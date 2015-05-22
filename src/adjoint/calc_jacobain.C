@@ -1,0 +1,497 @@
+/*******************************************************************
+ * Copyright (C) 2003 University at Buffalo
+ *
+ * This software can be redistributed free of charge.  See COPYING
+ * file in the top distribution directory for more details.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ *******************************************************************
+ */
+//Jan 30, 2015
+//haghakha
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+#include "../header/hpfem.h"
+
+#define KEY0   3797155840
+#define KEY1   0
+#define ITER   7
+#define EFFELL 0
+#define J      0
+#define JACIND 0
+
+//#define DEBUG
+
+void reset_resflag(ResFlag resflag[5]);
+
+void calc_jacobian(HashTable* El_Table, HashTable* NodeTable,
+		vector<Jacobian*>* solHyst, MatProps* matprops_ptr,
+		TimeProps* timeprops_ptr, MapNames *mapname_ptr, double const increment) {
+
+	int myid, numprocs;
+	MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
+
+	int neigh_flag;
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashEntryPtr currentPtr;
+	Element* Curr_El = NULL;
+	Element *neigh_elem = NULL;
+
+	int iter = timeprops_ptr->iter;
+	double tiny = GEOFLOW_TINY;
+
+	cout << "computing jacobian for time iteration " << iter << endl;
+
+	//here are some dummy values that we need for calc_edge_state
+	int order_flag = 1;
+	double outflow = 0;
+
+	//this array holds ResFlag for element itself and its neighbors
+	ResFlag resflag[5];
+	reset_resflag(resflag);
+
+	// after updating state_vars on cells we need to compute the fluxes
+	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid,
+			&order_flag, &outflow, resflag[0]);
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0) {
+
+					int boundary = 0;
+
+					//this part handles if the Curr_El is a boundary element
+					//cout<<"I am running do not worry"<<endl;
+					for (int neighnum = 0; neighnum < 4; neighnum++)
+						if (*(Curr_El->get_neigh_proc() + neighnum) == INIT) {
+							boundary = 1;
+							break;
+						}
+					if (!boundary) {
+
+						Jacobian *jacobian = solHyst->at(Curr_El->get_sol_rec_ind());
+
+						double *state_vars = Curr_El->get_state_vars();
+						double *prev_state_vars = Curr_El->get_prev_state_vars();
+						double *gravity = Curr_El->get_gravity();
+						double *d_gravity = Curr_El->get_d_gravity();
+						double *curvature = Curr_El->get_curvature();
+						Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
+						double bedfrict = Curr_El->get_effect_bedfrict();
+
+						double *dx = Curr_El->get_dx();
+						double kactxy[DIMENSION];
+						double orgSrcSgn[2];
+
+						Curr_El->get_slopes_prev(El_Table, NodeTable, matprops_ptr->gamma); // we run this to update d_state_vars
+
+						if (timeprops_ptr->iter < 51)
+							matprops_ptr->frict_tiny = 0.1;
+						else
+							matprops_ptr->frict_tiny = 0.000000001;
+
+						orgSourceSgn(Curr_El, matprops_ptr->frict_tiny, orgSrcSgn);
+
+						for (int effelement = 0; effelement < 5; effelement++) { //0 for the element itself, and the rest id for neighbour elements
+
+							int xp = Curr_El->get_positive_x_side(); //finding the direction of element
+							int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+							int jacmatind = jac_mat_index(effelement, xp); //this function returns the matrix that the jacobian matrix has to be stored
+
+							double void_res[3] = { 0., 0., 0. };
+
+#ifdef DEBUG
+							int gggflag = 0;
+
+							if (*(Curr_El->pass_key()) == KEY0
+									&& *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER
+									&& jacmatind == JACIND)
+								gggflag = 1;
+#endif
+
+							if (effelement == 0 && prev_state_vars[0] == 0.)
+
+								//this is a void element so the residual vector does not change by changing it's values
+								jacobian->set_jacobianMat_zero(jacmatind);
+
+							else if (effelement != 0
+									&& void_neigh_elem(El_Table, Curr_El, effelement))
+
+								//this is a void neighbor element so the residual of the curr_el does not depend on this neighbor
+								jacobian->set_jacobianMat_zero(jacmatind);
+
+							else {
+
+								for (int j = 0; j < 4; j++) {	//there is a problem here: I do not need to compute for first the component of adjoint
+
+									if (j != 1) {	//since we don't want to do that for first component of adjoint
+
+										double dummydt = 0.;//this is dummy because it is needed in clac_edge state->zdirflux->calc_wetness_factor which is useless here
+
+										//Attention make sure that NUM_STATE_VARS are selected correctly
+										//Actually we just need 3, but there is an excessive for first adjoint
+										const int state_num = NUM_STATE_VARS - 2;
+
+										Node* nxp = (Node*) NodeTable->lookup(
+												Curr_El->getNode() + (xp + 4) * 2);
+
+										Node* nyp = (Node*) NodeTable->lookup(
+												Curr_El->getNode() + (yp + 4) * 2);
+
+										Node* nxm = (Node*) NodeTable->lookup(
+												Curr_El->getNode() + (xm + 4) * 2);
+
+										Node* nym = (Node*) NodeTable->lookup(
+												Curr_El->getNode() + (ym + 4) * 2);
+
+										double vec_res[3];
+										double total_res[3] = { 0., 0., 0. };
+
+										int scheme = 0;
+										for (; scheme < 2; scheme++) {
+
+											//this flag shows that the pileheight before adding the increment is below or above the GEOFLOW_TINY.
+											//if it is below GEOFLOW_TINY then there is no need to update fluxes and kactxy
+											int updateflux, srcflag;
+											reset_resflag(resflag);
+#ifdef DEBUG
+											int dbgflag = 0, printflag = 0;
+											double fluxxpold[state_num], fluxypold[state_num]; //we just need to compute jacobian for h,u,v not for cont. adjoint so we don't store the fluxes for the adjoint
+											double fluxxmold[state_num], fluxymold[state_num];
+
+											unsigned key[2];
+											key[0] = *(Curr_El->pass_key());
+											key[1] = *(Curr_El->pass_key() + 1);
+
+											if (*(Curr_El->pass_key()) == KEY0
+													&& *(Curr_El->pass_key() + 1) == KEY1
+													&& jacmatind == JACIND && iter == ITER && j == J)
+
+												record_flux(El_Table, NodeTable, key, matprops_ptr,
+														effelement, myid, fluxxpold, fluxypold, fluxxmold,
+														fluxymold);
+
+#endif
+
+											// here we modify increment to one time compute forward and one time compute backward difference if it is necessary
+											double signe = pow(-1., scheme);
+											double incr = signe * increment;
+											increment_state(El_Table, Curr_El, incr, effelement, j,
+													&updateflux, &srcflag, resflag);
+
+											calc_flux_slope_kact(El_Table, NodeTable, Curr_El,
+													matprops_ptr, myid, effelement, updateflux, srcflag,
+													resflag);
+
+											double dt = timeprops_ptr->dt.at(iter - 1);	//at final time step we do not need the computation of adjoint and we always compute it for the previouse time so we need iter.
+											double dtdx = dt / dx[0];
+											double dtdy = dt / dx[1];
+
+											//Attention make sure that NUM_STATE_VARS are selected correctly
+											//Actually we just need 3, but there is an excessive for first adjoint
+											//const int state_num=NUM_STATE_VARS-2;
+											double fluxxp[state_num], fluxyp[state_num]; //we just need to compute jacobian for h,u,v not for cont. adjoint so we don't store the fluxes for the adjoint
+											double fluxxm[state_num], fluxym[state_num];
+
+											for (int ivar = 0; ivar < state_num; ivar++)
+												fluxxp[ivar] = nxp->flux[ivar];
+
+											for (int ivar = 0; ivar < state_num; ivar++)
+												fluxyp[ivar] = nyp->flux[ivar];
+
+											for (int ivar = 0; ivar < state_num; ivar++)
+												fluxxm[ivar] = nxm->flux[ivar];
+
+											for (int ivar = 0; ivar < state_num; ivar++)
+												fluxym[ivar] = nym->flux[ivar];
+
+#ifdef DEBUG
+											if (*(Curr_El->pass_key()) == KEY0
+													&& *(Curr_El->pass_key() + 1) == KEY1
+													&& jacmatind == JACIND && iter == ITER && j == J)
+												flux_debug(Curr_El, fluxxpold, fluxxmold, fluxypold,
+														fluxymold, fluxxp, fluxxm, fluxyp, fluxym,
+														effelement, j, iter, dt);
+#endif
+
+											double *d_state_vars = Curr_El->get_d_state_vars();
+
+											//here we compute the residuals
+											residual(vec_res, state_vars, prev_state_vars, fluxxp, //4
+													fluxyp, fluxxm, fluxym, dtdx, dtdy, dt, d_state_vars, //7
+													(d_state_vars + NUM_STATE_VARS), curvature, //2
+													matprops_ptr->intfrict, //1
+													bedfrict, gravity, d_gravity, Curr_El->get_kactxy(), //4
+													matprops_ptr->frict_tiny, orgSrcSgn, incr, //3
+													matprops_ptr->epsilon, srcflag); //2
+
+											//we have to return everything back
+											restore(El_Table, NodeTable, Curr_El, matprops_ptr,
+													effelement, j, myid, incr);
+
+											for (int ind = 0; ind < 3; ind++)
+												total_res[ind] += signe * vec_res[ind];
+
+//											if (scheme == 0 && fabs(vec_res[0] / incr) < 5.
+//													&& fabs(vec_res[1] / incr) < 5.
+//													&& fabs(vec_res[2] / incr) < 5.)
+//												//this means that forward difference is enough, and we do not need to compute central difference
+											break;
+
+										}
+
+										double jacincr = increment; //= scheme == 0 ? increment : 2. * increment;
+
+										jacobian->set_jacobian(jacmatind, total_res, j,
+										// following term is necessary to consider the scheme that whether it is forward difference or central difference
+												jacincr); //sets the propper components of the Jacobian for this element
+
+									}
+								}
+							}
+						}
+					} else {
+
+						// this for the element that are on the boundary
+						Jacobian *jacobian = solHyst->at(Curr_El->get_sol_rec_ind());
+						jacobian->set_jacobian();
+
+					}
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+	}
+	return;
+}
+
+int jac_mat_index(int effelement, int xp) {
+
+	int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+	// effelement - 1 shows which neighbor we are processing
+	if (effelement == 0)
+		return 0;
+	else if (effelement - 1 == xp)
+		return 1;
+	else if (effelement - 1 == yp)
+		return 2;
+	else if (effelement - 1 == xm)
+		return 3;
+	else if (effelement - 1 == ym)
+		return 4;
+	else
+		exit(1);
+}
+
+//this function returns 1 if the neighbor element is void
+int void_neigh_elem(HashTable* El_Table, Element* Curr_El, int effelement) {
+
+	Element* neigh_elem = (Element*) (El_Table->lookup(
+			Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
+
+	assert(neigh_elem);
+
+	if (*(neigh_elem->get_prev_state_vars()) == 0.)
+		return 1;
+
+	return 0;
+}
+
+void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El,
+		MatProps* matprops_ptr, int effelement, int j, int myid, double increment) {
+
+	Element* neigh_elem;
+	double *prev_state_vars = Curr_El->get_prev_state_vars();
+
+	double dummydt = 0., outflow = 0.;
+	int order_flag = 1;
+
+	ResFlag resflag;
+	resflag.callflag = 1;
+	resflag.lgft = 0;
+
+	int xp = Curr_El->get_positive_x_side(); //finding the direction of element
+	int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+
+	if (effelement == 0) { //this part of code add an increment to the state variables to find the Jacobian, but the problem is since it is called after correct, the increment shoud be added to the prev_state_vars
+
+		prev_state_vars[j] -= increment; //changing the state varibales at the element itself
+		Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid, dummydt,
+				&order_flag, &outflow, resflag, resflag); //chenge of the state_vars causes the all around fluxes change, this update xp ,yp
+
+		if ((*(Curr_El->get_neigh_proc() + xm)) != INIT) { //we have to make sure that there exit an element in xm side
+
+			Element* elem_xm = (Element*) (El_Table->lookup(
+					Curr_El->get_neighbors() + xm * KEYLENGTH));
+			elem_xm->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
+					dummydt, &order_flag, &outflow, resflag, resflag); //this update the flux on share edge with xm
+		}
+		if ((*(Curr_El->get_neigh_proc() + ym)) != INIT) { //we have to make sure that there exit an element in ym side
+
+			Element* elem_ym = (Element*) (El_Table->lookup(
+					Curr_El->get_neighbors() + ym * KEYLENGTH));
+			elem_ym->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
+					dummydt, &order_flag, &outflow, resflag, resflag); //this update the flux on share edge with ym
+		}
+
+	} else if ((*(Curr_El->get_neigh_proc() + (effelement - 1))) != INIT) {
+
+		neigh_elem = (Element*) (El_Table->lookup(
+				Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
+		*(neigh_elem->get_prev_state_vars() + j) -= increment;
+
+		if ((effelement - 1) == xp || (effelement - 1) == yp)
+			Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
+					dummydt, &order_flag, &outflow, resflag, resflag); //if we change the state variables in xp or yp, just the flux at this element has to be updated
+		else
+			neigh_elem->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
+					dummydt, &order_flag, &outflow, resflag, resflag); //otherwise the flux at the corresponding element has to be updated
+
+	}
+	Curr_El->get_slopes(El_Table, NodeTable, matprops_ptr->gamma);
+	return;
+}
+
+void calc_flux_slope_kact(HashTable* El_Table, HashTable* NodeTable,
+		Element* Curr_El, MatProps* matprops_ptr, int myid, int effelement,
+		int updateflux, int srcflag, ResFlag resflag[5]) {
+
+	double dummydt = 0., outflow = 0.;
+	int order_flag = 1;
+
+	ResFlag dummyresflag;
+	dummyresflag.callflag = 1;
+	dummyresflag.lgft = 0;
+
+	Element* neigh_elem;
+
+	int xp = Curr_El->get_positive_x_side(); //finding the direction of element
+	int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+
+	Curr_El->get_slopes_prev(El_Table, NodeTable, matprops_ptr->gamma);	//we also have to update the d_state_vars for the current element
+
+	double *d_state_vars = Curr_El->get_d_state_vars();
+
+//										if (srcflag && effelement == 0) {
+//
+//											gmfggetcoef_(Curr_El->get_prev_state_vars(), d_state_vars,
+//													(d_state_vars + NUM_STATE_VARS), dx,
+//													&(matprops_ptr->bedfrict[Curr_El->get_material()]),
+//													&(matprops_ptr->intfrict), &kactxy[0], &kactxy[1],
+//													&tiny, &(matprops_ptr->epsilon));
+//
+//											Curr_El->put_kactxy(kactxy);
+//											Curr_El->calc_stop_crit(matprops_ptr);
+//										}
+
+	if (effelement == 0 && updateflux) { //this part of code add an increment to the state variables to find the Jacobian, but the problem is since it is called after correct, the increment shoud be added to the prev_state_vars
+
+		Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid, dummydt,
+				&order_flag, &outflow, resflag[0], dummyresflag); //change of the state_vars causes the all around fluxes change, this update xp ,yp
+		// earlier in this file, we made sure that this element is not a boundary element
+		// so here we do not require to check the neighbor elements to make sure they are not located on the boundary
+
+		Element* elem_xm = (Element*) (El_Table->lookup(
+				Curr_El->get_neighbors() + xm * KEYLENGTH));
+		assert(elem_xm);
+		elem_xm->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid, dummydt,
+				&order_flag, &outflow, resflag[3], resflag[0]); //this update the flux on share edge with xm
+
+		Element* elem_ym = (Element*) (El_Table->lookup(
+				Curr_El->get_neighbors() + ym * KEYLENGTH));
+		assert(elem_ym);
+		elem_ym->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid, dummydt,
+				&order_flag, &outflow, resflag[4], resflag[0]); //this update the flux on share edge with ym
+
+	} else if (effelement != 0 && updateflux) {
+
+		if ((effelement - 1) == xp)
+
+			Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
+					dummydt, &order_flag, &outflow, resflag[0], resflag[1]); //if we change the state variables in xp or yp, just the flux at this element has to be updated
+		else if ((effelement - 1) == yp)
+			Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
+					dummydt, &order_flag, &outflow, resflag[0], resflag[2]);
+
+		else if ((effelement - 1) == xm) {
+
+			neigh_elem = (Element*) (El_Table->lookup(
+					Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
+			assert(neigh_elem);
+
+			neigh_elem->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
+					dummydt, &order_flag, &outflow, resflag[3], resflag[0]); //otherwise the flux at the corresponding element has to be updated
+//otherwise the flux at the corresponding element has to be updated
+
+		} else {
+
+			neigh_elem = (Element*) (El_Table->lookup(
+					Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
+			assert(neigh_elem);
+
+			neigh_elem->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
+					dummydt, &order_flag, &outflow, resflag[4], resflag[0]); //otherwise the flux at the corresponding element has to be updated
+//otherwise the flux at the corresponding element has to be updated
+		}
+
+	}
+
+	return;
+
+}
+
+void increment_state(HashTable* El_Table, Element* Curr_El, double increment,
+		int effelement, int j, int* updateflux, int* srcflag, ResFlag resflag[5]) {
+
+	*updateflux = 1;
+	*srcflag = 1;
+	double *prev_state_vars = Curr_El->get_prev_state_vars();
+
+	int xp = Curr_El->get_positive_x_side(); //finding the direction of element
+	int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+
+	if (effelement == 0) { //this part of code add an increment to the state variables to find the Jacobian, but the problem is since it is called after correct, the increment shoud be added to the prev_state_vars
+
+		if (j == 0 && prev_state_vars[j] < GEOFLOW_TINY) {
+			*updateflux = 0;
+			*srcflag = 0;
+			resflag[0].lgft = 1;
+		}
+
+		prev_state_vars[j] += increment; //changing the state varibales at the element itself
+
+	} else {
+
+		Element* neigh_elem = (Element*) (El_Table->lookup(
+				Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
+		assert(neigh_elem);
+
+		if (j == 0 && *(neigh_elem->get_prev_state_vars() + j) < GEOFLOW_TINY) {
+			*updateflux = 0;
+			resflag[jac_mat_index(effelement, xp)].lgft = 1;
+		}
+
+		*(neigh_elem->get_prev_state_vars() + j) += increment;
+
+	}
+	return;
+}
+
+void reset_resflag(ResFlag resflag[5]) {
+
+	for (int i = 0; i < 5; i++) {
+		resflag[i].callflag = 1;
+		resflag[i].lgft = 0;
+	}
+
+	return;
+}
