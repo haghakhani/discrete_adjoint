@@ -76,7 +76,7 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 					}
 
 					Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
-							timeprops_ptr->dtime, order_flag, &localoutflow, resflag,resflag);
+							timeprops_ptr->dtime, order_flag, &localoutflow);
 					localoutflow_sum += localoutflow;
 				}
 				currentPtr = currentPtr->next;

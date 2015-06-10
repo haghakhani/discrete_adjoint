@@ -76,7 +76,7 @@ int Initialize_Vector_data( char* GISDbase, char* location, char* mapset, char* 
 
   gis_vector.glabels = 0;
   gis_vector.glines  = 0;
-  
+
   if ( GISDbase && location && mapset && vector_file )
     {
       strcpy (gisPath, GISDbase);
@@ -84,13 +84,13 @@ int Initialize_Vector_data( char* GISDbase, char* location, char* mapset, char* 
       sprintf(gisPath,"%s%s%s",gisPath,mapset,gisSlash);
       strcpy(gisFullPath,gisPath);
       sprintf(gisFullPath,"%svector%s%s",gisFullPath,gisSlash,vector_file);
-      
+
       GisLabels* gisLabels = new GisLabels (gisFullPath);
       GisLines*  gisLines  = new GisLines  (gisFullPath);
-      
+
       if ( gisLabels->numberOfLabels() > 0 )
 	gisLines->setIndices(*gisLabels, vectorDataScale);
-      
+
       gis_vector.glabels = gisLabels;
       gis_vector.glines  = gisLines;
     }
@@ -103,7 +103,7 @@ int Delete_Vector_data()
     delete gis_vector.glabels;
   if ( gis_vector.glines )
     delete gis_vector.glines;
-  
+
   return 0;
 }
 
@@ -121,7 +121,7 @@ int Get_vector_line_type(int line_index, int* line_type)
 {
   if ( gis_vector.glines )
     return gis_vector.glines->getIndex(line_index, line_type);
-  
+
   return -4;
 }
 
@@ -132,7 +132,7 @@ int Get_vector_line_label(int line_index, string *line_str)
     //    cout<<"in Get_vector_line_label .."<<*line_str<<endl;
     return 0;
   }
-  
+
   return -4;
 }
 
@@ -140,7 +140,7 @@ int Get_vector_line_size(int line_index, int* line_size)
 {
   if ( gis_vector.glines )
     return gis_vector.glines->getLineSize(line_index, line_size);
-  
+
   return -4;
 }
 
@@ -148,7 +148,7 @@ int Get_vector_line(int line_index, double* line_x, double* line_y)
 {
   if ( gis_vector.glines )
     return gis_vector.glines->getLine(line_index, line_x, line_y);
-  
+
   return -4;
 }
 
@@ -158,7 +158,7 @@ void Set_vector_scale(double scale)
 int Initialize_GIS_data (char* GISDbase, char* location, char* mapset, char* raster_file)
 {
   int nrows, ncols;
-  
+
   char gisPath[200];
   char gisFullPath[250];
 #if defined WIN32
@@ -166,9 +166,9 @@ int Initialize_GIS_data (char* GISDbase, char* location, char* mapset, char* ras
 #else
   char* gisSlash = "/";
 #endif
-  
+
   clear_gis_grid();
-  
+
   if ( GISDbase && location && mapset && raster_file )
     {
       strcpy (gisPath, GISDbase);
@@ -176,24 +176,24 @@ int Initialize_GIS_data (char* GISDbase, char* location, char* mapset, char* ras
       sprintf(gisPath,"%s%s%s",gisPath,mapset,gisSlash);
       strcpy(gisFullPath,gisPath);
       sprintf(gisFullPath,"%scellhd%s%s",gisFullPath,gisSlash,raster_file);
-      
+
       GisRasterHdr gisHeader (gisFullPath);
       Gis_Head gHeadStruct;
       if ( ( ! gisHeader.good() ) ||
 	   ( set_from_header(gisHeader,gHeadStruct) != 0 ) )
 	return -4;
       gis_grid.ghead = gHeadStruct;
-      
+
       nrows = gisHeader.Rows();
       ncols = gisHeader.Cols();
-      
+
       if ( nrows < 1 || ncols < 1 )
 	return -4;
-      
+
       strcpy(gisFullPath,gisPath);
       sprintf(gisFullPath,"%sfcell%s%s",gisFullPath,gisSlash,raster_file);
       gis_grid.ghead.datafile = strdup(gisFullPath);
-      
+
       return 0;
     }
   return -4;
@@ -211,7 +211,7 @@ int Update_GIS_data (char* GISDbase, char* location, char* mapset, char* raster_
 #endif
 
   if ( GISDbase && location && mapset && raster_file ){
-    
+
     strcpy (gisPath, GISDbase);
     sprintf(gisPath,"%s%s%s%s",gisPath,gisSlash,location,gisSlash);
     sprintf(gisPath,"%s%s%s",gisPath,mapset,gisSlash);
@@ -266,7 +266,7 @@ int load_GIS_data ()
   int row;
   int nrows, ncols;
   char* fullGISDataFilePath = gis_grid.ghead.datafile;
-  
+
   GisBinFile binFile (fullGISDataFilePath,"r");
   if ( binFile.good() )
     {
@@ -275,19 +275,19 @@ int load_GIS_data ()
       binFile.setIsInteger (false);
       binFile.isCompressed (gis_grid.ghead.compressed==1);
       // 0 = uncompressed, 1 = compressed
-      
+
       nrows = gis_grid.ghead.nrows;
       ncols = gis_grid.ghead.ncols;
       binFile.nRows(nrows);
       binFile.nCols(ncols);
-      
+
       if ( ! ( gis_grid.elev = alloc_float_matrix ( nrows, ncols ) ) )
 	return -3;	// memory error
-      
+
       for (row = 0; row < nrows; row++)
 	if ( ! binFile.readRow (row, gis_grid.elev[row]) )
 	  return -4;
-      
+
       gis_grid.ghead.zmin = G_API_BIGFLOAT;
       gis_grid.ghead.zmax = -G_API_BIGFLOAT;
       return 0;
@@ -299,7 +299,7 @@ int Initialize_Raster_data (char* GISDbase, char* location, char* mapset, char* 
 {
   int nrows, ncols;
   int row;
-  
+
   char gisPath[200];
   char gisFullPath[250];
 #if defined WIN32
@@ -323,19 +323,19 @@ int Initialize_Raster_data (char* GISDbase, char* location, char* mapset, char* 
 	   ( set_from_header(gisHeader,gHeadStruct) != 0 ) )
 	return -4;
       gis_rast.ghead = gHeadStruct;
-      
+
       nrows = gisHeader.Rows();
       ncols = gisHeader.Cols();
-      
+
       if ( nrows < 1 || ncols < 1 )
 	return -4;
-      
+
       if ( ! ( gis_rast.cvals = alloc_char_matrix ( nrows, ncols ) ) )
 	return -3;	// memory error
-      
+
       strcpy(gisFullPath,gisPath);
       sprintf(gisFullPath,"%scats%s%s",gisFullPath,gisSlash,raster_file);
-      
+
       GisCats g_cats (gisFullPath);
       if ( ! g_cats.good() )
 	return -4;
@@ -344,21 +344,21 @@ int Initialize_Raster_data (char* GISDbase, char* location, char* mapset, char* 
 	  gis_rast.ncats = g_cats.mumberOfCats();
 	  gis_rast.cnames = set_cats(g_cats);
 	}
-      
+
       strcpy(gisFullPath,gisPath);
       sprintf(gisFullPath,"%scell%s%s",gisFullPath,gisSlash,raster_file);
-      
+
       GisBinFile binFile (gisFullPath);
       if ( binFile.good() )
 	{
 	  binFile.setEndian ("big");
 	  binFile.setDataSize (gisHeader.cellFormat()+1);
 	  binFile.setIsInteger (true);
-	  
+
 	  binFile.isCompressed (gisHeader.isCompressed());
 	  binFile.nRows(gisHeader.Rows());
 	  binFile.nCols(gisHeader.Cols());
-	  
+
 	  for (row = 0; row < nrows; row++)
 	    if ( ! binFile.readRow (row, gis_rast.cvals[row]) )
 	      return -4;
@@ -366,14 +366,14 @@ int Initialize_Raster_data (char* GISDbase, char* location, char* mapset, char* 
 	}
     }
   return -4;
-  
+
 }
 
 int Initialize_Image_data (char* GISDbase, char* location, char* mapset, char* raster_file)
 {
   int nrows, ncols;
   int row;
-  
+
   char gisPath[200];
   char gisFullPath[250];
 #if defined WIN32
@@ -381,9 +381,9 @@ int Initialize_Image_data (char* GISDbase, char* location, char* mapset, char* r
 #else
   char* gisSlash = "/";
 #endif
-  
+
   clear_gis_image();
-  
+
   if ( GISDbase && location && mapset && raster_file )
     {
       strcpy (gisPath, GISDbase);
@@ -391,17 +391,17 @@ int Initialize_Image_data (char* GISDbase, char* location, char* mapset, char* r
       sprintf(gisPath,"%s%s%s",gisPath,mapset,gisSlash);
       strcpy(gisFullPath,gisPath);
       sprintf(gisFullPath,"%scellhd%s%s",gisFullPath,gisSlash,raster_file);
-      
+
       GisRasterHdr gisHeader (gisFullPath);
       Gis_Head gHeadStruct;
       if ( ( ! gisHeader.good() ) ||
 	   ( set_from_header(gisHeader,gHeadStruct) != 0 ) )
 	return -4;
       gis_image.ghead = gHeadStruct;
-      
+
       nrows = gisHeader.Rows();
       ncols = gisHeader.Cols();
-      
+
       if ( nrows < 1 || ncols < 1 )
 	return -4;
 
@@ -410,7 +410,7 @@ int Initialize_Image_data (char* GISDbase, char* location, char* mapset, char* r
 
       strcpy(gisFullPath,gisPath);
       sprintf(gisFullPath,"%scolr%s%s",gisFullPath,gisSlash,raster_file);
-      
+
       GisColors g_colors (gisFullPath);
       if ( ! g_colors.good() )
 	return -4;
@@ -420,25 +420,25 @@ int Initialize_Image_data (char* GISDbase, char* location, char* mapset, char* r
 	  for (i = 0; i < 256; i++)
 	    g_colors.getColor(i, gis_image.rlut[i], gis_image.glut[i], gis_image.blut[i] );
 	}
-      
+
       strcpy(gisFullPath,gisPath);
       sprintf(gisFullPath,"%scell%s%s",gisFullPath,gisSlash,raster_file);
-      
+
       GisBinFile binFile (gisFullPath);
       if ( binFile.good() )
 	{
 	  binFile.setEndian ("big");
 	  binFile.setDataSize (gisHeader.cellFormat()+1);
 	  binFile.setIsInteger (true);
-	  
+
 	  binFile.isCompressed (gisHeader.isCompressed());
 	  binFile.nRows(gisHeader.Rows());
 	  binFile.nCols(gisHeader.Cols());
-	  
+
 	  for (row = 0; row < nrows; row++)
 	    if ( ! binFile.readRow (row, (char *) gis_image.ivals[row]) )
 	      return -4;
-	  
+
 	  return 0;
 	}
     }
@@ -586,7 +586,7 @@ int Get_elev_min(double resolution, double* elevmin)
       if (status != 0)
 	return status;
     }
-  
+
   *elevmin = gis_grid.ghead.zmin;
   return 0;
 }
@@ -594,14 +594,14 @@ int Get_elev_min(double resolution, double* elevmin)
 int Get_elev_max(double resolution, double* elevmax)
 {
   int status;
-  
+
   if ( gis_grid.ghead.zmin > gis_grid.ghead.zmax )
     {
       status = find_min_max();
       if (status != 0)
 	return status;
     }
-  
+
   *elevmax = gis_grid.ghead.zmax;
   return 0;
 }
@@ -728,7 +728,7 @@ int Get_image(double resolution, double x, double y, unsigned char* r, unsigned 
 {
   int row, col;
   unsigned char i;
-  
+
   if ( x >= gis_image.ghead.xmin && x <= gis_image.ghead.xmax &&
        y >= gis_image.ghead.ymin && y <= gis_image.ghead.ymax )
     {
@@ -751,7 +751,7 @@ int Get_image(double resolution, double x, double y, unsigned char* r, unsigned 
 int Get_raster_id(double resolution, double x, double y, int* category_id)
 {
   int row, col;
-  
+
   if ( x >= gis_rast.ghead.xmin && x <= gis_rast.ghead.xmax &&
        y >= gis_rast.ghead.ymin && y <= gis_rast.ghead.ymax )
     {
@@ -771,14 +771,14 @@ int Get_raster_id(double resolution, double x, double y, int* category_id)
 int Get_elevation(double resolution, double x, double y, double* elev)
 {
   int status;
-  
+
   if ( gis_grid.elev == 0 )
     {
       status = load_GIS_data();
       if ( status != 0 )
 	return status;
     }
-  
+
   if ( x >= gis_grid.ghead.xmin && x <= gis_grid.ghead.xmax &&
        y >= gis_grid.ghead.ymin && y <= gis_grid.ghead.ymax )
     {
@@ -801,14 +801,14 @@ int Get_elevation(double resolution, double x, double y, double* elev)
 int Get_slope(double resolution, double x, double y, double* xslope, double* yslope)
 {
   int status;
-  
+
   if ( gis_grid.xslope == 0 )
     {
       status = calculate_slope();
       if ( status != 0 )
 	return status;
     }
-  
+
   if ( x >= gis_grid.ghead.xmin && x <= gis_grid.ghead.xmax &&
        y >= gis_grid.ghead.ymin && y <= gis_grid.ghead.ymax )
     {
@@ -831,7 +831,7 @@ int Get_slope(double resolution, double x, double y, double* xslope, double* ysl
 	  *xslope = interpolate_bilinear_at ( gis_grid.ghead.resolution, x, y, gis_grid.xslope );
 	  *yslope = interpolate_bilinear_at ( gis_grid.ghead.resolution, x, y, gis_grid.yslope );
 	}
-      
+
 	}
   return 0;
 }
@@ -843,12 +843,12 @@ int Get_curvature(double resolution, double x, double y, double* xcurv, double* 
   float** xxcurv;
   float** yycurv;
   double x1, y1;
-  
+
   xxcurv = alloc_float_matrix(2,2);
   yycurv = alloc_float_matrix(2,2);
   if ( !xxcurv || !yycurv)
     return -3;
-  
+
   if ( gis_grid.xslope == 0 )
     {
       status = calculate_slope();
@@ -875,7 +875,7 @@ int Get_curvature(double resolution, double x, double y, double* xcurv, double* 
 		     2 * ( gis_grid.xslope[row  ][col+1] - gis_grid.xslope[row  ][col-1] ) +
 		     ( gis_grid.xslope[row+1][col+1] - gis_grid.xslope[row+1][col-1] ) ) /
 	    ( 8 * gis_grid.ghead.resolution );
-	  
+
 	  *ycurv = ( ( gis_grid.yslope[row-1][col-1] - gis_grid.yslope[row+1][col-1] ) +
 		     2 * ( gis_grid.yslope[row-1][col  ] - gis_grid.yslope[row+1][col  ] ) +
 		     ( gis_grid.yslope[row-1][col+1] - gis_grid.yslope[row+1][col+1] ) ) /
@@ -903,7 +903,7 @@ int Get_curvature(double resolution, double x, double y, double* xcurv, double* 
 	  y1 = y1/gis_grid.ghead.resolution;
 	  *xcurv = interpolate_bilinear_at ( gis_grid.ghead.resolution, x1, y1, xxcurv );
 	  *ycurv = interpolate_bilinear_at ( gis_grid.ghead.resolution, x1, y1, yycurv );
-	  
+
 	}
     }
   free_float_matrix (xxcurv);
@@ -926,7 +926,7 @@ int Get_image_array(double* resolution, double* x, double* y, unsigned char* r, 
 	{
 	  x1 = ( x[i] - gis_image.ghead.xmin ) / gis_image.ghead.resolution;
 	  y1 = ( gis_image.ghead.ymax - y[i] ) / gis_image.ghead.resolution;
-	  
+
 	  col = (int)x1;
 	  col = col >= gis_image.ghead.ncols ? gis_image.ghead.ncols-1 : col;
 	  col = col < 0 ? 0 : col;
@@ -954,7 +954,7 @@ int Get_raster_id_array(double* resolution, double* x, double* y, int* category_
 	{
 	  x1 = ( x[i] - gis_rast.ghead.xmin ) / gis_rast.ghead.resolution;
 	  y1 = ( gis_rast.ghead.ymax - y[i] ) / gis_rast.ghead.resolution;
-	  
+
 	  col = (int)x1;
 	  col = col >= gis_rast.ghead.ncols ? gis_rast.ghead.ncols-1 : col;
 	  col = col < 0 ? 0 : col;
@@ -972,14 +972,14 @@ int Get_elevation_array(double* resolution, double* x, double* y, double* elev, 
   double x1, y1;
   int i;
   int status;
-  
+
   if ( gis_grid.elev == 0 )
     {
       status = load_GIS_data();
       if ( status != 0 )
 	return status;
     }
-  
+
   for ( i = 0; i < number_of_locations; i++ )
     {
       if ( x[i] >= gis_grid.ghead.xmin && x[i] <= gis_grid.ghead.xmax &&
@@ -1004,14 +1004,14 @@ int Get_slope_array(double* resolution, double* x, double* y, double* xslope, do
 {
   int row, col;
   int i, status;
-  
+
   if ( gis_grid.xslope == 0 )
     {
       status = calculate_slope();
       if ( status != 0 )
 	return status;
     }
-  
+
   for ( i = 0; i < number_of_locations; i++ )
     {
       if ( x[i] >= gis_grid.ghead.xmin && x[i] <= gis_grid.ghead.xmax &&
@@ -1030,7 +1030,7 @@ int Get_curvature_array(double* resolution, double* x, double* y, double* xcurv,
 {
   int row, col;
   int i, status;
-  
+
   if ( gis_grid.slope == 0 )
     {
       status = calculate_slope();
@@ -1060,14 +1060,14 @@ int Get_curvature_array(double* resolution, double* x, double* y, double* xcurv,
 int Get_elevation_grid(double resolution, double xmin, double xmax, double ymin, double ymax, double* elev)
 {
   int status;
-  
+
   if ( gis_grid.elev == 0 )
     {
       status = load_GIS_data();
       if ( status != 0 )
 	return status;
     }
-  
+
   get_grid( resolution, xmin, xmax, ymin, ymax, gis_grid.elev, elev);
   return 0;
 }
@@ -1087,14 +1087,14 @@ int Get_image_grid(double resolution, double xmin, double xmax, double ymin, dou
 int Get_slope_grid(double resolution, double xmin, double xmax, double ymin, double ymax, double* slope)
 {
   int status;
-  
+
   if ( gis_grid.slope == 0 )
     {
       status = calculate_slope();
       if ( status != 0 )
 	return status;
     }
-  
+
   get_grid( resolution, xmin, xmax, ymin, ymax, gis_grid.slope, slope);
   return 0;
 }
@@ -1102,24 +1102,24 @@ int Get_slope_grid(double resolution, double xmin, double xmax, double ymin, dou
 int Get_curvature_grid(double resolution, double xmin, double xmax, double ymin, double ymax, double* xcurv, double* ycurv)
 {
   int status;
-  
+
   if ( gis_grid.slope == 0 )
     {
       status = calculate_slope();
       if ( status != 0 )
 	return status;
     }
-  
+
   if ( gis_grid.xcurv == 0 )
     {
       status = calculate_curvature();
       if ( status != 0 )
 	return status;
     }
-  
+
   get_grid( resolution, xmin, xmax, ymin, ymax, gis_grid.xcurv, xcurv);
   get_grid( resolution, xmin, xmax, ymin, ymax, gis_grid.ycurv, ycurv);
-  
+
   return 0;
 }
 
@@ -1134,18 +1134,18 @@ void get_grid(double resolution, double xmin, double xmax, double ymin, double y
   int frow, fcol;			/* final row and column */
   double icold, irowd;
   double resr;
-  
+
   icold = (xmin - gis_grid.ghead.xmin) / gis_grid.ghead.resolution;
   icol  = (int) icold;
-  
+
   irowd = (gis_grid.ghead.ymax - ymax) / gis_grid.ghead.resolution;
   irow  = (int) irowd;
-  
+
   fcol  = (int) ( (xmax - gis_grid.ghead.xmin) / gis_grid.ghead.resolution);
   frow  = (int) ( (gis_grid.ghead.ymax - ymin) / gis_grid.ghead.resolution);
-  
+
   resr = resolution/gis_grid.ghead.resolution;
-  
+
   li = 0;
   j = 0;
   row = irow;
@@ -1185,18 +1185,18 @@ void get_int_grid(double resolution, double xmin, double xmax, double ymin, doub
   int frow, fcol;			/* final row and column */
   double icold, irowd;
   double resr;
-  
+
   icold = (xmin - gis_rast.ghead.xmin) / gis_rast.ghead.resolution;
   icol  = (int) icold;
-  
+
   irowd = (gis_rast.ghead.ymax - ymax) / gis_rast.ghead.resolution;
   irow  = (int) irowd;
-  
+
   fcol  = (int) ( (xmax - gis_rast.ghead.xmin) / gis_rast.ghead.resolution);
   frow  = (int) ( (gis_rast.ghead.ymax - ymin) / gis_rast.ghead.resolution);
 
   resr = resolution/gis_rast.ghead.resolution;
-  
+
   li = 0;
   j = 0;
   row = irow;
@@ -1236,18 +1236,18 @@ void get_rgb_grid(double resolution, double xmin, double xmax, double ymin, doub
   int frow, fcol;			/* final row and column */
   double icold, irowd;
   double resr;
-  
+
   icold = (xmin - gis_image.ghead.xmin) / gis_image.ghead.resolution;
   icol  = (int) icold;
-  
+
   irowd = (gis_image.ghead.ymax - ymax) / gis_image.ghead.resolution;
   irow  = (int) irowd;
-  
+
   fcol  = (int) ( (xmax - gis_image.ghead.xmin) / gis_image.ghead.resolution);
   frow  = (int) ( (gis_image.ghead.ymax - ymin) / gis_image.ghead.resolution);
-  
+
   resr = resolution/gis_image.ghead.resolution;
-  
+
   li = 0;
   j = 0;
   row = irow;
@@ -1287,7 +1287,7 @@ void get_rgb_grid(double resolution, double xmin, double xmax, double ymin, doub
 int clear_gis_grid()
 {
   free(gis_grid.ghead.datafile);
-  
+
   gis_grid.ghead.zmin = 0;
   gis_grid.ghead.zmax = 0;
   gis_grid.ghead.xmin = 0;
@@ -1300,14 +1300,14 @@ int clear_gis_grid()
   gis_grid.ghead.wymin = 0;
   gis_grid.ghead.wymax = 0;
   gis_grid.ghead.wresolution = 0;
-  
+
   free_float_matrix ( gis_grid.elev );
   free_float_matrix ( gis_grid.xslope );
   free_float_matrix ( gis_grid.yslope );
   free_float_matrix ( gis_grid.slope );
   free_float_matrix ( gis_grid.xcurv );
   free_float_matrix ( gis_grid.ycurv );
-  
+
   gis_grid.elev = 0;
   gis_grid.xslope = 0;
   gis_grid.yslope = 0;
@@ -1332,15 +1332,15 @@ int clear_gis_rast()
   gis_rast.ghead.wymin = 0;
   gis_rast.ghead.wymax = 0;
   gis_rast.ghead.wresolution = 0;
-  
+
   gis_rast.ncats = 0;
-  
+
   free_char_matrix ( gis_rast.cvals );
   free_char_matrix ( gis_rast.cnames );
-  
+
   gis_rast.cvals = 0;
   gis_rast.cnames = 0;
-  
+
   return 0;
 }
 
@@ -1358,11 +1358,11 @@ int clear_gis_image()
   gis_image.ghead.wymin = 0;
   gis_image.ghead.wymax = 0;
   gis_image.ghead.wresolution = 0;
-  
+
   free_char_matrix ( (char **) gis_image.ivals );
-  
+
   gis_image.ivals =0;
-  
+
   return 0;
 }
 
@@ -1370,7 +1370,7 @@ float **alloc_float_matrix( int nrows, int ncols )
 {
   float **m=0;
   int i;
-  
+
   if ( m = (float **) calloc (nrows, sizeof(float *)) )
     {
       if ( m[0] = (float *) calloc (nrows*ncols, sizeof(float)) )
@@ -1389,7 +1389,7 @@ char **alloc_char_matrix( int nrows, int ncols )
 {
   char **m=0;
   int i;
-  
+
   if ( m = (char **) calloc (nrows, sizeof(char *)) )
     {
       if ( m[0] = (char *) calloc (nrows*ncols, sizeof(char)) )
@@ -1430,31 +1430,31 @@ int calculate_slope()
 {
   int row, col;
   int status;
-  
+
   if ( gis_grid.elev == 0 )
     {
       status = load_GIS_data();
       if ( status != 0 )
 	return status;
     }
-  
-  
+
+
   free_float_matrix ( gis_grid.xslope );
   free_float_matrix ( gis_grid.yslope );
   free_float_matrix ( gis_grid.slope );
-  
+
   free_float_matrix ( gis_grid.xcurv );
   free_float_matrix ( gis_grid.ycurv );
-  
+
   if ( ! ( gis_grid.xslope = alloc_float_matrix ( gis_grid.ghead.nrows, gis_grid.ghead.ncols ) ) )
     return -3;	/*memory error*/
-  
+
   if ( ! ( gis_grid.yslope = alloc_float_matrix ( gis_grid.ghead.nrows, gis_grid.ghead.ncols ) ) )
     return -3;	/*memory error*/
-  
+
   if ( ! ( gis_grid.slope = alloc_float_matrix ( gis_grid.ghead.nrows, gis_grid.ghead.ncols ) ) )
     return -3;	/*memory error*/
-  
+
   for (row = 1; row < gis_grid.ghead.nrows - 1; row++)
     {
       for (col = 1; col < gis_grid.ghead.ncols - 1; col++)
@@ -1496,17 +1496,17 @@ int calculate_curvature()
 {
   int row, col;
   int status;
-  
+
   if ( gis_grid.xslope == 0 )
     {
       status = calculate_slope();
       if ( status != 0 )
 	return status;
     }
-  
+
   free_float_matrix ( gis_grid.xcurv );
   free_float_matrix ( gis_grid.ycurv );
-  
+
   if ( ! ( gis_grid.xcurv = alloc_float_matrix ( gis_grid.ghead.nrows, gis_grid.ghead.ncols ) ) )
     return -3;	/*memory error*/
 
@@ -1549,17 +1549,17 @@ int find_min_max()
   int nrows, ncols;
   int row, col;
   int status;
-  
+
   if ( gis_grid.elev == 0 )
     {
       status = load_GIS_data();
       if ( status != 0 )
 	return status;
     }
-  
+
   nrows = gis_grid.ghead.nrows;
   ncols = gis_grid.ghead.ncols;
-  
+
   for (row = 0; row < nrows; row++)
     {
       for (col = 0; col < ncols; col++)
@@ -1584,10 +1584,10 @@ int print_grid()
       if ( status != 0 )
 	return status;
     }
-  
+
   if ( ! gis_grid.elev )
     return -4;
-  
+
   for (row = 0; row < gis_grid.ghead.nrows; row++)
     {
       fprintf (stdout, "row %d\n", row );
@@ -1597,7 +1597,7 @@ int print_grid()
     }
   fprintf (stdout, "\n" );
   fprintf (stdout, "x=%12.8f y=%12.8f \n", gis_grid.ghead.wxmin, gis_grid.ghead.wymin);
-  
+
   return 0;
 }
 
@@ -1609,12 +1609,12 @@ int set_from_header(GisRasterHdr& gisHeader, Gis_Head& aHeadStruct)
   if ( fabs(xres- yres)>=xres/10.0 )
     return -4;	// resolution must be the same
   aHeadStruct.wresolution = aHeadStruct.resolution = xres;
-  
+
   //	Copy the edges of the region
   //	Set rows and cols
   aHeadStruct.nrows = aHeadStruct.wnrows = gisHeader.Rows();
   aHeadStruct.ncols = aHeadStruct.wncols = gisHeader.Cols();
-  
+
   aHeadStruct.wxmin = aHeadStruct.xmin = gisHeader.West();
   //	Use this instead of
   //	gis_grid.ghead.wxmax = gis_grid.ghead.xmax = gisHeader.east
@@ -1633,7 +1633,7 @@ char **set_cats(GisCats& g_cats)
 {
   char **c=0;
   int i;
-  
+
   if ( c = (char **) calloc (g_cats.mumberOfCats(), sizeof(char *)) )
     {
       for (i=1; i<=g_cats.mumberOfCats(); i++)
@@ -1641,7 +1641,7 @@ char **set_cats(GisCats& g_cats)
 	  c[i-1] = strdup(g_cats.category(i));
 	  //cout << i << ":" << string(c[i-1]) << endl;
 	}
-      
+
       return c;
     }
   return 0;

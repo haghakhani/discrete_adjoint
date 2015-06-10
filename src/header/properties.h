@@ -1388,7 +1388,6 @@ struct PertElemInfo {
 
 	}
 
-}
-;
+};
 
 #endif

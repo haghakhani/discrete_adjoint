@@ -32,10 +32,8 @@ void adjoint_init(HashTable *El_Table, HashTable *Node_Table) {
 			currentPtr = *(buck + i);
 			while (currentPtr) {
 				Curr_El = (Element*) (currentPtr->value);
-				if (Curr_El->get_adapted_flag() > 0
-						&& *(Curr_El->get_state_vars()) > 0) {
-					*(Curr_El->get_state_vars() + 6) = *(Curr_El->get_dx())
-							* *(Curr_El->get_dx() + 1);
+				if (Curr_El->get_adapted_flag() > 0 && *(Curr_El->get_state_vars()) > 0) {
+					*(Curr_El->get_state_vars() + 6) = *(Curr_El->get_dx()) * *(Curr_El->get_dx() + 1);
 					if (isinf(*(Curr_El->get_state_vars() + 6)))
 						cout << "there is something wrong in initialization" << endl;
 
@@ -64,8 +62,8 @@ void adjoint_init(HashTable *El_Table, HashTable *Node_Table) {
 	return;
 }
 
-void compute_funcsens(Element* element, TimeProps* timep,
-		double* sensitivity_curr, double* sensitivity_prev) {
+void compute_funcsens(Element* element, TimeProps* timep, double* sensitivity_curr,
+    double* sensitivity_prev) {
 
 	double *pos = element->get_dx();
 	double dt = timep->dt.back();
@@ -83,6 +81,24 @@ void compute_funcsens(Element* element, TimeProps* timep,
 	*(sensitivity_prev) = 0.5 * dt * pos[0] * pos[1] * height_prev;
 	*(sensitivity_prev + 1) = 0.;
 	*(sensitivity_prev + 2) = 0.;
+
+	return;
+}
+
+void compute_funcsens(Element* element, double dt, double* func_sens) {
+
+	double *dx = element->get_dx();
+
+	double height = *(element->get_state_vars());
+
+	// in trapezoidal time integrator that we use for functional,
+	// we have the effect of current and previous time step
+
+	func_sens[0] = 0.5 * dt * dx[0] * dx[1] * height;
+	func_sens[1] = 0.;
+	func_sens[2] = 0.;
+
+//	func_sens->sensitivity = sensitivity;
 
 	return;
 }

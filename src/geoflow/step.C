@@ -26,11 +26,10 @@
 #define KEY1 2576980374
 #define ITER 30
 
-void step(HashTable* El_Table, HashTable* NodeTable, vector<Jacobian*> *solHyst,
-		int myid, int nump, MatProps* matprops_ptr, TimeProps* timeprops_ptr,
-		PileProps *pileprops_ptr, FluxProps *fluxprops, StatProps* statprops_ptr,
-		int* order_flag, OutLine* outline_ptr, DISCHARGE* discharge,
-		int adaptflag) {
+void step(HashTable* El_Table, HashTable* NodeTable, DualMesh* dualmesh, int myid, int nump,
+		MatProps* matprops_ptr, TimeProps* timeprops_ptr, PileProps *pileprops_ptr,
+		FluxProps *fluxprops, StatProps* statprops_ptr, int* order_flag, OutLine* outline_ptr,
+		DISCHARGE* discharge, int adaptflag) {
 	/*
 	 * PREDICTOR-CORRECTED based on Davis' Simplified Godunov Method
 	 */
@@ -41,15 +40,18 @@ void step(HashTable* El_Table, HashTable* NodeTable, vector<Jacobian*> *solHyst,
 	slopes(El_Table, NodeTable, matprops_ptr);
 
 	// get coefficients, eigenvalues, hmax and calculate the time step
-	double dt = get_coef_and_eigen(El_Table, NodeTable, matprops_ptr, fluxprops,
-			timeprops_ptr, 0);
+	double dt = get_coef_and_eigen(El_Table, NodeTable, matprops_ptr, fluxprops, timeprops_ptr, 0);
+	// here we store the required data (solution and functional sensitivity) for the 0 time step
+	if (timeprops_ptr->iter == 0) {
+		initSolRec(El_Table, NodeTable, dualmesh, dt, myid);
+	}
 
 	timeprops_ptr->incrtime(&dt); //also reduces dt if necessary
 
 	// assign influxes and then if any new sources are activating in
 	// current time step refine and re-mark cells
-	adapt_fluxsrc_region(El_Table, NodeTable, matprops_ptr, pileprops_ptr,
-			fluxprops, timeprops_ptr, dt, myid, adaptflag);
+	adapt_fluxsrc_region(El_Table, NodeTable, matprops_ptr, pileprops_ptr, fluxprops, timeprops_ptr,
+			dt, myid, adaptflag);
 
 	int i;
 	HashEntryPtr* buck = El_Table->getbucketptr();
@@ -149,8 +151,8 @@ void step(HashTable* El_Table, HashTable* NodeTable, vector<Jacobian*> *solHyst,
 	move_data(nump, myid, El_Table, NodeTable, timeprops_ptr);
 
 	/* calculate kact/pass */
-	double dt_not_used = get_coef_and_eigen(El_Table, NodeTable, matprops_ptr,
-			fluxprops, timeprops_ptr, 1);
+	double dt_not_used = get_coef_and_eigen(El_Table, NodeTable, matprops_ptr, fluxprops,
+			timeprops_ptr, 1);
 
 	/*
 	 * calculate edge states
@@ -160,8 +162,8 @@ void step(HashTable* El_Table, HashTable* NodeTable, vector<Jacobian*> *solHyst,
 	ResFlag resflag;
 	resflag.callflag = 0;
 	resflag.lgft = 0.;
-	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid,
-			order_flag, &outflow, resflag);
+	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, order_flag, &outflow,
+			resflag);
 	outflow *= dt;
 
 	/*
@@ -174,17 +176,13 @@ void step(HashTable* El_Table, HashTable* NodeTable, vector<Jacobian*> *solHyst,
 	double eroded = 0.0, elemeroded;
 	double deposited = 0.0, elemdeposited;
 	double realvolume = 0.0;
-	double func_sens_curr[3] = { 0., 0., 0. };
-	double func_sens_prev[3] = { 0., 0., 0. };
 
 	buck = El_Table->getbucketptr();
-	Jacobian* jacobian;
+
 	// mdj 2007-04 this loop has pretty much defeated me - there is
 	//             a dependency in the Element class that causes incorrect
 	//             results
 	//
-	if (timeprops_ptr->iter == 1)
-		initSolRec(El_Table, NodeTable, solHyst, timeprops_ptr, myid);//this function initialize the solution hash table and also save the initial condition
 
 	for (i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -203,9 +201,8 @@ void step(HashTable* El_Table, HashTable* NodeTable, vector<Jacobian*> *solHyst,
 					//if (*(Curr_El->pass_key())==2151461179 && *(Curr_El->pass_key()+1)==330382099 /*&& timeprops->iter == 9 */)
 					//  cout<<"step is cheking the element"<<endl;
 
-					correct(NodeTable, El_Table, dt, matprops_ptr, fluxprops,
-							timeprops_ptr, Curr_El_out, &elemforceint, &elemforcebed,
-							&elemeroded, &elemdeposited);
+					correct(NodeTable, El_Table, dt, matprops_ptr, fluxprops, timeprops_ptr, Curr_El_out,
+							&elemforceint, &elemforcebed, &elemeroded, &elemdeposited);
 
 					forceint += fabs(elemforceint);
 					forcebed += fabs(elemforcebed);
@@ -217,14 +214,13 @@ void step(HashTable* El_Table, HashTable* NodeTable, vector<Jacobian*> *solHyst,
 					//update the record of maximum pileheight in the area covered by this element
 					double hheight = *(Curr_El->get_state_vars());
 
-					int ind = Curr_El->get_sol_rec_ind();
-					jacobian = solHyst->at(ind);
+//					int ind = Curr_El->get_sol_rec_ind();
+//					jacobian = solHyst->at(ind);
 
 #ifdef MAX_DEPTH_MAP
 					double pfheight[6];
 					outline_ptr->update(coord[0] - 0.5 * dxy[0], coord[0] + 0.5 * dxy[0],
-							coord[1] - 0.5 * dxy[1], coord[1] + 0.5 * dxy[1], hheight,
-							pfheight);
+							coord[1] - 0.5 * dxy[1], coord[1] + 0.5 * dxy[1], hheight, pfheight);
 #endif
 
 #ifdef APPLY_BC
@@ -233,18 +229,14 @@ void step(HashTable* El_Table, HashTable* NodeTable, vector<Jacobian*> *solHyst,
 							for (k = 0; k < NUM_STATE_VARS; k++)
 								*(Curr_El->get_state_vars() + k) = 0;
 #endif
-					compute_funcsens(Curr_El, timeprops_ptr, func_sens_curr,
-							func_sens_prev);
+					if (*(Curr_El->get_state_vars()) == 0.)
+						dualmesh->set_sol_zero(Curr_El);
 
-					Solution *solution = new Solution(Curr_El->get_state_vars(),
-							Curr_El->get_kactxy(), func_sens_curr); //allocate memory and construct jacobian
-					// if we compute the functional as a function of time depend on the approximation
-					// scheme we use, e.g trapozeidal, we have to add a contribution from the
-					// next time step to previous time step/steps
-					jacobian->add_state_func_sens(func_sens_prev,
-							timeprops_ptr->iter - 1);
+					else {
 
-					jacobian->put_solution(solution); //associate the created jacobian to the element
+						Solution *solution = new Solution(Curr_El->get_state_vars(), *(Curr_El->get_kactxy()));
+						dualmesh->update_sol(Curr_El, solution); //associate the created jacobian to the element
+					}
 
 				}
 				currentPtr = currentPtr->next;
@@ -265,8 +257,7 @@ void step(HashTable* El_Table, HashTable* NodeTable, vector<Jacobian*> *solHyst,
 	}
 
 	/* finished corrector step */
-	calc_stats(El_Table, NodeTable, myid, matprops_ptr, timeprops_ptr,
-			statprops_ptr, discharge, dt);
+	calc_stats(El_Table, NodeTable, myid, matprops_ptr, timeprops_ptr, statprops_ptr, discharge, dt);
 
 	double tempin[6], tempout[6];
 	tempin[0] = outflow;    //volume that flew out the boundaries this iteration
@@ -287,10 +278,8 @@ void step(HashTable* El_Table, HashTable* NodeTable, vector<Jacobian*> *solHyst,
 	statprops_ptr->realvolume = tempout[3] * (matprops_ptr->HEIGHT_SCALE)
 			* (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
 
-	statprops_ptr->forceint = tempout[4] / tempout[3]
-			* matprops_ptr->GRAVITY_SCALE;
-	statprops_ptr->forcebed = tempout[5] / tempout[3]
-			* matprops_ptr->GRAVITY_SCALE;
+	statprops_ptr->forceint = tempout[4] / tempout[3] * matprops_ptr->GRAVITY_SCALE;
+	statprops_ptr->forcebed = tempout[5] / tempout[3] * matprops_ptr->GRAVITY_SCALE;
 
 	//calc_volume(El_Table, myid, matprops_ptr, timeprops_ptr, dt, v_star, nz_star);
 
@@ -305,8 +294,8 @@ void step(HashTable* El_Table, HashTable* NodeTable, vector<Jacobian*> *solHyst,
 /* determines and returns v_star the non-dimensional stopping velocity */
 /***********************************************************************/
 
-void calc_volume(HashTable* El_Table, int myid, MatProps* matprops_ptr,
-		TimeProps* timeprops_ptr, double d_time, double *v_star, double *nz_star) {
+void calc_volume(HashTable* El_Table, int myid, MatProps* matprops_ptr, TimeProps* timeprops_ptr,
+		double d_time, double *v_star, double *nz_star) {
 	int i, j, k, counter, imax = 0;
 	double tiny = GEOFLOW_TINY;
 	//-------------------go through all the elements of the subdomain and
@@ -337,8 +326,7 @@ void calc_volume(HashTable* El_Table, int myid, MatProps* matprops_ptr,
 
 					// rule out non physical fast moving thin layers
 					if (state_vars[0] > min_height) {
-						temp = sqrt(
-								state_vars[2] * state_vars[2] + state_vars[3] * state_vars[3]);
+						temp = sqrt(state_vars[1] * state_vars[1] + state_vars[2] * state_vars[2]);
 						v_ave += temp * dx * dy;
 						temp /= 1;  //state_vars[1];
 
@@ -379,11 +367,10 @@ void calc_volume(HashTable* El_Table, int myid, MatProps* matprops_ptr,
 		//dimensionalize
 		gl_v_ave = gl_v_ave / gl_volume2
 				* sqrt(matprops_ptr->LENGTH_SCALE * matprops_ptr->GRAVITY_SCALE);
-		gl_v_max = gl_v_max
-				* sqrt(matprops_ptr->LENGTH_SCALE * (matprops_ptr->GRAVITY_SCALE));
+		gl_v_max = gl_v_max * sqrt(matprops_ptr->LENGTH_SCALE * (matprops_ptr->GRAVITY_SCALE));
 
-		gl_volume = gl_volume * (matprops_ptr->LENGTH_SCALE)
-				* (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->HEIGHT_SCALE);
+		gl_volume = gl_volume * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE)
+				* (matprops_ptr->HEIGHT_SCALE);
 		gl_max_height = gl_max_height * (matprops_ptr->HEIGHT_SCALE);
 
 		d_time *= timeprops_ptr->TIME_SCALE;
@@ -401,9 +388,8 @@ void calc_volume(HashTable* El_Table, int myid, MatProps* matprops_ptr,
 		printf("At the end of time step %d the time is %d:%02d:%g (hrs:min:sec),\n"
 				"time step length is %g [sec], volume is %g [m^3],\n"
 				"max height is %g [m], max velocity is %g [m/s],\n"
-				"ave velocity is %g [m/s], v* = %g\n\n", timeprops_ptr->iter, hours,
-				minutes, seconds, d_time, gl_volume, gl_max_height, gl_v_max, gl_v_ave,
-				*v_star);
+				"ave velocity is %g [m/s], v* = %g\n\n", timeprops_ptr->iter, hours, minutes, seconds,
+				d_time, gl_volume, gl_max_height, gl_v_max, gl_v_ave, *v_star);
 	}
 
 	return;
@@ -434,8 +420,7 @@ double get_max_momentum(HashTable* El_Table, MatProps* matprops_ptr) {
 					double* state_vars = EmTemp->get_state_vars();
 					//eliminate fast moving very thin pile from consideration
 					if (state_vars[0] >= min_height) {
-						mom2 = (state_vars[2] * state_vars[2]
-								+ state_vars[3] * state_vars[3]);
+						mom2 = (state_vars[1] * state_vars[1] + state_vars[2] * state_vars[2]);
 						/* mom2 is not a mistake... only need to take the root of
 						 the maximum value */
 						if (mom2 > max_mom)
@@ -471,8 +456,8 @@ double get_max_momentum(HashTable* El_Table, MatProps* matprops_ptr) {
 /* can think of a better place to put it go ahead                     */
 /**********************************************************************/
 
-void sim_end_warning(HashTable* El_Table, MatProps* matprops_ptr,
-		TimeProps* timeprops_ptr, double v_star) {
+void sim_end_warning(HashTable* El_Table, MatProps* matprops_ptr, TimeProps* timeprops_ptr,
+		double v_star) {
 	FILE *fp;
 	int myid, numprocs;
 	MPI_Status status;
@@ -492,16 +477,13 @@ void sim_end_warning(HashTable* El_Table, MatProps* matprops_ptr,
 		//print to screen
 		printf("\nTitan2D performed %d time steps before the calculation ended.\n",
 				timeprops_ptr->iter);
-		printf("%d:%02d:%g (hrs:min:sec) of time was simulated.\n", hours, minutes,
-				seconds);
+		printf("%d:%02d:%g (hrs:min:sec) of time was simulated.\n", hours, minutes, seconds);
 
 		//print to file
 		fp = fopen("sim_end_warning.readme", "w");
-		fprintf(fp,
-				"Titan2D performed %d time steps before the calculation ended.\n",
+		fprintf(fp, "Titan2D performed %d time steps before the calculation ended.\n",
 				timeprops_ptr->iter);
-		fprintf(fp, "%d:%02d:%g (hrs:min:sec) of time was simulated.\n", hours,
-				minutes, seconds);
+		fprintf(fp, "%d:%02d:%g (hrs:min:sec) of time was simulated.\n", hours, minutes, seconds);
 	}
 
 	/*****************************************/
@@ -529,8 +511,7 @@ void sim_end_warning(HashTable* El_Table, MatProps* matprops_ptr,
 					double* state_vars = EmTemp->get_state_vars();
 					//eliminate fast moving very thin pile from consideration
 					if (state_vars[0] >= min_height) {
-						velocity2 = (state_vars[2] * state_vars[2]
-								+ state_vars[3] * state_vars[3]); ///(state_vars[1]*state_vars[1]);
+						velocity2 = (state_vars[1] * state_vars[1] + state_vars[2] * state_vars[2]); ///(state_vars[1]*state_vars[1]);
 
 						if (velocity2 > v_max) {
 							/* velocity2 is not a mistake... only need to take the root of
@@ -561,8 +542,7 @@ void sim_end_warning(HashTable* El_Table, MatProps* matprops_ptr,
 			if (receive.rank == myid)
 				MPI_Send(xy_v_max, 2, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
 			else if (myid == 0)
-				MPI_Recv(xy_v_max, 2, MPI_DOUBLE, receive.rank, 0, MPI_COMM_WORLD,
-						&status);
+				MPI_Recv(xy_v_max, 2, MPI_DOUBLE, receive.rank, 0, MPI_COMM_WORLD, &status);
 		}
 	}
 
@@ -570,21 +550,15 @@ void sim_end_warning(HashTable* El_Table, MatProps* matprops_ptr,
 	if (myid == 0) {
 		//print to screen
 		printf("the final v* = v/v_slump = %g\n", v_star);
-		printf(
-				"The maximum final velocity of %g [m/s] \noccured at the UTM coordinates (%g,%g)\n",
-				v_max
-						* sqrt(matprops_ptr->LENGTH_SCALE * (matprops_ptr->GRAVITY_SCALE)),
-				xy_v_max[0] * matprops_ptr->LENGTH_SCALE,
-				xy_v_max[1] * matprops_ptr->LENGTH_SCALE);
+		printf("The maximum final velocity of %g [m/s] \noccured at the UTM coordinates (%g,%g)\n",
+				v_max * sqrt(matprops_ptr->LENGTH_SCALE * (matprops_ptr->GRAVITY_SCALE)),
+				xy_v_max[0] * matprops_ptr->LENGTH_SCALE, xy_v_max[1] * matprops_ptr->LENGTH_SCALE);
 
 		//print to file
 		fprintf(fp, "the final v* = v/v_slump = %g\n", v_star);
-		fprintf(fp,
-				"The maximum final velocity of %g [m/s] \noccured at the UTM coordinates (%g,%g)\n",
-				v_max
-						* sqrt(matprops_ptr->LENGTH_SCALE * (matprops_ptr->GRAVITY_SCALE)),
-				xy_v_max[0] * matprops_ptr->LENGTH_SCALE,
-				xy_v_max[1] * matprops_ptr->LENGTH_SCALE);
+		fprintf(fp, "The maximum final velocity of %g [m/s] \noccured at the UTM coordinates (%g,%g)\n",
+				v_max * sqrt(matprops_ptr->LENGTH_SCALE * (matprops_ptr->GRAVITY_SCALE)),
+				xy_v_max[0] * matprops_ptr->LENGTH_SCALE, xy_v_max[1] * matprops_ptr->LENGTH_SCALE);
 		fclose(fp);
 	}
 

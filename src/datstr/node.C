@@ -219,7 +219,7 @@ Node:: ~Node() {
 
 void Node::zero_flux() {
   int i;
-  for(i=0;i<NUM_STATE_VARS+3;i++)
+  for(i=0;i<NUM_STATE_VARS;i++)
     flux[i] = refinementflux[i]=0.0;
 }
 

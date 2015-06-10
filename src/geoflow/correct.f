@@ -18,7 +18,7 @@ C***********************************************************************
      1     tiny, dtdx, dtdy, dt, dUdx, dUdy, xslope, yslope, curv,
      2     intfrictang, bedfrictang, g, dgdx ,kactxy, frict_tiny,
      3     forceint,forcebed, dragfoce ,DO_EROSION, eroded, v_solid,
-     4     v_fluid, den_solid, den_fluid, terminal_vel, eps, IF_STOPPED, 
+     4     den_solid, den_fluid, terminal_vel, eps, IF_STOPPED,
      5     fluxsrc)
 C***********************************************************************
 
@@ -27,18 +27,18 @@ C***********************************************************************
       double precision forceintx, forceinty
       double precision forcebedx, forcebedy
       double precision forcebedmax, forcebedequil, forcegrav
-      double precision unitvx, unitvy, v_solid(2), v_fluid(2)
+      double precision unitvx, unitvy, v_solid(2)
       double precision den_frac, den_solid, den_fluid
       double precision alphaxx, alphayy, alphaxy, alphaxz, alphayz
       double precision tanbed, terminal_vel, dragfoce(2)
 
-      double precision fluxxp(9),fluxyp(9),tiny, uprev(6), ustore(6)
-      double precision fluxxm(9), fluxym(9)
-      double precision uvec(6), dUdx(6), dUdy(6)
+      double precision fluxxp(3),fluxyp(3),tiny, uprev(3), ustore(3)
+      double precision fluxxm(3), fluxym(3)
+      double precision uvec(3), dUdx(3), dUdy(3)
       double precision h_inv, hphi_inv, curv(2), frict_tiny
       double precision intfrictang, bedfrictang, kactxy, dgdx(2)
       double precision dtdx, dtdy, dt, g(3), sgn_dudy, sgn_dvdx, tmp
-      double precision dnorm, fluxsrc(6)
+      double precision dnorm, fluxsrc(3)
       double precision xslope,yslope,slope
       double precision t1, t2
       double precision erosion_rate,threshold,es,totalShear
@@ -60,24 +60,21 @@ c     initialize to zero
       unitvy=0.0
       eroded=0.0
 
-      do 10 i = 1,4
-         ustore(i)=uprev(i)+dt*fluxsrc(i)
-     1        -dtdx*(fluxxp(i)-fluxxm(i))
-     2        -dtdy*(fluxyp(i)-fluxym(i))
- 10   continue
+      Ustore(1)=Uprev(1)
+     1     -dtdx*(fluxxp(1)-fluxxm(1))
+     2     -dtdy*(fluxyp(1)-fluxym(1))
+     3     +dt*fluxsrc(1)
+      Ustore(1)=dmax1(Ustore(1),0.0d0)
 
-      ustore(2)=uprev(2)+dt*fluxsrc(2)
-     $     -dtdx*(fluxxp(2)+fluxxm(5))
-     $     -dtdy*(fluxyp(2)+fluxym(5))
+      Ustore(2)=Uprev(2)
+     1     -dtdx*(fluxxp(2)-fluxxm(2))
+     2     -dtdy*(fluxyp(2)-fluxym(2))
+     3     +dt*fluxsrc(2)
 
-      ustore(5)=uprev(5)+dt*fluxsrc(5)
-     $     -dtdx*(fluxxp(6)+fluxxm(7))
-     $     -dtdy*(fluxyp(6)+fluxym(7))
-
-
-      ustore(6)=uprev(6)+dt*fluxsrc(6)
-     $     -dtdx*(fluxxp(8)+fluxxm(9))
-     $     -dtdy*(fluxyp(8)+fluxym(9))
+      Ustore(3)=Uprev(3)
+     1     -dtdx*(fluxxp(3)-fluxxm(3))
+     2     -dtdy*(fluxyp(3)-fluxym(3))
+     3     +dt*fluxsrc(3)
 
 
       ustore(1) = dmax1(ustore(1),0.)
@@ -106,18 +103,18 @@ c     the gravity force in the x direction
          forcegrav=g(1)*uvec(1)
 
 c     the internal friction force
-         tmp = h_inv*(dUdy(3)-v_solid(1)*dUdy(1))
+         tmp = h_inv*(dUdy(2)-v_solid(1)*dUdy(1))
          sgn_dudy = sgn(tmp, frict_tiny)
          forceintx=sgn_dudy*uvec(1)*kactxy*(g(3)*dUdy(1)
      $        +dgdx(2)*uvec(1))*dsin(intfrictang)
 
 c     the bed friction force for fast moving flow 
          forcebedx=unitvx*
-     $        dmax1(g(3)*Uvec(1)+v_solid(1)*Uvec(3)*curv(1),0.0d0)
+     $        dmax1(g(3)*Uvec(1)+v_solid(1)*Uvec(2)*curv(1),0.0d0)
      $        *tanbed
 
 
-         Ustore(3) = Ustore(3) + dt*(forcegrav -forcebedx -forceintx)
+         Ustore(2) = Ustore(2) + dt*(forcegrav -forcebedx -forceintx)
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     y-direction source terms
@@ -127,74 +124,23 @@ c     the gravity force in the y direction
          forcegrav=g(2)*Uvec(1)
 
 c     the internal friction force
-         tmp = h_inv*(dudx(4)-v_solid(2)*dUdx(1))
+         tmp = h_inv*(dudx(3)-v_solid(2)*dUdx(1))
          sgn_dvdx = sgn(tmp, frict_tiny)
          forceinty=sgn_dvdx*Uvec(1)*kactxy*(g(3)*
      $        dUdx(1)+dgdx(1)*Uvec(1))*dsin(intfrictang)
 
 c     the bed friction force for fast moving flow 
          forcebedy=unitvy
-     $        *dmax1(g(3)*Uvec(1)+v_solid(2)*Uvec(4)*curv(2),0.0d0)
+     $        *dmax1(g(3)*Uvec(1)+v_solid(2)*Uvec(3)*curv(2),0.0d0)
      $        *tanbed
 
-         Ustore(4) = Ustore(4) + dt*(forcegrav -forcebedy -forceinty)
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c     First adjoint's source term
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-
-         tmp = h_inv*(dUdy(3)-v_solid(1)*dUdy(1))
-         sgn_dudy = sgn(tmp, frict_tiny)
-         t1 =g(1) - kactxy*sgn_dudy*dsin(intfrictang)*
-     $        (2*Uvec(1)*dgdx(2) + g(3)*dUdy(1)) -
-     $        unitvx*g(3)*tanbed*
-     $        (1-v_solid(1)*v_solid(1)*curv(1)/g(3))
-
-
-         tmp = h_inv*(dudx(4)-v_solid(2)*dUdx(1))
-         sgn_dvdx = sgn(tmp, frict_tiny)
-         t2 =g(2) - kactxy*sgn_dvdx *dsin(intfrictang)*
-     $        (2*Uvec(1)*dgdx(1)+g(3)*dUdx(1)) -
-     $        unitvy*g(3)*tanbed*
-     $        (1-v_solid(2)*v_solid(2)*curv(2)/g(3))
-
-         Ustore(2) = Ustore(2) + dt*(t1*Uvec(5)+t2*Uvec(6))
-
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c     Second adjoint's source term
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-         if (speed.gt.0.0) then
-            tmp = v_solid(1)**2*curv(1)/g(3)
-            t1 = -g(3)*tanbed*(unitvx**2*(1+tmp)+2*tmp)/speed
-
-            t2 = unitvx*tanbed
-     $           *dmax1(g(3)*Uvec(1)+v_solid(2)*Uvec(4)*curv(2),0.0d0)
-     $           *v_solid(2)/speed**2
-
-            Ustore(5) = Ustore(5) + dt*(t1*Uvec(5)+t2*Uvec(6))
-         endif
-
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c     Third adjoint's source term
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-         if (speed.gt.0.0) then
-            t1 =  unitvy*tanbed
-     $           *dmax1(g(3)*Uvec(1)+v_solid(1)*Uvec(3)*curv(1),0.0d0)
-     $           *v_solid(1)/speed**2
-
-            tmp = v_solid(2)**2*curv(2)/g(3)
-            t1 = -g(3)*tanbed*(unitvy**2*(1+tmp)+2*tmp)/speed
-            
-            Ustore(6) = Ustore(6) + dt*(t1*Uvec(5)+t2*Uvec(6))
-         endif
+         Ustore(3) = Ustore(3) + dt*(forcegrav -forcebedy -forceinty)
       endif
 
-c     computation of magnitude of friction forces for statistics
-      forceint=unitvx*forceintx+unitvy*forceinty
-      forcebed=unitvx*forcebedx+unitvy*forcebedy
-
 c     update the state variables
-      do 20 i=1,6
- 20      uvec(i) = ustore(i)
+      Uvec(1) = Ustore(1)
+      Uvec(2) = Ustore(2)
+      Uvec(3) = Ustore(3)
 
-         return
-         end
+      return
+      end

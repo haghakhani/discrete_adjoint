@@ -10,7 +10,6 @@
 #endif
 #include "../header/hpfem.h"
 
-
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter) {
 
 	HashEntryPtr currentPtr;
@@ -27,8 +26,7 @@ void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter) {
 
 				if (Curr_El->get_adapted_flag() > 0) {
 					if (dabs(*(Curr_El->get_coord()) - pelinf->elempos[0]) < epsilon
-							&& dabs(*(Curr_El->get_coord() + 1) - pelinf->elempos[1])
-									< epsilon) {
+					    && dabs(*(Curr_El->get_coord() + 1) - pelinf->elempos[1]) < epsilon) {
 
 						// perturbing U
 						*(Curr_El->get_state_vars()) += epsilon;
@@ -98,120 +96,101 @@ void find_test_elem(HashTable* El_Table, PertElemInfo** pelinf, int iter) {
 	return;
 }
 
-void fill_pertelem_info(HashTable* El_Table, vector<Jacobian*>* solHyst,
-		PertElemInfo* eleminfo) {
+void fill_pertelem_info(DualMesh* dualmesh, PertElemInfo* eleminfo) {
 
-	HashEntryPtr currentPtr;
-	Element *Curr_El;
-	HashEntryPtr *buck = El_Table->getbucketptr();
-	Jacobian *jacobian, *neighjac;
-	Element *neigh_elem;
+	DualCell *cell, *neigh_cell;
 	double*** jacobianmat;
 	double *curr_adj_ptr, *prev_adj_ptr;
 
 	const double epsilon = INCREMENT;
 
-	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
-		if (*(buck + i)) {
-			currentPtr = *(buck + i);
-			while (currentPtr) {
-				Curr_El = (Element*) (currentPtr->value);
+	int Ny = dualmesh->get_Ny();
+	int Nx = dualmesh->get_Nx();
 
-				if (Curr_El->get_adapted_flag() > 0) {
-					if (dabs(*(Curr_El->get_coord()) - eleminfo->elempos[0]) < epsilon
-							&& dabs(*(Curr_El->get_coord() + 1) - eleminfo->elempos[1])
-									< epsilon) {
+	for (int i = 0; i < Ny; ++i)
+		for (int j = 0; j < Nx; ++j) {
 
-						eleminfo->h = *(Curr_El->get_state_vars());
+			cell = dualmesh->get_dualcell(i, j);
 
-						eleminfo->elem_size[0] = *(Curr_El->get_dx());
+			if (dabs(*(cell->get_position()) - eleminfo->elempos[0]) < epsilon
+			    && dabs(*(cell->get_position() + 1) - eleminfo->elempos[1]) < epsilon) {
 
-						eleminfo->elem_size[1] = *(Curr_El->get_dx() + 1);
+				eleminfo->h = *(cell->get_state_vars());
 
-//						eleminfo->
+				eleminfo->elem_size[0] = dualmesh->get_dx();
 
-						jacobian = solHyst->at(Curr_El->get_sol_rec_ind());
-						eleminfo->func_sens = *(jacobian->get_funcsens(eleminfo->iter));
+				eleminfo->elem_size[1] = dualmesh->get_dy();
 
-						for (int effelement = 0; effelement < 5; effelement++) { //0 for the element itself, and the rest id for neighbour elements
+				eleminfo->func_sens = *(cell->get_funcsens());
 
-							if (effelement == 0) {		    //this part of code
+				for (int effelement = 0; effelement < 5; effelement++) { //0 for the element itself, and the rest id for neighbour elements
 
-								curr_adj_ptr = (Curr_El->get_state_vars() + 6);
-								prev_adj_ptr = (Curr_El->get_prev_state_vars() + 6);
+					if (effelement == 0) {		    //this part of code
 
-								for (int j = 0; j < 3; ++j) {
-									eleminfo->neigh_jac[effelement].curr_adj[j] =
-											curr_adj_ptr[j];
-									eleminfo->neigh_jac[effelement].prev_adj[j] =
-											prev_adj_ptr[j];
-								}
+						curr_adj_ptr = cell->get_curr_adjoint();
+						prev_adj_ptr = cell->get_prev_adjoint();
 
-								jacobianmat = jacobian->get_jacobian();
-
-								for (int k = 0; k < 3; ++k)
-									for (int l = 0; l < 3; ++l)
-										eleminfo->neigh_jac[effelement].jacobianMat[k][l] =
-												jacobianmat[effelement][k][l];
-
-							} else {
-
-								neigh_elem = Curr_El->get_side_neighbor(El_Table,
-										effelement - 1);//basically we are checking all neighbor elements, and start from xp neighbor
-								if (neigh_elem) {
-
-									curr_adj_ptr = (neigh_elem->get_state_vars() + 6);
-									prev_adj_ptr = (neigh_elem->get_prev_state_vars() + 6);
-
-									for (int j = 0; j < 3; ++j) {
-										eleminfo->neigh_jac[effelement].curr_adj[j] =
-												curr_adj_ptr[j];
-										eleminfo->neigh_jac[effelement].prev_adj[j] =
-												prev_adj_ptr[j];
-									}
-
-									neighjac = solHyst->at(neigh_elem->get_sol_rec_ind());
-									jacobianmat = neighjac->get_jacobian();
-
-									int jacind;
-
-									switch (effelement) {
-									case 1:	//in xp neighbor I have to read jacobian of xm, because position of curr_el is in xm side of that neighbor
-										jacind = 3;
-										break;
-									case 2:		    //for yp return ym
-										jacind = 4;
-										break;
-									case 3:		    //for xm return xp
-										jacind = 1;
-										break;
-									case 4:		    //for ym return yp
-										jacind = 2;
-										break;
-									default:
-										cout << "invalid neighbor position" << endl;
-									}
-
-									for (int k = 0; k < 3; ++k)
-										for (int l = 0; l < 3; ++l)
-											eleminfo->neigh_jac[effelement].jacobianMat[k][l] =
-													jacobianmat[jacind][k][l];
-
-								}
-							}
+						for (int k = 0; k < 3; ++k) {
+							eleminfo->neigh_jac[effelement].curr_adj[k] = curr_adj_ptr[k];
+							eleminfo->neigh_jac[effelement].prev_adj[k] = prev_adj_ptr[k];
 						}
 
-						// to break the for loop
-						i = El_Table->get_no_of_buckets();
+						jacobianmat = cell->get_jacobian();
 
-						// break the while loop
-						break;
+						for (int k = 0; k < 3; ++k)
+							for (int l = 0; l < 3; ++l)
+								eleminfo->neigh_jac[effelement].jacobianMat[k][l] = jacobianmat[effelement][k][l];
+
+					} else {
+
+						int a, b;
+						set_ab(&a, &b, effelement);
+
+						neigh_cell = dualmesh->get_dualcell(i + a, j + b);//basically we are checking all neighbor elements, and start from xp neighbor
+
+						if (neigh_cell) {
+
+							curr_adj_ptr = neigh_cell->get_curr_adjoint();
+							prev_adj_ptr = neigh_cell->get_prev_adjoint();
+
+							for (int j = 0; j < 3; ++j) {
+								eleminfo->neigh_jac[effelement].curr_adj[j] = curr_adj_ptr[j];
+								eleminfo->neigh_jac[effelement].prev_adj[j] = prev_adj_ptr[j];
+							}
+
+							jacobianmat = neigh_cell->get_jacobian();
+
+							int jacind;
+
+							switch (effelement) {
+								case 1:	//in xp neighbor I have to read jacobian of xm, because position of curr_el is in xm side of that neighbor
+									jacind = 3;
+									break;
+								case 2:		    //for yp return ym
+									jacind = 4;
+									break;
+								case 3:		    //for xm return xp
+									jacind = 1;
+									break;
+								case 4:		    //for ym return yp
+									jacind = 2;
+									break;
+								default:
+									cout << "invalid neighbor position" << endl;
+							}
+
+							for (int k = 0; k < 3; ++k)
+								for (int l = 0; l < 3; ++l)
+									eleminfo->neigh_jac[effelement].jacobianMat[k][l] = jacobianmat[jacind][k][l];
+
+						}
 					}
 				}
-				currentPtr = currentPtr->next;
+				// to terminate the loop
+				i = Ny;
+				j = Nx;
 			}
 		}
-
 	return;
 }
 
@@ -227,8 +206,7 @@ int check_elem_exist(HashTable *El_Table, unsigned *key) {
 			while (currentPtr) {
 				Curr_El = (Element*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0)
-					if (*(Curr_El->pass_key()) == key[0]
-							&& *(Curr_El->pass_key() + 1) == key[1])
+					if (*(Curr_El->pass_key()) == key[0] && *(Curr_El->pass_key() + 1) == key[1])
 						return (1);
 
 				currentPtr = currentPtr->next;
@@ -252,8 +230,7 @@ int checkElement(HashTable *El_Table, double *max, unsigned *key) {
 				if (Curr_El->get_adapted_flag() > 0) {
 					double* state_vars = Curr_El->get_state_vars();
 					double* prev_state_vars = Curr_El->get_prev_state_vars();
-					if (*(Curr_El->pass_key()) == key[0]
-							&& *(Curr_El->pass_key() + 1) == key[1]) {
+					if (*(Curr_El->pass_key()) == key[0] && *(Curr_El->pass_key() + 1) == key[1]) {
 						if (state_vars[0] != 0 /*|| prev_state_vars[0] != 0*/)
 							return (1);
 					}
@@ -264,5 +241,4 @@ int checkElement(HashTable *El_Table, double *max, unsigned *key) {
 
 	return (0);
 }
-
 

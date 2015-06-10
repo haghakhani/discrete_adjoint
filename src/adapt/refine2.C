@@ -688,17 +688,17 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 	neigh_gen[3] = *(orig_neigh_gen + 3);
 
 	//boundary conditions
-	if (orig_bcptr && (orig_bcptr->type[0] || orig_bcptr->type[3])) //else bcptr is a NULL pointer by default, ERROR this should crash if orig_bcptr==NULL
-			{
-		bcptr = new BC;
-		bcptr->type[0] = orig_bcptr->type[0];
-		bcptr->type[3] = orig_bcptr->type[3];
-		for (i = 0; i < 2; i++)
-			for (int j = 0; j < 2; j++) {
-				bcptr->value[0][i][j] = orig_bcptr->value[0][i][j];
-				bcptr->value[3][i][j] = orig_bcptr->value[3][i][j];
-			}
-	}
+//	if (orig_bcptr && (orig_bcptr->type[0] || orig_bcptr->type[3])) //else bcptr is a NULL pointer by default, ERROR this should crash if orig_bcptr==NULL
+//			{
+//		bcptr = new BC;
+//		bcptr->type[0] = orig_bcptr->type[0];
+//		bcptr->type[3] = orig_bcptr->type[3];
+//		for (i = 0; i < 2; i++)
+//			for (int j = 0; j < 2; j++) {
+//				bcptr->value[0][i][j] = orig_bcptr->value[0][i][j];
+//				bcptr->value[3][i][j] = orig_bcptr->value[3][i][j];
+//			}
+//	}
 
 	double err = (*(EmTemp->get_el_error())) * .5; //added by jp oct11
 	double sol = (*(EmTemp->get_el_solution())) * .5; //added by jp oct11
@@ -776,19 +776,19 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 	neigh_gen[3] = generation;
 
 	bcptr = NULL;
-	//boundary conditions
-	if (orig_bcptr && (orig_bcptr->type[0] || orig_bcptr->type[1])) //else bcptr is a NULL pointer by default
-			{
-		bcptr = new BC;
-		bcptr->type[0] = orig_bcptr->type[0];
-		bcptr->type[1] = orig_bcptr->type[1];
-		for (i = 0; i < 2; i++)
-			for (int j = 0; j < 2; j++) {
-				bcptr->value[0][i][j] = orig_bcptr->value[0][i][j];
-				bcptr->value[1][i][j] = orig_bcptr->value[1][i][j];
-			}
-
-	}
+//	//boundary conditions
+//	if (orig_bcptr && (orig_bcptr->type[0] || orig_bcptr->type[1])) //else bcptr is a NULL pointer by default
+//			{
+//		bcptr = new BC;
+//		bcptr->type[0] = orig_bcptr->type[0];
+//		bcptr->type[1] = orig_bcptr->type[1];
+//		for (i = 0; i < 2; i++)
+//			for (int j = 0; j < 2; j++) {
+//				bcptr->value[0][i][j] = orig_bcptr->value[0][i][j];
+//				bcptr->value[1][i][j] = orig_bcptr->value[1][i][j];
+//			}
+//
+//	}
 	my_elm_loc[0] = elm_loc[0] + 1;
 	my_elm_loc[1] = elm_loc[1];
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 - 0.5;
@@ -862,18 +862,18 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 
 	bcptr = NULL;
 	//boundary conditions
-	if (orig_bcptr && (orig_bcptr->type[1] || orig_bcptr->type[2])) //else bcptr is a NULL pointer by default
-			{
-		bcptr = new BC;
-		bcptr->type[1] = orig_bcptr->type[1];
-		bcptr->type[2] = orig_bcptr->type[2];
-		for (i = 0; i < 2; i++)
-			for (int j = 0; j < 2; j++) {
-				bcptr->value[1][i][j] = orig_bcptr->value[1][i][j];
-				bcptr->value[2][i][j] = orig_bcptr->value[2][i][j];
-			}
-
-	}
+//	if (orig_bcptr && (orig_bcptr->type[1] || orig_bcptr->type[2])) //else bcptr is a NULL pointer by default
+//			{
+//		bcptr = new BC;
+//		bcptr->type[1] = orig_bcptr->type[1];
+//		bcptr->type[2] = orig_bcptr->type[2];
+//		for (i = 0; i < 2; i++)
+//			for (int j = 0; j < 2; j++) {
+//				bcptr->value[1][i][j] = orig_bcptr->value[1][i][j];
+//				bcptr->value[2][i][j] = orig_bcptr->value[2][i][j];
+//			}
+//
+//	}
 	my_elm_loc[0] = elm_loc[0] + 1;
 	my_elm_loc[1] = elm_loc[1] + 1;
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 - 0.5;
@@ -947,18 +947,18 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 
 	bcptr = NULL;
 	//boundary conditions
-	if (orig_bcptr && (orig_bcptr->type[2] || orig_bcptr->type[3])) //else bcptr is a NULL pointer by default
-			{
-		bcptr = new BC;
-		bcptr->type[2] = orig_bcptr->type[2];
-		bcptr->type[3] = orig_bcptr->type[3];
-		for (i = 0; i < 2; i++)
-			for (int j = 0; j < 2; j++) {
-				bcptr->value[2][i][j] = orig_bcptr->value[2][i][j];
-				bcptr->value[3][i][j] = orig_bcptr->value[3][i][j];
-			}
-
-	}
+//	if (orig_bcptr && (orig_bcptr->type[2] || orig_bcptr->type[3])) //else bcptr is a NULL pointer by default
+//			{
+//		bcptr = new BC;
+//		bcptr->type[2] = orig_bcptr->type[2];
+//		bcptr->type[3] = orig_bcptr->type[3];
+//		for (i = 0; i < 2; i++)
+//			for (int j = 0; j < 2; j++) {
+//				bcptr->value[2][i][j] = orig_bcptr->value[2][i][j];
+//				bcptr->value[3][i][j] = orig_bcptr->value[3][i][j];
+//			}
+//
+//	}
 
 	my_elm_loc[0] = elm_loc[0];
 	my_elm_loc[1] = elm_loc[1] + 1;

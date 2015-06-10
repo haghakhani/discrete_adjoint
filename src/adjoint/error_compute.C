@@ -124,7 +124,7 @@ void error_compute(HashTable* El_Table, HashTable* NodeTable,
 								fluxxm, fluxym, dtdx, dtdy, dt, d_state_vars,
 								(d_state_vars + NUM_STATE_VARS), curvature,
 								matprops_ptr->intfrict, bedfrict, gravity, d_gravity,
-								Curr_El->get_kactxy(), matprops_ptr->frict_tiny, orgSrcSgn,
+								*(Curr_El->get_kactxy()), matprops_ptr->frict_tiny, orgSrcSgn,
 								0./*here increment is zero*/, matprops_ptr->epsilon);
 
 						state_vars[1] = vec_res[0];

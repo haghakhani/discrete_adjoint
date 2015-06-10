@@ -17,7 +17,6 @@
 
 #ifndef ELEMENT_H
 #define ELEMENT_H
-#include <math.h>
 #include "boundary.h"
 #include "hashtab.h"
 #include "node.h"
@@ -80,7 +79,7 @@ public:
 	Element() {
 		counted = 0;
 		father[0] = father[1] = 0; //initialize the father key to zero
-		for (int i = 0; i < NUM_STATE_VARS + 3; i++)
+		for (int i = 0; i < NUM_STATE_VARS ; i++)
 			state_vars[i] = -1;
 		for (int i = 0; i < NUM_STATE_VARS; i++)
 			Influx[i] = 0.;
@@ -338,22 +337,20 @@ public:
 	void zdirflux(HashTable* El_Table, HashTable* NodeTable,
 			MatProps* matprops_ptr, int order_flag, int dir,
 			double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS],
-			Element* EmNeigh, double dt, ResFlag resflag);
+			Element* EmNeigh, double dt);
 
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) x direction fluxes. Keith wrote this
 	void xdirflux(MatProps* matprops_ptr, double dz, double thissideSwet,
-			double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS],
-			ResFlag resflag);
+			double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
 
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) y direction fluxes. Keith wrote this
 	void ydirflux(MatProps* matprops_ptr, double dz, double thissideSwet,
-			double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS],
-			ResFlag resflag);
+			double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
 
 	//! this function (indirectly) calculates the fluxes that will be used to perform the finite volume corrector step and stores them in element edge nodes, indirectly because it calls other functions to calculate the analytical fluxes and then calls another function to compute the riemann fluxes from the analytical fluxes. Talk to me (Keith) before you modify this, as I am fairly certain that it is now completely bug free and parts of it can be slightly confusing.
 	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 			MatProps* matprops_ptr, int myid, double dt, int* order_flag,
-			double *outflow, ResFlag rresflag,ResFlag lresflag);
+			double *outflow);
 
 	/*! this function calculates the maximum x and y direction wavespeeds
 	 *  which are the eigenvalues of the flux jacobian
@@ -670,9 +667,9 @@ private:
 	/* variables for hyperbolic geoflow problem */
 
 	//! state_vars is an array that holds the current state variables: h, hVx, and hVy
-	double state_vars[NUM_STATE_VARS + 3];
+	double state_vars[NUM_STATE_VARS ];
 	//! these are the values of the state variables from before the predictor step
-	double prev_state_vars[NUM_STATE_VARS + 3];
+	double prev_state_vars[NUM_STATE_VARS ];
 
 	//! these are the spatial (x and y) derivatives of the state variables: (dh/dx, dhVx/dx, dhVy/dx, dh/dy, dhVx/dy, dhVy/dy)
 	double d_state_vars[NUM_STATE_VARS * DIMENSION];
@@ -822,21 +819,8 @@ inline int Element::get_opposite_brother_flag() {
 inline void Element::put_height_mom(double pile_height, double volf,
 		double xmom, double ymom) {
 	prev_state_vars[0] = state_vars[0] = pile_height;
-	prev_state_vars[1] = state_vars[1] = pile_height;
-
-	//if (pile_height>0){
-	//  prev_state_vars[1]=prev_state_vars[4]=prev_state_vars[5]=
-	//  state_vars[1]=state_vars[4]=state_vars[5]=1;
-	//}else{
-	// prev_state_vars[1]=prev_state_vars[4]=prev_state_vars[5]=
-	//  state_vars[1]=state_vars[4]=state_vars[5]=0;
-	//}
-	prev_state_vars[2] = state_vars[2] = xmom;
-	prev_state_vars[4] = state_vars[4] = 0.;
-	prev_state_vars[3] = state_vars[3] = ymom;
-	prev_state_vars[5] = state_vars[5] = 0.;
-	state_vars[6] = state_vars[7] = state_vars[8] = 0.0;
-	prev_state_vars[6] = prev_state_vars[7] = prev_state_vars[8] = 0.0;
+	prev_state_vars[1] = state_vars[1] = xmom;
+	prev_state_vars[2] = state_vars[2] = ymom;
 
 	if (pile_height > GEOFLOW_TINY) {
 		shortspeed = sqrt(xmom * xmom + ymom * ymom) / (pile_height);

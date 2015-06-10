@@ -72,8 +72,8 @@ int write_xdmf(HashTable *El_Table, HashTable *NodeTable,TimeProps *timeprops_pt
 	 {
 	    state_vars=EmTemp->get_state_vars();
 	    pheight.push_back(state_vars[0]*matprops_ptr->HEIGHT_SCALE);
-	    xmom.push_back(state_vars[2]*momentum_scale);
-	    ymom.push_back(state_vars[3]*momentum_scale);
+	    xmom.push_back(state_vars[1]*momentum_scale);
+	    ymom.push_back(state_vars[2]*momentum_scale);
 	    num_elm++;
 	    nodes=EmTemp->getNode();
 	    for (j=0; j<4; j++)

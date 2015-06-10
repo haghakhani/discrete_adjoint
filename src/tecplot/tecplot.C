@@ -31,18 +31,18 @@
 #endif
 
 void get_elem_orient(Element *EmTemp, int *xm, int *xp, int *ym, int *yp);
-int get_elem_elev(HashTable *NodeTable, MatProps *matprops, Element *EmTemp,
-		double *elevation);
+int get_elem_elev(HashTable *NodeTable, MatProps *matprops, Element *EmTemp, double *elevation);
 
-int get_ll_polygon(HashTable* El_Table, HashTable* NodeTable, int myid,
-		Element* EmArray[4]);
-int get_ur_tri(HashTable* El_Table, HashTable* NodeTable, int myid,
-		Element* EmArray[4]);
+int get_ll_polygon(HashTable* El_Table, HashTable* NodeTable, int myid, Element* EmArray[4]);
+int get_ur_tri(HashTable* El_Table, HashTable* NodeTable, int myid, Element* EmArray[4]);
 
-int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops,
-		TimeProps *timeprops, Element *EmTemp, int adjflag);
+int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimeProps *timeprops,
+    Element *EmTemp, int adjflag);
 
 void DumpString(FILE *fp, char *str);
+
+void get_elevation_and_coord(DualCell* cell, double lscale, double* dx, double* elevation,
+    double coords[][2]);
 
 void testkey(HashTable* El_Table, Element* EmTemp) {
 	unsigned key[2];
@@ -73,13 +73,233 @@ void testkey2(HashTable* El_Table) {
 	return;
 }
 
-void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
-		TimeProps* timeprops, MapNames* mapnames, double v_star_func, int adjflag) {
+void dualplot(DualMesh* dualmesh, MatProps* matprops, TimeProps* timeprops, MapNames* mapnames,
+    double v_star_func, int adjflag) {
+
+	int Ny = dualmesh->get_Ny();
+	int Nx = dualmesh->get_Nx();
+
+	double dx[2];
+	dx[0] = dualmesh->get_dx();
+	dx[1] = dualmesh->get_dy();
+
+	double lscale = matprops->LENGTH_SCALE;
+	double hscale = matprops->HEIGHT_SCALE;
+	double tscale = timeprops->TIME_SCALE;
+	double gsacel = matprops->GRAVITY_SCALE;
+
+	double momentum_scale = hscale * sqrt(matprops->LENGTH_SCALE * (matprops->GRAVITY_SCALE)); // scaling factor for the momentums
+
+	double adjoint_scale[3] = { 1.0, 1.0, 1.0 };
+	adjoint_scale[0] = hscale * lscale * lscale * tscale;
+
+	double residual_scale[3] = { 1.0, 1.0, 1.0 };
+	residual_scale[0] = hscale / tscale;
+	residual_scale[1] = residual_scale[2] = momentum_scale / tscale;
+
+	double error_scale, functional_scale;
+
+	// this must be equal to adjoint_scale[i] * residual_scale[i] foe any i
+	error_scale = functional_scale = adjoint_scale[0] * residual_scale[0];
+
+	int myid = 0;
+	int cell_counter = Nx * Ny;
+
+	char filename[256];
+
+	if (adjflag == 1)
+		sprintf(filename, "dual%02d%08d.tec", myid, timeprops->iter - 1);
+	else
+		sprintf(filename, "dual%02d%08d.tec", myid, timeprops->iter);
+
+	FILE* fp;
+
+	fp = fopen(filename, "w");
+
+	int hrs, mins;
+	double secs;
+	timeprops->chunktime(&hrs, &mins, &secs);
+
+	fprintf(fp, "TITLE= \" %s: time %d:%02d:%g (hrs:min:sec), functional=%g\"\n", mapnames->gis_map,
+	    hrs, mins, secs, v_star_func);
+	fprintf(fp,
+	    "VARIABLES = \"X\", \"Y\", \"ELEVATION\", \"PILE_HEIGHT\", \"X_MOMENTUM\", \"Y_MOMENTUM\",\"RESIDUAL_1\", \"RESIDUAL_2\", \"RESIDUAL_3\","
+			    "\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\" , \"CORREC_TERM\" , \"ERROR\" \n");
+
+//	fprintf(fp, "\n");
+	fprintf(fp, "ZONE I=%d, J=%d, DATAPACKING=BLOCK, VARLOCATION=([3-14]=CELLCENTERED)\n", Nx + 1,
+	    Ny + 1);
+
+	double xrange[2] = { *(dualmesh->get_xminmax()), *(dualmesh->get_xminmax() + 1) };
+	double yrange[2] = { *(dualmesh->get_yminmax()), *(dualmesh->get_yminmax() + 1) };
+
+	// x of points
+	for (int i = 0; i < Ny + 1; ++i)
+		for (int j = 0; j < Nx + 1; ++j)
+			fprintf(fp, "%e ", (xrange[0] + j * dx[0]) * lscale);
+	fprintf(fp, "\n");
+
+	// y of points
+	for (int i = 0; i < Ny + 1; ++i)
+		for (int j = 0; j < Nx + 1; ++j)
+			fprintf(fp, "%e ", (yrange[0] + i * dx[1]) * lscale);
+	fprintf(fp, "\n");
+
+//	// h+elevation
+//	for (int j = 0; j < Nx; ++j)
+//		for (int i = 0; i < Ny; ++i) {
+//
+//			DualCell* cell = dualmesh->get_dualcell(i, j);
+//			double* state_vars = cell->get_state_vars();
+//			fprintf(fp, "%e ", (cell->get_elevation() + state_vars[0]) * hscale);
+//		}
+//	fprintf(fp, "\n");
+
+	//elevation
+
+	for (int i = 0; i < Ny; ++i)
+		for (int j = 0; j < Nx; ++j) {
+
+			DualCell* cell = dualmesh->get_dualcell(i, j);
+			double* state_vars = cell->get_state_vars();
+			fprintf(fp, "%e ", cell->get_elevation() * hscale);
+
+		}
+	fprintf(fp, "\n");
+
+	// PILE_HEIGHT
+
+	for (int i = 0; i < Ny; ++i)
+		for (int j = 0; j < Nx; ++j) {
+
+			DualCell* cell = dualmesh->get_dualcell(i, j);
+			double* state_vars = cell->get_state_vars();
+			fprintf(fp, "%e ", state_vars[0] * hscale);
+
+		}
+	fprintf(fp, "\n");
+
+	// X_MOMENTUM
+	for (int i = 0; i < Ny; ++i)
+		for (int j = 0; j < Nx; ++j) {
+
+			DualCell* cell = dualmesh->get_dualcell(i, j);
+			double* state_vars = cell->get_state_vars();
+			fprintf(fp, "%e ", state_vars[1] * momentum_scale);
+
+		}
+	fprintf(fp, "\n");
+
+	// Y_MOMENTUM
+	for (int i = 0; i < Ny; ++i)
+		for (int j = 0; j < Nx; ++j) {
+
+			DualCell* cell = dualmesh->get_dualcell(i, j);
+			double* state_vars = cell->get_state_vars();
+			fprintf(fp, "%e ", state_vars[2] * momentum_scale);
+
+		}
+	fprintf(fp, "\n");
+
+	// RESIDUAL_1
+	for (int i = 0; i < Ny; ++i)
+		for (int j = 0; j < Nx; ++j) {
+
+//			DualCell* cell = dualmesh->get_dualcell(i, j);
+//			double* state_vars = cell->get_state_vars();
+			fprintf(fp, "%e ", 0.);
+
+		}
+	fprintf(fp, "\n");
+
+	// RESIDUAL_2
+	for (int i = 0; i < Ny; ++i)
+		for (int j = 0; j < Nx; ++j) {
+
+//			DualCell* cell = dualmesh->get_dualcell(i, j);
+//			double* state_vars = cell->get_state_vars();
+			fprintf(fp, "%e ", 0.);
+
+		}
+	fprintf(fp, "\n");
+
+	// RESIDUAL_3
+	for (int i = 0; i < Ny; ++i)
+		for (int j = 0; j < Nx; ++j) {
+
+//			DualCell* cell = dualmesh->get_dualcell(i, j);
+//			double* state_vars = cell->get_state_vars();
+			fprintf(fp, "%e ", 0.);
+
+		}
+	fprintf(fp, "\n");
+
+	// CURR_ADJ_1
+	for (int i = 0; i < Ny; ++i)
+		for (int j = 0; j < Nx; ++j) {
+
+			DualCell* cell = dualmesh->get_dualcell(i, j);
+			double* curr_adjoint = cell->get_curr_adjoint();
+			fprintf(fp, "%e ", curr_adjoint[0] * adjoint_scale[0]);
+
+		}
+	fprintf(fp, "\n");
+
+	// CURR_ADJ_2
+	for (int i = 0; i < Ny; ++i)
+		for (int j = 0; j < Nx; ++j) {
+
+			DualCell* cell = dualmesh->get_dualcell(i, j);
+			double* curr_adjoint = cell->get_curr_adjoint();
+			fprintf(fp, "%e ", curr_adjoint[1] * adjoint_scale[1]);
+
+		}
+	fprintf(fp, "\n");
+
+	// CURR_ADJ_3
+	for (int i = 0; i < Ny; ++i)
+		for (int j = 0; j < Nx; ++j) {
+
+			DualCell* cell = dualmesh->get_dualcell(i, j);
+			double* curr_adjoint = cell->get_curr_adjoint();
+			fprintf(fp, "%e ", curr_adjoint[2] * adjoint_scale[2]);
+
+		}
+	fprintf(fp, "\n");
+
+	// CORREC
+	for (int i = 0; i < Ny; ++i)
+		for (int j = 0; j < Nx; ++j) {
+
+//			DualCell* cell = dualmesh->get_dualcell(i, j);
+//			double* state_vars = cell->get_state_vars();
+			fprintf(fp, "%e ", 0.);
+
+		}
+	fprintf(fp, "\n");
+
+	// ERROR
+	for (int i = 0; i < Ny; ++i)
+		for (int j = 0; j < Nx; ++j) {
+
+//			DualCell* cell = dualmesh->get_dualcell(i, j);
+//			double* state_vars = cell->get_state_vars();
+			fprintf(fp, "%e ", 0.);
+
+		}
+
+	fclose(fp);
+	return;
+
+}
+
+void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops, TimeProps* timeprops,
+    MapNames* mapnames, double v_star_func, int adjflag) {
 	int i_buck, i_neigh;   //indices
-	int xp, xm, yp, ym;    //x plus, x minus, y plus, y minus directions
+	int xp, xm, yp, ym;   //x plus, x minus, y plus, y minus directions
 	int gen, *neigh_gen;   //level of grid refinement
-	int numprocs;          //number of processes
-	int myid, *neigh_proc; //process id's
+	int numprocs;   //number of processes
+	int myid, *neigh_proc;   //process id's
 
 	int done = 1;
 	unsigned key[2];
@@ -126,22 +346,22 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 			assert(EmTemp);
 			entryp = entryp->next;
 			if ((EmTemp->get_adapted_flag() != TOBEDELETED)
-					&& (abs(EmTemp->get_adapted_flag()) <= BUFFER)) {
+			    && (abs(EmTemp->get_adapted_flag()) <= BUFFER)) {
 				num_tec_node++;
 				EmTemp->put_ithelem(num_tec_node);
 
 				if (EmTemp->get_adapted_flag() > TOBEDELETED) {
 					switch (get_ll_polygon(El_Table, NodeTable, myid, EmArray)) {
-					case 4: //we should draw a lower left quad
-						num_tec_quad++;
-						break;
-					case 3: //we should draw a lower left triangle
-						num_tec_tri++;
-						break;
-					case 0: //we should NOT draw a lower left polygon
-						break;
-					default: //something wierd happened report this to the "FBI"
-						assert(0);
+						case 4: //we should draw a lower left quad
+							num_tec_quad++;
+							break;
+						case 3: //we should draw a lower left triangle
+							num_tec_tri++;
+							break;
+						case 0: //we should NOT draw a lower left polygon
+							break;
+						default: //something wierd happened report this to the "FBI"
+							assert(0);
 					} //switch(get_ll_polygon(El_Table,NodeTable,myid,EmArray))
 
 					//match the lower left triangle at the lower left corner of
@@ -172,7 +392,7 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	if (adjflag == 0)
 		sprintf(filename, "tecpl%02d%08d.tec", myid, iter);
 	else if (adjflag == 1)
-		sprintf(filename, "error%02d%08d.tec", myid, iter-1);
+		sprintf(filename, "error%02d%08d.tec", myid, iter - 1);
 	else if (adjflag == 2)
 		sprintf(filename, "error%02d%08d.tec", myid, iter);
 
@@ -183,18 +403,16 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	double secs;
 	timeprops->chunktime(&hrs, &mins, &secs);
 
-	if (adjflag ) {
-		fprintf(fp,
-				"TITLE= \" %s: time %d:%02d:%g (hrs:min:sec), functional=%g\"\n",
-				mapnames->gis_map, hrs, mins, secs, v_star_func);
-		fprintf(fp,
-				"VARIABLES = \"X\", \"Y\", \"Z\", \"PILE_HEIGHT\","
-						"\"RESIDUAL_1\", \"SOLID_X_MOMENTUM\", \"SOLID_Y_MOMENTUM\","
-						"\"RESIDUAL_2\", \"RESIDUAL_3\","
-						"\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\" , \"CORREC_TERM\" , \"ERROR\" \n");
+	if (adjflag) {
+		fprintf(fp, "TITLE= \" %s: time %d:%02d:%g (hrs:min:sec), functional=%g\"\n", mapnames->gis_map,
+		    hrs, mins, secs, v_star_func);
+		fprintf(fp, "VARIABLES = \"X\", \"Y\", \"Z\", \"PILE_HEIGHT\","
+				"\"RESIDUAL_1\", \"SOLID_X_MOMENTUM\", \"SOLID_Y_MOMENTUM\","
+				"\"RESIDUAL_2\", \"RESIDUAL_3\","
+				"\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\" , \"CORREC_TERM\" , \"ERROR\" \n");
 	} else {
-		fprintf(fp, "TITLE= \" %s: time %d:%02d:%g (hrs:min:sec), V*=%g\"\n",
-				mapnames->gis_map, hrs, mins, secs, v_star_func);
+		fprintf(fp, "TITLE= \" %s: time %d:%02d:%g (hrs:min:sec), V*=%g\"\n", mapnames->gis_map, hrs,
+		    mins, secs, v_star_func);
 		fprintf(fp, "VARIABLES = \"X\", \"Y\", \"Z\", \"PILE_HEIGHT\","
 				"\"CONT_ADJ1\", \"SOLID_X_MOMENTUM\", \"SOLID_Y_MOMENTUM\","
 				"\"CONT_ADJ2\", \"CONT_ADJ3\","
@@ -202,12 +420,11 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	}
 
 	fprintf(fp, "\n");
-	fprintf(fp, "ZONE N=%d, E=%d, F=FEPOINT, ET=QUADRILATERAL\n", num_tec_node,
-			num_tec_elem);
+	fprintf(fp, "ZONE N=%d, E=%d, F=FEPOINT, ET=QUADRILATERAL\n", num_tec_node, num_tec_elem);
 
 	//print the element/BUBBLE-node information
 
-	int num_missing_bubble_node = 0; //for legacy debugging, I (Keith)
+	int num_missing_bubble_node = 0;	  //for legacy debugging, I (Keith)
 	//believe the missing BUBBLE node problem has been solved, it
 	//doesn't seem to be a problem anymore
 
@@ -218,11 +435,11 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 			assert(EmTemp);
 			entryp = entryp->next;
 			if ((EmTemp->get_adapted_flag() != TOBEDELETED)
-					&& (abs(EmTemp->get_adapted_flag()) <= BUFFER))
-				num_missing_bubble_node += print_bubble_node(fp, NodeTable, matprops,
-						timeprops, EmTemp, adjflag);
+			    && (abs(EmTemp->get_adapted_flag()) <= BUFFER))
+				num_missing_bubble_node += print_bubble_node(fp, NodeTable, matprops, timeprops, EmTemp,
+				    adjflag);
 		}
-		//while(entryp)
+//while(entryp)
 	}  //for(i_buck=0;i_buck<e_buckets;i_buck++)
 
 //print the tecplot element connectivity data
@@ -233,42 +450,38 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 			EmArray[0] = EmTemp = (Element*) entryp->value;
 			assert(EmTemp);
 			entryp = entryp->next;
-			if ((EmTemp->get_adapted_flag() > TOBEDELETED)
-					&& (EmTemp->get_adapted_flag() <= BUFFER)) {
+			if ((EmTemp->get_adapted_flag() > TOBEDELETED) && (EmTemp->get_adapted_flag() <= BUFFER)) {
 
 				neigh_proc = EmTemp->get_neigh_proc();
 				gen = EmTemp->get_gen();
 				neigh_gen = EmTemp->get_neigh_gen();
 
 				switch (get_ll_polygon(El_Table, NodeTable, myid, EmArray)) {
-				case 4: //we should draw a lower left quad
-					tec_nodes_in_tec_quad[0] = EmArray[2]->get_ithelem();
-					tec_nodes_in_tec_quad[1] = EmArray[0]->get_ithelem();
-					tec_nodes_in_tec_quad[2] = EmArray[1]->get_ithelem();
-					tec_nodes_in_tec_quad[3] = EmArray[3]->get_ithelem();
+					case 4: //we should draw a lower left quad
+						tec_nodes_in_tec_quad[0] = EmArray[2]->get_ithelem();
+						tec_nodes_in_tec_quad[1] = EmArray[0]->get_ithelem();
+						tec_nodes_in_tec_quad[2] = EmArray[1]->get_ithelem();
+						tec_nodes_in_tec_quad[3] = EmArray[3]->get_ithelem();
 
-					fprintf(fp, "%d %d %d %d\n", tec_nodes_in_tec_quad[0],
-							tec_nodes_in_tec_quad[1], tec_nodes_in_tec_quad[2],
-							tec_nodes_in_tec_quad[3]);
+						fprintf(fp, "%d %d %d %d\n", tec_nodes_in_tec_quad[0], tec_nodes_in_tec_quad[1],
+						    tec_nodes_in_tec_quad[2], tec_nodes_in_tec_quad[3]);
 
-					num_tec_elem2++; //counter of number of drawing elements
-					break;
-				case 3: //we should draw a lower left triangle
-					tec_nodes_in_tec_quad[0] = EmArray[2]->get_ithelem();
-					tec_nodes_in_tec_quad[1] = EmArray[0]->get_ithelem();
-					tec_nodes_in_tec_quad[2] = tec_nodes_in_tec_quad[3] =
-							EmArray[1]->get_ithelem();
+						num_tec_elem2++; //counter of number of drawing elements
+						break;
+					case 3: //we should draw a lower left triangle
+						tec_nodes_in_tec_quad[0] = EmArray[2]->get_ithelem();
+						tec_nodes_in_tec_quad[1] = EmArray[0]->get_ithelem();
+						tec_nodes_in_tec_quad[2] = tec_nodes_in_tec_quad[3] = EmArray[1]->get_ithelem();
 
-					fprintf(fp, "%d %d %d %d\n", tec_nodes_in_tec_quad[0],
-							tec_nodes_in_tec_quad[1], tec_nodes_in_tec_quad[2],
-							tec_nodes_in_tec_quad[3]);
+						fprintf(fp, "%d %d %d %d\n", tec_nodes_in_tec_quad[0], tec_nodes_in_tec_quad[1],
+						    tec_nodes_in_tec_quad[2], tec_nodes_in_tec_quad[3]);
 
-					num_tec_elem2++; //counter of number of drawing elements
-					break;
-				case 0: //we should NOT draw a lower left polygon
-					break;
-				default: //something weird happened report this to the "FBI"
-					assert(0);
+						num_tec_elem2++; //counter of number of drawing elements
+						break;
+					case 0: //we should NOT draw a lower left polygon
+						break;
+					default: //something weird happened report this to the "FBI"
+						assert(0);
 				} //switch(get_ll_polygon(El_Table, myid, EmArray))
 
 				/**********************************************************/
@@ -279,12 +492,10 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 				if (get_ur_tri(El_Table, NodeTable, myid, EmArray)) {
 					tec_nodes_in_tec_quad[0] = EmArray[1]->get_ithelem();
 					tec_nodes_in_tec_quad[1] = EmArray[2]->get_ithelem();
-					tec_nodes_in_tec_quad[2] = tec_nodes_in_tec_quad[3] =
-							EmArray[0]->get_ithelem();
+					tec_nodes_in_tec_quad[2] = tec_nodes_in_tec_quad[3] = EmArray[0]->get_ithelem();
 
-					fprintf(fp, "%d %d %d %d\n", tec_nodes_in_tec_quad[0],
-							tec_nodes_in_tec_quad[1], tec_nodes_in_tec_quad[2],
-							tec_nodes_in_tec_quad[3]);
+					fprintf(fp, "%d %d %d %d\n", tec_nodes_in_tec_quad[0], tec_nodes_in_tec_quad[1],
+					    tec_nodes_in_tec_quad[2], tec_nodes_in_tec_quad[3]);
 
 					num_tec_elem2++; //counter of number of drawing elements
 				} //if(get_ur_tri(El_Table,myid,EmArray))
@@ -305,21 +516,18 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 						EmArray[1] = EmArray[2] = EmArray[3] = NULL;
 
 						//The Primary Neighbor
-						EmArray[1] = (Element*) El_Table->lookup(
-								EmTemp->get_neighbors() + i_neigh * KEYLENGTH);
+						EmArray[1] = (Element*) El_Table->lookup(EmTemp->get_neighbors() + i_neigh * KEYLENGTH);
 						assert(EmArray[1]);
 						tec_nodes_in_tec_quad[1] = EmArray[1]->get_ithelem();
 
 						//The Secondary Neighbor
 						EmArray[2] = (Element*) El_Table->lookup(
-								EmTemp->get_neighbors() + (i_neigh + 4) * KEYLENGTH);
+						    EmTemp->get_neighbors() + (i_neigh + 4) * KEYLENGTH);
 						assert(EmArray[2]);
-						tec_nodes_in_tec_quad[2] = tec_nodes_in_tec_quad[3] =
-								EmArray[2]->get_ithelem();
+						tec_nodes_in_tec_quad[2] = tec_nodes_in_tec_quad[3] = EmArray[2]->get_ithelem();
 
-						fprintf(fp, "%d %d %d %d\n", tec_nodes_in_tec_quad[0],
-								tec_nodes_in_tec_quad[1], tec_nodes_in_tec_quad[2],
-								tec_nodes_in_tec_quad[3]);
+						fprintf(fp, "%d %d %d %d\n", tec_nodes_in_tec_quad[0], tec_nodes_in_tec_quad[1],
+						    tec_nodes_in_tec_quad[2], tec_nodes_in_tec_quad[3]);
 
 						num_tec_elem2++; //counter of number of drawing elements
 					} //if((neigh_gen[i_neigh]>gen)&&(neigh_proc[i_neigh]!=INIT))
@@ -361,8 +569,7 @@ void get_elem_orient(Element *EmTemp, int *xm, int *xp, int *ym, int *yp) {
  ***********************************************************
  */
 
-int get_elem_elev(HashTable *NodeTable, MatProps *matprops, Element *EmTemp,
-		double *elevation) {
+int get_elem_elev(HashTable *NodeTable, MatProps *matprops, Element *EmTemp, double *elevation) {
 	int j;
 	double resolution, xcoord, ycoord;
 	Node *NdTemp;
@@ -370,7 +577,7 @@ int get_elem_elev(HashTable *NodeTable, MatProps *matprops, Element *EmTemp,
 	NdTemp = (Node*) NodeTable->lookup(EmTemp->pass_key());
 
 	if (NdTemp == NULL) {
-		//printf("\"start\" of get_elem_elev return(1)\n"); fflush(stdout);
+//printf("\"start\" of get_elem_elev return(1)\n"); fflush(stdout);
 		j = Get_max_resolution(&resolution);
 		if (j != 0) {
 			printf("error in Get_max_resolution\n");
@@ -379,14 +586,14 @@ int get_elem_elev(HashTable *NodeTable, MatProps *matprops, Element *EmTemp,
 
 		xcoord = *(EmTemp->get_coord()) * (matprops->LENGTH_SCALE);
 		ycoord = *(EmTemp->get_coord() + 1) * (matprops->LENGTH_SCALE);
-		//printf("elev_ptr=%d, ",(int) elevation);
+//printf("elev_ptr=%d, ",(int) elevation);
 		j = Get_elevation(resolution, xcoord, ycoord, elevation);
-		//printf("elev_ptr=%d\n",(int) elevation);
+//printf("elev_ptr=%d\n",(int) elevation);
 		if (j != 0) {
 			printf("error in Get_elevation\n");
 			exit(1);
 		}
-		//printf("End of get_elem_elev return(1)\n"); fflush(stdout);
+//printf("End of get_elem_elev return(1)\n"); fflush(stdout);
 		return (1);
 	} else {
 		*elevation = NdTemp->get_elevation() * (matprops->LENGTH_SCALE);
@@ -402,8 +609,7 @@ int get_elem_elev(HashTable *NodeTable, MatProps *matprops, Element *EmTemp,
  * returns 0 if shouldn't draw a lower left polygon
  ************************************************************************
  */
-int get_ll_polygon(HashTable* El_Table, HashTable* NodeTable, int myid,
-		Element* EmArray[4]) {
+int get_ll_polygon(HashTable* El_Table, HashTable* NodeTable, int myid, Element* EmArray[4]) {
 
 	int xm, xp, ym, yp; //this element's  left right down up
 	int zmxm, zmxp, zmym, zmyp; //left/down neighbor's left right down up
@@ -427,52 +633,45 @@ int get_ll_polygon(HashTable* El_Table, HashTable* NodeTable, int myid,
 	get_elem_orient(EmArray[0], &xm, &xp, &ym, &yp);
 
 	if (((neigh_proc[xm] == INIT) || (neigh_proc[ym] == INIT))
-			|| (((neigh_gen[xm] < gen) || (neigh_gen[ym] < gen))
-					&& (EmArray[0]->get_which_son() != 0)))
+	    || (((neigh_gen[xm] < gen) || (neigh_gen[ym] < gen)) && (EmArray[0]->get_which_son() != 0)))
 		return 0;
 
 //yada++;
 
-	EmArray[1] = (Element*) El_Table->lookup(
-			EmArray[0]->get_neighbors() + (xm + 4) * KEYLENGTH);
-	EmArray[2] = (Element*) El_Table->lookup(
-			EmArray[0]->get_neighbors() + ym * KEYLENGTH);
+	EmArray[1] = (Element*) El_Table->lookup(EmArray[0]->get_neighbors() + (xm + 4) * KEYLENGTH);
+	EmArray[2] = (Element*) El_Table->lookup(EmArray[0]->get_neighbors() + ym * KEYLENGTH);
 
-	if (!(((neigh_proc[xm + 4] == myid)
-			|| ((neigh_proc[xm + 4] == -2) && (neigh_proc[xm] == myid)))
-			|| (neigh_proc[ym] == myid)))
-		//can't get to lower left neighbor by taking either route
-		//because lower and left neighbors are both ghost cells
-		//so draw a lower left triangle instead of a lower left quad
+	if (!(((neigh_proc[xm + 4] == myid) || ((neigh_proc[xm + 4] == -2) && (neigh_proc[xm] == myid)))
+	    || (neigh_proc[ym] == myid)))
+//can't get to lower left neighbor by taking either route
+//because lower and left neighbors are both ghost cells
+//so draw a lower left triangle instead of a lower left quad
 		return 3;
 
-	if ((neigh_proc[xm + 4] == myid)
-			|| ((neigh_proc[xm + 4] == -2) && (neigh_proc[xm] == myid))) {
-		//can get to lower left neighbor by going left then down
+	if ((neigh_proc[xm + 4] == myid) || ((neigh_proc[xm + 4] == -2) && (neigh_proc[xm] == myid))) {
+//can get to lower left neighbor by going left then down
 		assert(EmArray[1]);
 		get_elem_orient(EmArray[1], &zmxm, &zmxp, &zmym, &zmyp);
 		if (*(EmArray[1]->get_neigh_proc() + zmym) == -1) {
 			EmArray[1] = EmArray[2] = EmArray[3] = NULL;
 			return 0;
 		}
-		EmArray[3] = (Element*) El_Table->lookup(
-				EmArray[1]->get_neighbors() + (zmym + 4) * KEYLENGTH);
-		//printf("left then down\n");
-		//yada++;
+		EmArray[3] = (Element*) El_Table->lookup(EmArray[1]->get_neighbors() + (zmym + 4) * KEYLENGTH);
+//printf("left then down\n");
+//yada++;
 
 	} else { //neigh_proc[ym]==myid
-		//printf("down then left\n");
-		//can get to lower left neighbor by going down then left
+//printf("down then left\n");
+//can get to lower left neighbor by going down then left
 		assert(EmArray[2]);
 		get_elem_orient(EmArray[2], &zmxm, &zmxp, &zmym, &zmyp);
 		if (*(EmArray[2]->get_neigh_proc() + zmxm) == -1) {
 			EmArray[1] = EmArray[2] = EmArray[3] = NULL;
 			return 0;
 		}
-		EmArray[3] = (Element*) El_Table->lookup(
-				EmArray[2]->get_neighbors() + zmxm * KEYLENGTH);
-		//printf("down then left\n");
-		//yada++;
+		EmArray[3] = (Element*) El_Table->lookup(EmArray[2]->get_neighbors() + zmxm * KEYLENGTH);
+//printf("down then left\n");
+//yada++;
 	}
 //yada++;
 	/*
@@ -482,11 +681,11 @@ int get_ll_polygon(HashTable* El_Table, HashTable* NodeTable, int myid,
 	 */
 	if (!(EmArray[3])) {
 		printf(
-				"myid=%d xm=%d xp=%d ym=%d yp=%d zmxm=%d zmxp=%d zmym=%d zmyp=%d EmArray[0]->key={%u,%u}\n",
-				myid, xm, xp, ym, yp, zmxm, zmxp, zmym, zmyp,
-				*(EmArray[0]->pass_key() + 0), *(EmArray[0]->pass_key() + 1));
+		    "myid=%d xm=%d xp=%d ym=%d yp=%d zmxm=%d zmxp=%d zmym=%d zmyp=%d EmArray[0]->key={%u,%u}\n",
+		    myid, xm, xp, ym, yp, zmxm, zmxp, zmym, zmyp, *(EmArray[0]->pass_key() + 0),
+		    *(EmArray[0]->pass_key() + 1));
 		scanf("%d", &yada);
-		//yada++;
+//yada++;
 	}
 	/*
 	 myid+=0;
@@ -513,8 +712,7 @@ int get_ll_polygon(HashTable* El_Table, HashTable* NodeTable, int myid,
  ************************************************************************
  */
 
-int get_ur_tri(HashTable* El_Table, HashTable* NodeTable, int myid,
-		Element* EmArray[4]) {
+int get_ur_tri(HashTable* El_Table, HashTable* NodeTable, int myid, Element* EmArray[4]) {
 	int xm, xp, ym, yp; //this  element's  left right down up
 	int xpxm, xpxp, xpym, xpyp; //right neighbor's left right down up
 	int ypxm, ypxp, ypym, ypyp; //up    neighbor's left right down up
@@ -537,12 +735,11 @@ int get_ur_tri(HashTable* El_Table, HashTable* NodeTable, int myid,
 //make sure it's not a domain boundary
 	if ((neigh_proc[xpfirst] != INIT) && (neigh_proc[yp] != INIT)) {
 
-		EmArray[2] = (Element*) El_Table->lookup(
-				EmArray[0]->get_neighbors() + yp * KEYLENGTH);
+		EmArray[2] = (Element*) El_Table->lookup(EmArray[0]->get_neighbors() + yp * KEYLENGTH);
 		if (!EmArray[2]) {
 			ElemBackgroundCheck(El_Table, NodeTable, EmArray[0]->pass_key(), stdout);
-			ElemBackgroundCheck(El_Table, NodeTable,
-					EmArray[0]->get_neighbors() + yp * KEYLENGTH, stdout);
+			ElemBackgroundCheck(El_Table, NodeTable, EmArray[0]->get_neighbors() + yp * KEYLENGTH,
+			stdout);
 
 		}
 		assert(EmArray[2]);
@@ -550,27 +747,25 @@ int get_ur_tri(HashTable* El_Table, HashTable* NodeTable, int myid,
 		get_elem_orient(EmArray[2], &ypxm, &ypxp, &ypym, &ypyp);
 		yneigh_neigh_proc = EmArray[2]->get_neigh_proc();
 
-		EmArray[1] = (Element*) El_Table->lookup(
-				EmArray[0]->get_neighbors() + xp * KEYLENGTH);
+		EmArray[1] = (Element*) El_Table->lookup(EmArray[0]->get_neighbors() + xp * KEYLENGTH);
 		if (!EmArray[1]) {
 			ElemBackgroundCheck(El_Table, NodeTable, EmArray[0]->pass_key(), stdout);
-			ElemBackgroundCheck(El_Table, NodeTable,
-					EmArray[0]->get_neighbors() + xp * KEYLENGTH, stdout);
+			ElemBackgroundCheck(El_Table, NodeTable, EmArray[0]->get_neighbors() + xp * KEYLENGTH,
+			stdout);
 		}
 		assert(EmArray[1]);
 		get_elem_orient(EmArray[1], &xpxm, &xpxp, &xpym, &xpyp);
 		neigh_neigh_gen = EmArray[1]->get_neigh_gen();
-		//account for more refined neighbor's neighbors
+//account for more refined neighbor's neighbors
 		if (neigh_neigh_gen[xpyp] > neigh_gen[xp])
 			xpyp += 4;
 
 		xneigh_neigh_proc = EmArray[1]->get_neigh_proc();
 
-		//check if it's a lower left corner of another subdomain
-		if ((yneigh_neigh_proc[ypxp] != INIT)
-				&& (yneigh_neigh_proc[ypxp] != neigh_proc[xp])
-				&& (yneigh_neigh_proc[ypxp] != neigh_proc[yp])
-				&& (yneigh_neigh_proc[ypxp] == xneigh_neigh_proc[xpyp]))
+//check if it's a lower left corner of another subdomain
+		if ((yneigh_neigh_proc[ypxp] != INIT) && (yneigh_neigh_proc[ypxp] != neigh_proc[xp])
+		    && (yneigh_neigh_proc[ypxp] != neigh_proc[yp])
+		    && (yneigh_neigh_proc[ypxp] == xneigh_neigh_proc[xpyp]))
 			return (3);
 	}
 
@@ -587,8 +782,8 @@ int get_ur_tri(HashTable* El_Table, HashTable* NodeTable, int myid,
  ***********************************************************
  */
 //for use when writing ascii tecplot files
-int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops,
-		TimeProps *timeprops, Element *EmTemp, int adjflag) {
+int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimeProps *timeprops,
+    Element *EmTemp, int adjflag) {
 
 	int num_missing_bubble_node;
 	double elevation;
@@ -611,8 +806,7 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops,
 
 	// this must be equal to adjoint_scale[i] * residual_scale[i] foe any i
 	error_scale = functional_scale = adjoint_scale[0] * residual_scale[0];
-	num_missing_bubble_node = get_elem_elev(NodeTable, matprops, EmTemp,
-			&elevation);
+	num_missing_bubble_node = get_elem_elev(NodeTable, matprops, EmTemp, &elevation);
 
 	double Vel[4];
 	EmTemp->eval_velocity(0.0, 0.0, Vel);
@@ -620,7 +814,7 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops,
 	double output[14];
 
 	if (adjflag) {
-		//if adjflag ==1 or adjflag==2 runs this part
+//if adjflag ==1 or adjflag==2 runs this part
 		output[0] = *(EmTemp->get_coord()) * lscale;
 		output[1] = *(EmTemp->get_coord() + 1) * lscale;
 		output[2] = elevation + *(EmTemp->get_prev_state_vars()) * hscale;
@@ -657,17 +851,15 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops,
 	for (int i = 0; i < 3; i++)
 		if (isinf(output[i]))
 			cout << "this element has problem  " << *(EmTemp->pass_key()) << "    "
-					<< *(EmTemp->pass_key() + 1) << endl;
+			    << *(EmTemp->pass_key() + 1) << endl;
 
 	if (adjflag)
-		fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e\n", output[0],
-				output[1], output[2], output[3], output[4], output[5], output[6],
-				output[7], output[8], output[9], output[10], output[11], output[12],
-				output[13]);
+		fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e\n", output[0], output[1], output[2],
+		    output[3], output[4], output[5], output[6], output[7], output[8], output[9], output[10],
+		    output[11], output[12], output[13]);
 	else
-		fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e\n", output[0], output[1],
-				output[2], output[3], output[4], output[5], output[6], output[7],
-				output[8], output[9], output[10]);
+		fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e\n", output[0], output[1], output[2], output[3],
+		    output[4], output[5], output[6], output[7], output[8], output[9], output[10]);
 
 	return (num_missing_bubble_node);
 }
@@ -680,7 +872,7 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops,
  ***********************************************************
  */
 
-/* the name DumpString is what tecplot uses in 
+/* the name DumpString is what tecplot uses in
  tecplot9/util/preplot/preplot.c
  see useful_lib.C for fwriteI() */
 void DumpString(FILE *fp, char *str) {
@@ -699,9 +891,8 @@ void DumpString(FILE *fp, char *str) {
  ***********************************************************
  */
 
-void viz_output(HashTable* El_Table, HashTable* NodeTable, int myid,
-		int numprocs, MatProps* matprops, TimeProps* timeprops,
-		MapNames* mapnames) {
+void viz_output(HashTable* El_Table, HashTable* NodeTable, int myid, int numprocs,
+    MatProps* matprops, TimeProps* timeprops, MapNames* mapnames) {
 	int i, k;
 	int element_counter = 0;
 	Element* EmTemp;
@@ -732,8 +923,7 @@ void viz_output(HashTable* El_Table, HashTable* NodeTable, int myid,
 	filename[10] = (myid % 1000) / 100 + 48;
 	filename[11] = (myid % 100) / 10 + 48;
 	filename[12] = (myid % 10) + 48;
-	double velocity_scale = sqrt(
-			matprops->LENGTH_SCALE * (matprops->GRAVITY_SCALE)); // scaling factor for the velocities
+	double velocity_scale = sqrt(matprops->LENGTH_SCALE * (matprops->GRAVITY_SCALE)); // scaling factor for the velocities
 
 // actual data output
 	for (i = 0; i < e_buckets; i++) {
@@ -762,11 +952,10 @@ void viz_output(HashTable* El_Table, HashTable* NodeTable, int myid,
 		 for(i=1;i<=matprops->material_count;i++)
 		 fprintf(fp,"%s\n%g\n",matprops->matnames[i],matprops->bedfrict[i]); */} else
 		fp = fopen(filename, "a+");
-	fprintf(fp, "%f %d %d %d %d\n", timeprops->time, parameters, points,
-			variables, inputs);
+	fprintf(fp, "%f %d %d %d %d\n", timeprops->time, parameters, points, variables, inputs);
 	fprintf(fp,
-			"\"key unsigned[%d]\", \"coordinate double[%d]\", \"terrain_slope double[%d]\", \"pile_height double[1]\", \"pile_velocity double[%d]\", \"processor int[1]\", \"FOM double[1]\" \n",
-			2, 3, 2, 2);
+	    "\"key unsigned[%d]\", \"coordinate double[%d]\", \"terrain_slope double[%d]\", \"pile_height double[1]\", \"pile_velocity double[%d]\", \"processor int[1]\", \"FOM double[1]\" \n",
+	    2, 3, 2, 2);
 // output parameters
 	fprintf(fp, "time_step int[1] %d \n", timeprops->iter);
 	fprintf(fp, "number_of_processors int[1] %d \n", numprocs);
@@ -782,25 +971,22 @@ void viz_output(HashTable* El_Table, HashTable* NodeTable, int myid,
 				Node* NdTemp = (Node*) NodeTable->lookup(EmTemp->pass_key());
 				if (state_vars[0] < GEOFLOW_TINY) {
 					double zero = 0;
-					fprintf(fp, "%u %u %f %f %f %f %f %f %f %f %d %f \n",
-							*(EmTemp->pass_key()), *(EmTemp->pass_key() + 1),
-							(*(EmTemp->get_coord())) * (matprops)->LENGTH_SCALE,
-							(*(EmTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
-							(NdTemp->get_elevation()) * (matprops)->LENGTH_SCALE,
-							*(EmTemp->get_zeta()), *(EmTemp->get_zeta() + 1), zero, zero,
-							zero, myid, zero);
+					fprintf(fp, "%u %u %f %f %f %f %f %f %f %f %d %f \n", *(EmTemp->pass_key()),
+					    *(EmTemp->pass_key() + 1), (*(EmTemp->get_coord())) * (matprops)->LENGTH_SCALE,
+					    (*(EmTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
+					    (NdTemp->get_elevation()) * (matprops)->LENGTH_SCALE, *(EmTemp->get_zeta()),
+					    *(EmTemp->get_zeta() + 1), zero, zero, zero, myid, zero);
 				} else {
 					double Vel[4];
 					EmTemp->eval_velocity(0.0, 0.0, Vel);
-					fprintf(fp, "%u %u %f %f %f %f %f %f %f %f %d %f \n",
-							*(EmTemp->pass_key()), *(EmTemp->pass_key() + 1),
-							(*(EmTemp->get_coord())) * (matprops)->LENGTH_SCALE,
-							(*(EmTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
-							(NdTemp->get_elevation()) * (matprops)->LENGTH_SCALE,
-							*(EmTemp->get_zeta()), *(EmTemp->get_zeta() + 1),
-							state_vars[0] * (matprops)->HEIGHT_SCALE, velocity_scale * Vel[0], //*state_vars[1]/state_vars[0],
-							velocity_scale * Vel[1], //state_vars[2]/state_vars[0],
-							myid, (double) (state_vars[0] / 20.)); //state_vars[0]/20 is just a filler item
+					fprintf(fp, "%u %u %f %f %f %f %f %f %f %f %d %f \n", *(EmTemp->pass_key()),
+					    *(EmTemp->pass_key() + 1), (*(EmTemp->get_coord())) * (matprops)->LENGTH_SCALE,
+					    (*(EmTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
+					    (NdTemp->get_elevation()) * (matprops)->LENGTH_SCALE, *(EmTemp->get_zeta()),
+					    *(EmTemp->get_zeta() + 1), state_vars[0] * (matprops)->HEIGHT_SCALE,
+					    velocity_scale * Vel[0], //*state_vars[1]/state_vars[0],
+					    velocity_scale * Vel[1], //state_vars[2]/state_vars[0],
+					    myid, (double) (state_vars[0] / 20.)); //state_vars[0]/20 is just a filler item
 				}
 			}
 			entryp = entryp->next;
@@ -821,7 +1007,7 @@ void viz_output(HashTable* El_Table, HashTable* NodeTable, int myid,
  **************************************
  *************************************/
 void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
-		TimeProps* timeprops, MapNames* mapnames, double v_star) {
+    TimeProps* timeprops, MapNames* mapnames, double v_star) {
 	int myid, i;
 	int numprocs;
 	int material;
@@ -842,7 +1028,7 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	int e_buckets = El_Table->get_no_of_buckets();
 
 	double momentum_scale = matprops->HEIGHT_SCALE
-			* sqrt(matprops->LENGTH_SCALE * (matprops->GRAVITY_SCALE)); // scaling factor for the momentums
+	    * sqrt(matprops->LENGTH_SCALE * (matprops->GRAVITY_SCALE)); // scaling factor for the momentums
 
 	FILE* fp;
 
@@ -852,16 +1038,14 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	double seconds;
 	timeprops->chunktime(&hours, &minutes, &seconds);
 
-	fprintf(fp,
-			"TITLE= \" %s (MESH OUTPUT) time %d:%02d:%g (hrs:min:sec), V*=%g\"\n",
-			mapnames->gis_map, hours, minutes, seconds, v_star);
+	fprintf(fp, "TITLE= \" %s (MESH OUTPUT) time %d:%02d:%g (hrs:min:sec), V*=%g\"\n",
+	    mapnames->gis_map, hours, minutes, seconds, v_star);
 
 //fprintf ( fp, "TITLE= \"MESH OUTPUT\"\n" );
 
-	fprintf(fp,
-			"VARIABLES = \"X\" \"Y\" \"Z\" \"PILE_HEIGHT\" \"SXMOMENTUM\" \"SYMOMENTUM\" "
-					"\"FXMOMENTUM\" \"FYMOMENTUM\" \"Vx_s\" \"Vy_s\" \"Vx_f\" \"Vy_f\" "
-					"\"VOL_FRACT\" \"ELEM_ERROR\" \"DRAGY\"");
+	fprintf(fp, "VARIABLES = \"X\" \"Y\" \"Z\" \"PILE_HEIGHT\" \"SXMOMENTUM\" \"SYMOMENTUM\" "
+			"\"FXMOMENTUM\" \"FYMOMENTUM\" \"Vx_s\" \"Vy_s\" \"Vx_f\" \"Vy_f\" "
+			"\"VOL_FRACT\" \"ELEM_ERROR\" \"DRAGY\"");
 
 	if (myid == TARGETPROCB) {
 		printf("at meshplotter 3.0\n");
@@ -881,8 +1065,8 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	}
 
 	fprintf(fp, "\n");
-	fprintf(fp, "ZONE N=%d, E=%d, F=FEPOINT, ET=QUADRILATERAL\n",
-			element_counter * 4, element_counter);
+	fprintf(fp, "ZONE N=%d, E=%d, F=FEPOINT, ET=QUADRILATERAL\n", element_counter * 4,
+	    element_counter);
 
 	int elements = El_Table->get_no_of_buckets();
 	for (i = 0; i < elements; i++) {
@@ -902,9 +1086,6 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 				double* state_vars = EmTemp->get_state_vars();
 				double err = sqrt(*(EmTemp->get_el_error()));
 				double Vel[4];
-				double volf = 0;
-				if (state_vars[0] > GEOFLOW_TINY)
-					volf = state_vars[1] / state_vars[0];
 
 				EmTemp->eval_velocity(0., 0., Vel);
 				for (int j = 0; j < 4; j++) {
@@ -912,16 +1093,13 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 					assert(NodeTemp);
 					int jj = j;
 					if (NodeTemp->getinfo() != S_C_CON)
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
-								(*(NodeTemp->get_coord())) * (matprops)->LENGTH_SCALE,
-								(*(NodeTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
-								NodeTemp->get_elevation() * (matprops->LENGTH_SCALE),
-								state_vars[0] * (matprops)->HEIGHT_SCALE,
-								state_vars[2] * momentum_scale, state_vars[3] * momentum_scale,
-								state_vars[4], state_vars[5], Vel[0], Vel[1], Vel[2], Vel[3],
-								state_vars[1],
-								*(EmTemp->get_el_error())/**(EmTemp->get_drag())*/,
-								*(EmTemp->get_drag() + 1));
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e\n",
+						    (*(NodeTemp->get_coord())) * (matprops)->LENGTH_SCALE,
+						    (*(NodeTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
+						    NodeTemp->get_elevation() * (matprops->LENGTH_SCALE),
+						    state_vars[0] * (matprops)->HEIGHT_SCALE, state_vars[1] * momentum_scale,
+						    state_vars[2] * momentum_scale, Vel[0], Vel[1], Vel[2], Vel[3], state_vars[1],
+						    *(EmTemp->get_el_error())/**(EmTemp->get_drag())*/, *(EmTemp->get_drag() + 1));
 
 					else // S_C_CON will have a discontinuity in the elevation so fix that by interpolation
 					{
@@ -946,27 +1124,22 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 							neighside = 1;
 							//assert(0);
 						}
-						Node* NodeTemp2 = (Node*) NodeTable->lookup(
-								nodes + mynode * KEYLENGTH);
+						Node* NodeTemp2 = (Node*) NodeTable->lookup(nodes + mynode * KEYLENGTH);
 						assert(NodeTemp2);
 
 						elev = .5 * NodeTemp2->get_elevation();
 						Element* EmTemp2 = (Element*) El_Table->lookup(
-								(EmTemp->get_neighbors() + KEYLENGTH * neighside));
+						    (EmTemp->get_neighbors() + KEYLENGTH * neighside));
 						assert(EmTemp2);
 
-						NodeTemp2 = (Node*) NodeTable->lookup(
-								EmTemp2->getNode() + j * KEYLENGTH);
+						NodeTemp2 = (Node*) NodeTable->lookup(EmTemp2->getNode() + j * KEYLENGTH);
 						elev += .5 * NodeTemp2->get_elevation();
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
-								(*(NodeTemp->get_coord())) * (matprops)->LENGTH_SCALE,
-								(*(NodeTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
-								elev * (matprops->LENGTH_SCALE),
-								state_vars[0] * (matprops)->HEIGHT_SCALE,
-								state_vars[2] * momentum_scale, state_vars[3] * momentum_scale,
-								state_vars[4], state_vars[5], Vel[0], Vel[1], Vel[2], Vel[3],
-								state_vars[1], *(EmTemp->get_drag()),
-								*(EmTemp->get_drag() + 1));
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e\n",
+						    (*(NodeTemp->get_coord())) * (matprops)->LENGTH_SCALE,
+						    (*(NodeTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
+						    elev * (matprops->LENGTH_SCALE), state_vars[0] * (matprops)->HEIGHT_SCALE,
+						    state_vars[1] * momentum_scale, state_vars[2] * momentum_scale, Vel[0], Vel[1],
+						    Vel[2], Vel[3], state_vars[1], *(EmTemp->get_drag()), *(EmTemp->get_drag() + 1));
 					}
 				}
 			}
@@ -990,7 +1163,7 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
  **************************************
  *************************************/
 void vizplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
-		TimeProps* timeprops) {
+    TimeProps* timeprops) {
 	int myid, i;
 	int numprocs;
 	int material;
@@ -1008,8 +1181,7 @@ void vizplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	sprintf(filename, "vizplot%08d.plt", timeprops->iter);
 	int order;
 	int e_buckets = El_Table->get_no_of_buckets();
-	double momentum_scale = sqrt(
-			matprops->LENGTH_SCALE * (matprops->GRAVITY_SCALE)); // scaling factor for the momentums
+	double momentum_scale = sqrt(matprops->LENGTH_SCALE * (matprops->GRAVITY_SCALE)); // scaling factor for the momentums
 
 	FILE* fp;
 
@@ -1017,7 +1189,7 @@ void vizplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 		fp = fopen(filename, "w");
 		fprintf(fp, "TITLE= \"MESH OUTPUT\"\n");
 		fprintf(fp,
-				"VARIABLES = \"X\", \"Y\", \"Z\", \"PROC\" \"PILE_HEIGHT\" \"XMOMENTUM\" \"YMOMENTUM\" \"KEY0\" \"KEY1\" \"GENERATION\" \"SON\"");
+		    "VARIABLES = \"X\", \"Y\", \"Z\", \"PROC\" \"PILE_HEIGHT\" \"XMOMENTUM\" \"YMOMENTUM\" \"KEY0\" \"KEY1\" \"GENERATION\" \"SON\"");
 	} else {
 		MPI_Recv(&done, 1, MPI_INT, myid - 1, TECTAG, MPI_COMM_WORLD, &status);
 		fp = fopen(filename, "a+");
@@ -1035,8 +1207,8 @@ void vizplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	}
 
 	fprintf(fp, "\n");
-	fprintf(fp, "ZONE N=%d, E=%d, F=FEPOINT, ET=QUADRILATERAL\n",
-			element_counter * 4, element_counter);
+	fprintf(fp, "ZONE N=%d, E=%d, F=FEPOINT, ET=QUADRILATERAL\n", element_counter * 4,
+	    element_counter);
 
 	int elements = El_Table->get_no_of_buckets();
 
@@ -1058,13 +1230,12 @@ void vizplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 				for (int j = 0; j < 4; j++) {
 					NodeTemp = (Node*) NodeTable->lookup(nodes + j * KEYLENGTH);
 					fprintf(fp, "%e %e %e %d %e %e %e %u %u %d %d\n",
-							(*(NodeTemp->get_coord())) * (matprops)->LENGTH_SCALE,
-							(*(NodeTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
-							(NodeTemp->get_elevation()) * (matprops)->LENGTH_SCALE, myid,
-							state_vars[0] * (matprops)->HEIGHT_SCALE,
-							state_vars[2] * momentum_scale, state_vars[3] * momentum_scale,
-							*(EmTemp->pass_key()), *(EmTemp->pass_key() + 1),
-							EmTemp->get_gen(), EmTemp->get_which_son());
+					    (*(NodeTemp->get_coord())) * (matprops)->LENGTH_SCALE,
+					    (*(NodeTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
+					    (NodeTemp->get_elevation()) * (matprops)->LENGTH_SCALE, myid,
+					    state_vars[0] * (matprops)->HEIGHT_SCALE, state_vars[1] * momentum_scale,
+					    state_vars[2] * momentum_scale, *(EmTemp->pass_key()), *(EmTemp->pass_key() + 1),
+					    EmTemp->get_gen(), EmTemp->get_which_son());
 
 				}
 			}
@@ -1082,6 +1253,39 @@ void vizplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 
 	if (myid != numprocs - 1)
 		MPI_Send(&done, 1, MPI_INT, myid + 1, TECTAG, MPI_COMM_WORLD);
+
+}
+
+void get_elevation_and_coord(DualCell* cell, double lscale, double* dx, double* elevation,
+    double coords[][2]) {
+
+	double resolution = (dx[0] + dx[1]) * lscale / 2.0;
+
+	for (int i = 0; i < 4; ++i)
+		for (int j; j < 2; ++j)
+			coords[i][j] = 0.;
+
+// order of points 1: lower left, 2: lower right, 3: upper right, 4: upper left
+
+	double *position;
+	position = cell->get_position();
+
+	double xcoord[2] = { (position[0] - .5 * dx[0]) * lscale, (position[0] + .5 * dx[0]) * lscale };
+	double ycoord[2] = { (position[1] - .5 * dx[1]) * lscale, (position[1] + .5 * dx[1]) * lscale };
+
+	Get_elevation(resolution, xcoord[0], ycoord[0], &elevation[0]);
+	Get_elevation(resolution, xcoord[1], ycoord[0], &elevation[1]);
+	Get_elevation(resolution, xcoord[1], ycoord[1], &elevation[2]);
+	Get_elevation(resolution, xcoord[0], ycoord[1], &elevation[3]);
+
+	coords[0][0] = xcoord[0];
+	coords[0][1] = ycoord[0];
+	coords[1][0] = xcoord[1];
+	coords[1][1] = ycoord[0];
+	coords[2][0] = xcoord[1];
+	coords[2][1] = ycoord[1];
+	coords[3][0] = xcoord[0];
+	coords[3][1] = ycoord[1];
 
 }
 

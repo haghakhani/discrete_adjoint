@@ -26,10 +26,8 @@
 #define KEY1   2863311530
 #define ITER   4
 
-
-double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable,
-		MatProps* matprops_ptr, FluxProps* fluxprops_ptr, TimeProps* timeprops_ptr,
-		int ghost_flag) {
+double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
+    FluxProps* fluxprops_ptr, TimeProps* timeprops_ptr, int ghost_flag) {
 	int myid;
 	MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 	double min_distance = 1000000, max_evalue = GEOFLOW_TINY, doubleswap;
@@ -49,7 +47,7 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable,
 	//beginning of section that SHOULD ____NOT___ be openmp'd
 	double maxinflux = 0.0;
 	if ((maxinflux = fluxprops_ptr->MaxInfluxNow(matprops_ptr, timeprops_ptr)
-			* (matprops_ptr->epsilon)) > 0.0) {
+	    * (matprops_ptr->epsilon)) > 0.0) {
 		double mindx = -1.0;
 		;
 
@@ -59,12 +57,11 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable,
 				EmTemp = (Element*) (entryp->value);
 				entryp = entryp->next;
 
-				if ((EmTemp->get_adapted_flag() > 0)
-						|| (EmTemp->get_adapted_flag() < 0)) {
+				if ((EmTemp->get_adapted_flag() > 0) || (EmTemp->get_adapted_flag() < 0)) {
 					mindx = (
-							(*(EmTemp->get_dx() + 0) < *(EmTemp->get_dx() + 1)) ?
-									*(EmTemp->get_dx() + 0) : *(EmTemp->get_dx() + 1))
-							* pow(0.5, REFINE_LEVEL - EmTemp->get_gen());
+					    (*(EmTemp->get_dx() + 0) < *(EmTemp->get_dx() + 1)) ?
+					        *(EmTemp->get_dx() + 0) : *(EmTemp->get_dx() + 1))
+					    * pow(0.5, REFINE_LEVEL - EmTemp->get_gen());
 					break;
 				}
 			}
@@ -85,7 +82,7 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable,
 	int intswap;
 	double *curve, maxcurve;
 	int ifanynonzeroheight = 0;
-	double Vsolid[2], Vfluid[2];
+	double Vsolid[2];
 	for (ibuck = 0; ibuck < num_elem_buckets; ibuck++) {
 		entryp = *(elem_bucket_zero + ibuck);
 		while (entryp) {
@@ -93,7 +90,7 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable,
 			entryp = entryp->next;
 
 			if ((EmTemp->get_adapted_flag() > 0)
-					|| ((EmTemp->get_adapted_flag() < 0) && (ghost_flag == 1))) {
+			    || ((EmTemp->get_adapted_flag() < 0) && (ghost_flag == 1))) {
 				//if this element does not belong on this processor don't involve!!!
 
 				if (*(EmTemp->get_state_vars()) > GEOFLOW_TINY) {
@@ -109,14 +106,12 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable,
 
 					int debuging, ggg = 0;
 					if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1
-							&& timeprops_ptr->iter == ITER)
+					    && timeprops_ptr->iter == ITER)
 						debuging = ggg = 1;
 
-					gmfggetcoef_(EmTemp->get_state_vars(), d_uvec,
-							(d_uvec + NUM_STATE_VARS), dx_ptr,
-							&(matprops_ptr->bedfrict[EmTemp->get_material()]),
-							&(matprops_ptr->intfrict), &kactxy[0], &kactxy[1], &tiny,
-							&(matprops_ptr->epsilon));
+					gmfggetcoef_(EmTemp->get_state_vars(), d_uvec, (d_uvec + NUM_STATE_VARS), dx_ptr,
+					    &(matprops_ptr->bedfrict[EmTemp->get_material()]), &(matprops_ptr->intfrict),
+					    &kactxy[0], &kactxy[1], &tiny, &(matprops_ptr->epsilon));
 
 					EmTemp->put_kactxy(kactxy);
 					EmTemp->calc_stop_crit(matprops_ptr);
@@ -129,17 +124,12 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable,
 					//rule speed if it is smaller) because underestimating speed (which
 					//results in over estimating the timestep) is fatal to stability...
 
-					Vsolid[0] = (*(EmTemp->get_state_vars() + 2))
-							/ (*(EmTemp->get_state_vars()));
-					Vsolid[1] = (*(EmTemp->get_state_vars() + 3))
-							/ (*(EmTemp->get_state_vars()));
-					Vfluid[0] = 0;//(*(EmTemp->get_state_vars()+4))/(*(EmTemp->get_state_vars()));
-					Vfluid[1] = 0;//(*(EmTemp->get_state_vars()+5))/(*(EmTemp->get_state_vars()));
+					Vsolid[0] = (*(EmTemp->get_state_vars() + 1)) / (*(EmTemp->get_state_vars()));
+					Vsolid[1] = (*(EmTemp->get_state_vars() + 2)) / (*(EmTemp->get_state_vars()));
 
 					eigen_(EmTemp->get_state_vars(), (EmTemp->get_eigenvxymax()),
-							(EmTemp->get_eigenvxymax() + 1), &evalue, &tiny,
-							EmTemp->get_kactxy(), EmTemp->get_gravity(), Vsolid, Vfluid,
-							&(matprops_ptr->epsilon), &(matprops_ptr->flow_type));
+					    (EmTemp->get_eigenvxymax() + 1), &evalue, &tiny, EmTemp->get_kactxy(),
+					    EmTemp->get_gravity(), Vsolid, &(matprops_ptr->epsilon), &(matprops_ptr->flow_type));
 #endif
 
 					// ***********************************************************
@@ -156,20 +146,16 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable,
 						maxcurve = (dabs(curve[0]) > dabs(curve[1])) ? curve[0] : curve[1];
 
 						fprintf(stderr,
-								"eigenvalue is %e for procd %d momentums are:\n \
+						    "eigenvalue is %e for procd %d momentums are:\n \
                      solid :(%e, %e) \n \
-                     fluid :(%e, %e) \n \
                      for pile height %e curvature=%e (x,y)=(%e,%e)\n",
-								evalue, myid, *(EmTemp->get_state_vars() + 2),
-								*(EmTemp->get_state_vars() + 3),
-								*(EmTemp->get_state_vars() + 4),
-								*(EmTemp->get_state_vars() + 5), *(EmTemp->get_state_vars()),
-								maxcurve, *(EmTemp->get_coord()), *(EmTemp->get_coord() + 1));
+						    evalue, myid, *(EmTemp->get_state_vars() + 1), *(EmTemp->get_state_vars() + 2),
+						    *(EmTemp->get_state_vars()), maxcurve, *(EmTemp->get_coord()),
+						    *(EmTemp->get_coord() + 1));
 						exit(1);
 					}
 
-					min_dx_dy_evalue = c_dmin1(c_dmin1(dx_ptr[0], dx_ptr[1]) / evalue,
-							min_dx_dy_evalue);
+					min_dx_dy_evalue = c_dmin1(c_dmin1(dx_ptr[0], dx_ptr[1]) / evalue, min_dx_dy_evalue);
 				} else {
 					EmTemp->calc_stop_crit(matprops_ptr); // ensure decent friction-values
 					kactxy[0] = kactxy[1] = matprops_ptr->epsilon;
@@ -182,9 +168,7 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable,
 	dt[0] = 0.5 * min_dx_dy_evalue;
 
 	//find the negative of the max not the positive min
-	dt[1] = -0.9
-			* sqrt(
-					hmax * (matprops_ptr->epsilon) * (matprops_ptr->GRAVITY_SCALE) / 9.8);
+	dt[1] = -0.9 * sqrt(hmax * (matprops_ptr->epsilon) * (matprops_ptr->GRAVITY_SCALE) / 9.8);
 
 	ierr = MPI_Allreduce(dt, global_dt, 3, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
 

@@ -194,8 +194,8 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid,
 		     (xy[1]-yCen)*(xy[1]-yCen))*dVol;
 	    
 	    
-	    v_ave+=sqrt(state_vars[2]*state_vars[2]+state_vars[3]*state_vars[3])*dA;
-            u_ave+=sqrt(state_vars[2]*state_vars[2]+state_vars[3]*state_vars[3])*dA;
+	    v_ave+=sqrt(state_vars[1]*state_vars[1]+state_vars[2]*state_vars[2])*dA;
+            u_ave+=sqrt(state_vars[1]*state_vars[1]+state_vars[2]*state_vars[2])*dA;
 	    Curr_El->eval_velocity(0.0,0.0,Velocity);
 
 
@@ -203,35 +203,24 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid,
                (!((u_ave<=0.0)||(0.0<=u_ave)))||
 	       (!((state_vars[0]<=0.0)||(0.0<=state_vars[0])))||
 	       (!((state_vars[1]<=0.0)||(0.0<=state_vars[1])))||
-	       (!((state_vars[2]<=0.0)||(0.0<=state_vars[2])))||
-	       (!((state_vars[3]<=0.0)||(0.0<=state_vars[3])))||
-	       (!((state_vars[4]<=0.0)||(0.0<=state_vars[4])))||
-	       (!((state_vars[5]<=0.0)||(0.0<=state_vars[5]))))
+	       (!((state_vars[2]<=0.0)||(0.0<=state_vars[2]))))
             {
 	      //v_ave is NaN
 	      printf("calc_stats(): NaN detected in element={%10u,%10u} at iter=%d\n",
 		     *(Curr_El->pass_key()+0),*(Curr_El->pass_key()+1),
 		     timeprops->iter);
-	      printf("prevu={%12.6g,%12.6g,%12.6g,%12.6g,%12.6g,%12.6g}\n",
+	      printf("prevu={%12.6g,%12.6g,%12.6g}\n",
 		     *(Curr_El->get_prev_state_vars()+0),
 		     *(Curr_El->get_prev_state_vars()+1),
-		     *(Curr_El->get_prev_state_vars()+2),
-		     *(Curr_El->get_prev_state_vars()+3),
-		     *(Curr_El->get_prev_state_vars()+4),
-		     *(Curr_El->get_prev_state_vars()+5));
-	      printf("  u={%12.6g,%12.6g,%12.6g,%12.6g,%12.6g,%12.6g}\n",
-		     state_vars[0],state_vars[1],state_vars[2],
-                     state_vars[3],state_vars[4],state_vars[5]);
-	      printf("prev {Vx_s, Vy_s, Vx_f, Vy_f}={%12.6g,%12.6g,%12.6g,%12.6g}\n",
-		    *(Curr_El->get_prev_state_vars()+2)/(*(Curr_El->get_prev_state_vars())),
-		    *(Curr_El->get_prev_state_vars()+3)/(*(Curr_El->get_prev_state_vars())),
-		    *(Curr_El->get_prev_state_vars()+2)/(*(Curr_El->get_prev_state_vars())),
-		    *(Curr_El->get_prev_state_vars()+3)/(*(Curr_El->get_prev_state_vars())));
-	      printf("this {Vx_s, Vy_s, Vx_f, Vy_f}={%12.6g,%12.6g,%12.6g,%12.6g}\n",
-		     state_vars[2]/*state_vars[1]*/,
-		     state_vars[3]/*state_vars[1]*/,
-		     state_vars[2]/state_vars[0],
-		     state_vars[3]/state_vars[0]);
+		     *(Curr_El->get_prev_state_vars()+2));
+	      printf("  u={%12.6g,%12.6g,%12.6g}\n",
+		     state_vars[0],state_vars[1],state_vars[2]);
+	      printf("prev {Vx_s, Vy_s}={%12.6g,%12.6g}\n",
+		    *(Curr_El->get_prev_state_vars()+1)/(*(Curr_El->get_prev_state_vars())),
+		    *(Curr_El->get_prev_state_vars()+2)/(*(Curr_El->get_prev_state_vars())));
+	      printf("this {Vx_s, Vy_s}={%12.6g,%12.6g}\n",
+		     state_vars[1]/state_vars[0],
+		     state_vars[2]/state_vars[0]);
 	      ElemBackgroundCheck2(El_Table,NodeTable,Curr_El,stdout);
 	      exit(1);
 	    }
@@ -240,8 +229,8 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid,
 	    if(temp > v_max) v_max=temp;
             temp=sqrt(Velocity[2]*Velocity[2]+Velocity[3]*Velocity[3]);
             if(temp > u_max) u_max=temp;
-	    vx_ave+=state_vars[2]*dA;
-	    vy_ave+=state_vars[3]*dA;
+	    vx_ave+=state_vars[1]*dA;
+	    vy_ave+=state_vars[2]*dA;
 	    adjoint+=.5*(9.8*state_vars[0]*state_vars[0]+ state_vars[0]*(Velocity[0]*Velocity[0]+Velocity[1]*Velocity[1]))*dA;
 	    //these are garbage, Bin Yu wanted them when he was trying to come up 
 	    //with a global stopping criteria (to stop the calculation, not the pile)
@@ -254,7 +243,7 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid,
 		      *((Curr_El->get_coord())+1)*matprops->LENGTH_SCALE,
 		      &xslope,&yslope);
 	    if(temp>GEOFLOW_TINY){
-	      slope_ave+=-(state_vars[2]*xslope+state_vars[3]*yslope)*dA/temp;
+	      slope_ave+=-(state_vars[1]*xslope+state_vars[2]*yslope)*dA/temp;
 	      slopevolume+=dVol;}
 	  }
 	}

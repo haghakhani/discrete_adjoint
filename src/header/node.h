@@ -22,8 +22,8 @@
 #include "constant.h"
 #include "hashtab.h"
 #include "struct.h"
-#include "jacobian.h"
-
+//#include "jacobian.h"
+class Jacobian;
 class Node {
 
 	friend class Element;
@@ -229,10 +229,10 @@ protected:
 	double elevation;
 
 	//! these are the so called "regular fluxes" that is the ones that are used to update the elements, assume that element normal is parallel to either the x or y axis, Keith is the one who introduced a distinction between regular and refinement fluxes for use with the stopping criteria, this distinction is disabled by default
-	double flux[NUM_STATE_VARS + 3];
+	double flux[NUM_STATE_VARS ];
 
 	//! the "refinement flux" is necessary when using the stopping criteria to reset the "regular" fluxes to what they would be if velocity was zero in the cell(s) involved.  The refinement flux is what the flux would have been if it had not been reset, they are needed since refinement is based on fluxes (and also pileheight gradient but that's not relevant here) Keith is the one who introduced a distinction between regular and refinement fluxes for use with the stopping criteria, this distinction is disabled by default.
-	double refinementflux[NUM_STATE_VARS + 3];
+	double refinementflux[NUM_STATE_VARS ];
 };
 
 inline void Node::putsol(double* s) {

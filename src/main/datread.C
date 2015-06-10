@@ -505,7 +505,7 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr,
 //end of the file, those are now read from frict.data in Read_data()
 void Read_grid(int myid, int numprocs, HashTable** NodeTable,
 		HashTable** ElemTable, MatProps* matprops_ptr,
-		OutLine* outline_ptr) {
+		OutLine* outline_ptr,DualMesh** dualmesh) {
 	int Node_Num, Elem_Num;
 
 	int NODE_TABLE_SIZE = 400000;
@@ -791,6 +791,8 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable,
 	outline_ptr->init(Quad9P->get_dx(), REFINE_LEVEL - Quad9P->get_gen(), xminmax,
 			yminmax);
 #endif
+	*dualmesh= new DualMesh (Quad9P->get_dx(), REFINE_LEVEL - Quad9P->get_gen(), xminmax,
+			yminmax);
 
 	delete[] value;
 

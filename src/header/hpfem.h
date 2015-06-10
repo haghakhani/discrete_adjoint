@@ -17,6 +17,9 @@
 
 //modifed 2003/08/29 11:29:35 by kdalbey
 
+#ifndef HPFEM_H
+#define HPFEM_H
+
 #define  SUNOS  //definition for gmake architecture
 #define TOPO_DATA
 
@@ -38,11 +41,12 @@ using namespace std;
 //#undef SEEK_END
 //#undef SEEK_CUR
 #include <mpi.h>
-#include "properties.h"
-#include "node.h"
-#include "jacobian.h"
-#include "element2.h"
 #include "hashtab.h"
+#include "node.h"
+#include "properties.h"
+#include "element2.h"
+#include "jacobian.h"
+#include "dualmesh.h"
 #include "recv.h"
 #include "extfun.h"
 #include "geoflow.h"
@@ -53,4 +57,8 @@ using namespace std;
 #include "flux_srcs.h"
 
 #undef CRAY
+
+#endif
+
+
 

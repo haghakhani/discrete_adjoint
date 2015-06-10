@@ -83,7 +83,7 @@ extern void fhsfc3d(double*, unsigned*, unsigned*);
 extern void fhsfc2d_(double*, unsigned*, unsigned*);
 
 /* geoflow data */
-const int NUM_STATE_VARS = 6;
+const int NUM_STATE_VARS = 3;
 const int NUM_ADJ_EQS = 3;
 
 const double GEOFLOW_TINY=2.e-04;

@@ -5,5 +5,5 @@
 #
 
 noinst_HEADERS = blas.h constant.h extfun.h geoflow.h hpfem.h properties.h \
-    refined_neighbor_info.h struct.h boundary.h element2.h jacobian.h exvar.h \
+    refined_neighbor_info.h struct.h boundary.h element2.h jacobian.h dualmesh.h exvar.h \
     hashtab.h node.h recv.h scale.h flux_srcs.h GMFG_hdfapi.h 
