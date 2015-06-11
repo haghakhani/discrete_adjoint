@@ -149,6 +149,10 @@ public:
 
 	void calc_func_sens(const void * ctx);
 
+	void print_cell_info(int iter);
+
+	void print_cell_neighb_info(DualMesh*dualmesh, int iter);
+
 	//destructor
 	~DualCell();
 
@@ -170,5 +174,7 @@ private:
 	double elevation;
 
 };
+
+void set_ab(int* a, int* b, int effelement);
 
 #endif

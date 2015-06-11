@@ -118,7 +118,7 @@ void dual_solver(DualMesh* dualmesh, MatProps* matprops_ptr, TimeProps* timeprop
 //		unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
 //		    rescomp);
 
-		if (/*adjiter*/timeprops_ptr->ifadjoint_out() /*|| adjiter == 1*/)
+		if (adjiter/*timeprops_ptr->ifadjoint_out() /*|| adjiter == 1*/)
 			dualplot(dualmesh, matprops_ptr, timeprops_ptr, mapname_ptr, functional, plotflag);
 
 	}

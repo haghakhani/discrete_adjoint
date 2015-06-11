@@ -190,8 +190,6 @@ void print_jacobian(HashTable* El_Table, vector<Jacobian*>* solHyst, int iter);
 
 void print_jacobian(DualMesh* dualmesh, int iter);
 
-void set_ab(int* a, int* b, int effelement);
-
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);
 

@@ -17,11 +17,11 @@
 #endif
 #include "../header/hpfem.h"
 
-#define KEY0   8
-#define KEY1   3
-#define ITER   5
-#define EFFELL 4
-#define J      1
+#define KEY0   11
+#define KEY1   8
+#define ITER   21
+#define EFFELL 2
+#define J      0
 #define JACIND 0
 
 #define DEBUG
@@ -49,7 +49,7 @@ void calc_jacobian(DualMesh* dualmesh, MatProps* matprops_ptr, TimeProps* timepr
 	ResFlag resflag[5];
 	reset_resflag(resflag);
 
-	dualmesh->calc_flux();
+//	dualmesh->calc_flux();
 
 	int Ny = dualmesh->get_Ny();
 	int Nx = dualmesh->get_Nx();
@@ -87,10 +87,14 @@ void calc_jacobian(DualMesh* dualmesh, MatProps* matprops_ptr, TimeProps* timepr
 
 				}
 
+				int fff = 0, rrr = 1;
+				if (yind == KEY0 && xind == KEY1 && iter == ITER )
+					fff = rrr;
+
+//				cell->calc_slopes(dualmesh);
+
 				for (int ind = 0; ind < NUM_STATE_VARS * DIMENSION; ++ind)
 					d_state_vars_old[ind] = *(cell->get_d_state_vars() + ind);
-
-				cell->calc_slopes(dualmesh);
 
 				double fluxold[4][NUM_STATE_VARS];
 
@@ -118,9 +122,9 @@ void calc_jacobian(DualMesh* dualmesh, MatProps* matprops_ptr, TimeProps* timepr
 				    matprops_ptr->frict_tiny, orgSrcSgn, 0. /*here we set increment0.*/, //3
 				    matprops_ptr->epsilon, 1/*here we set srcflag=1*/); //2
 
-				for (int effelement = 0; effelement < 5; effelement++) {
+				unsigned key_xm[2] = { yind, xind - 1 }, key_ym[2] = { yind - 1, xind };
 
-					double void_res[NUM_STATE_VARS] = { 0., 0., 0. };
+				for (int effelement = 0; effelement < 5; effelement++) {
 
 					if (effelement == 0 && prev_state_vars[0] == 0.)
 
@@ -133,12 +137,8 @@ void calc_jacobian(DualMesh* dualmesh, MatProps* matprops_ptr, TimeProps* timepr
 
 					else {
 
-						unsigned key_xp[2] = { yind, xind + 1 }, key_xm[2] = { yind, xind - 1 }, key_yp[2] = {
-						    yind + 1, xind }, key_ym[2] = { yind - 1, xind };
-
 						for (int j = 0; j < NUM_STATE_VARS; j++) {
 
-							double vec_res[NUM_STATE_VARS];
 							double total_res[NUM_STATE_VARS] = { 0., 0., 0. };
 
 							int scheme = 0;
@@ -180,6 +180,7 @@ void calc_jacobian(DualMesh* dualmesh, MatProps* matprops_ptr, TimeProps* timepr
 #endif
 								double *d_state_vars = cell->get_d_state_vars();
 
+								double vec_res[NUM_STATE_VARS];
 								//here we compute the residuals
 								residual(vec_res, state_vars, prev_state_vars, flux[0], //4
 								    flux[1], flux[2], flux[3], dtdx, dtdy, dt, d_state_vars, //7

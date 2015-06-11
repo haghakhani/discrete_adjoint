@@ -15,9 +15,9 @@
 #endif
 #include "../header/hpfem.h"
 
-#define KEY0 3916612844
-#define KEY1 1321528399
-#define ITER 1
+#define KEY0 25
+#define KEY1 16
+#define ITER 61
 
 struct Func_CTX {
 
@@ -116,6 +116,9 @@ void calc_adjoint(DualMesh* dualmesh, TimeProps* timeprops_ptr, int iter, int ad
 				for (int k = 0; k < NUM_STATE_VARS; k++)
 					adjoint[k] = *(dualcell->get_funcsens() + k) - adjcontr[k];
 
+				if (abs(i - KEY0) <= 1 && abs(j - KEY1) <= 1 && iter == ITER) //&& effelement == EFFELL  && j == J)
+					dualcell->print_cell_neighb_info(dualmesh, iter);
+
 			}
 		}
 
@@ -140,13 +143,16 @@ void set_ab(int* a, int* b, int effelement) {
 			*a = -1;
 			break;
 		default:
-			cerr << "This effective element is invalis" << endl;
+			cerr << "This effective element is invalid" << endl;
 	}
 }
 
 void DualCell::calc_func_sens(const void * ctx) {
 
 	Func_CTX* contx = (Func_CTX *) ctx;
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		func_sens[i] = 0.;
 
 	if (contx->adjiter == 0) {
 

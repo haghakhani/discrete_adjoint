@@ -196,7 +196,7 @@ DualCell::DualCell(unsigned* key, double* position) :
 
 	curr_adjoint = NULL;
 	prev_adjoint = NULL;
-	func_sens=NULL;
+	func_sens = NULL;
 	state_vars = NULL;
 	prev_state_vars = NULL;
 	flux = NULL;
@@ -423,7 +423,7 @@ void DualCell::calc_gravity(MatProps* matprops_ptr) {
 		gravity[2] = 9.8;
 	}
 
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		gravity[i] = gravity[i] / matprops_ptr->GRAVITY_SCALE;
 
 }
@@ -629,8 +629,108 @@ void DualCell::calc_topo_data(DualMesh* dualmesh, MatProps* matprops_ptr) {
 
 }
 
-double* DualCell::get_funcsens(){
+double* DualCell::get_funcsens() {
 	return func_sens;
+}
+
+void DualCell::print_cell_info(int iter) {
+
+	FILE *fp;
+	char filename[256];
+	sprintf(filename, "cell_NY%3d_NX%3d_iter%04d", key[0], key[1], iter);
+	fp = fopen(filename, "a");
+
+	fprintf(fp, "cell position: x=%f , y=%f \n", position[0], position[1]);
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		fprintf(fp, "state_vars[%d]:      %e ", i, state_vars[i]);
+	fprintf(fp, "\n");
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		fprintf(fp, "prev_state_vars[%d]: %e ", i, prev_state_vars[i]);
+	fprintf(fp, "\n");
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		fprintf(fp, "func_sens[%d]:       %e ", i, func_sens[i]);
+	fprintf(fp, "\n");
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		fprintf(fp, "curr_adjoint[%d]:    %e ", i, curr_adjoint[i]);
+	fprintf(fp, "\n");
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		fprintf(fp, "prev_adjoint[%d]:    %e ", i, prev_adjoint[i]);
+	fprintf(fp, "\n");
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		fprintf(fp, "gravity[%d]:         %e ", i, gravity[i]);
+	fprintf(fp, "\n");
+	fprintf(fp, "\n");
+
+	for (int i = 0; i < NUM_STATE_VARS * DIMENSION; ++i)
+		fprintf(fp, "flux[%d]: %e ", i, flux[i]);
+	fprintf(fp, "\n");
+
+	for (int i = 0; i < NUM_STATE_VARS * DIMENSION; ++i)
+		fprintf(fp, "d_state_vars[%d]: %e ", i, d_state_vars[i]);
+	fprintf(fp, "\n");
+	fprintf(fp, "\n");
+
+	for (int i = 0; i < DIMENSION; ++i)
+		fprintf(fp, "d_gravity[%d]: %e ", i, d_gravity[i]);
+	fprintf(fp, "\n");
+
+	for (int i = 0; i < DIMENSION; ++i)
+		fprintf(fp, "zeta[%d]:      %e ", i, zeta[i]);
+	fprintf(fp, "\n");
+
+	for (int i = 0; i < DIMENSION; ++i)
+		fprintf(fp, "curvature[%d]: %e ", i, curvature[i]);
+	fprintf(fp, "\n");
+	fprintf(fp, "\n");
+
+	fprintf(fp, "elevation= %e \n", elevation);
+	fprintf(fp, "kact=      %e \n", kact);
+	fprintf(fp, "\n");
+
+	for (int i = 0; i < 5; i++) {
+		fprintf(fp, "Matrix=  %d,\n", i);
+
+		for (int j = 0; j < NUM_STATE_VARS; j++) {
+			for (int k = 0; k < NUM_STATE_VARS; k++) {
+				fprintf(fp, "%10.8f  ", jacobianMat[i][j][k]);
+				if (dabs(jacobianMat[i][j][k]) > 10.)
+					fprintf(fp, "Jedi begir mano \n");
+			}
+			fprintf(fp, "\n");
+		}
+	}
+
+	fprintf(fp, "====================================\n");
+
+	fclose(fp);
+
+}
+
+void DualCell::print_cell_neighb_info(DualMesh*dualmesh, int iter) {
+
+	for (int effel = 0; effel < 5; ++effel)
+		if (effel == 0)
+			print_cell_info(iter);
+
+		else {
+
+			int a, b;
+			set_ab(&a, &b, effel);
+
+			DualCell* neigh_cell = dualmesh->get_dualcell(key[0] + a, key[1] + b);
+			if (neigh_cell != NULL)
+				neigh_cell->print_cell_info(iter);
+			else
+				cout << "for effel  " << effel << " is NULL " << endl;
+
+		}
+
 }
 
 DualCell::~DualCell() {
