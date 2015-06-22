@@ -17,67 +17,66 @@
 
 #ifndef CONSTANTS
 #define CONSTANTS
-const int  KEYLENGTH = 2;
+const int KEYLENGTH = 2;
 
 //const   NODE_TABLE_SIZE=6000;
 //const   EL_TABLE_SIZE=2000;
 
+const int MAX_PROCS = 2056;
 
-const int  MAX_PROCS = 2056;
-
-const int  ZERO      = '0';
-const int  NONZERO   = 111;
+const int ZERO = '0';
+const int NONZERO = 111;
 //const   NBUCKETS  = 2000;        //every hashtable posseses 5000 entries.
-const int   PRIME     = 2017;        //used for creating hash key
-const int   DIMENSION = 2;
-const int   EQUATIONS = 2;         /* be careful EQUATIONS and NUM_STATE_VARS
-				      are completely different things and are 
-				      not interchangeable, EQUATIONS appears 
-				      to not be used except for the el_error
-				      and el_solution variables (members of 
-				      element) I believe they are only for 
-				      FEM which we aren't really using in the
-				      Finite difference/volume version of 
-				      titan.  Just leave it at 2 and otherwise
-				      ignore it. */
-const int   POWER     = 1; 
-const int   MAX_ORDER = 6;
+const int PRIME = 2017;        //used for creating hash key
+const int DIMENSION = 2;
+const int EQUATIONS = 2; /* be careful EQUATIONS and NUM_STATE_VARS
+ are completely different things and are
+ not interchangeable, EQUATIONS appears
+ to not be used except for the el_error
+ and el_solution variables (members of
+ element) I believe they are only for
+ FEM which we aren't really using in the
+ Finite difference/volume version of
+ titan.  Just leave it at 2 and otherwise
+ ignore it. */
+const int POWER = 1;
+const int MAX_ORDER = 6;
 
-const double PI   = 3.1415926;
+const double PI = 3.1415926;
 
-const int   BCTYPE    = 3;
+const int BCTYPE = 3;
 
-const float  C = 1.5;
+const float C = 1.5;
 
-const int   NODEINIT    = 0x0000;
-const int   CORNER      = 0x0002;//--corner dof
-const int   BUBBLE      = 0x0006;
-const int   SIDE        = 0x0004;//--side dof
-const int   CONSTRAINED = 0x0001;
-const int   S_C_CON     = 0x0007;//--side dof
-const int   S_S_CON     = 0x0005;//--no dof
-const int   ASSIGNED    = 1;
-const int   UNASSIGNED  = 0;
+const int NODEINIT = 0x0000;
+const int CORNER = 0x0002;        //--corner dof
+const int BUBBLE = 0x0006;
+const int SIDE = 0x0004;        //--side dof
+const int CONSTRAINED = 0x0001;
+const int S_C_CON = 0x0007;        //--side dof
+const int S_S_CON = 0x0005;        //--no dof
+const int ASSIGNED = 1;
+const int UNASSIGNED = 0;
 
-const double   UN_CONSTRAINED =-999999.0;/*for the unconstrained dof*/
+const double UN_CONSTRAINED = -999999.0;/*for the unconstrained dof*/
 
-const int   ON = 1;
-const int   OFF = 0;
+const int ON = 1;
+const int OFF = 0;
 
-const int   NEW = 1;
-const int   OLD = 0;
+const int NEW = 1;
+const int OLD = 0;
 
-const int   INIT = -1;
+const int INIT = -1;
 
-const float  MAX_X = 1.0;
-const float  MAX_Y = 1.0;
-const float  MIN_X = -1.0;
-const float  MIN_Y = -1.0;
+const float MAX_X = 1.0;
+const float MAX_Y = 1.0;
+const float MIN_X = -1.0;
+const float MIN_Y = -1.0;
 
-const float  SMALL = 1.0e-5;
-const float  XBC = -1.0;
-const float  YBC = -1.0;
-const float  LOAD_BALANCE_TOLERANCE = 1.0001;
+const float SMALL = 1.0e-5;
+const float XBC = -1.0;
+const float YBC = -1.0;
+const float LOAD_BALANCE_TOLERANCE = 1.0001;
 
 extern void fhsfc3d(double*, unsigned*, unsigned*);
 extern void fhsfc2d_(double*, unsigned*, unsigned*);
@@ -85,16 +84,17 @@ extern void fhsfc2d_(double*, unsigned*, unsigned*);
 /* geoflow data */
 const int NUM_STATE_VARS = 3;
 const int NUM_ADJ_EQS = 3;
+const int EFF_ELL = 5;
 
-const double GEOFLOW_TINY=2.e-04;
-const double GEOFLOW_SHORT=3.0e-03;
+const double GEOFLOW_TINY = 2.e-04;
+const double GEOFLOW_SHORT = 3.0e-03;
 
 /* two-phase stuff */
 const int TWOPHASE = 0;
 const int DRY_FLOW = 1;
-const int FLUID_FLOW=2;
+const int FLUID_FLOW = 2;
 
-const int GHOST         = -9876; //"refined" GHOST CELL FLAG
+const int GHOST = -9876; //"refined" GHOST CELL FLAG
 
 //adjoint constants
 const double INCREMENT = 1.e-08;
@@ -109,6 +109,5 @@ const double INCREMENT = 1.e-08;
 #define TOBEDELETED    0  //This element has been marked for deletion, do ot involve
 #define OLDFATHER     -6  //This is a temporary marking that says neighbors need to be updated with NEWSON information and then this element should be remarked as TOBEDELETED
 #define OLDSON        -7  //The plan is make this analogous to OLDFATHER to allow unrefinement NEXT TO but not across interprocessor boundaries, this has not been implemented yet (date of this comment: 20061026)
-
 
 #endif

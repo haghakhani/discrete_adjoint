@@ -147,10 +147,8 @@ struct StatProps {
 	//! the constructor initializes a few statistics
 	StatProps() {
 		timereached = -1.0;
-		xcen = ycen = xvar = yvar = rmean = area = vmean = vxmean = vymean =
-				slopemean = vstar = 0.0;
-		realvolume = statvolume = outflowvol = erodedvol = depositedvol =
-				cutoffheight = 0.0;
+		xcen = ycen = xvar = yvar = rmean = area = vmean = vxmean = vymean = slopemean = vstar = 0.0;
+		realvolume = statvolume = outflowvol = erodedvol = depositedvol = cutoffheight = 0.0;
 		piler = hmax = vmax = forceint = forcebed = 0.0;
 		heightifreach = xyifreach[0] = xyifreach[1] = timereached = 0.0;
 		xyminmax[0] = xyminmax[1] = xyminmax[2] = xyminmax[3] = hxyminmax = 0.0;
@@ -262,8 +260,8 @@ struct MapNames {
 	}
 
 	//! this function allocates space for and assigns the information about the GIS map
-	void assign(char *gis_main_in, char *gis_sub_in, char *gis_mapset_in,
-			char *gis_map_in, int extramaps_in) {
+	void assign(char *gis_main_in, char *gis_sub_in, char *gis_mapset_in, char *gis_map_in,
+	    int extramaps_in) {
 		gis_main = allocstrcpy(gis_main_in);
 		gis_sub = allocstrcpy(gis_sub_in);
 		gis_mapset = allocstrcpy(gis_mapset_in);
@@ -294,6 +292,9 @@ struct TimeProps {
 
 	//! the current number of iterations
 	int iter;
+
+	//! the current number of iterations in dual solution
+	int adjiter;
 
 	//! the maximum amount of time (in seconds) before the simulation ends
 	double maxtime;
@@ -336,8 +337,8 @@ struct TimeProps {
 	vector<double> dt;
 
 	//! this function initializes the time properties at the beginning of the simulation
-	void inittime(int maxiterin, double maxtimein, double timeoutputin,
-			double timesavein, double TIME_SCALEin) {
+	void inittime(int maxiterin, double maxtimein, double timeoutputin, double timesavein,
+	    double TIME_SCALEin) {
 		maxiter = maxiterin;
 		maxtime = maxtimein;
 		timeoutput = timeoutputin;
@@ -347,6 +348,7 @@ struct TimeProps {
 		ndnextoutput = timeoutput / TIME_SCALE;
 		ndnextsave = timesave / TIME_SCALE;
 		iter = 0;
+		adjiter = 0;
 		ioutput = 0;
 		isave = 0;
 		time = 0.0;
@@ -379,11 +381,9 @@ struct TimeProps {
 	}
 
 	int ifadjoint_out() {
-		int output =
-				fabs(remainder(time, timeoutput / TIME_SCALE)) < 1.0E-06 ? 1 : 0;
+		int output = fabs(remainder(time, timeoutput / TIME_SCALE)) < 1.0E-06 ? 1 : 0;
 		if (output)
-			time = ((double) rint(time * TIME_SCALE / timeoutput)) * timeoutput
-					/ TIME_SCALE;
+			time = ((double) rint(time * TIME_SCALE / timeoutput)) * timeoutput / TIME_SCALE;
 		return output;
 	}
 
@@ -398,8 +398,7 @@ struct TimeProps {
 	int ifend(double vstar) {
 		if (vstar > vstarmax)
 			vstarmax = vstar;
-		return ((time >= ndmaxtime) || (iter > maxiter)
-				|| ((vstarmax > 2.0) && !(vstar > 1.0)));
+		return ((time >= ndmaxtime) || (iter > maxiter) || ((vstarmax > 2.0) && !(vstar > 1.0)));
 	}
 
 	//! checks if the simulation has passed 1/10th of the maximum time allowed
@@ -526,10 +525,9 @@ struct MatProps {
 	 *  aren't known at the time this is called so dummy values are fed in instead
 	 *  for many if not all of these
 	 */
-	MatProps(int material_countin, char **matnamesin, double intfrictin,
-			double *bedfrictin, double porosityin, double muin, double rhoin,
-			double rhofin, double epsilonin, double gammain, double frict_tinyin,
-			double lscale, double hscale, double gscale) {
+	MatProps(int material_countin, char **matnamesin, double intfrictin, double *bedfrictin,
+	    double porosityin, double muin, double rhoin, double rhofin, double epsilonin, double gammain,
+	    double frict_tinyin, double lscale, double hscale, double gscale) {
 
 		material_count = material_countin;
 
@@ -678,8 +676,8 @@ struct OutLine {
 	}
 
 	//! this function updates the maximum throughout time pileheight in every cell covered by an arbitrary element
-	void update(double xstart, double xstop, double ystart, double ystop,
-			double height, double h2[6]) {
+	void update(double xstart, double xstop, double ystart, double ystop, double height,
+	    double h2[6]) {
 		int ixstart = (int) ((xstart - xminmax[0]) / dx + 0.5);
 		int ixstop = (int) ((xstop - xminmax[0]) / dx + 0.5);
 		int iystart = (int) ((ystart - yminmax[0]) / dy + 0.5);
@@ -727,12 +725,9 @@ struct OutLine {
 		FILE *fp = fopen(filename, "w");
 
 		//FILE *fp=fopen("outline.pileheight","w");
-		fprintf(fp,
-				"Nx=%d: X={%20.14g,%20.14g}\nNy=%d: Y={%20.14g,%20.14g}\nPileheight=\n",
-				Nx, xminmax[0] * matprops_ptr->LENGTH_SCALE,
-				xminmax[1] * matprops_ptr->LENGTH_SCALE, Ny,
-				yminmax[0] * matprops_ptr->LENGTH_SCALE,
-				yminmax[1] * matprops_ptr->LENGTH_SCALE);
+		fprintf(fp, "Nx=%d: X={%20.14g,%20.14g}\nNy=%d: Y={%20.14g,%20.14g}\nPileheight=\n", Nx,
+		    xminmax[0] * matprops_ptr->LENGTH_SCALE, xminmax[1] * matprops_ptr->LENGTH_SCALE, Ny,
+		    yminmax[0] * matprops_ptr->LENGTH_SCALE, yminmax[1] * matprops_ptr->LENGTH_SCALE);
 		for (iy = 0; iy < Ny; iy++) {
 			for (ix = 0; ix < Nx - 1; ix++)
 				fprintf(fp, "%g ", pileheight[iy][ix] * matprops_ptr->HEIGHT_SCALE);
@@ -742,12 +737,9 @@ struct OutLine {
 
 		sprintf(filename, "elevation.grid");
 		fp = fopen(filename, "w");
-		fprintf(fp,
-				"Nx=%d: X={%20.14g,%20.14g}\nNy=%d: Y={%20.14g,%20.14g}\nPileheight=\n",
-				Nx, xminmax[0] * matprops_ptr->LENGTH_SCALE,
-				xminmax[1] * matprops_ptr->LENGTH_SCALE, Ny,
-				yminmax[0] * matprops_ptr->LENGTH_SCALE,
-				yminmax[1] * matprops_ptr->LENGTH_SCALE);
+		fprintf(fp, "Nx=%d: X={%20.14g,%20.14g}\nNy=%d: Y={%20.14g,%20.14g}\nPileheight=\n", Nx,
+		    xminmax[0] * matprops_ptr->LENGTH_SCALE, xminmax[1] * matprops_ptr->LENGTH_SCALE, Ny,
+		    yminmax[0] * matprops_ptr->LENGTH_SCALE, yminmax[1] * matprops_ptr->LENGTH_SCALE);
 		double yy, xx, res = dx + dy, elevation;
 		int ierr;
 		for (iy = 0; iy < Ny; iy++) {
@@ -781,26 +773,24 @@ struct OutLine {
 		FILE *fp = fopen(filename, "r");
 
 		if (fp == NULL)
-			printf(
-					"pileheightrecord.%06d can not be found.\nRestarting from zero instead\n",
-					statprops_ptr->runid);
+			printf("pileheightrecord.%06d can not be found.\nRestarting from zero instead\n",
+			    statprops_ptr->runid);
 		else {
 
 			int Nxtemp, Nytemp;
 			double xminmaxtemp[2], yminmaxtemp[2];
-			fscanf(fp, "Nx=%d: X={%lf,%lf}\nNy=%d: Y={%lf,%lf}\nPileheight=\n",
-					&Nxtemp, (xminmaxtemp + 0), (xminmaxtemp + 1), &Nytemp,
-					(yminmaxtemp + 0), (yminmaxtemp + 1));
+			fscanf(fp, "Nx=%d: X={%lf,%lf}\nNy=%d: Y={%lf,%lf}\nPileheight=\n", &Nxtemp,
+			    (xminmaxtemp + 0), (xminmaxtemp + 1), &Nytemp, (yminmaxtemp + 0), (yminmaxtemp + 1));
 
 			if ((Nxtemp == Nx)
-					&& (fabs(xminmaxtemp[0] / matprops_ptr->LENGTH_SCALE - xminmax[0])
-							<= fabs(xminmax[0]) / 10000000000.0)
-					&& (fabs(xminmaxtemp[1] / matprops_ptr->LENGTH_SCALE - xminmax[1])
-							<= fabs(xminmax[1]) / 10000000000.0) && (Nytemp == Ny)
-					&& (fabs(yminmaxtemp[0] / matprops_ptr->LENGTH_SCALE - yminmax[0])
-							<= fabs(yminmax[0]) / 10000000000.0)
-					&& (fabs(yminmaxtemp[1] / matprops_ptr->LENGTH_SCALE - yminmax[1])
-							<= fabs(yminmax[1]) / 10000000000.0)) {
+			    && (fabs(xminmaxtemp[0] / matprops_ptr->LENGTH_SCALE - xminmax[0])
+			        <= fabs(xminmax[0]) / 10000000000.0)
+			    && (fabs(xminmaxtemp[1] / matprops_ptr->LENGTH_SCALE - xminmax[1])
+			        <= fabs(xminmax[1]) / 10000000000.0) && (Nytemp == Ny)
+			    && (fabs(yminmaxtemp[0] / matprops_ptr->LENGTH_SCALE - yminmax[0])
+			        <= fabs(yminmax[0]) / 10000000000.0)
+			    && (fabs(yminmaxtemp[1] / matprops_ptr->LENGTH_SCALE - yminmax[1])
+			        <= fabs(yminmax[1]) / 10000000000.0)) {
 
 				for (iy = 0; iy < Ny; iy++)
 					for (ix = 0; ix < Nx; ix++) {
@@ -809,18 +799,16 @@ struct OutLine {
 					}
 			} else {
 				printf(
-						"the pileheightrecord.%06d that is present does not match the restart file.\nRestarting from zero instead\n",
-						statprops_ptr->runid);
+				    "the pileheightrecord.%06d that is present does not match the restart file.\nRestarting from zero instead\n",
+				    statprops_ptr->runid);
 				printf("Nx=%d Nxtemp=%d\n", Nx, Nxtemp);
 				printf("Ny=%d Nytemp=%d\n", Ny, Nytemp);
-				printf(
-						"xmin=%20.14g xmintemp=%20.14g  xmax=%20.14g, xmaxtemp=%20.14g\n",
-						xminmax[0] * matprops_ptr->LENGTH_SCALE, xminmaxtemp[0],
-						xminmax[1] * matprops_ptr->LENGTH_SCALE, xminmaxtemp[1]);
-				printf(
-						"ymin=%20.14g ymintemp=%20.14g  ymax=%20.14g, ymaxtemp=%20.14g\n",
-						yminmax[0] * matprops_ptr->LENGTH_SCALE, yminmaxtemp[0],
-						yminmax[1] * matprops_ptr->LENGTH_SCALE, yminmaxtemp[1]);
+				printf("xmin=%20.14g xmintemp=%20.14g  xmax=%20.14g, xmaxtemp=%20.14g\n",
+				    xminmax[0] * matprops_ptr->LENGTH_SCALE, xminmaxtemp[0],
+				    xminmax[1] * matprops_ptr->LENGTH_SCALE, xminmaxtemp[1]);
+				printf("ymin=%20.14g ymintemp=%20.14g  ymax=%20.14g, ymaxtemp=%20.14g\n",
+				    yminmax[0] * matprops_ptr->LENGTH_SCALE, yminmaxtemp[0],
+				    yminmax[1] * matprops_ptr->LENGTH_SCALE, yminmaxtemp[1]);
 				exit(0);
 			}
 
@@ -895,14 +883,11 @@ struct DISCHARGE {
 				planes[iplane][4] = planes[iplane][1] - planes[iplane][0]; //xb-xa
 				planes[iplane][5] = planes[iplane][3] - planes[iplane][2]; //yb-ya
 				planes[iplane][6] = //(xb-xa)^2+(yb-ya)^2
-						planes[iplane][4] * planes[iplane][4]
-								+ planes[iplane][5] * planes[iplane][5];
+				    planes[iplane][4] * planes[iplane][4] + planes[iplane][5] * planes[iplane][5];
 				planes[iplane][7] = //ya*(xb-xa)-xa*(yb-ya)
-						planes[iplane][3] * planes[iplane][4]
-								- planes[iplane][1] * planes[iplane][5];
+				    planes[iplane][3] * planes[iplane][4] - planes[iplane][1] * planes[iplane][5];
 				planes[iplane][8] = ((fabs(planes[iplane][4]) + fabs(planes[iplane][5]))
-						* (fabs(planes[iplane][4]) + fabs(planes[iplane][5])))
-						/ planes[iplane][6];
+				    * (fabs(planes[iplane][4]) + fabs(planes[iplane][5]))) / planes[iplane][6];
 
 				planes[iplane][9] = 0.0; //discharge through the plane
 
@@ -923,9 +908,8 @@ struct DISCHARGE {
 		double dxnode[4], dynode[4];
 		double dist2nearest2;
 		double halfsidelength = //assumes grid is not slanted
-				(fabs(nodes[6][0] - nodes[4][0]) + fabs(nodes[6][1] - nodes[4][1])
-						+ fabs(nodes[7][0] - nodes[5][0]) + fabs(nodes[7][1] - nodes[5][1]))
-						* 0.25;
+		    (fabs(nodes[6][0] - nodes[4][0]) + fabs(nodes[6][1] - nodes[4][1])
+		        + fabs(nodes[7][0] - nodes[5][0]) + fabs(nodes[7][1] - nodes[5][1])) * 0.25;
 		double halfsidelength2 = halfsidelength * halfsidelength;
 		double err = halfsidelength / pow(2.0, 19.0);
 
@@ -943,17 +927,15 @@ struct DISCHARGE {
 			 y=( (xb-xa)*(ya*(xb-xa)-xa*(yb-ya))+(yb-ya)*(y8*(yb-ya)+x8*(xb-xa)))/
 			 ((xb-xa)^2+(yb-ya)^2);
 			 */
-			doubleswap1 = nodes[8][1] * planes[iplane][5]
-					+ nodes[8][0] * planes[iplane][4];
+			doubleswap1 = nodes[8][1] * planes[iplane][5] + nodes[8][0] * planes[iplane][4];
 			//         =y8         *(yb-ya)          +x8         *(xb-xa)
-			nearestpoint[0] = (-planes[iplane][5] * planes[iplane][7]
-					+ planes[iplane][4] * doubleswap1) / planes[iplane][6];
-			nearestpoint[1] = (+planes[iplane][4] * planes[iplane][7]
-					+ planes[iplane][5] * doubleswap1) / planes[iplane][6];
+			nearestpoint[0] = (-planes[iplane][5] * planes[iplane][7] + planes[iplane][4] * doubleswap1)
+			    / planes[iplane][6];
+			nearestpoint[1] = (+planes[iplane][4] * planes[iplane][7] + planes[iplane][5] * doubleswap1)
+			    / planes[iplane][6];
 
-			dist2nearest2 = (nodes[8][0] - nearestpoint[0])
-					* (nodes[8][0] - nearestpoint[0])
-					+ (nodes[8][1] - nearestpoint[1]) * (nodes[8][1] - nearestpoint[1]);
+			dist2nearest2 = (nodes[8][0] - nearestpoint[0]) * (nodes[8][0] - nearestpoint[0])
+			    + (nodes[8][1] - nearestpoint[1]) * (nodes[8][1] - nearestpoint[1]);
 
 			//check if line interesects with cell (not counting a single corner)
 			if (dist2nearest2 < halfsidelength2 * planes[iplane][8]) {
@@ -967,54 +949,52 @@ struct DISCHARGE {
 				//be an "intersection")
 				for (icorner1 = 0; icorner1 < 4; icorner1++) {
 					doubleswap1 = nodes[icorner1][1] * dxnode[icorner1]
-							- nodes[icorner1][0] * dynode[icorner1];
-					doubleswap2 = dxnode[icorner1] * planes[iplane][5]
-							- dynode[icorner1] * planes[iplane][4];
+					    - nodes[icorner1][0] * dynode[icorner1];
+					doubleswap2 = dxnode[icorner1] * planes[iplane][5] - dynode[icorner1] * planes[iplane][4];
 
 					if ((doubleswap2 < 0) || (doubleswap2 > 0)) {
 
 						intersectpoint[iintersect][0] = (planes[iplane][4] * doubleswap1
-								- dxnode[icorner1] * planes[iplane][7]) / doubleswap2;
+						    - dxnode[icorner1] * planes[iplane][7]) / doubleswap2;
 						intersectpoint[iintersect][1] = (planes[iplane][5] * doubleswap1
-								- dynode[icorner1] * planes[iplane][7]) / doubleswap2;
+						    - dynode[icorner1] * planes[iplane][7]) / doubleswap2;
 
 						int ifprint = 0;
 						if (((intersectpoint[iintersect][0] < planes[iplane][0] - err)
-								&& (planes[iplane][0] < planes[iplane][1]))
-								|| ((intersectpoint[iintersect][0] > planes[iplane][0] + err)
-										&& (planes[iplane][0] > planes[iplane][1]))
-								|| ((intersectpoint[iintersect][1] < planes[iplane][2] - err)
-										&& (planes[iplane][2] < planes[iplane][3]))
-								|| ((intersectpoint[iintersect][1] > planes[iplane][2] + err)
-										&& (planes[iplane][2] > planes[iplane][3]))) {
+						    && (planes[iplane][0] < planes[iplane][1]))
+						    || ((intersectpoint[iintersect][0] > planes[iplane][0] + err)
+						        && (planes[iplane][0] > planes[iplane][1]))
+						    || ((intersectpoint[iintersect][1] < planes[iplane][2] - err)
+						        && (planes[iplane][2] < planes[iplane][3]))
+						    || ((intersectpoint[iintersect][1] > planes[iplane][2] + err)
+						        && (planes[iplane][2] > planes[iplane][3]))) {
 							intersectpoint[iintersect][0] = planes[iplane][0];
 							intersectpoint[iintersect][1] = planes[iplane][2];
 						} else if (((intersectpoint[iintersect][0] < planes[iplane][1] - err)
-								&& (planes[iplane][1] < planes[iplane][0]))
-								|| ((intersectpoint[iintersect][0] > planes[iplane][1] + err)
-										&& (planes[iplane][1] > planes[iplane][0]))
-								|| ((intersectpoint[iintersect][1] < planes[iplane][3] - err)
-										&& (planes[iplane][3] < planes[iplane][2]))
-								|| ((intersectpoint[iintersect][1] > planes[iplane][3] + err)
-										&& (planes[iplane][3] > planes[iplane][2]))) {
+						    && (planes[iplane][1] < planes[iplane][0]))
+						    || ((intersectpoint[iintersect][0] > planes[iplane][1] + err)
+						        && (planes[iplane][1] > planes[iplane][0]))
+						    || ((intersectpoint[iintersect][1] < planes[iplane][3] - err)
+						        && (planes[iplane][3] < planes[iplane][2]))
+						    || ((intersectpoint[iintersect][1] > planes[iplane][3] + err)
+						        && (planes[iplane][3] > planes[iplane][2]))) {
 							intersectpoint[iintersect][0] = planes[iplane][1];
 							intersectpoint[iintersect][1] = planes[iplane][3];
 						}
 
 						if (((((intersectpoint[iintersect][0] - intersectpoint[0][0])
-								* (intersectpoint[iintersect][0] - intersectpoint[0][0])
-								+ (intersectpoint[iintersect][1] - intersectpoint[0][1])
-										* (intersectpoint[iintersect][1] - intersectpoint[0][1]))
-								> (halfsidelength / 512.0)) || (iintersect == 0))
-								&& (doubleswap2 != 0.0))
+						    * (intersectpoint[iintersect][0] - intersectpoint[0][0])
+						    + (intersectpoint[iintersect][1] - intersectpoint[0][1])
+						        * (intersectpoint[iintersect][1] - intersectpoint[0][1]))
+						    > (halfsidelength / 512.0)) || (iintersect == 0)) && (doubleswap2 != 0.0))
 							iintersect++;
 
 						if (iintersect == 2) {
 
 							if ((intersectpoint[1][0] - intersectpoint[0][0])
-									* (planes[iplane][1] - planes[iplane][0])
-									+ (intersectpoint[1][1] - intersectpoint[0][1])
-											* (planes[iplane][3] - planes[iplane][2]) < 0.0) {
+							    * (planes[iplane][1] - planes[iplane][0])
+							    + (intersectpoint[1][1] - intersectpoint[0][1])
+							        * (planes[iplane][3] - planes[iplane][2]) < 0.0) {
 								doubleswap3 = intersectpoint[0][0];
 								intersectpoint[0][0] = intersectpoint[1][0];
 								intersectpoint[1][0] = doubleswap3;
@@ -1032,16 +1012,12 @@ struct DISCHARGE {
 					//a plane end point is in this cell
 
 					doubleswap1 = //dist from center node to 1st plane endpoint
-							(nodes[8][0] - planes[iplane][0])
-									* (nodes[8][0] - planes[iplane][0])
-									+ (nodes[8][1] - planes[iplane][2])
-											* (nodes[8][1] - planes[iplane][2]);
+					    (nodes[8][0] - planes[iplane][0]) * (nodes[8][0] - planes[iplane][0])
+					        + (nodes[8][1] - planes[iplane][2]) * (nodes[8][1] - planes[iplane][2]);
 
 					doubleswap2 = //dist from center node to 2nd plane endpoint
-							(nodes[8][0] - planes[iplane][1])
-									* (nodes[8][0] - planes[iplane][1])
-									+ (nodes[8][1] - planes[iplane][3])
-											* (nodes[8][1] - planes[iplane][3]);
+					    (nodes[8][0] - planes[iplane][1]) * (nodes[8][0] - planes[iplane][1])
+					        + (nodes[8][1] - planes[iplane][3]) * (nodes[8][1] - planes[iplane][3]);
 
 					if (doubleswap1 <= doubleswap2) { //it's the 1st end point
 						intersectpoint[1][0] = planes[iplane][0];
@@ -1076,12 +1052,9 @@ struct DISCHARGE {
 					 */
 
 					//discharge += dt*(hVx*dy-hVy*dx)
-					planes[iplane][9] +=
-							dt
-									* (statevars[1]
-											* (intersectpoint[1][1] - intersectpoint[0][1])
-											- statevars[2]
-													* (intersectpoint[1][0] - intersectpoint[0][0]));
+					planes[iplane][9] += dt
+					    * (statevars[1] * (intersectpoint[1][1] - intersectpoint[0][1])
+					        - statevars[2] * (intersectpoint[1][0] - intersectpoint[0][0]));
 				} // if(iintersect==2)
 
 			} //if(halfsidelength*(absdy+absdx)>=absdx*absdx+absdy*absdy)
@@ -1161,8 +1134,8 @@ struct FluxProps {
 
 		for (int isrc = 0; isrc < no_of_sources; isrc++)
 			if (((timeprops_ptr->time - timeprops_ptr->dtime <= start_time[isrc])
-					&& (start_time[isrc] < timeprops_ptr->time))
-					|| ((timeprops_ptr->iter == 0) && (start_time[isrc] == 0.0)))
+			    && (start_time[isrc] < timeprops_ptr->time))
+			    || ((timeprops_ptr->iter == 0) && (start_time[isrc] == 0.0)))
 				return (1);
 
 		return (0);
@@ -1173,13 +1146,12 @@ struct FluxProps {
 		double tempinflux, maxinflux = 0.0;
 
 		for (int isrc = 0; isrc < no_of_sources; isrc++)
-			if (((start_time[isrc] <= timeprops_ptr->time)
-					&& (timeprops_ptr->time <= end_time[isrc]))
-					|| ((timeprops_ptr->iter == 0) && (start_time[isrc] == 0))) {
+			if (((start_time[isrc] <= timeprops_ptr->time) && (timeprops_ptr->time <= end_time[isrc]))
+			    || ((timeprops_ptr->iter == 0) && (start_time[isrc] == 0))) {
 				tempinflux = sqrt(
-						influx[isrc] * influx[isrc]
-								+ (xVel[isrc] * xVel[isrc] + yVel[isrc] * yVel[isrc])
-										/ ((matprops_ptr->epsilon) * (matprops_ptr->epsilon)));
+				    influx[isrc] * influx[isrc]
+				        + (xVel[isrc] * xVel[isrc] + yVel[isrc] * yVel[isrc])
+				            / ((matprops_ptr->epsilon) * (matprops_ptr->epsilon)));
 				if (tempinflux > maxinflux)
 					maxinflux = tempinflux;
 			}
@@ -1269,15 +1241,13 @@ struct PertElemInfo {
 		sprintf(filename, "adjoint.test.%04d", iter);
 		FILE *fp = fopen(filename, "w");
 
-		fprintf(fp,
-				"functionals: forward_run=%1.8e , dual_run=%1.8e, perturb_run=%1.8e \n",
-				forw_functional, dual_functional, perturb_functional);
+		fprintf(fp, "functionals: forward_run=%1.8e , dual_run=%1.8e, perturb_run=%1.8e \n",
+		    forw_functional, dual_functional, perturb_functional);
 
-		fprintf(fp, "forward sensitivity=%16e \n",
-				(perturb_functional - forw_functional) / INCREMENT);
+		fprintf(fp, "forward sensitivity=%16e \n", (perturb_functional - forw_functional) / INCREMENT);
 
 		fprintf(fp,
-				"\n ==============================This is the part that we have to care about========= \n");
+		    "\n ==============================This is the part that we have to care about========= \n");
 
 		fprintf(fp, "functional sensitivity= %1.8e \n", func_sens);
 
@@ -1285,31 +1255,26 @@ struct PertElemInfo {
 
 		fprintf(fp, "Element position x= %1.8e y=%1.8e \n", elempos[0], elempos[1]);
 
-		fprintf(fp, "Element size dx= %1.8e dy=%1.8e \n", elem_size[0],
-				elem_size[1]);
+		fprintf(fp, "Element size dx= %1.8e dy=%1.8e \n", elem_size[0], elem_size[1]);
 
 		for (int effelement = 0; effelement < 5; effelement++) {
 
-			fprintf(fp, "\nAdjoint and  Jacobian information for neighbor # %d:\n \n",
-					effelement);
+			fprintf(fp, "\nAdjoint and  Jacobian information for neighbor # %d:\n \n", effelement);
 
 			for (int i = 0; i < 3; i++)
-				fprintf(fp, "curr_adjoint[%d]= %1.8e  ", i,
-						neigh_jac[effelement].curr_adj[i]);
+				fprintf(fp, "curr_adjoint[%d]= %1.8e  ", i, neigh_jac[effelement].curr_adj[i]);
 
 			fprintf(fp, "\n");
 
 			for (int i = 0; i < 3; i++)
-				fprintf(fp, "prev_adjoint[%d]= %1.8e  ", i,
-						neigh_jac[effelement].prev_adj[i]);
+				fprintf(fp, "prev_adjoint[%d]= %1.8e  ", i, neigh_jac[effelement].prev_adj[i]);
 
 			fprintf(fp, "\n");
 
 			for (int i = 0; i < 3; i++) {
 				fprintf(fp, "\n");
 				for (int j = 0; j < 3; j++)
-					fprintf(fp, "jacobian[%d][%d]= %1.8e  ", i, j,
-							neigh_jac[effelement].jacobianMat[i][j]);
+					fprintf(fp, "jacobian[%d][%d]= %1.8e  ", i, j, neigh_jac[effelement].jacobianMat[i][j]);
 			}
 
 			fprintf(fp, "\n");
@@ -1349,29 +1314,25 @@ struct PertElemInfo {
 		char filename[50];
 		sprintf(filename, "functional.test.%04d", iter);
 
-		if (dual_func.size() == forw_func.size()
-				&& dual_func.size() == pert_func.size()) {
+		if (dual_func.size() == forw_func.size() && dual_func.size() == pert_func.size()) {
 
 			FILE *fp = fopen(filename, "w");
 
 			for (int i = 0; i < dual_func.size(); i++)
 				if (i == 0)
 
-					fprintf(fp,
-							"functionals: forward_run=%16e , dual_run=%16e, perturb_run=%16e \n",
-							forw_func.at(i), dual_func.at(i), pert_func.at(i));
+					fprintf(fp, "functionals: forward_run=%16e , dual_run=%16e, perturb_run=%16e \n",
+					    forw_func.at(i), dual_func.at(i), pert_func.at(i));
 				else
-					fprintf(fp,
-							"functionals: forward_run=%16e , dual_run=%16e, perturb_run=%16e \n",
-							forw_func.at(i) - forw_func.at(i - 1),
-							dual_func.at(i) - dual_func.at(i - 1),
-							pert_func.at(i) - pert_func.at(i - 1));
+					fprintf(fp, "functionals: forward_run=%16e , dual_run=%16e, perturb_run=%16e \n",
+					    forw_func.at(i) - forw_func.at(i - 1), dual_func.at(i) - dual_func.at(i - 1),
+					    pert_func.at(i) - pert_func.at(i - 1));
 
 			fclose(fp);
 		} else {
 			printf(
-					"size of functional vectors are not equal, dual_size=%d, forw_size=%d, pert_size=%d \n",
-					dual_func.size(), pert_func.size(), forw_func.size());
+			    "size of functional vectors are not equal, dual_size=%d, forw_size=%d, pert_size=%d \n",
+			    dual_func.size(), pert_func.size(), forw_func.size());
 		}
 	}
 
@@ -1381,8 +1342,7 @@ struct PertElemInfo {
 
 		for (int neigh = 0; neigh < 5; ++neigh)
 			for (int ind = 0; ind < 3; ++ind)
-				contr += neigh_jac[neigh].jacobianMat[0][ind]
-						* neigh_jac[neigh].prev_adj[ind];
+				contr += neigh_jac[neigh].jacobianMat[0][ind] * neigh_jac[neigh].prev_adj[ind];
 
 		dual_sens = neigh_jac[0].curr_adj[0] + contr;
 
@@ -1390,4 +1350,20 @@ struct PertElemInfo {
 
 };
 
+class HashTable;
+
+struct MeshCTX {
+
+	HashTable* el_table;
+	HashTable* nd_table;
+
+};
+
+struct PropCTX {
+
+	MatProps* matprops;
+	TimeProps* timeprops;
+	MapNames* mapnames;
+
+};
 #endif

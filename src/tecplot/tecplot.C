@@ -41,9 +41,6 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimePr
 
 void DumpString(FILE *fp, char *str);
 
-void get_elevation_and_coord(DualCell* cell, double lscale, double* dx, double* elevation,
-    double coords[][2]);
-
 void testkey(HashTable* El_Table, Element* EmTemp) {
 	unsigned key[2];
 	key[0] = *(EmTemp->pass_key() + 0);
@@ -71,226 +68,6 @@ void testkey2(HashTable* El_Table) {
 	 } */
 
 	return;
-}
-
-void dualplot(DualMesh* dualmesh, MatProps* matprops, TimeProps* timeprops, MapNames* mapnames,
-    double v_star_func, int adjflag) {
-
-	int Ny = dualmesh->get_Ny();
-	int Nx = dualmesh->get_Nx();
-
-	double dx[2];
-	dx[0] = dualmesh->get_dx();
-	dx[1] = dualmesh->get_dy();
-
-	double lscale = matprops->LENGTH_SCALE;
-	double hscale = matprops->HEIGHT_SCALE;
-	double tscale = timeprops->TIME_SCALE;
-	double gsacel = matprops->GRAVITY_SCALE;
-
-	double momentum_scale = hscale * sqrt(matprops->LENGTH_SCALE * (matprops->GRAVITY_SCALE)); // scaling factor for the momentums
-
-	double adjoint_scale[3] = { 1.0, 1.0, 1.0 };
-	adjoint_scale[0] = hscale * lscale * lscale * tscale;
-
-	double residual_scale[3] = { 1.0, 1.0, 1.0 };
-	residual_scale[0] = hscale / tscale;
-	residual_scale[1] = residual_scale[2] = momentum_scale / tscale;
-
-	double error_scale, functional_scale;
-
-	// this must be equal to adjoint_scale[i] * residual_scale[i] foe any i
-	error_scale = functional_scale = adjoint_scale[0] * residual_scale[0];
-
-	int myid = 0;
-	int cell_counter = Nx * Ny;
-
-	char filename[256];
-
-	if (adjflag == 1)
-		sprintf(filename, "dual%02d%08d.tec", myid, timeprops->iter - 1);
-	else
-		sprintf(filename, "dual%02d%08d.tec", myid, timeprops->iter);
-
-	FILE* fp;
-
-	fp = fopen(filename, "w");
-
-	int hrs, mins;
-	double secs;
-	timeprops->chunktime(&hrs, &mins, &secs);
-
-	fprintf(fp, "TITLE= \" %s: time %d:%02d:%g (hrs:min:sec), functional=%g\"\n", mapnames->gis_map,
-	    hrs, mins, secs, v_star_func);
-	fprintf(fp,
-	    "VARIABLES = \"X\", \"Y\", \"ELEVATION\", \"PILE_HEIGHT\", \"X_MOMENTUM\", \"Y_MOMENTUM\",\"RESIDUAL_1\", \"RESIDUAL_2\", \"RESIDUAL_3\","
-			    "\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\" , \"CORREC_TERM\" , \"ERROR\" \n");
-
-//	fprintf(fp, "\n");
-	fprintf(fp, "ZONE I=%d, J=%d, DATAPACKING=BLOCK, VARLOCATION=([3-14]=CELLCENTERED)\n", Nx + 1,
-	    Ny + 1);
-
-	double xrange[2] = { *(dualmesh->get_xminmax()), *(dualmesh->get_xminmax() + 1) };
-	double yrange[2] = { *(dualmesh->get_yminmax()), *(dualmesh->get_yminmax() + 1) };
-
-	// x of points
-	for (int i = 0; i < Ny + 1; ++i)
-		for (int j = 0; j < Nx + 1; ++j)
-			fprintf(fp, "%e ", (xrange[0] + j * dx[0]) * lscale);
-	fprintf(fp, "\n");
-
-	// y of points
-	for (int i = 0; i < Ny + 1; ++i)
-		for (int j = 0; j < Nx + 1; ++j)
-			fprintf(fp, "%e ", (yrange[0] + i * dx[1]) * lscale);
-	fprintf(fp, "\n");
-
-//	// h+elevation
-//	for (int j = 0; j < Nx; ++j)
-//		for (int i = 0; i < Ny; ++i) {
-//
-//			DualCell* cell = dualmesh->get_dualcell(i, j);
-//			double* state_vars = cell->get_state_vars();
-//			fprintf(fp, "%e ", (cell->get_elevation() + state_vars[0]) * hscale);
-//		}
-//	fprintf(fp, "\n");
-
-	//elevation
-
-	for (int i = 0; i < Ny; ++i)
-		for (int j = 0; j < Nx; ++j) {
-
-			DualCell* cell = dualmesh->get_dualcell(i, j);
-			double* state_vars = cell->get_state_vars();
-			fprintf(fp, "%e ", cell->get_elevation() * hscale);
-
-		}
-	fprintf(fp, "\n");
-
-	// PILE_HEIGHT
-
-	for (int i = 0; i < Ny; ++i)
-		for (int j = 0; j < Nx; ++j) {
-
-			DualCell* cell = dualmesh->get_dualcell(i, j);
-			double* state_vars = cell->get_state_vars();
-			fprintf(fp, "%e ", state_vars[0] * hscale);
-
-		}
-	fprintf(fp, "\n");
-
-	// X_MOMENTUM
-	for (int i = 0; i < Ny; ++i)
-		for (int j = 0; j < Nx; ++j) {
-
-			DualCell* cell = dualmesh->get_dualcell(i, j);
-			double* state_vars = cell->get_state_vars();
-			fprintf(fp, "%e ", state_vars[1] * momentum_scale);
-
-		}
-	fprintf(fp, "\n");
-
-	// Y_MOMENTUM
-	for (int i = 0; i < Ny; ++i)
-		for (int j = 0; j < Nx; ++j) {
-
-			DualCell* cell = dualmesh->get_dualcell(i, j);
-			double* state_vars = cell->get_state_vars();
-			fprintf(fp, "%e ", state_vars[2] * momentum_scale);
-
-		}
-	fprintf(fp, "\n");
-
-	// RESIDUAL_1
-	for (int i = 0; i < Ny; ++i)
-		for (int j = 0; j < Nx; ++j) {
-
-//			DualCell* cell = dualmesh->get_dualcell(i, j);
-//			double* state_vars = cell->get_state_vars();
-			fprintf(fp, "%e ", 0.);
-
-		}
-	fprintf(fp, "\n");
-
-	// RESIDUAL_2
-	for (int i = 0; i < Ny; ++i)
-		for (int j = 0; j < Nx; ++j) {
-
-//			DualCell* cell = dualmesh->get_dualcell(i, j);
-//			double* state_vars = cell->get_state_vars();
-			fprintf(fp, "%e ", 0.);
-
-		}
-	fprintf(fp, "\n");
-
-	// RESIDUAL_3
-	for (int i = 0; i < Ny; ++i)
-		for (int j = 0; j < Nx; ++j) {
-
-//			DualCell* cell = dualmesh->get_dualcell(i, j);
-//			double* state_vars = cell->get_state_vars();
-			fprintf(fp, "%e ", 0.);
-
-		}
-	fprintf(fp, "\n");
-
-	// CURR_ADJ_1
-	for (int i = 0; i < Ny; ++i)
-		for (int j = 0; j < Nx; ++j) {
-
-			DualCell* cell = dualmesh->get_dualcell(i, j);
-			double* curr_adjoint = cell->get_curr_adjoint();
-			fprintf(fp, "%e ", curr_adjoint[0] * adjoint_scale[0]);
-
-		}
-	fprintf(fp, "\n");
-
-	// CURR_ADJ_2
-	for (int i = 0; i < Ny; ++i)
-		for (int j = 0; j < Nx; ++j) {
-
-			DualCell* cell = dualmesh->get_dualcell(i, j);
-			double* curr_adjoint = cell->get_curr_adjoint();
-			fprintf(fp, "%e ", curr_adjoint[1] * adjoint_scale[1]);
-
-		}
-	fprintf(fp, "\n");
-
-	// CURR_ADJ_3
-	for (int i = 0; i < Ny; ++i)
-		for (int j = 0; j < Nx; ++j) {
-
-			DualCell* cell = dualmesh->get_dualcell(i, j);
-			double* curr_adjoint = cell->get_curr_adjoint();
-			fprintf(fp, "%e ", curr_adjoint[2] * adjoint_scale[2]);
-
-		}
-	fprintf(fp, "\n");
-
-	// CORREC
-	for (int i = 0; i < Ny; ++i)
-		for (int j = 0; j < Nx; ++j) {
-
-//			DualCell* cell = dualmesh->get_dualcell(i, j);
-//			double* state_vars = cell->get_state_vars();
-			fprintf(fp, "%e ", 0.);
-
-		}
-	fprintf(fp, "\n");
-
-	// ERROR
-	for (int i = 0; i < Ny; ++i)
-		for (int j = 0; j < Nx; ++j) {
-
-//			DualCell* cell = dualmesh->get_dualcell(i, j);
-//			double* state_vars = cell->get_state_vars();
-			fprintf(fp, "%e ", 0.);
-
-		}
-
-	fclose(fp);
-	return;
-
 }
 
 void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops, TimeProps* timeprops,
@@ -407,15 +184,13 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops, T
 		fprintf(fp, "TITLE= \" %s: time %d:%02d:%g (hrs:min:sec), functional=%g\"\n", mapnames->gis_map,
 		    hrs, mins, secs, v_star_func);
 		fprintf(fp, "VARIABLES = \"X\", \"Y\", \"Z\", \"PILE_HEIGHT\","
-				"\"RESIDUAL_1\", \"SOLID_X_MOMENTUM\", \"SOLID_Y_MOMENTUM\","
-				"\"RESIDUAL_2\", \"RESIDUAL_3\","
-				"\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\" , \"CORREC_TERM\" , \"ERROR\" \n");
+				"\"X_MOMENTUM\", \"Y_MOMENTUM\","
+				"\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\" \n");
 	} else {
 		fprintf(fp, "TITLE= \" %s: time %d:%02d:%g (hrs:min:sec), V*=%g\"\n", mapnames->gis_map, hrs,
 		    mins, secs, v_star_func);
 		fprintf(fp, "VARIABLES = \"X\", \"Y\", \"Z\", \"PILE_HEIGHT\","
-				"\"CONT_ADJ1\", \"SOLID_X_MOMENTUM\", \"SOLID_Y_MOMENTUM\","
-				"\"CONT_ADJ2\", \"CONT_ADJ3\","
+				"\"X_MOMENTUM\", \"Y_MOMENTUM\","
 				"\"ELEVATION\", \"SOLID_SPEED\"\n");
 	}
 
@@ -819,47 +594,34 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimePr
 		output[1] = *(EmTemp->get_coord() + 1) * lscale;
 		output[2] = elevation + *(EmTemp->get_prev_state_vars()) * hscale;
 		output[3] = *(EmTemp->get_prev_state_vars()) * hscale;
-		output[4] = *(EmTemp->get_state_vars() + 1) * residual_scale[0];
+		output[4] = *(EmTemp->get_prev_state_vars() + 1) * momentum_scale;
 		output[5] = *(EmTemp->get_prev_state_vars() + 2) * momentum_scale;
-		output[6] = *(EmTemp->get_prev_state_vars() + 3) * momentum_scale;
-		output[7] = *(EmTemp->get_state_vars() + 4) * residual_scale[1];
-		output[8] = *(EmTemp->get_state_vars() + 5) * residual_scale[2];
-		output[9] = *(EmTemp->get_state_vars() + 6) * adjoint_scale[0];
-		output[10] = *(EmTemp->get_state_vars() + 7) * adjoint_scale[1];
-		output[11] = *(EmTemp->get_state_vars() + 8) * adjoint_scale[2];
-		output[12] = *(EmTemp->get_correction()) * error_scale;
-		output[13] = *(EmTemp->get_el_error() + 1) * error_scale;
-
-//		if (timeprops->time == 0.)
-//			//residuals, correction term and error are zero, because we know the initial condition
-//			output[4] = output[7] = output[8] = output[12] = output[13] = 0.0;
+		output[6] = *(EmTemp->get_adjoint()) * adjoint_scale[0];
+		output[7] = *(EmTemp->get_adjoint()+1) * adjoint_scale[1];
+		output[8] = *(EmTemp->get_adjoint()+2) * adjoint_scale[2];
 
 	} else {
 		output[0] = *(EmTemp->get_coord()) * lscale;
 		output[1] = *(EmTemp->get_coord() + 1) * lscale;
 		output[2] = elevation + *(EmTemp->get_state_vars()) * hscale;
 		output[3] = *(EmTemp->get_state_vars()) * hscale;
-		output[4] = *(EmTemp->get_state_vars() + 1) * adjoint_scale[0];
+		output[4] = *(EmTemp->get_state_vars() + 1) * momentum_scale;
 		output[5] = *(EmTemp->get_state_vars() + 2) * momentum_scale;
-		output[6] = *(EmTemp->get_state_vars() + 3) * momentum_scale;
-		output[7] = *(EmTemp->get_state_vars() + 4) * adjoint_scale[1];
-		output[8] = *(EmTemp->get_state_vars() + 5) * adjoint_scale[2];
-		output[9] = elevation;
-		output[10] = sqrt(Vel[0] * Vel[0] + Vel[1] * Vel[1]) * velocity_scale;
+		output[6] = elevation;
+		output[7] = sqrt(Vel[0] * Vel[0] + Vel[1] * Vel[1]) * velocity_scale;
 	}
 
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < NUM_STATE_VARS; i++)
 		if (isinf(output[i]))
 			cout << "this element has problem  " << *(EmTemp->pass_key()) << "    "
 			    << *(EmTemp->pass_key() + 1) << endl;
 
 	if (adjflag)
-		fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e\n", output[0], output[1], output[2],
-		    output[3], output[4], output[5], output[6], output[7], output[8], output[9], output[10],
-		    output[11], output[12], output[13]);
+		fprintf(fp, "%e %e %e %e %e %e %e %e %e \n", output[0], output[1], output[2],
+		    output[3], output[4], output[5], output[6], output[7], output[8]);
 	else
-		fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e\n", output[0], output[1], output[2], output[3],
-		    output[4], output[5], output[6], output[7], output[8], output[9], output[10]);
+		fprintf(fp, "%e %e %e %e %e %e %e %e \n", output[0], output[1], output[2], output[3],
+		    output[4], output[5], output[6], output[7]);
 
 	return (num_missing_bubble_node);
 }
@@ -1044,7 +806,7 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 //fprintf ( fp, "TITLE= \"MESH OUTPUT\"\n" );
 
 	fprintf(fp, "VARIABLES = \"X\" \"Y\" \"Z\" \"PILE_HEIGHT\" \"SXMOMENTUM\" \"SYMOMENTUM\" "
-			"\"FXMOMENTUM\" \"FYMOMENTUM\" \"Vx_s\" \"Vy_s\" \"Vx_f\" \"Vy_f\" "
+			"\"FXMOMENTUM\" \"FYMOMENTUM\" \"Vx_s\" \"Vy_s\" "
 			"\"VOL_FRACT\" \"ELEM_ERROR\" \"DRAGY\"");
 
 	if (myid == TARGETPROCB) {
@@ -1253,39 +1015,6 @@ void vizplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 
 	if (myid != numprocs - 1)
 		MPI_Send(&done, 1, MPI_INT, myid + 1, TECTAG, MPI_COMM_WORLD);
-
-}
-
-void get_elevation_and_coord(DualCell* cell, double lscale, double* dx, double* elevation,
-    double coords[][2]) {
-
-	double resolution = (dx[0] + dx[1]) * lscale / 2.0;
-
-	for (int i = 0; i < 4; ++i)
-		for (int j; j < 2; ++j)
-			coords[i][j] = 0.;
-
-// order of points 1: lower left, 2: lower right, 3: upper right, 4: upper left
-
-	double *position;
-	position = cell->get_position();
-
-	double xcoord[2] = { (position[0] - .5 * dx[0]) * lscale, (position[0] + .5 * dx[0]) * lscale };
-	double ycoord[2] = { (position[1] - .5 * dx[1]) * lscale, (position[1] + .5 * dx[1]) * lscale };
-
-	Get_elevation(resolution, xcoord[0], ycoord[0], &elevation[0]);
-	Get_elevation(resolution, xcoord[1], ycoord[0], &elevation[1]);
-	Get_elevation(resolution, xcoord[1], ycoord[1], &elevation[2]);
-	Get_elevation(resolution, xcoord[0], ycoord[1], &elevation[3]);
-
-	coords[0][0] = xcoord[0];
-	coords[0][1] = ycoord[0];
-	coords[1][0] = xcoord[1];
-	coords[1][1] = ycoord[0];
-	coords[2][0] = xcoord[1];
-	coords[2][1] = ycoord[1];
-	coords[3][0] = xcoord[0];
-	coords[3][1] = ycoord[1];
 
 }
 

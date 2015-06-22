@@ -22,10 +22,10 @@
 #define DO_EROSION
 #define DEBUG
 
-#define KEY0   3797155840
-#define KEY1   0
+#define KEY0   3870077243
+#define KEY1   330382099
 #define EFFELL 0
-#define ITER   5
+#define ITER   11
 #define J      0
 #define JACIND 0
 #define X      1.97853625e-01
@@ -116,10 +116,10 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	EmTemp->convect_dryline(V_avg, dt); //this is necessary
 
 	int debuging, ggg = 0;
-//	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1
-//			&& timeprops->iter == ITER)
-	if (dabs(*(EmTemp->get_coord()) - X) < INCREMENT&& dabs(*(EmTemp->get_coord()+1) - Y)<INCREMENT
-	&& timeprops->iter == ITER)
+	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1
+			&& timeprops->iter == ITER)
+//	if (dabs(*(EmTemp->get_coord()) - X) < INCREMENT&& dabs(*(EmTemp->get_coord()+1) - Y)<INCREMENT
+//	&& timeprops->iter == ITER)
 		debuging = ggg = 1;
 
 	double dragforce[2] = { 0., 0. };
@@ -130,8 +130,8 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	    &terminal_vel, &(matprops_ptr->epsilon), &IF_STOPPED, Influx);
 
 #ifdef DEBUG
-	if (dabs(*(EmTemp->get_coord()) - X) < INCREMENT&& dabs(*(EmTemp->get_coord()+1) - Y)<INCREMENT
-	&& timeprops->iter == ITER) {
+	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1
+			&& timeprops->iter == ITER) {
 		int state_num = NUM_STATE_VARS;
 		FILE *fp;
 		fp = fopen("debugfile", "w");

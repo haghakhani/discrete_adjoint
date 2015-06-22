@@ -83,22 +83,17 @@ void delete_ghost_elms(HashTable* El_Table, int myid);
 void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
     TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow, ResFlag resflag);
 
-void dual_solver(DualMesh* dualmesh, MatProps* matprops_ptr, TimeProps* timeprops_ptr,
-    MapNames *mapname_ptr, PertElemInfo* eleminfo);
+void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo);
 
-void calc_jacobian(HashTable* El_Table, HashTable* NodeTable, vector<Jacobian*>* solHyst,
-    MatProps* matprops_ptr, TimeProps* timeprops_ptr, MapNames *mapname_ptr,
+void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
     double const increment);
-
-void calc_jacobian(DualMesh* dualmesh, MatProps* matprops_ptr, TimeProps* timeprops_ptr,
-    MapNames *mapname_ptr, double const increment);
 
 void error_compute(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprops_ptr,
     MatProps* matprops_ptr, int iter, int myid, int numprocs);
 
-void calc_adjoint(HashTable* El_Table, vector<Jacobian*>* solHyst, int iter, int adjiter, int myid);
+void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El);
 
-void calc_adjoint(DualMesh* dualmesh, TimeProps* timeprops_ptr, int iter, int adjiter, int myid);
+void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx);
 
 void uinform_refine(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprops_ptr,
     MatProps* matprops_ptr, int numprocs, int myid);
@@ -110,8 +105,6 @@ int num_nonzero_elem(HashTable *El_Table);
 void adjoint_init(HashTable* BT_Elem_Ptr, HashTable* BT_Node_Ptr);
 
 void compute_funcsens(Element* element, double dt, double* func_sens);
-
-void compute_functional(DualMesh* dualmesh, double* functional, TimeProps* timeprops_ptr);
 
 void compute_functional(HashTable* El_Table, double* functional, TimeProps* timeprops_ptr);
 
@@ -125,16 +118,12 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
 void save_solution(HashTable* El_Table, HashTable* NodeTable, HashTable* solHystPtr,
     TimeProps* timeprops_ptr);
 
-void initSolRec(HashTable* El_Table, HashTable* NodeTable, DualMesh *dualmesh, double dt, int myid);
-
-void allocJacoMat(vector<Jacobian*> solHyst);
+void allocJacoMat(HashTable *El_Table);
 
 //this function is such that returns 0 for element itself, 1 for xp element, 2 yp element, 3 xm element, 4 ym element
 int jac_mat_index(int effelement, int xp);
 
 void orgSourceSgn(Element* Curr_El, double frictiny, double* orgSgn);
-
-void orgSourceSgn(DualCell* cell, double frictiny, double* orgSgn);
 
 int checkElement(HashTable *El_Table, double *max, unsigned *key);
 
@@ -147,48 +136,29 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 
 int void_neigh_elem(HashTable* El_Table, Element* Curr_El, int effelement);
 
-int void_neigh_cell(DualMesh* dualmesh, DualCell* cell, int effelement);
-
 void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, MatProps* matprops_ptr,
     int effelement, int j, int myid, double increment);
 
-void restore(DualMesh* dualmesh, DualCell* cell, MatProps* matprops_ptr, int effelement, int j,
-    double increment, double fluxold[4][NUM_STATE_VARS],
-    double d_state_vars_old[NUM_STATE_VARS * DIMENSION]);
-
 void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
-    int effelement, int myid, double fluxxpold[4], double fluxypold[4], double fluxxmold[4],
-    double fluxymold[4]);
+    int effelement, int myid, double *fluxxpold, double* fluxypold, double* fluxxmold,
+    double* fluxymold);
 
-void record_flux(DualMesh* dualmesh, DualCell* cell, double fluxold[4][NUM_STATE_VARS]);
-
-void flux_debug(Element* Curr_El, double fluxxpold[4], double fluxxmold[4], double fluxypold[4],
-    double fluxymold[4], double fluxxp[4], double fluxxm[4], double fluxyp[4], double fluxym[4],
+void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* fluxypold,
+    double* fluxymold, double* fluxxp, double* fluxxm, double* fluxyp, double* fluxym,
     int effelement, int j, int iter, double dt);
-
-void flux_debug(DualCell* cell, double fluxold[4][NUM_STATE_VARS], double flux[4][NUM_STATE_VARS],
-    int effelement, int j, int iter, double dt, double* dx);
 
 void calc_flux_slope_kact(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El,
     MatProps* matprops_ptr, int myid, int effelement, int updateflux, int srcflag,
     ResFlag resflag[5]);
 
-void calc_flux_slope_kact(DualMesh* dualmesh, DualCell* cell, MatProps* matprops_ptr,
-    int effelement, int updateflux, ResFlag resflag[5]);
-
 void increment_state(HashTable* El_Table, Element* Curr_El, double increment, int effelement, int j,
     int* updateflux, int* srcflag, ResFlag resflag[5]);
 
-void increment_state(DualMesh* dualmesh, DualCell* cell, double increment, int effelement, int j,
-    int* updateflux, int* srcflag, ResFlag resflag[5]);
+void reverse_states(HashTable* El_Table, HashTable* solrec, int iter);
 
-void reverse_states(HashTable* El_Table, vector<Jacobian*>* solHyst, int iter);
+void print_jacobian(HashTable* El_Table, int iter);
 
-void reverse_states(DualMesh* dualmesh, int iter);
-
-void print_jacobian(HashTable* El_Table, vector<Jacobian*>* solHyst, int iter);
-
-void print_jacobian(DualMesh* dualmesh, int iter);
+void record_solution(MeshCTX* meshctx, PropCTX* propctx, SolRec* solrec);
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);
@@ -198,9 +168,9 @@ void find_test_elem(HashTable* El_Table, PertElemInfo** pelinf, int iter);
 void find_adjoint_sol(HashTable* El_Table, vector<Jacobian*>* solHyst, PertElemInfo* eleminfo,
     TimeProps* timeprops_ptr);
 
-void fill_pertelem_info(DualMesh* dualmesh, PertElemInfo* eleminfo);
-
 int check_elem_exist(HashTable *El_Table, unsigned *key);
+
+void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo);
 
 void riemannflux();
 

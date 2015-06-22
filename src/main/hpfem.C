@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 		HashTable* BT_Node_Ptr;
 		HashTable* BT_Elem_Ptr;
 
-		DualMesh* dualmesh;
+		SolRec* solrec;
 
 		//-- MPI
 		int myid, master, numprocs;
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
 		int adjflag = 0;
 		double end_time = 10000.0;
 
-		int OUTPUT = 1; //Hossein generated this flag to turn off writing output in forward run
+		int OUTPUT = 0; //Hossein generated this flag to turn off writing output in forward run
 		/*
 		 * viz_flag is used to determine which viz output to use
 		 * nonzero 1st bit of viz_flag means output tecplotxxxx.plt
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
 
 		if (!loadrun(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &matprops, &timeprops, &mapnames,
 		    &adaptflag, &order_flag, &statprops, &discharge, &outline)) {
-			Read_grid(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &matprops, &outline,&dualmesh);
+			Read_grid(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &matprops, &outline, &solrec);
 
 			setup_geoflow(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops);
 
@@ -156,6 +156,17 @@ int main(int argc, char *argv[]) {
 		output_discharge(&matprops, &timeprops, &discharge, myid);
 
 		move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
+
+		MeshCTX meshctx;
+		meshctx.el_table = BT_Elem_Ptr;
+		meshctx.nd_table = BT_Node_Ptr;
+
+		PropCTX propctx;
+		propctx.timeprops = &timeprops;
+		propctx.matprops = &matprops;
+		propctx.mapnames = &mapnames;
+
+		record_solution(&meshctx, &propctx, solrec);
 
 		if (myid == 0)
 			output_summary(&timeprops, &statprops, savefileflag);
@@ -250,10 +261,12 @@ int main(int argc, char *argv[]) {
 				move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 			}
 
-			step(BT_Elem_Ptr, BT_Node_Ptr, dualmesh, myid, numprocs, &matprops, &timeprops, &pileprops,
-			    &fluxprops, &statprops, &order_flag, &outline, &discharge, adaptflag);
+			step(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops, &pileprops, &fluxprops,
+			    &statprops, &order_flag, &outline, &discharge, adaptflag);
 
-			compute_functional(BT_Elem_Ptr,&functional,&timeprops);
+			record_solution(&meshctx, &propctx, solrec);
+
+			compute_functional(BT_Elem_Ptr, &functional, &timeprops);
 
 			if (test)
 				eleminfo->update_pert_func(functional);
@@ -372,7 +385,7 @@ int main(int argc, char *argv[]) {
 		MPI_Barrier(MPI_COMM_WORLD);
 
 		if (!test)
-			dual_solver(dualmesh, &matprops, &timeprops, &mapnames, eleminfo);
+			dual_solver(solrec, &meshctx, &propctx, eleminfo);
 
 		//write out the final pile statistics (and run time)
 		if (myid == 0)
@@ -413,8 +426,8 @@ int main(int argc, char *argv[]) {
 #endif
 
 		Delete_Table(BT_Elem_Ptr, BT_Node_Ptr);
-		if (!test)
-			delete dualmesh;
+//		if (!test)
+//			delete dualmesh;
 
 	}
 	delete eleminfo;

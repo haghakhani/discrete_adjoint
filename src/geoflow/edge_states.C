@@ -25,7 +25,6 @@
 #define KEY1   3964585199
 #define ITER   7
 
-
 /*! calc_edge_states() cycles through the element Hashtable (listing of all 
  *  elements) and for each element (that has not been refined this iteration 
  *  and is not a ghost_element) calls Element member function 
@@ -34,9 +33,8 @@
  *  GIS map's cummulative outflow (defined as the mass flow off of the
  *  GIS map).  Also, the elements are checked for multiple pile-height values 
  */
-void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
-		MatProps* matprops_ptr, TimeProps* timeprops_ptr, int myid, int* order_flag,
-		double *outflow, ResFlag resflag) {
+void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
+    TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow, ResFlag resflag) {
 	int i, j, k, counter, iter, keys1, keys2;
 	double tiny = GEOFLOW_TINY;
 	int el_counter = 0;
@@ -68,15 +66,14 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 				if (Curr_El->get_adapted_flag() > 0) {
 					//if this element doesn't belong on this processor don't involve
 
-					if (*(Curr_El->pass_key()) == KEY0
-							&& *(Curr_El->pass_key() + 1) == KEY1
-							&& timeprops_ptr->iter == ITER) {
-						int ddd,aa = 0;
+					if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
+					    && timeprops_ptr->iter == ITER) {
+						int ddd, aa = 0;
 						int gg = ddd;
 					}
 
-					Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
-							timeprops_ptr->dtime, order_flag, &localoutflow);
+					Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid, timeprops_ptr->dtime,
+					    order_flag, &localoutflow, resflag, resflag);
 					localoutflow_sum += localoutflow;
 				}
 				currentPtr = currentPtr->next;

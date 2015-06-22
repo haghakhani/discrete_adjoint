@@ -34,44 +34,43 @@ class Element {
 
 	friend class HashTable;
 
-	friend void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable,
-			int numprocs, int myid, double loc);
+	friend void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable, int numprocs, int myid,
+	    double loc);
 
-	friend void ElemBackgroundCheck(HashTable* El_Table, HashTable* NodeTable,
-			unsigned *debugkey, FILE *fp);
+	friend void ElemBackgroundCheck(HashTable* El_Table, HashTable* NodeTable, unsigned *debugkey,
+	    FILE *fp);
 
-	friend void ElemBackgroundCheck2(HashTable* El_Table, HashTable* NodeTable,
-			void *EmDebug, FILE *fp);
+	friend void ElemBackgroundCheck2(HashTable* El_Table, HashTable* NodeTable, void *EmDebug,
+	    FILE *fp);
 
-	friend void NodeBackgroundCheck(HashTable* El_Table, HashTable* NodeTable,
-			unsigned *debugkey, FILE *fp);
+	friend void NodeBackgroundCheck(HashTable* El_Table, HashTable* NodeTable, unsigned *debugkey,
+	    FILE *fp);
 
-	friend void delete_oldsons(HashTable* El_Table, HashTable* NodeTable,
-			int myid, void *EmFather);
+	friend void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *EmFather);
 
-	friend void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable,
-			int numprocs, int myid, void* RefinedList, TimeProps* timeprops_ptr);
+	friend void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int numprocs, int myid,
+	    void* RefinedList, TimeProps* timeprops_ptr);
 
-	friend void unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable,
-			int myid, void* NewFatherList);
+	friend void unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int myid,
+	    void* NewFatherList);
 
-	friend void unrefine_interp_neigh_update(HashTable* El_Table,
-			HashTable* NodeTable, int nump, int myid, void* OtherProcUpdate);
+	friend void unrefine_interp_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump,
+	    int myid, void* OtherProcUpdate);
 
-	friend void BSFC_combine_elements(int side, Element *EmTemp,
-			HashTable *HT_Elem_Ptr, HashTable *HT_Node_Ptr, int destination_proc);
+	friend void BSFC_combine_elements(int side, Element *EmTemp, HashTable *HT_Elem_Ptr,
+	    HashTable *HT_Node_Ptr, int destination_proc);
 
 	friend void Pack_element(void *sendel, ElemPack* elem, HashTable* HT_Node_Ptr,
-			int destination_proc);
+	    int destination_proc);
 
-	friend void destroy_element(void *r_element, HashTable* HT_Elem_Ptr,
-			HashTable* HT_Node_Ptr, int target_pro, ELinkPtr* EL_head);
+	friend void destroy_element(void *r_element, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
+	    int target_pro, ELinkPtr* EL_head);
 
-	friend void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr,
-			HashTable* HT_Node_Ptr, int myid, double* e_error);
+	friend void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
+	    int myid, double* e_error);
 
-	friend void construct_el(Element* newelement, ElemPack* elem2,
-			HashTable* HT_Node_Ptr, int myid, double* e_error);
+	friend void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, int myid,
+	    double* e_error);
 
 public:
 
@@ -79,7 +78,7 @@ public:
 	Element() {
 		counted = 0;
 		father[0] = father[1] = 0; //initialize the father key to zero
-		for (int i = 0; i < NUM_STATE_VARS ; i++)
+		for (int i = 0; i < NUM_STATE_VARS; i++)
 			state_vars[i] = -1;
 		for (int i = 0; i < NUM_STATE_VARS; i++)
 			Influx[i] = 0.;
@@ -97,20 +96,18 @@ public:
 	;
 
 	//! constructor that creates an original element when funky is read in
-	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH],
-			int n_pro[], BC *b, int mat, int *elm_loc_in, double pile_height,
-			int myid, unsigned *opposite_brother);
+	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], BC *b, int mat,
+	    int *elm_loc_in, double pile_height, int myid, unsigned *opposite_brother);
 
 	//! constructor that creates a son element from its father during refinement
-	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH],
-			int n_pro[], BC *b, int gen, int elm_loc_in[], int *ord, int gen_neigh[],
-			int mat, Element *fthTemp, double *coord_in, HashTable *El_Table,
-			HashTable *NodeTable, int myid, MatProps *matprops_ptr,
-			int iwetnodefather, double Awetfather, double *drypoint_in, int resComp);
+	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], BC *b, int gen,
+	    int elm_loc_in[], int *ord, int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
+	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
+	    int iwetnodefather, double Awetfather, double *drypoint_in, int resComp);
 
 	//! constructor that creates a father element from its four sons during unrefinement
-	Element(Element *sons[], HashTable *NodeTable, HashTable *El_Table,
-			MatProps *matprops_ptr, int resComp);
+	Element(Element *sons[], HashTable *NodeTable, HashTable *El_Table, MatProps *matprops_ptr,
+	    int resComp);
 
 	//! constructor that creates/restores a saved element during restart
 	Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
@@ -293,14 +290,19 @@ public:
 	/* geoflow functions */
 
 	//! this function initializes pileheight, momentums and shortspeed (also known as the L'Hosptial speed see calc_shortspeed for an explanation),this function is called in init_piles.C
-	void put_height_mom(double pile_height, double vfract, double xmom,
-			double ymom);
+	void put_height_mom(double pile_height, double vfract, double xmom, double ymom);
 
 	//! this function assigns a specified value to the pileheight and zeros to the momentums and shortspeed
 	void put_height(double pile_height);
 
 	//! this function returns the vector of state variables
 	double* get_state_vars();
+
+	//! this function returns the vector of adjoint
+	double* get_adjoint();
+
+	//! this function returns the vector of prev_adjoint
+	double* get_prev_adjoint();
 
 	//! this function returns the vector of x and y derivatives of state variables, all the x derivatives come first as a group followed by the y derivatives as a group
 	double* get_d_state_vars();
@@ -334,23 +336,21 @@ public:
 	void insert_coord(HashTable* NodeTable);
 
 	//! this function, based on the dir flag, chooses between calling xdirflux and ydirflux, which respectively, calculate either the x or y direction analytical cell center fluxes (or the fluxes at the the boundary if 2nd order flux option is checked on the gui). Keith wrote this.
-	void zdirflux(HashTable* El_Table, HashTable* NodeTable,
-			MatProps* matprops_ptr, int order_flag, int dir,
-			double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS],
-			Element* EmNeigh, double dt);
+	void zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int order_flag,
+	    int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], Element *EmNeigh,
+	    double dt, ResFlag resflag);
 
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) x direction fluxes. Keith wrote this
-	void xdirflux(MatProps* matprops_ptr, double dz, double thissideSwet,
-			double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
+	void xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag);
 
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) y direction fluxes. Keith wrote this
-	void ydirflux(MatProps* matprops_ptr, double dz, double thissideSwet,
-			double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
+	void ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag);
 
 	//! this function (indirectly) calculates the fluxes that will be used to perform the finite volume corrector step and stores them in element edge nodes, indirectly because it calls other functions to calculate the analytical fluxes and then calls another function to compute the riemann fluxes from the analytical fluxes. Talk to me (Keith) before you modify this, as I am fairly certain that it is now completely bug free and parts of it can be slightly confusing.
-	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
-			MatProps* matprops_ptr, int myid, double dt, int* order_flag,
-			double *outflow);
+	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int myid,
+	    double dt, int* order_flag, double *outflow, ResFlag lresflag, ResFlag rresflag);
 
 	/*! this function calculates the maximum x and y direction wavespeeds
 	 *  which are the eigenvalues of the flux jacobian
@@ -426,9 +426,8 @@ public:
 	void calc_gravity_vector(MatProps *matprops_ptr);
 
 	//! this function is defined in unrefine.C, it is also called in that file, it finds this element's brothers
-	int find_brothers(HashTable* El_Table, HashTable* NodeTable, double target,
-			int myid, MatProps* matprops_ptr, void* NewFatherList,
-			void* OtherProcUpdate, int rescomp);
+	int find_brothers(HashTable* El_Table, HashTable* NodeTable, double target, int myid,
+	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int rescomp);
 	/*
 	 //! this function is defined in unrefine.C, it is also called in that file, it finds this element's brothers
 	 int find_brothers(HashTable* El_Table, HashTable* NodeTable,
@@ -441,8 +440,8 @@ public:
 	int check_unrefinement(HashTable *El_Table, double target);
 
 	//! this function updates this elements neighbor info when one of its neighbors has been unrefined
-	void change_neigh_info(unsigned *fth_key, unsigned *ng_key, int neworder,
-			int ng_gen, int fth_proc);
+	void change_neigh_info(unsigned *fth_key, unsigned *ng_key, int neworder, int ng_gen,
+	    int fth_proc);
 
 	//! this function returns the elm_loc variable, which is used in unrefinement beyond the initial coarse grid
 	int* get_elm_loc();
@@ -478,8 +477,7 @@ public:
 	double *get_influx();
 
 	//! this function calculates the extrusion (out of the ground) fluxes for this elements
-	void calc_flux(HashTable *NodeTable, FluxProps *fluxprops,
-			TimeProps *timeprops);
+	void calc_flux(HashTable *NodeTable, FluxProps *fluxprops, TimeProps *timeprops);
 
 	//! this function returns 2 if this element contains pileheight>=contour_height and has a neighbor who contains pileheight<contour_height.  It returns 1 if this element contains pileheight<contour_height and has a neighbor who contains pileheight>=contour_height.  It returns 0 otherwise. The intended use if if(EmTemp->if_pile_boundary(ElemTable,contour_height)) but I (Keith) added the distinction bewteen 1 and 2 to allow future developers to distinguish between the inside and outside of a pileheight contour line, as this functionality could be useful in the future.
 	int if_pile_boundary(HashTable *ElemTable, double contour_height);
@@ -491,8 +489,7 @@ public:
 	int if_first_buffer_boundary(HashTable *ElemTable, double contour_height);
 
 	//! the buffer layer is a layer of refined cells on the outside of the pile, i.e. ((pileheight<contour_height)&&(Influx[0]==0)) and adjacent to the pile.  It is "N" elements wide, and the "N" element width is increased one element at a time.  This function returns 2 if this element a member of the boundary of the buffer that is one element wider than the current buffer and does not need to be adapted.  It returns 1 if this elment needs to be refined and some of its sons will be in the next buffer boundary
-	int if_next_buffer_boundary(HashTable *ElemTable, HashTable *NodeTable,
-			double contour_height);
+	int if_next_buffer_boundary(HashTable *ElemTable, HashTable *NodeTable, double contour_height);
 
 	//! for debugging only
 	int get_counted();
@@ -578,6 +575,27 @@ public:
 
 	//! this function returns the correction term
 	double* get_correction();
+
+	void set_jacobian(int neigh_num, double elemjacob[3], int state_vars_num, const double incr);
+
+	// this function sets the jacobian for a boundary element
+	void set_jacobian();
+
+	void print_jacobian(int iter);
+
+	double*** get_jacobian();
+
+	void new_jacobianMat();
+
+	void rev_state_vars(Jacobian* jacobian, int iter);
+
+	void set_jacobianMat_zero(int jacmatind);
+
+	void add_state_func_sens(double* func_sens_prev, int iter);
+
+	void calc_func_sens(const void * ctx);
+
+	double* get_func_sens();
 
 private:
 	//! myprocess is id of the process(or) that owns this element
@@ -667,9 +685,16 @@ private:
 	/* variables for hyperbolic geoflow problem */
 
 	//! state_vars is an array that holds the current state variables: h, hVx, and hVy
-	double state_vars[NUM_STATE_VARS ];
+	double state_vars[NUM_STATE_VARS];
+
 	//! these are the values of the state variables from before the predictor step
-	double prev_state_vars[NUM_STATE_VARS ];
+	double prev_state_vars[NUM_STATE_VARS];
+
+	//! adjoint vector
+	double adjoint[NUM_STATE_VARS];
+
+	//! prev. time step adjoint vector
+	double prev_adjoint[NUM_STATE_VARS];
 
 	//! these are the spatial (x and y) derivatives of the state variables: (dh/dx, dhVx/dx, dhVy/dx, dh/dy, dhVx/dy, dhVy/dy)
 	double d_state_vars[NUM_STATE_VARS * DIMENSION];
@@ -754,6 +779,11 @@ private:
 	//! this term holds the correction term computed from inner product of linear construction of residual and linear construction of adjoint
 	double correction;
 
+	//! double jacobianMat [8][3][3],self[3][3],neigh1[3][3],neigh2[3][3],neigh3[3][3],neigh4[3][3]
+	double ***jacobianMat;
+
+	double func_sens[NUM_STATE_VARS];
+
 };
 
 inline int Element::get_ithelem() {
@@ -816,8 +846,7 @@ inline int Element::get_opposite_brother_flag() {
 }
 ;
 
-inline void Element::put_height_mom(double pile_height, double volf,
-		double xmom, double ymom) {
+inline void Element::put_height_mom(double pile_height, double volf, double xmom, double ymom) {
 	prev_state_vars[0] = state_vars[0] = pile_height;
 	prev_state_vars[1] = state_vars[1] = xmom;
 	prev_state_vars[2] = state_vars[2] = ymom;
@@ -839,6 +868,16 @@ inline void Element::put_height(double pile_height) {
 
 inline double* Element::get_state_vars() {
 	return state_vars;
+}
+;
+
+inline double* Element::get_adjoint() {
+	return adjoint;
+}
+;
+
+inline double* Element::get_prev_adjoint() {
+	return prev_adjoint;
 }
 ;
 
@@ -1181,8 +1220,12 @@ inline double* Element::get_const_adj() {
 	return consAdj;
 }
 
-inline double* Element::get_correction(){
+inline double* Element::get_correction() {
 	return &correction;
+}
+
+inline double* Element::get_func_sens() {
+	return func_sens;
 }
 
 /*************************************************************************/

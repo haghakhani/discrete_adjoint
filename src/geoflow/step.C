@@ -26,7 +26,7 @@
 #define KEY1 2576980374
 #define ITER 30
 
-void step(HashTable* El_Table, HashTable* NodeTable, DualMesh* dualmesh, int myid, int nump,
+void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump,
 		MatProps* matprops_ptr, TimeProps* timeprops_ptr, PileProps *pileprops_ptr,
 		FluxProps *fluxprops, StatProps* statprops_ptr, int* order_flag, OutLine* outline_ptr,
 		DISCHARGE* discharge, int adaptflag) {
@@ -42,9 +42,6 @@ void step(HashTable* El_Table, HashTable* NodeTable, DualMesh* dualmesh, int myi
 	// get coefficients, eigenvalues, hmax and calculate the time step
 	double dt = get_coef_and_eigen(El_Table, NodeTable, matprops_ptr, fluxprops, timeprops_ptr, 0);
 	// here we store the required data (solution and functional sensitivity) for the 0 time step
-	if (timeprops_ptr->iter == 0) {
-		initSolRec(El_Table, NodeTable, dualmesh, dt, myid);
-	}
 
 	timeprops_ptr->incrtime(&dt); //also reduces dt if necessary
 
@@ -229,14 +226,6 @@ void step(HashTable* El_Table, HashTable* NodeTable, DualMesh* dualmesh, int myi
 							for (k = 0; k < NUM_STATE_VARS; k++)
 								*(Curr_El->get_state_vars() + k) = 0;
 #endif
-					if (*(Curr_El->get_state_vars()) == 0.)
-						dualmesh->set_sol_zero(Curr_El);
-
-					else {
-
-						Solution *solution = new Solution(Curr_El->get_state_vars(), *(Curr_El->get_kactxy()));
-						dualmesh->update_sol(Curr_El, solution); //associate the created jacobian to the element
-					}
 
 				}
 				currentPtr = currentPtr->next;

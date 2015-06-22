@@ -23,6 +23,7 @@
 #include "hashtab.h"
 #include "struct.h"
 //#include "jacobian.h"
+class SolRec;
 class Jacobian;
 class Node {
 
@@ -37,14 +38,12 @@ class Node {
 			TimeProps* timeprops_ptr, MatProps* matprops_ptr, int iter, int myid,
 			int numprocs);
 
-	friend void calc_jacobian(HashTable* El_Table, HashTable* NodeTable,
-			vector<Jacobian*>* solHyst, MatProps* matprops_ptr,
-			TimeProps* timeprops_ptr, MapNames *mapname_ptr, double const increment);
+	friend void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
+	    double const increment);
 
-	friend void record_flux(HashTable* El_Table, HashTable* NodeTable,
-			unsigned* key, MatProps* matprops_ptr, int effelement, int myid,
-			double fluxxpold[4], double fluxypold[4], double fluxxmold[4],
-			double fluxymold[4]);
+	friend void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
+	    int effelement, int myid, double *fluxxpold, double* fluxypold, double* fluxxmold,
+	    double* fluxymold);
 
 	friend void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable,
 			int numprocs, int myid, double loc);

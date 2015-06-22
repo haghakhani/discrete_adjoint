@@ -28,126 +28,121 @@ struct Func_CTX {
 	int adjiter;
 };
 
-void calc_adjoint(DualMesh* dualmesh, TimeProps* timeprops_ptr, int iter, int adjiter, int myid) {
+void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 
-	int Ny = dualmesh->get_Ny();
-	int Nx = dualmesh->get_Nx();
+	HashTable* El_Table = meshctx->el_table;
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashEntryPtr currentPtr;
+	Element* Curr_El = NULL;
+	int iter = propctx->timeprops->iter;
 
-	Func_CTX ctx;
-	ctx.dx = dualmesh->get_dx();
-	ctx.dy = dualmesh->get_dx();
-	ctx.timeprops = timeprops_ptr;
-	ctx.iter = iter;
-	ctx.adjiter = adjiter;
+	double aa, bb = .1;
 
-	for (int i = 0; i < Ny; ++i)
-		for (int j = 0; j < Nx; ++j) {
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
 
-			DualCell* dualcell = dualmesh->get_dualcell(i, j);
-			dualcell->calc_func_sens((const void *) &ctx);
+				if (Curr_El->get_adapted_flag() > 0) {
+					if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
+						aa = bb;
 
-			if (adjiter == 0) {
-
-				double* adjoint = dualcell->get_curr_adjoint();
-
-				for (int k = 0; k < NUM_STATE_VARS; ++k)
-					adjoint[k] = *(dualcell->get_funcsens() + k);
-
-			} else {
-
-				double* adjoint = dualcell->get_curr_adjoint();
-
-				DualCell *neigh_cell;
-				double* adjoint_pointer;
-				double adjcontr[NUM_STATE_VARS] = { 0., 0., 0. };
-				double*** jacobianmat;
-
-				for (int effelement = 0; effelement < 5; effelement++) { //0 for the element itself, and the rest id for neighbour elements
-
-					if (effelement == 0) {		    //this part of code
-
-						adjoint_pointer = dualcell->get_prev_adjoint();
-
-						jacobianmat = dualcell->get_jacobian();
-
-						for (int k = 0; k < NUM_STATE_VARS; ++k)
-							for (int l = 0; l < NUM_STATE_VARS; ++l)
-								adjcontr[k] += adjoint_pointer[l] * jacobianmat[0][k][l];
-
-					} else {
-
-						int a, b;
-						set_ab(&a, &b, effelement);
-
-						neigh_cell = dualmesh->get_dualcell(i + a, j + b);//basically we are checking all neighbor elements, and start from xp neighbor
-
-						if (neigh_cell) {
-
-							adjoint_pointer = neigh_cell->get_prev_adjoint();
-							jacobianmat = neigh_cell->get_jacobian();
-
-							int jacind;
-
-							switch (effelement) {
-								case 1:	//in xp neighbor I have to read jacobian of xm, because position of curr_el is in xm side of that neighbor
-									jacind = 3;
-									break;
-								case 2:		    //for yp return ym
-									jacind = 4;
-									break;
-								case 3:		    //for xm return xp
-									jacind = 1;
-									break;
-								case 4:		    //for ym return yp
-									jacind = 2;
-									break;
-								default:
-									cout << "invalid neighbor position" << endl;
-							}
-
-							for (int k = 0; k < NUM_STATE_VARS; ++k)
-								for (int l = 0; l < NUM_STATE_VARS; ++l)
-									adjcontr[k] += adjoint_pointer[l] * jacobianmat[jacind][k][l];
-
-						}
-					}
+					calc_adjoint_elem(meshctx, propctx, Curr_El);
 				}
-
-				for (int k = 0; k < NUM_STATE_VARS; k++)
-					adjoint[k] = *(dualcell->get_funcsens() + k) - adjcontr[k];
-
-				if (abs(i - KEY0) <= 1 && abs(j - KEY1) <= 1 && iter == ITER) //&& effelement == EFFELL  && j == J)
-					dualcell->print_cell_neighb_info(dualmesh, iter);
-
+				currentPtr = currentPtr->next;
 			}
 		}
-
+	}
 	return;
 }
 
-void set_ab(int* a, int* b, int effelement) {
+void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 
-	//b is for index in x, and a is index for y
-	*a = *b = 0;
-	switch (effelement) {
-		case 1:
-			*b = 1;
-			break;
-		case 2:
-			*a = 1;
-			break;
-		case 3:
-			*b = -1;
-			break;
-		case 4:
-			*a = -1;
-			break;
-		default:
-			cerr << "This effective element is invalid" << endl;
+	Func_CTX ctx;
+	ctx.dx = *(Curr_El->get_dx());
+	ctx.dy = *(Curr_El->get_dx() + 1);
+	ctx.timeprops = propctx->timeprops;
+	ctx.iter = propctx->timeprops->iter;
+	ctx.adjiter = propctx->timeprops->adjiter;
+
+	double* adjoint = Curr_El->get_adjoint();
+	Jacobian *jacobian, *neighjac;
+
+	Curr_El->calc_func_sens((const void *) &ctx);
+
+	HashTable* El_Table = meshctx->el_table;
+
+	if (propctx->timeprops->adjiter == 0) {
+
+		for (int i = 0; i < NUM_STATE_VARS; ++i)
+			adjoint[i] = *(Curr_El->get_func_sens() + i);
+
+	} else {
+
+		Element *neigh_elem;
+		double* adjoint_pointer;
+		double adjcontr[NUM_STATE_VARS] = { 0.0, 0.0, 0.0 };
+		double*** jacobianmat;
+
+		for (int effelement = 0; effelement < EFF_ELL; effelement++) { //0 for the element itself, and the rest id for neighbour elements
+
+			if (effelement == 0) {		    //this part of code
+
+				adjoint_pointer = (Curr_El->get_prev_adjoint());
+
+				jacobianmat = Curr_El->get_jacobian();
+
+				for (int k = 0; k < NUM_STATE_VARS; ++k)
+					for (int l = 0; l < NUM_STATE_VARS; ++l)
+						adjcontr[k] += adjoint_pointer[l] * jacobianmat[0][k][l];
+
+			} else {
+
+				neigh_elem = Curr_El->get_side_neighbor(El_Table, effelement - 1);//basically we are checking all neighbor elements, and start from xp neighbor
+				if (neigh_elem) {
+
+					adjoint_pointer = neigh_elem->get_prev_adjoint();
+					jacobianmat = neigh_elem->get_jacobian();
+
+					int jacind;
+
+					switch (effelement) {
+						case 1:	//in xp neighbor I have to read jacobian of xm, because position of curr_el is in xm side of that neighbor
+							jacind = 3;
+							break;
+						case 2:		    //for yp return ym
+							jacind = 4;
+							break;
+						case 3:		    //for xm return xp
+							jacind = 1;
+							break;
+						case 4:		    //for ym return yp
+							jacind = 2;
+							break;
+						default:
+							cout << "invalid neighbor position" << endl;
+					}
+
+					for (int k = 0; k < NUM_STATE_VARS; ++k)
+						for (int l = 0; l < NUM_STATE_VARS; ++l)
+							adjcontr[k] += adjoint_pointer[l] * jacobianmat[jacind][k][l];
+
+				}
+			}
+		}
+
+		for (int j = 0; j < NUM_STATE_VARS; j++)
+			adjoint[j] = *(Curr_El->get_func_sens() + j) - adjcontr[j];
 	}
-}
 
-void DualCell::calc_func_sens(const void * ctx) {
+	for (int i = 0; i < NUM_STATE_VARS; i++)
+		if (isnan(adjoint[i]) || isinf(adjoint[i]))
+			cout << "it is incorrect  " << endl;
+
+	return;
+}
+void Element::calc_func_sens(const void * ctx) {
 
 	Func_CTX* contx = (Func_CTX *) ctx;
 
