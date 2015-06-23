@@ -11,62 +11,12 @@
 #include "../header/hpfem.h"
 
 void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
-		MatProps* matprops_ptr, int effelement, int myid, double* fluxxpold,
-		double* fluxypold, double* fluxxmold, double* fluxymold) {
-
-	double dummydt = 0., outflow = 0.;
-	int order_flag = 1;
-	ResFlag resflag;
-	resflag.callflag = 1;
-	resflag.lgft = 0;
+		MatProps* matprops_ptr, int myid, double fluxold[4][NUM_STATE_VARS]) {
 
 	Element* Curr_El = (Element*) (El_Table->lookup(key));
 
 	int xp = Curr_El->get_positive_x_side(); //finding the direction of element
 	int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
-
-	Element* neigh_elem;
-
-	if (effelement == 0) {
-
-		Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid, dummydt,
-				&order_flag, &outflow, resflag, resflag); //chenge of the state_vars causes the all around fluxes change, this update xp ,yp
-
-		if ((*(Curr_El->get_neigh_proc() + xm)) != INIT) { //we have to make sure that there exit an element in xm side
-
-			Element* elem_xm = (Element*) (El_Table->lookup(
-					Curr_El->get_neighbors() + xm * KEYLENGTH));
-			assert(elem_xm);
-			elem_xm->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
-					dummydt, &order_flag, &outflow, resflag, resflag); //this update the flux on share edge with xm
-
-		}
-
-		if ((*(Curr_El->get_neigh_proc() + ym)) != INIT) { //we have to make sure that there exit an element in ym side
-
-			Element* elem_ym = (Element*) (El_Table->lookup(
-					Curr_El->get_neighbors() + ym * KEYLENGTH));
-			assert(elem_ym);
-			elem_ym->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
-					dummydt, &order_flag, &outflow, resflag, resflag); //this update the flux on share edge with ym
-		}
-
-	} else {
-		if ((*(Curr_El->get_neigh_proc() + (effelement - 1))) != INIT) {
-
-			neigh_elem = (Element*) (El_Table->lookup(
-					Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
-			assert(neigh_elem);
-
-			if ((effelement - 1) == xp || (effelement - 1) == yp)
-				Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
-						dummydt, &order_flag, &outflow, resflag,resflag); //if we change the state variables in xp or yp, just the flux at this element has to be updated
-			else
-				neigh_elem->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
-						dummydt, &order_flag, &outflow, resflag, resflag); //otherwise the flux at the corresponding element has to be updated
-
-		}
-	}
 
 	Node* nxp = (Node*) NodeTable->lookup(Curr_El->getNode() + (xp + 4) * 2);
 
@@ -77,10 +27,10 @@ void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
 	Node* nym = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
 
 	for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
-		fluxxpold[ivar] = nxp->flux[ivar];
-		fluxypold[ivar] = nyp->flux[ivar];
-		fluxxmold[ivar] = nxm->flux[ivar];
-		fluxymold[ivar] = nym->flux[ivar];
+		fluxold[0][ivar] = nxp->flux[ivar];
+		fluxold[1][ivar] = nyp->flux[ivar];
+		fluxold[2][ivar] = nxm->flux[ivar];
+		fluxold[3][ivar] = nym->flux[ivar];
 	}
 }
 
@@ -153,13 +103,13 @@ void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* 
 	for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
 
 		abs_fluxx_diff[ivar] = dabs(fluxxold[ivar] - fluxxnew[ivar]);
-		if (abs_fluxx_diff[ivar] > 0. && ivar != 1)
+		if (abs_fluxx_diff[ivar] > 0. )
 			cout << setw(10) << setprecision(8) << "change effects the flux_x for var  " << ivar
 			    << " eff_elem   " << effelement << "  j  " << j << "  value  " << abs_fluxx_diff[ivar]
 			    << endl;
 
 		abs_fluxy_diff[ivar] = dabs(fluxxold[ivar] - fluxxnew[ivar]);
-		if (abs_fluxy_diff[ivar] > 0. && ivar != 1)
+		if (abs_fluxy_diff[ivar] > 0. )
 			cout << "change effects the flux_y for var  " << ivar << " eff_elem   " << effelement
 			    << "  j  " << j << "  value  " << abs_fluxy_diff[ivar] << endl;
 	}

@@ -15,9 +15,9 @@
 #endif
 #include "../header/hpfem.h"
 
-#define KEY0 25
-#define KEY1 16
-#define ITER 61
+#define KEY0 3938123776
+#define KEY1 0
+#define ITER 141
 
 struct Func_CTX {
 
@@ -67,7 +67,6 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 	ctx.adjiter = propctx->timeprops->adjiter;
 
 	double* adjoint = Curr_El->get_adjoint();
-	Jacobian *jacobian, *neighjac;
 
 	Curr_El->calc_func_sens((const void *) &ctx);
 

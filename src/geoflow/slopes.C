@@ -18,35 +18,45 @@
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
- 
+
 #include "../header/hpfem.h"
 #include "../header/geoflow.h"
 
-void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr)
-{
-  int i;
-  //-------------------go through all the elements of the subdomain------------------------
-  //-------------------and   --------------------------
-  
-  HashEntryPtr* buck = El_Table->getbucketptr();
-/* mdj 2007-02 */
-  HashEntryPtr currentPtr;
-  Element* Curr_El;
-#pragma omp parallel for private(currentPtr,Curr_El)
-  for(i=0; i<El_Table->get_no_of_buckets(); i++)
-    if(*(buck+i))
-      {
-	currentPtr = *(buck+i);
-	while(currentPtr)
-	  {
-	    Curr_El=(Element*)(currentPtr->value);
- 	    if(Curr_El->get_adapted_flag()>0)
-	      {//if this element does not belong on this processor don't involve!!!
-	      Curr_El->get_slopes(El_Table, NodeTable, matprops_ptr->gamma);
-	    }
-	    currentPtr=currentPtr->next;      	    
-	  }
-      }
+void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int dualcall) {
+	int i;
+	//-------------------go through all the elements of the subdomain------------------------
+	//-------------------and   --------------------------
 
-  return;
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	/* mdj 2007-02 */
+	HashEntryPtr currentPtr;
+	Element* Curr_El;
+#pragma omp parallel for private(currentPtr,Curr_El)
+	if (!dualcall) {
+		for (i = 0; i < El_Table->get_no_of_buckets(); i++)
+			if (*(buck + i)) {
+				currentPtr = *(buck + i);
+				while (currentPtr) {
+					Curr_El = (Element*) (currentPtr->value);
+					if (Curr_El->get_adapted_flag() > 0) { //if this element does not belong on this processor don't involve!!!
+						Curr_El->get_slopes(El_Table, NodeTable, matprops_ptr->gamma);
+					}
+					currentPtr = currentPtr->next;
+				}
+			}
+	} else {
+		for (i = 0; i < El_Table->get_no_of_buckets(); i++)
+					if (*(buck + i)) {
+						currentPtr = *(buck + i);
+						while (currentPtr) {
+							Curr_El = (Element*) (currentPtr->value);
+							if (Curr_El->get_adapted_flag() > 0) { //if this element does not belong on this processor don't involve!!!
+								Curr_El->get_slopes_prev(El_Table, NodeTable, matprops_ptr->gamma);
+							}
+							currentPtr = currentPtr->next;
+						}
+					}
+	}
+
+	return;
 }

@@ -24,10 +24,7 @@
 
 #define KEY0   3870077243
 #define KEY1   330382099
-#define EFFELL 0
 #define ITER   11
-#define J      0
-#define JACIND 0
 #define X      1.97853625e-01
 #define Y      2.30663500e-01
 

@@ -86,19 +86,33 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 						}
 					if (!boundary) {
 
-						double *state_vars = Curr_El->get_state_vars();
+						double state_vars[NUM_STATE_VARS], gravity[NUM_STATE_VARS];
+						double d_gravity[DIMENSION], curvature[DIMENSION];
+						double d_state_vars_old[NUM_STATE_VARS * DIMENSION];
 						double *prev_state_vars = Curr_El->get_prev_state_vars();
-						double *gravity = Curr_El->get_gravity();
-						double *d_gravity = Curr_El->get_d_gravity();
-						double *curvature = Curr_El->get_curvature();
 						Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
 						double bedfrict = Curr_El->get_effect_bedfrict();
-
-						double *dx = Curr_El->get_dx();
+						double dx[2] = { *(Curr_El->get_dx()), *(Curr_El->get_dx()+1) };
 						double kactxy[DIMENSION];
-						double orgSrcSgn[DIMENSION];
+						double orgSrcSgn[2];
 
-						Curr_El->get_slopes_prev(El_Table, NodeTable, matprops_ptr->gamma); // we run this to update d_state_vars
+						for (int ind = 0; ind < NUM_STATE_VARS; ++ind) {
+
+							state_vars[ind] = *(Curr_El->get_state_vars() + ind);
+							gravity[ind] = *(Curr_El->get_gravity() + ind);
+
+						}
+
+						for (int ind = 0; ind < DIMENSION; ++ind) {
+
+							d_gravity[ind] = *(Curr_El->get_d_gravity() + ind);
+							curvature[ind] = *(Curr_El->get_curvature() + ind);
+
+						}
+
+						for (int ind = 0; ind < NUM_STATE_VARS * DIMENSION; ++ind)
+							d_state_vars_old[ind] = *(Curr_El->get_d_state_vars() + ind);
+
 
 						if (timeprops_ptr->iter < 51)
 							matprops_ptr->frict_tiny = 0.1;
@@ -106,6 +120,9 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 							matprops_ptr->frict_tiny = 0.000000001;
 
 						orgSourceSgn(Curr_El, matprops_ptr->frict_tiny, orgSrcSgn);
+
+						double fluxold[4][NUM_STATE_VARS];
+						record_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, fluxold);
 
 						for (int effelement = 0; effelement < EFF_ELL; effelement++) { //0 for the element itself, and the rest id for neighbour elements
 
@@ -135,16 +152,6 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 
 								for (int j = 0; j < NUM_STATE_VARS; j++) {	//there is a problem here: I do not need to compute for first the component of adjoint
 
-									double dummydt = 0.;//this is dummy because it is needed in clac_edge state->zdirflux->calc_wetness_factor which is useless here
-
-									Node* nxp = (Node*) NodeTable->lookup(Curr_El->getNode() + (xp + 4) * 2);
-
-									Node* nyp = (Node*) NodeTable->lookup(Curr_El->getNode() + (yp + 4) * 2);
-
-									Node* nxm = (Node*) NodeTable->lookup(Curr_El->getNode() + (xm + 4) * 2);
-
-									Node* nym = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
-
 									double vec_res[NUM_STATE_VARS];
 									double total_res[NUM_STATE_VARS] = { 0., 0., 0. };
 
@@ -155,17 +162,6 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 										//if it is below GEOFLOW_TINY then there is no need to update fluxes and kactxy
 										int updateflux, srcflag;
 										reset_resflag(resflag);
-
-										int dbgflag = 0, printflag = 0;
-										double fluxxpold[NUM_STATE_VARS], fluxypold[NUM_STATE_VARS]; //we just need to compute jacobian for h,u,v not for cont. adjoint so we don't store the fluxes for the adjoint
-										double fluxxmold[NUM_STATE_VARS], fluxymold[NUM_STATE_VARS];
-
-										if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
-										    && jacmatind == JACIND && iter == ITER && j == J)
-
-											record_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, effelement, myid,
-											    fluxxpold, fluxypold, fluxxmold, fluxymold);
-
 
 										// here we modify increment to one time compute forward and one time compute backward difference if it is necessary
 										double signe = pow(-1., scheme);
@@ -183,33 +179,22 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 										//Attention make sure that NUM_STATE_VARS are selected correctly
 										//Actually we just need 3, but there is an excessive for first adjoint
 										//const int state_num=NUM_STATE_VARS-2;
-										double fluxxp[NUM_STATE_VARS], fluxyp[NUM_STATE_VARS]; //we just need to compute jacobian for h,u,v not for cont. adjoint so we don't store the fluxes for the adjoint
-										double fluxxm[NUM_STATE_VARS], fluxym[NUM_STATE_VARS];
+										double flux[4][NUM_STATE_VARS];
+										record_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
 
-										for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
-											fluxxp[ivar] = nxp->flux[ivar];
-
-										for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
-											fluxyp[ivar] = nyp->flux[ivar];
-
-										for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
-											fluxxm[ivar] = nxm->flux[ivar];
-
-										for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
-											fluxym[ivar] = nym->flux[ivar];
 
 #ifdef DEBUG
 										if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
 										    && jacmatind == JACIND && iter == ITER && j == J)
-											flux_debug(Curr_El, fluxxpold, fluxxmold, fluxypold, fluxymold, fluxxp,
-											    fluxxm, fluxyp, fluxym, effelement, j, iter, dt);
+											flux_debug(Curr_El, fluxold[0], fluxold[2], fluxold[1], fluxold[3], flux[0],
+													flux[2], flux[1], flux[3], effelement, j, iter, dt);
 #endif
 
 										double *d_state_vars = Curr_El->get_d_state_vars();
 
 										//here we compute the residuals
-										residual(vec_res, state_vars, prev_state_vars, fluxxp, //4
-												fluxyp, fluxxm, fluxym, dtdx, dtdy, dt, d_state_vars, //7
+										residual(vec_res, state_vars, prev_state_vars, flux[0], //4
+												flux[1], flux[2], flux[3], dtdx, dtdy, dt, d_state_vars, //7
 										    (d_state_vars + NUM_STATE_VARS), curvature, //2
 										    matprops_ptr->intfrict, //1
 										    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), //4
@@ -348,7 +333,7 @@ void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El,
 					dummydt, &order_flag, &outflow, resflag, resflag); //otherwise the flux at the corresponding element has to be updated
 
 	}
-	Curr_El->get_slopes(El_Table, NodeTable, matprops_ptr->gamma);
+	Curr_El->get_slopes_prev(El_Table, NodeTable, matprops_ptr->gamma);
 
 }
 

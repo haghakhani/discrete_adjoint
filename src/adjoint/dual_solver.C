@@ -91,7 +91,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		resflag.lgft = 0;
 		calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, &outflow,
 		    resflag);
-		slopes(El_Table, NodeTable, matprops_ptr);
+		slopes(El_Table, NodeTable, matprops_ptr,1);
 
 		compute_functional(El_Table, &functional, timeprops_ptr);
 

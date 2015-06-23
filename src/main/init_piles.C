@@ -107,7 +107,7 @@ void init_piles(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 
 
   move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr,timeprops_ptr);
-  slopes(HT_Elem_Ptr, HT_Node_Ptr, matprops);
+  slopes(HT_Elem_Ptr, HT_Node_Ptr, matprops,0);
 
   /* initial calculation of actual volume on the map */
 
