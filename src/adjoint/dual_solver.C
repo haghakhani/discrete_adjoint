@@ -99,7 +99,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 		calc_jacobian(meshctx, propctx, eleminfo, INCREMENT);
 
-		print_jacobian(El_Table, iter);
+//		print_jacobian(El_Table, iter);
 
 		calc_adjoint(meshctx, propctx);
 

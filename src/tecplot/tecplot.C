@@ -25,6 +25,10 @@
 #define TARGETPROCA -1
 #define TARGETPROCB -1
 
+#define ITER 8
+#define KEY0 3866281196
+#define KEY1 1321528399
+
 #ifndef TECPLOTASCII
 //generates a corrupt binary tecplot file... it doesn't work
 #define num_var 8
@@ -560,6 +564,10 @@ int get_ur_tri(HashTable* El_Table, HashTable* NodeTable, int myid, Element* EmA
 int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimeProps *timeprops,
     Element *EmTemp, int adjflag) {
 
+	int aa,bb=1;
+	if (timeprops->iter==ITER && *(EmTemp->pass_key())==KEY0 && *(EmTemp->pass_key()+1)==KEY1 )
+		bb=aa;
+
 	int num_missing_bubble_node;
 	double elevation;
 	double hscale = matprops->HEIGHT_SCALE;
@@ -571,7 +579,10 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimePr
 	double momentum_scale = hscale * velocity_scale; // scaling factor for the momentums
 
 	double adjoint_scale[3] = { 1.0, 1.0, 1.0 };
-	adjoint_scale[0] = hscale * lscale * lscale * tscale;
+	adjoint_scale[0] = hscale * lscale * lscale * tscale* tscale;
+	// scale of adjoint is different for first and two other component, and depend on the functional
+	adjoint_scale[1] = hscale * lscale * tscale * tscale* tscale;
+
 
 	double residual_scale[3] = { 1.0, 1.0, 1.0 };
 	residual_scale[0] = hscale / tscale;

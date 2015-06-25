@@ -97,7 +97,7 @@ const int FLUID_FLOW = 2;
 const int GHOST = -9876; //"refined" GHOST CELL FLAG
 
 //adjoint constants
-const double INCREMENT = 1.e-08;
+const double INCREMENT = 1.49e-08;
 
 //The magnitude of the "adapted" flag indicates whether the cell is NEWSON, NEWFATHER, NOTRECADAPTED, or TOBEDELETED.  A postive value indicates it's on this processor, a negative sign indicates a GHOST cell.
 

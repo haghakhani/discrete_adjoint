@@ -17,11 +17,11 @@
 #endif
 #include "../header/hpfem.h"
 
-#define KEY0   3870077243
-#define KEY1   330382099
-#define ITER   11
+#define KEY0   3938123776
+#define KEY1   0
+#define ITER   144
 #define EFFELL 0
-#define J      0
+#define J      2
 #define JACIND 0
 
 #define DEBUG

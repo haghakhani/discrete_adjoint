@@ -15,9 +15,9 @@
 #endif
 #include "../header/hpfem.h"
 
-#define KEY0 3938123776
-#define KEY1 0
-#define ITER 141
+#define KEY0 3866281196
+#define KEY1 1321528399
+#define ITER 9
 
 struct Func_CTX {
 

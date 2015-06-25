@@ -22,9 +22,9 @@
 #define DO_EROSION
 #define DEBUG
 
-#define KEY0   3870077243
-#define KEY1   330382099
-#define ITER   11
+#define KEY0   3938123776
+#define KEY1   0
+#define ITER   144
 #define X      1.97853625e-01
 #define Y      2.30663500e-01
 
