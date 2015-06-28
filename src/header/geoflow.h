@@ -113,7 +113,7 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
     double dtdy, double dt, double *d_state_vars_x, double *d_state_vars_y, //4
     double *curvature, double intfrictang, double bedfrictin, double *gravity, //4
     double *dgdx, double kactxyelem, double fric_tiny, double* orgSrcSgn, //4
-    double increment, double epsilon, int srcflag = 1); //3
+    double increment, double epsilon, int* check_stop_crit, int srcflag = 1,int org_res_flag=1); //5
 
 void save_solution(HashTable* El_Table, HashTable* NodeTable, HashTable* solHystPtr,
     TimeProps* timeprops_ptr);

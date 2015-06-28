@@ -24,12 +24,12 @@
 
 #define KEY0   3938123776
 #define KEY1   0
-#define ITER   144
+#define ITER   148
 #define X      1.97853625e-01
 #define Y      2.30663500e-01
 
 #include "../header/hpfem.h"
-#include "../header/geoflow.h"
+
 void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* matprops_ptr,
     FluxProps *fluxprops, TimeProps *timeprops, void *EmTemp_in, double *forceint, double *forcebed,
     double *eroded, double *deposited) {

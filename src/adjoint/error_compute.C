@@ -21,20 +21,18 @@
 #define KEY1   2863311530
 #define ITER   5
 
-void error_compute(HashTable* El_Table, HashTable* NodeTable,
-		TimeProps* timeprops_ptr, MatProps* matprops_ptr, int iter, int myid,
-		int numprocs) {
+void error_compute(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprops_ptr,
+    MatProps* matprops_ptr, int iter, int myid, int numprocs) {
 
-	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr,
-			timeprops_ptr);
+	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
 
 	int order_flag = 1;	//this is dummy here
 	double outflow[1];	//this is dummy here
 	ResFlag resflag;
 	resflag.callflag = 1;
 	resflag.lgft = 0;
-	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid,
-			&order_flag, outflow, resflag);
+	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, outflow,
+	    resflag);
 
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
@@ -49,8 +47,7 @@ void error_compute(HashTable* El_Table, HashTable* NodeTable,
 					if (Curr_El->get_adapted_flag() == NEWSON) {
 
 						int dbgflag;
-						if (*(Curr_El->pass_key()) == KEY0
-								&& *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
+						if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
 							dbgflag = 1;
 
 						double *state_vars = Curr_El->get_state_vars();
@@ -63,7 +60,8 @@ void error_compute(HashTable* El_Table, HashTable* NodeTable,
 						double velocity[DIMENSION];
 						double *dx = Curr_El->get_dx();
 						double kactxy[DIMENSION];
-						double orgSrcSgn[2], vec_res[3];
+						double orgSrcSgn[2];
+						double* vec_res = Curr_El->get_residual();
 
 						Curr_El->get_slopes_prev(El_Table, NodeTable, matprops_ptr->gamma);
 						double *d_state_vars = Curr_El->get_d_state_vars();
@@ -89,17 +87,13 @@ void error_compute(HashTable* El_Table, HashTable* NodeTable,
 
 						const int state_num = NUM_STATE_VARS - 2;
 
-						Node* nxp = (Node*) NodeTable->lookup(
-								Curr_El->getNode() + (xp + 4) * 2);
+						Node* nxp = (Node*) NodeTable->lookup(Curr_El->getNode() + (xp + 4) * 2);
 
-						Node* nyp = (Node*) NodeTable->lookup(
-								Curr_El->getNode() + (yp + 4) * 2);
+						Node* nyp = (Node*) NodeTable->lookup(Curr_El->getNode() + (yp + 4) * 2);
 
-						Node* nxm = (Node*) NodeTable->lookup(
-								Curr_El->getNode() + (xm + 4) * 2);
+						Node* nxm = (Node*) NodeTable->lookup(Curr_El->getNode() + (xm + 4) * 2);
 
-						Node* nym = (Node*) NodeTable->lookup(
-								Curr_El->getNode() + (ym + 4) * 2);
+						Node* nym = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
 
 						double fluxxp[state_num], fluxyp[state_num]; //we just need to compute jacobian for h,u,v not for cont. adjoint so we don't store the fluxes for the adjoint
 						double fluxxm[state_num], fluxym[state_num];
@@ -116,28 +110,26 @@ void error_compute(HashTable* El_Table, HashTable* NodeTable,
 						for (int ivar = 0; ivar < state_num; ivar++)
 							fluxym[ivar] = nym->flux[ivar];
 
-						if (*(Curr_El->pass_key()) == KEY0
-								&& *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
+						if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
 							dbgflag = 1;
 
-						residual(vec_res, state_vars, prev_state_vars, fluxxp, fluxyp,
-								fluxxm, fluxym, dtdx, dtdy, dt, d_state_vars,
-								(d_state_vars + NUM_STATE_VARS), curvature,
-								matprops_ptr->intfrict, bedfrict, gravity, d_gravity,
-								*(Curr_El->get_kactxy()), matprops_ptr->frict_tiny, orgSrcSgn,
-								0./*here increment is zero*/, matprops_ptr->epsilon);
+						int dummy_stop[DIMENSION] = { 0, 0 };
 
-						state_vars[1] = vec_res[0];
-						state_vars[4] = vec_res[1];
-						state_vars[5] = vec_res[2];
+						residual(vec_res, state_vars, prev_state_vars, fluxxp, fluxyp, fluxxm, fluxym, dtdx,
+						    dtdy, dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature,
+						    matprops_ptr->intfrict, bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()),
+						    matprops_ptr->frict_tiny, orgSrcSgn, 0./*here increment is zero*/,
+						    matprops_ptr->epsilon, dummy_stop);
 
 						el_error[1] = 0.0;
 						*correction = 0.0;
-						for (int j = 0; j < 3; j++) {
-							el_error[1] += vec_res[j]
-									* (state_vars[NUM_STATE_VARS + j] - constAdj[j]);
 
-							*correction += vec_res[j] * state_vars[NUM_STATE_VARS + j];
+						double* adjoint=Curr_El->get_adjoint();
+
+						for (int j = 0; j < NUM_STATE_VARS; j++) {
+							el_error[1] += vec_res[j] * (adjoint[j] - constAdj[j]);
+
+							*correction += vec_res[j] * adjoint[j];
 						}
 						//if (el_error[1]!=0)
 						//	cout<<"it should print blue"<<endl ;

@@ -20,14 +20,15 @@
 #define	DEBUG
 
 void residual(double* residual, double *state_vars, double *prev_state_vars, //3
-		double *fluxxp, double *fluxyp, double *fluxxm, double *fluxym, double dtdx, //5
-		double dtdy, double dt, double *d_state_vars_x, double *d_state_vars_y, //4
-		double *curvature, double intfrictang, double bedfrict, double *gravity, //4
-		double *dgdx, double kactxyelem, double fric_tiny, double* orgSrcSgn, //4
-		double increment, double epsilon, int srcflag) {
+    double *fluxxp, double *fluxyp, double *fluxxm, double *fluxym, double dtdx, //5
+    double dtdy, double dt, double *d_state_vars_x, double *d_state_vars_y, //4
+    double *curvature, double intfrictang, double bedfrict, double *gravity, //4
+    double *dgdx, double kactxyelem, double fric_tiny, double* orgSrcSgn, //4
+    double increment, double epsilon, int* check_stop_crit, int srcflag, int org_res_flag) {
 
 	double velocity[DIMENSION];
 	double kactxy[DIMENSION];
+	double tmp[NUM_STATE_VARS];
 	//double bedfrict;
 
 	if (prev_state_vars[0] > GEOFLOW_TINY) {
@@ -35,7 +36,7 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
 			kactxy[k] = kactxyelem;
 
 		if ((prev_state_vars[1] == 0. && prev_state_vars[2] == increment)
-				|| (prev_state_vars[2] == 0. && prev_state_vars[1] == increment)) {
+		    || (prev_state_vars[2] == 0. && prev_state_vars[1] == increment)) {
 			velocity[0] = 0.;
 			velocity[1] = 0.;
 		} else {
@@ -53,15 +54,13 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
 		//bedfrict = bedfrictin;
 	}
 
-	for (int i = 0; i < NUM_STATE_VARS; i++)
+	for (int i = 0; i < NUM_STATE_VARS; i++) {
 		residual[i] = 0.0;
+		tmp[i] = 0.;
+	}
 
-	residual[0] = state_vars[0] - prev_state_vars[0]
-			+ dtdx * (fluxxp[0] - fluxxm[0]) + dtdy * (fluxyp[0] - fluxym[0]);
-	residual[1] = state_vars[1] - prev_state_vars[1]
-			+ dtdx * (fluxxp[1] - fluxxm[1]) + dtdy * (fluxyp[1] - fluxym[1]);
-	residual[2] = state_vars[2] - prev_state_vars[2]
-			+ dtdx * (fluxxp[2] - fluxxm[2]) + dtdy * (fluxyp[2] - fluxym[2]);
+	for (int i = 0; i < NUM_STATE_VARS; i++)
+		tmp[i] = prev_state_vars[i] - dtdx * (fluxxp[i] - fluxxm[i]) - dtdy * (fluxyp[i] - fluxym[i]);
 
 	if (prev_state_vars[0] > GEOFLOW_TINY && srcflag) {
 
@@ -79,33 +78,54 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
 
 		double sin_int_fric = sin(intfrictang);
 		double s2 = orgSrcSgn[0] * prev_state_vars[0] * kactxy[0]
-				* (gravity[2] * d_state_vars_y[0] + dgdx[1] * prev_state_vars[0])
-				* sin_int_fric;
+		    * (gravity[2] * d_state_vars_y[0] + dgdx[1] * prev_state_vars[0]) * sin_int_fric;
+
 		double tan_bed_fric = tan(bedfrict);
 		double s3 = unitvx
-				* max(
-						gravity[2] * prev_state_vars[0]
-								+ velocity[0] * prev_state_vars[1] * curvature[0], 0.0)
-				* tan_bed_fric;
+		    * max(gravity[2] * prev_state_vars[0] + velocity[0] * prev_state_vars[1] * curvature[0],
+		        0.0) * tan_bed_fric;
 
-		residual[1] -= dt * (s1 - s2 - s3);
+		if (org_res_flag)
+			if (dabs(tmp[1] + dt * s1) > dabs(dt * (s2 + s3)))
+				tmp[1] += dt * (s1 - s2 - s3);
+			else {
+				tmp[1] = state_vars[1];
+				check_stop_crit[0] = 1;
+			}
+
+		else if (!check_stop_crit[0])
+			tmp[1] += dt * (s1 - s2 - s3);
+		else
+			tmp[1] = state_vars[1];
 
 		//y dir
 
 		s1 = gravity[1] * prev_state_vars[0];
 
 		s2 = orgSrcSgn[1] * prev_state_vars[0] * kactxy[0]
-				* (gravity[2] * d_state_vars_x[0] + dgdx[0] * prev_state_vars[0])
-				* sin_int_fric;
+		    * (gravity[2] * d_state_vars_x[0] + dgdx[0] * prev_state_vars[0]) * sin_int_fric;
 
 		s3 = unitvy
-				* max(
-						gravity[2] * prev_state_vars[0]
-								+ velocity[1] * prev_state_vars[2] * curvature[1], 0.0)
-				* tan_bed_fric;
+		    * max(gravity[2] * prev_state_vars[0] + velocity[1] * prev_state_vars[2] * curvature[1],
+		        0.0) * tan_bed_fric;
 
-		residual[2] -= dt * (s1 - s2 - s3);
+		if (org_res_flag)
+			if (dabs(tmp[2] + dt * s1) > dabs(dt * (s2 + s3)))
+				tmp[2] += dt * (s1 - s2 - s3);
+			else {
+				tmp[2] = state_vars[2];
+				check_stop_crit[1] = 1;
+			}
+
+		else if (!check_stop_crit[1])
+			tmp[2] += dt * (s1 - s2 - s3);
+		else
+			tmp[2] = state_vars[2];
+
 	}
+
+	for (int i = 0; i < NUM_STATE_VARS; i++)
+		residual[i] = state_vars[i] - tmp[i];
 
 #ifdef DEBUG
 

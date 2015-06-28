@@ -26,6 +26,7 @@ struct Func_CTX {
 	TimeProps* timeprops;
 	int iter;
 	int adjiter;
+
 };
 
 void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
@@ -75,7 +76,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 	if (propctx->timeprops->adjiter == 0) {
 
 		for (int i = 0; i < NUM_STATE_VARS; ++i)
-			adjoint[i] = *(Curr_El->get_func_sens() + i);
+			adjoint[i] = *(Curr_El->get_func_sens()+i);
 
 	} else {
 
@@ -132,7 +133,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 		}
 
 		for (int j = 0; j < NUM_STATE_VARS; j++)
-			adjoint[j] = *(Curr_El->get_func_sens() + j) - adjcontr[j];
+			adjoint[j] = *(Curr_El->get_func_sens()+j) - adjcontr[j];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)

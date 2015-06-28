@@ -595,6 +595,8 @@ public:
 
 	void calc_func_sens(const void * ctx);
 
+	double* get_residual();
+
 	double* get_func_sens();
 
 private:
@@ -770,11 +772,11 @@ private:
 	//! Drag-force
 	double drag[DIMENSION];
 
-	//! this integer just keep the index of jacobian for this element
-	int sol_rec_ind;
-
 	//! this array just keep the constant reconstruction of adjoints in refinement
 	double consAdj[3];
+
+	//! residual vector from error compute
+	double residual[3];
 
 	//! this term holds the correction term computed from inner product of linear construction of residual and linear construction of adjoint
 	double correction;
@@ -1207,15 +1209,6 @@ inline void Element::put_drypoint(double *drypoint_in) {
 	return;
 }
 
-inline int Element::get_sol_rec_ind() {
-	return sol_rec_ind;
-}
-
-inline void Element::put_sol_rec_ind(int ind) {
-	sol_rec_ind = ind;
-	return;
-}
-
 inline double* Element::get_const_adj() {
 	return consAdj;
 }
@@ -1224,10 +1217,13 @@ inline double* Element::get_correction() {
 	return &correction;
 }
 
+inline double* Element::get_residual() {
+	return residual;
+}
+
 inline double* Element::get_func_sens() {
 	return func_sens;
 }
-
 /*************************************************************************/
 /*************************************************************************/
 /*************************************************************************/

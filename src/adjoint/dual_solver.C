@@ -53,19 +53,18 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 //	// here we do this because iter in timeprops is such that it is one iter more than
 //	// actual iteration at the end of forward run, so we have to correct that.
-//	timeprops_ptr->iter = timeprops_ptr->maxiter;
 
 	double functional = 0.0, dt;
 
 	calc_adjoint(meshctx, propctx);
 
-//	uinform_refine(El_Table, NodeTable, timeprops_ptr, matprops_ptr, numprocs, myid);
-//
-//	error_compute(El_Table, NodeTable, timeprops_ptr, matprops_ptr, maxiter, myid, numprocs);
-//
-//	double UNREFINE_TARGET = .01;	//dummy value is not used in the function
-//	unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
-//	    rescomp);
+	uinform_refine(El_Table, NodeTable, timeprops_ptr, matprops_ptr, numprocs, myid);
+
+	error_compute(El_Table, NodeTable, timeprops_ptr, matprops_ptr, maxiter, myid, numprocs);
+
+	double UNREFINE_TARGET = .01;	//dummy value is not used in the function
+	unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
+	    rescomp);
 
 	int tecflag = 2;
 	tecplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, functional, tecflag);
@@ -109,9 +108,9 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		//for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
 		//sensitivity w.r.t to parameters
 
-//		uinform_refine(El_Table, NodeTable, timeprops_ptr, matprops_ptr, numprocs, myid);
+		uinform_refine(El_Table, NodeTable, timeprops_ptr, matprops_ptr, numprocs, myid);
 //
-//		error_compute(El_Table, NodeTable, timeprops_ptr, matprops_ptr, iter, myid, numprocs);
+		error_compute(El_Table, NodeTable, timeprops_ptr, matprops_ptr, iter, myid, numprocs);
 //
 //		// in dual weighted error estimation if solver performs n step, we'll have n+1
 //		// solution and n+1 adjoint solution, but we'll have just n residual and as a
@@ -119,9 +118,9 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 //		// we know the solution from initial condition  so the error of 0th step is zero,
 //		// and we have to compute the error for other time steps.
 //
-//		double UNREFINE_TARGET = .01;	//dummy value is not used in the function
-//		unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
-//		    rescomp);
+		double UNREFINE_TARGET = .01;	//dummy value is not used in the function
+		unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
+		    rescomp);
 
 		if (timeprops_ptr->adjiter/*timeprops_ptr->ifadjoint_out() /*|| adjiter == 1*/)
 			tecplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, functional,
