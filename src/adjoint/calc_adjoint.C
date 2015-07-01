@@ -29,6 +29,8 @@ struct Func_CTX {
 
 };
 
+void calc_func_sens(HashTable *El_Table);
+
 void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 
 	HashTable* El_Table = meshctx->el_table;
@@ -37,7 +39,7 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 	Element* Curr_El = NULL;
 	int iter = propctx->timeprops->iter;
 
-	double aa=0, bb = .1;
+	double aa = 0, bb = .1;
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
@@ -75,8 +77,10 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 
 	if (propctx->timeprops->adjiter == 0) {
 
+		calc_func_sens(El_Table);
+
 		for (int i = 0; i < NUM_STATE_VARS; ++i)
-			adjoint[i] = *(Curr_El->get_func_sens()+i);
+			adjoint[i] = *(Curr_El->get_func_sens() + i);
 
 	} else {
 
@@ -133,7 +137,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 		}
 
 		for (int j = 0; j < NUM_STATE_VARS; j++)
-			adjoint[j] = *(Curr_El->get_func_sens()+j) - adjcontr[j];
+			adjoint[j] = /**(Curr_El->get_func_sens() + j)*/-adjcontr[j];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
@@ -166,5 +170,40 @@ void Element::calc_func_sens(const void * ctx) {
 		func_sens[0] = .5 * prev_state_vars[0] * (dt_n + dt_p) * contx->dx * contx->dy;
 
 	}
+}
+
+void calc_func_sens(HashTable *El_Table) {
+
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashEntryPtr currentPtr;
+	Element* Curr_El = NULL;
+	double max = 0.;
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0)
+					max = *(Curr_El->get_state_vars()) > max ? *(Curr_El->get_state_vars()) : max;
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0)
+					*(Curr_El->get_func_sens()) = *(Curr_El->get_state_vars()) == max ? 1 : 0.;
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
 }
 

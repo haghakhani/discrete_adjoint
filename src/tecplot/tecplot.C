@@ -581,9 +581,9 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimePr
 	double momentum_scale = hscale * velocity_scale; // scaling factor for the momentums
 
 	double adjoint_scale[3] = { 1.0, 1.0, 1.0 };
-	adjoint_scale[0] = hscale * hscale * lscale * lscale * tscale * tscale;
+	adjoint_scale[0] = tscale;//hscale * hscale * lscale * lscale * tscale * tscale;
 	// scale of adjoint is different for first and two other component, and depend on the functional
-	adjoint_scale[1] = adjoint_scale[2] = hscale * hscale * lscale * tscale * tscale * tscale;
+	adjoint_scale[1] = adjoint_scale[2] =  tscale * tscale*hscale/lscale;//hscale * hscale * lscale * tscale * tscale * tscale;
 
 	double residual_scale[3]; //= { hscale, momentum_scale, momentum_scale };
 	residual_scale[0] = hscale / tscale;
@@ -592,7 +592,7 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimePr
 	double error_scale, functional_scale;
 
 	// this must be equal to adjoint_scale[i] * residual_scale[i] foe any i
-	error_scale = functional_scale = hscale * hscale * lscale * lscale * tscale;
+	error_scale = functional_scale = hscale;//hscale * hscale * lscale * lscale * tscale;
 	num_missing_bubble_node = get_elem_elev(NodeTable, matprops, EmTemp, &elevation);
 
 	double Vel[4];
