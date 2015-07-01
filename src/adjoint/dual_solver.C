@@ -51,16 +51,13 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 	allocJacoMat(El_Table);
 
-//	// here we do this because iter in timeprops is such that it is one iter more than
-//	// actual iteration at the end of forward run, so we have to correct that.
-
 	double functional = 0.0, dt;
 
 	calc_adjoint(meshctx, propctx);
 
-	uinform_refine(El_Table, NodeTable, timeprops_ptr, matprops_ptr, numprocs, myid);
+	uinform_refine(meshctx, propctx, numprocs, myid);
 
-	error_compute(El_Table, NodeTable, timeprops_ptr, matprops_ptr, maxiter, myid, numprocs);
+	error_compute(meshctx, propctx, maxiter, myid, numprocs);
 
 	double UNREFINE_TARGET = .01;	//dummy value is not used in the function
 	unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
@@ -73,6 +70,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 	for (int iter = maxiter; iter > 0; --iter) {
 
+		allocJacoMat(El_Table);
+
 		timeprops_ptr->iter = iter;
 		dt = timeprops_ptr->dt.at(iter - 1);
 		timeprops_ptr->adjiter++;
@@ -83,14 +82,16 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 		timeprops_ptr->adjoint_time(iter - 1);
 
-//		dualmesh->initialize_dual_flow(matprops_ptr);
 		//this array holds ResFlag for element itself and its neighbors
 		ResFlag resflag;
 		resflag.callflag = 1;
 		resflag.lgft = 0;
+
+		calc_d_gravity(El_Table);
+
 		calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, &outflow,
 		    resflag);
-		slopes(El_Table, NodeTable, matprops_ptr,1);
+		slopes(El_Table, NodeTable, matprops_ptr, 1);
 
 		compute_functional(El_Table, &functional, timeprops_ptr);
 
@@ -108,16 +109,16 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		//for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
 		//sensitivity w.r.t to parameters
 
-		uinform_refine(El_Table, NodeTable, timeprops_ptr, matprops_ptr, numprocs, myid);
-//
-		error_compute(El_Table, NodeTable, timeprops_ptr, matprops_ptr, iter, myid, numprocs);
-//
-//		// in dual weighted error estimation if solver performs n step, we'll have n+1
-//		// solution and n+1 adjoint solution, but we'll have just n residual and as a
-//		// result n error estimate. The point is that at initial step (0'th step),
-//		// we know the solution from initial condition  so the error of 0th step is zero,
-//		// and we have to compute the error for other time steps.
-//
+		uinform_refine(meshctx, propctx, numprocs, myid);
+
+		error_compute(meshctx, propctx, iter, myid, numprocs);
+
+		// in dual weighted error estimation if solver performs n step, we'll have n+1
+		// solution and n+1 adjoint solution, but we'll have just n residual and as a
+		// result n error estimate. The point is that at initial step (0'th step),
+		// we know the solution from initial condition  so the error of 0th step is zero,
+		// and we have to compute the error for other time steps.
+
 		double UNREFINE_TARGET = .01;	//dummy value is not used in the function
 		unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
 		    rescomp);

@@ -34,8 +34,7 @@ class Node {
 			void *EmTemp, double *forceint, double *forcebed, double *eroded,
 			double *deposited);
 
-	friend void error_compute(HashTable* El_Table, HashTable* NodeTable,
-			TimeProps* timeprops_ptr, MatProps* matprops_ptr, int iter, int myid,
+	friend void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter, int myid,
 			int numprocs);
 
 	friend void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,

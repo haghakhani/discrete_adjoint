@@ -17,14 +17,14 @@
 #endif
 #include "../header/hpfem.h"
 
-#define KEY0   3938123776
-#define KEY1   0
-#define ITER   148
+#define KEY0   3053365930
+#define KEY1   2863311530
+#define ITER   275
 #define EFFELL 0
 #define J      2
 #define JACIND 0
 
-#define DEBUG
+//#define DEBUG
 
 void reset_resflag(ResFlag resflag[5]);
 

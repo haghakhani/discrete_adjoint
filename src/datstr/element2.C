@@ -168,8 +168,9 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 	effect_bedfrict = effect_tanbedfrict = 0.;
 
 	for (i = 0; i < NUM_STATE_VARS; i++) {
-		consAdj[i] = 0.0;
+		consAdj[i] = 0.;
 		func_sens[i] = 0.;
+		residual[i] = 0.;
 	}
 	jacobianMat = NULL;
 }
@@ -184,11 +185,10 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 	adapted = NEWSON;
 
 	if (!resComp) {
-		for (int i = 0; i < NUM_STATE_VARS; i++)
+		for (int i = 0; i < NUM_STATE_VARS; i++) {
 			prev_state_vars[i] = 0.;
-		for (int i = 0; i < NUM_STATE_VARS; i++)
 			Influx[i] = 0.;
-
+		}
 		for (int i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
 			d_state_vars[i] = 0.;
 
@@ -213,6 +213,11 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 		father[i] = NULL;
 		key[i] = nodekeys[8][i]; //--using buble key to represent the element
 	}
+
+	int aa = 0, bb = 1;
+	if (key[0] == 2248710553 && key[1] == 2576980374)
+		bb = aa;
+
 	elm_loc[0] = elm_loc_in[0];
 	elm_loc[1] = elm_loc_in[1];
 
@@ -277,14 +282,12 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 	double dxx = coord_in[0] - fthTemp->coord[0];
 	double dyy = coord_in[1] - fthTemp->coord[1];
 
-	for (i = 0; i < NUM_STATE_VARS; i++) {
-		// state_vars[i] = fthTemp->state_vars[i]+fthTemp->d_state_vars[i]*dxx + fthTemp->d_state_vars[i+NUM_STATE_VARS]*dyy;
-		state_vars[i] = fthTemp->state_vars[i] * myfractionoffather;
-		prev_state_vars[i] = fthTemp->prev_state_vars[i] * myfractionoffather;
-		adjoint[i] = fthTemp->adjoint[i] * myfractionoffather;
-		prev_adjoint[i] = fthTemp->prev_adjoint[i] * myfractionoffather;
-		shortspeed = fthTemp->shortspeed;
-	}
+	if (!resComp)
+		for (i = 0; i < NUM_STATE_VARS + 3; i++) {
+			state_vars[i] = fthTemp->state_vars[i] * myfractionoffather;
+			prev_state_vars[i] = fthTemp->prev_state_vars[i] * myfractionoffather;
+			shortspeed = fthTemp->shortspeed;
+		}
 
 	if (state_vars[0] < 0.)
 		state_vars[0] = 0.;
@@ -305,16 +308,18 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 		kactxy[1] = fthTemp->kactxy[1];
 		effect_kactxy[0] = fthTemp->effect_kactxy[0];
 		effect_kactxy[1] = fthTemp->effect_kactxy[1];
-
 		for (i = 0; i < NUM_STATE_VARS; i++) {
+			state_vars[i] = fthTemp->state_vars[i];
+			prev_state_vars[i] = fthTemp->prev_state_vars[i];
 			adjoint[i] = fthTemp->adjoint[i];
 			prev_adjoint[i] = fthTemp->prev_adjoint[i];
-			Influx[i] = 0.;
 			consAdj[i] = fthTemp->adjoint[i];
+			Influx[i] = 0.;
+			residual[i] = 0.;
 		}
 	}
 
-	jacobianMat=NULL;
+	jacobianMat = NULL;
 
 	return;
 }
@@ -586,11 +591,13 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 		prev_state_vars[i] = 0.;
 		adjoint[i] = 0.;
 		prev_adjoint[i] = 0.;
+		residual[i] = 0.;
 		for (j = 0; j < 4; j++) {
 			state_vars[i] += *(sons[j]->get_state_vars() + i) * 0.25;
 			prev_state_vars[i] += *(sons[j]->get_prev_state_vars() + i) * 0.25;
 			adjoint[i] += *(sons[j]->get_adjoint() + i) * 0.25;
 			prev_adjoint[i] += *(sons[j]->get_prev_adjoint() + i) * 0.25;
+			residual[i] += *(sons[j]->get_residual() + i) * 0.25;
 		}
 
 	}
@@ -627,7 +634,7 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 			for (i = 0; i < EQUATIONS; i++) {
 				kactxy[i] += *(sons[j]->get_kactxy() + i) * 0.25;
 				effect_kactxy[i] += *(sons[j]->get_effect_kactxy() + i) * 0.25;
-				el_error[i] += dabs(*(sons[j]->get_el_error() + i));
+				el_error[i] += *(sons[j]->get_el_error() + i) * 0.25;
 			}
 
 			for (i = 0; i < NUM_STATE_VARS; i++)
@@ -636,7 +643,7 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 
 	}
 
-	jacobianMat=NULL;
+	jacobianMat = NULL;
 
 	return;
 }
@@ -3584,6 +3591,9 @@ double*** Element::get_jacobian() {
 
 void Element::new_jacobianMat() //in forward run we just save the solution and in backward run we compute the jacobian
 {
+	if (jacobianMat != NULL)
+		return;
+
 	int i, j, k;
 	jacobianMat = new double**[5];
 	for (i = 0; i < 5; i++) {

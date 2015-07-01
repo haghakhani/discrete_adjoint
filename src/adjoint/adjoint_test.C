@@ -66,8 +66,7 @@ void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo) {
 
 				if (Curr_El->get_adapted_flag() > 0) {
 					if (dabs(*(Curr_El->get_coord()) - eleminfo->elempos[0]) < epsilon
-							&& dabs(*(Curr_El->get_coord() + 1) - eleminfo->elempos[1])
-									< epsilon) {
+					    && dabs(*(Curr_El->get_coord() + 1) - eleminfo->elempos[1]) < epsilon) {
 
 						eleminfo->h = *(Curr_El->get_state_vars());
 
@@ -88,10 +87,8 @@ void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo) {
 								prev_adj_ptr = (Curr_El->get_prev_adjoint());
 
 								for (int j = 0; j < 3; ++j) {
-									eleminfo->neigh_jac[effelement].curr_adj[j] =
-											curr_adj_ptr[j];
-									eleminfo->neigh_jac[effelement].prev_adj[j] =
-											prev_adj_ptr[j];
+									eleminfo->neigh_jac[effelement].curr_adj[j] = curr_adj_ptr[j];
+									eleminfo->neigh_jac[effelement].prev_adj[j] = prev_adj_ptr[j];
 								}
 
 								jacobianmat = Curr_El->get_jacobian();
@@ -99,22 +96,19 @@ void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo) {
 								for (int k = 0; k < 3; ++k)
 									for (int l = 0; l < 3; ++l)
 										eleminfo->neigh_jac[effelement].jacobianMat[k][l] =
-												jacobianmat[effelement][k][l];
+										    jacobianmat[effelement][k][l];
 
 							} else {
 
-								neigh_elem = Curr_El->get_side_neighbor(El_Table,
-										effelement - 1);//basically we are checking all neighbor elements, and start from xp neighbor
+								neigh_elem = Curr_El->get_side_neighbor(El_Table, effelement - 1);//basically we are checking all neighbor elements, and start from xp neighbor
 								if (neigh_elem) {
 
 									curr_adj_ptr = (neigh_elem->get_state_vars() + 6);
 									prev_adj_ptr = (neigh_elem->get_prev_state_vars() + 6);
 
 									for (int j = 0; j < 3; ++j) {
-										eleminfo->neigh_jac[effelement].curr_adj[j] =
-												curr_adj_ptr[j];
-										eleminfo->neigh_jac[effelement].prev_adj[j] =
-												prev_adj_ptr[j];
+										eleminfo->neigh_jac[effelement].curr_adj[j] = curr_adj_ptr[j];
+										eleminfo->neigh_jac[effelement].prev_adj[j] = prev_adj_ptr[j];
 									}
 
 									jacobianmat = neigh_elem->get_jacobian();
@@ -122,26 +116,25 @@ void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo) {
 									int jacind;
 
 									switch (effelement) {
-									case 1:	//in xp neighbor I have to read jacobian of xm, because position of curr_el is in xm side of that neighbor
-										jacind = 3;
-										break;
-									case 2:		    //for yp return ym
-										jacind = 4;
-										break;
-									case 3:		    //for xm return xp
-										jacind = 1;
-										break;
-									case 4:		    //for ym return yp
-										jacind = 2;
-										break;
-									default:
-										cout << "invalid neighbor position" << endl;
+										case 1:	//in xp neighbor I have to read jacobian of xm, because position of curr_el is in xm side of that neighbor
+											jacind = 3;
+											break;
+										case 2:		    //for yp return ym
+											jacind = 4;
+											break;
+										case 3:		    //for xm return xp
+											jacind = 1;
+											break;
+										case 4:		    //for ym return yp
+											jacind = 2;
+											break;
+										default:
+											cout << "invalid neighbor position" << endl;
 									}
 
 									for (int k = 0; k < 3; ++k)
 										for (int l = 0; l < 3; ++l)
-											eleminfo->neigh_jac[effelement].jacobianMat[k][l] =
-													jacobianmat[jacind][k][l];
+											eleminfo->neigh_jac[effelement].jacobianMat[k][l] = jacobianmat[jacind][k][l];
 
 								}
 							}
@@ -211,7 +204,6 @@ void find_test_elem(HashTable* El_Table, PertElemInfo** pelinf, int iter) {
 	return;
 }
 
-
 int check_elem_exist(HashTable *El_Table, unsigned *key) {
 	int num = 0;			//myid
 	HashEntryPtr currentPtr;
@@ -240,23 +232,27 @@ int checkElement(HashTable *El_Table, double *max, unsigned *key) {
 	Element *Curr_El;
 	HashEntryPtr *buck = El_Table->getbucketptr();
 
+	*max = 0;
+
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
 			while (currentPtr) {
 				Curr_El = (Element*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) {
-					double* state_vars = Curr_El->get_state_vars();
-					double* prev_state_vars = Curr_El->get_prev_state_vars();
-					if (*(Curr_El->pass_key()) == key[0] && *(Curr_El->pass_key() + 1) == key[1]) {
-						if (state_vars[0] != 0 /*|| prev_state_vars[0] != 0*/)
-							return (1);
+					Element* fth = (Element*) El_Table->lookup(Curr_El->pass_key());
+
+					if (*(fth->pass_key()) == key[0] && *(fth->pass_key() + 1) == key[1]) {
+						*max += 1;
 					}
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 
-	return (0);
+
+	int gg = *max;
+
+	return (gg);
 }
 

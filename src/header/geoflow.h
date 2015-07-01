@@ -65,6 +65,8 @@ void out_final_stats(TimeProps* timeprops_ptr, StatProps* statprops_ptr);
 void setup_geoflow(HashTable* El_Table, HashTable* NodeTable, int myid, int nump,
     MatProps* matprops_ptr, TimeProps *timeprops_ptr);
 
+void calc_d_gravity(HashTable* El_Table);
+
 //! this function calculates the spatial derivatives of the state variables
 void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int dualcall);
 
@@ -88,15 +90,13 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
     double const increment);
 
-void error_compute(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprops_ptr,
-    MatProps* matprops_ptr, int iter, int myid, int numprocs);
+void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter, int myid, int numprocs);
 
 void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El);
 
 void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx);
 
-void uinform_refine(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprops_ptr,
-    MatProps* matprops_ptr, int numprocs, int myid);
+void uinform_refine(MeshCTX* meshctx, PropCTX* propctx, int numprocs, int myid);
 
 void bilinear_interp(HashTable* El_Table);
 
@@ -113,7 +113,7 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
     double dtdy, double dt, double *d_state_vars_x, double *d_state_vars_y, //4
     double *curvature, double intfrictang, double bedfrictin, double *gravity, //4
     double *dgdx, double kactxyelem, double fric_tiny, double* orgSrcSgn, //4
-    double increment, double epsilon, int* check_stop_crit, int srcflag = 1,int org_res_flag=1); //5
+    double increment, double epsilon, int* check_stop_crit, int srcflag = 1, int org_res_flag = 1); //5
 
 void save_solution(HashTable* El_Table, HashTable* NodeTable, HashTable* solHystPtr,
     TimeProps* timeprops_ptr);

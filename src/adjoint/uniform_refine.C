@@ -17,12 +17,18 @@
 #endif
 #include "../header/hpfem.h"
 
-#define KEY0   3788876458
-#define KEY1   2863311530
-#define ITER   5
+#define KEY0   3777862041
+#define KEY1   2576980374
+//#define DEBUG
 
-void uinform_refine(HashTable* El_Table, HashTable* NodeTable,
-		TimeProps* timeprops_ptr, MatProps* matprops_ptr, int numprocs, int myid) {
+void uinform_refine(MeshCTX* meshctx, PropCTX* propctx, int numprocs, int myid) {
+
+	HashTable* El_Table = meshctx->el_table;
+	HashTable* NodeTable = meshctx->nd_table;
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
 
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
@@ -36,8 +42,8 @@ void uinform_refine(HashTable* El_Table, HashTable* NodeTable,
 #ifdef DEBUG
 	double dummyv_star = 0.0;
 	int adjflag = 1;
-	tecplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr,
-			dummyv_star, adjflag);
+	tecplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0.,adjflag);
+
 	int nonz1 = num_nonzero_elem(El_Table);
 
 	cout << "number of elements before refinement  " << nonz1 << endl;
@@ -48,15 +54,12 @@ void uinform_refine(HashTable* El_Table, HashTable* NodeTable,
 		dbgvec[i] = 0;
 		pass[i] = 0;
 	}
-	if (checkElement(El_Table))
-	exit(23);
-#endif
 
-//	if (checkElement(El_Table, &max, key))
-//		cout << "here is the problem" << endl;
+#endif
 
 	htflush(El_Table, NodeTable, 1);
 	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
+
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
@@ -88,12 +91,11 @@ void uinform_refine(HashTable* El_Table, HashTable* NodeTable,
 			}
 		}
 	}
-//	if (checkElement(El_Table,&max, key))
-//		cout << "here is the problem" << endl;
+
+//	cout << "here is the problem   "<<checkElement(El_Table, &max, key) << endl;
 
 #ifdef DEBUG
-	if (checkElement(El_Table))
-	exit(24);
+
 	cout << "number of elements -7   " << num_nonzero_elem(El_Table, -7) << endl
 	<< "number of elements -6   " << num_nonzero_elem(El_Table, -6) << endl
 	<< "number of elements  0   " << num_nonzero_elem(El_Table, 0) << endl
@@ -106,19 +108,14 @@ void uinform_refine(HashTable* El_Table, HashTable* NodeTable,
 
 	bilinear_interp(El_Table);	//this function reconstruct linear interpolation
 
-//	if (checkElement(El_Table, &max, key))
-//		cout << "here is the problem" << endl;
-
 	refine_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &RefinedList,
 			timeprops_ptr);	//this function delete old father elements
 
-//	if (checkElement(El_Table, &max, key))
-//		cout << "here is the problem" << endl;
+//	cout << "here is the problem   "<<checkElement(El_Table, &max, key) << endl;
+
 	RefinedList.trashlist();
 
 	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
 
-//	if (checkElement(El_Table, &max, key))
-//		cout << "here is the problem" << endl;
 	return;
 }

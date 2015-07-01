@@ -84,19 +84,16 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
 		double s3 = unitvx
 		    * max(gravity[2] * prev_state_vars[0] + velocity[0] * prev_state_vars[1] * curvature[0],
 		        0.0) * tan_bed_fric;
+		if (prev_state_vars[1]==increment)
+			s3=0;
 
-		if (org_res_flag)
-			if (dabs(tmp[1] + dt * s1) > dabs(dt * (s2 + s3)))
+			if (dabs(tmp[1] + dt * s1) > dabs(dt * (s2 + s3)) && !check_stop_crit[0])
 				tmp[1] += dt * (s1 - s2 - s3);
 			else {
 				tmp[1] = state_vars[1];
-				check_stop_crit[0] = 1;
+				if (org_res_flag)
+					check_stop_crit[0] = 1;
 			}
-
-		else if (!check_stop_crit[0])
-			tmp[1] += dt * (s1 - s2 - s3);
-		else
-			tmp[1] = state_vars[1];
 
 		//y dir
 
@@ -109,18 +106,16 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
 		    * max(gravity[2] * prev_state_vars[0] + velocity[1] * prev_state_vars[2] * curvature[1],
 		        0.0) * tan_bed_fric;
 
-		if (org_res_flag)
-			if (dabs(tmp[2] + dt * s1) > dabs(dt * (s2 + s3)))
-				tmp[2] += dt * (s1 - s2 - s3);
-			else {
-				tmp[2] = state_vars[2];
-				check_stop_crit[1] = 1;
-			}
+		if (prev_state_vars[2]==increment)
+			s3=0;
 
-		else if (!check_stop_crit[1])
+		if (dabs(tmp[2] + dt * s1) > dabs(dt * (s2 + s3)) && !check_stop_crit[1])
 			tmp[2] += dt * (s1 - s2 - s3);
-		else
+		else {
 			tmp[2] = state_vars[2];
+			if (org_res_flag)
+				check_stop_crit[1] = 1;
+		}
 
 	}
 

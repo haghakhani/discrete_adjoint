@@ -15,9 +15,9 @@
 #endif
 #include "../header/hpfem.h"
 
-#define KEY0 3866281196
-#define KEY1 1321528399
-#define ITER 9
+#define KEY0   1263446698
+#define KEY1   2863311530
+#define ITER   276
 
 struct Func_CTX {
 
@@ -37,7 +37,7 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 	Element* Curr_El = NULL;
 	int iter = propctx->timeprops->iter;
 
-	double aa, bb = .1;
+	double aa=0, bb = .1;
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {

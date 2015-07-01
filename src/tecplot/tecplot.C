@@ -189,7 +189,9 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops, T
 		    hrs, mins, secs, v_star_func);
 		fprintf(fp, "VARIABLES = \"X\", \"Y\", \"Z\", \"PILE_HEIGHT\","
 				"\"X_MOMENTUM\", \"Y_MOMENTUM\","
-				"\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\" \n");
+				"\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\","
+				"\"RESIDUAL1\", \"RESIDUAL2\", \"RESIDUAL3\","
+				"\"CORRECTION\", \"ERROR\"\n");
 	} else {
 		fprintf(fp, "TITLE= \" %s: time %d:%02d:%g (hrs:min:sec), V*=%g\"\n", mapnames->gis_map, hrs,
 		    mins, secs, v_star_func);
@@ -564,9 +566,9 @@ int get_ur_tri(HashTable* El_Table, HashTable* NodeTable, int myid, Element* EmA
 int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimeProps *timeprops,
     Element *EmTemp, int adjflag) {
 
-	int aa,bb=1;
-	if (timeprops->iter==ITER && *(EmTemp->pass_key())==KEY0 && *(EmTemp->pass_key()+1)==KEY1 )
-		bb=aa;
+	int aa, bb = 1;
+	if (timeprops->iter == ITER && *(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1)
+		bb = aa;
 
 	int num_missing_bubble_node;
 	double elevation;
@@ -579,19 +581,18 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimePr
 	double momentum_scale = hscale * velocity_scale; // scaling factor for the momentums
 
 	double adjoint_scale[3] = { 1.0, 1.0, 1.0 };
-	adjoint_scale[0] = hscale * lscale * lscale * tscale* tscale;
+	adjoint_scale[0] = hscale * hscale * lscale * lscale * tscale * tscale;
 	// scale of adjoint is different for first and two other component, and depend on the functional
-	adjoint_scale[1] = hscale * lscale * tscale * tscale* tscale;
+	adjoint_scale[1] = adjoint_scale[2] = hscale * hscale * lscale * tscale * tscale * tscale;
 
-
-	double residual_scale[3] = { 1.0, 1.0, 1.0 };
+	double residual_scale[3]; //= { hscale, momentum_scale, momentum_scale };
 	residual_scale[0] = hscale / tscale;
 	residual_scale[1] = residual_scale[2] = momentum_scale / tscale;
 
 	double error_scale, functional_scale;
 
 	// this must be equal to adjoint_scale[i] * residual_scale[i] foe any i
-	error_scale = functional_scale = adjoint_scale[0] * residual_scale[0];
+	error_scale = functional_scale = hscale * hscale * lscale * lscale * tscale;
 	num_missing_bubble_node = get_elem_elev(NodeTable, matprops, EmTemp, &elevation);
 
 	double Vel[4];
@@ -608,8 +609,13 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimePr
 		output[4] = *(EmTemp->get_prev_state_vars() + 1) * momentum_scale;
 		output[5] = *(EmTemp->get_prev_state_vars() + 2) * momentum_scale;
 		output[6] = *(EmTemp->get_adjoint()) * adjoint_scale[0];
-		output[7] = *(EmTemp->get_adjoint()+1) * adjoint_scale[1];
-		output[8] = *(EmTemp->get_adjoint()+2) * adjoint_scale[2];
+		output[7] = *(EmTemp->get_adjoint() + 1) * adjoint_scale[1];
+		output[8] = *(EmTemp->get_adjoint() + 2) * adjoint_scale[2];
+		output[9] = *(EmTemp->get_residual()) * residual_scale[0];
+		output[10] = *(EmTemp->get_residual() + 1) * residual_scale[1];
+		output[11] = *(EmTemp->get_residual() + 2) * residual_scale[2];
+		output[12] = *(EmTemp->get_correction()) * functional_scale;
+		output[13] = dabs(*(EmTemp->get_el_error() + 1) * error_scale);
 
 	} else {
 		output[0] = *(EmTemp->get_coord()) * lscale;
@@ -622,17 +628,13 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimePr
 		output[7] = sqrt(Vel[0] * Vel[0] + Vel[1] * Vel[1]) * velocity_scale;
 	}
 
-	for (int i = 0; i < NUM_STATE_VARS; i++)
-		if (isinf(output[i]))
-			cout << "this element has problem  " << *(EmTemp->pass_key()) << "    "
-			    << *(EmTemp->pass_key() + 1) << endl;
-
 	if (adjflag)
-		fprintf(fp, "%e %e %e %e %e %e %e %e %e \n", output[0], output[1], output[2],
-		    output[3], output[4], output[5], output[6], output[7], output[8]);
+		fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e \n", output[0], output[1], output[2],
+		    output[3], output[4], output[5], output[6], output[7], output[8], output[9], output[10],
+		    output[11], output[12], output[13]);
 	else
-		fprintf(fp, "%e %e %e %e %e %e %e %e \n", output[0], output[1], output[2], output[3],
-		    output[4], output[5], output[6], output[7]);
+		fprintf(fp, "%e %e %e %e %e %e %e %e \n", output[0], output[1], output[2], output[3], output[4],
+		    output[5], output[6], output[7]);
 
 	return (num_missing_bubble_node);
 }

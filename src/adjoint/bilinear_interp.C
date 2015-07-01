@@ -17,6 +17,10 @@
 #endif
 #include "../header/hpfem.h"
 
+#define KEY0 3777862041
+#define KEY1 2576980374
+#define DEBUG
+
 void bilinear_interp(HashTable* El_Table) {
 
 	HashEntryPtr currentPtr;
@@ -36,9 +40,8 @@ void bilinear_interp(HashTable* El_Table) {
 					which_son = Curr_El->get_which_son();
 #ifdef DEBUG
 					double aa, bb = .1;
-					if (*(Curr_El->pass_key()) == KEY0
-							&& *(Curr_El->pass_key() + 1) == KEY1)
-					aa = bb;
+					if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1)
+						aa = bb;
 #endif
 					switch (which_son) {
 
@@ -143,21 +146,17 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
     Element *Curr_El) {
 
 	double *state_vars, *elem11_state, *elem12_state, *elem21_state, *elem22_state;
-
 	double *prev_state_vars, *elem11_prev_state, *elem12_prev_state, *elem21_prev_state,
 	    *elem22_prev_state;
-	double *coord, *elem11_coord, *elem12_coord, *elem21_coord, *elem22_coord;
-
 	double *adjoint, *elem11_adjoint, *elem12_adjoint, *elem21_adjoint, *elem22_adjoint;
-
-	double *prev_adjoint, *elem11_prev_adjoint, *elem12_prev_adjoint, *elem21_prev_adjoint,
-	    *elem22_prev_adjoint;
+	double *coord, *elem11_coord, *elem12_coord, *elem21_coord, *elem22_coord;
 
 	int type = 0;			//this is just a flag that indicates the type of element
 
 	state_vars = Curr_El->get_state_vars();
 	prev_state_vars = Curr_El->get_prev_state_vars();
 	coord = Curr_El->get_coord();
+	adjoint = Curr_El->get_adjoint();
 
 	elem11_state = elem11->get_state_vars();
 	elem12_state = elem12->get_state_vars();
@@ -178,11 +177,6 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 	elem12_adjoint = elem12->get_adjoint();
 	elem21_adjoint = elem21->get_adjoint();
 	elem22_adjoint = elem22->get_adjoint();
-
-	elem11_prev_adjoint = elem11->get_prev_adjoint();
-	elem12_prev_adjoint = elem12->get_prev_adjoint();
-	elem21_prev_adjoint = elem21->get_prev_adjoint();
-	elem22_prev_adjoint = elem22->get_prev_adjoint();
 
 	if (elem11 && elem12 && elem21 && elem22) {
 		//this is an ordinary case for an element inside the domain
@@ -206,10 +200,6 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 			adjoint[j] = bilinear_interp_value(elem11_coord[0], elem21_coord[0], elem21_coord[1],
 			    elem22_coord[1], elem11_adjoint[j], elem21_adjoint[j], elem12_adjoint[j],
 			    elem22_adjoint[j], coord[0], coord[1], type);
-
-			prev_adjoint[j] = bilinear_interp_value(elem11_coord[0], elem21_coord[0], elem21_coord[1],
-			    elem22_coord[1], elem11_prev_adjoint[j], elem21_prev_adjoint[j], elem12_prev_adjoint[j],
-			    elem22_prev_adjoint[j], coord[0], coord[1], type);
 		}
 	} else if ((!elem11 && !elem12 && elem21 && elem22)	//interpolation only in y
 	|| (elem11 && elem12 && !elem21 && !elem22)	//left or right side of father is boundary
@@ -231,11 +221,6 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 				    0,	//interpolation is in y, so x position is not important
 				    elem11_coord[1], elem12_coord[1], elem11_adjoint[j], 0, elem12_adjoint[j], 0, coord[0],
 				    coord[1], type);
-
-				prev_adjoint[j] = bilinear_interp_value(0,
-				    0,	//interpolation is in y, so x position is not important
-				    elem11_coord[1], elem12_coord[1], elem11_prev_adjoint[j], 0, elem12_prev_adjoint[j], 0,
-				    coord[0], coord[1], type);
 			}
 
 		} else {	// in this case elem11 & elem12 do not exist, so we replace their value with zero
@@ -255,11 +240,6 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 				    0,	//interpolation is in y, so x position is not important
 				    elem21_coord[1], elem22_coord[1], 0, elem21_adjoint[j], 0, elem22_adjoint[j], coord[0],
 				    coord[1], type);
-
-				prev_adjoint[j] = bilinear_interp_value(0,
-				    0,	//interpolation is in y, so x position is not important
-				    elem21_coord[1], elem22_coord[1], 0, elem21_prev_adjoint[j], 0, elem22_prev_adjoint[j],
-				    coord[0], coord[1], type);
 			}
 		}
 	} else if ((!elem11 && elem12 && !elem21 && elem22)	//interpolation only in x
@@ -277,9 +257,6 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 
 				adjoint[j] = bilinear_interp_value(elem11_coord[0], elem21_coord[0], 0, 0,//interpolation is in x, so y position is not important
 				    elem11_adjoint[j], elem21_adjoint[j], 0, 0, coord[0], coord[1], type);
-
-				prev_adjoint[j] = bilinear_interp_value(elem11_coord[0], elem21_coord[0], 0, 0,	//interpolation is in x, so y position is not important
-				    elem11_prev_adjoint[j], elem21_prev_adjoint[j], 0, 0, coord[0], coord[1], type);
 			}
 
 		} else {	// in this case elem11 & elem21 do not exist, so we replace their value with zero
@@ -293,10 +270,6 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 
 				adjoint[j] = bilinear_interp_value(elem12_coord[0], elem22_coord[0], 0, 0,//interpolation is in x, so y position is not important
 				    0, 0, elem12_adjoint[j], elem22_adjoint[j], coord[0], coord[1], type);
-
-				prev_adjoint[j] = bilinear_interp_value(elem12_coord[0], elem22_coord[0], 0, 0,	//interpolation is in x, so y position is not important
-				    0, 0, elem12_prev_adjoint[j], elem22_prev_adjoint[j], coord[0], coord[1], type);
-
 			}
 		}
 

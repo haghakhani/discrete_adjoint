@@ -21,8 +21,8 @@
 
 #include "../header/hpfem.h"
 
-void setup_geoflow(HashTable* El_Table, HashTable* NodeTable, int myid,
-		int nump, MatProps* matprops_ptr, TimeProps *timeprops_ptr) {
+void setup_geoflow(HashTable* El_Table, HashTable* NodeTable, int myid, int nump,
+    MatProps* matprops_ptr, TimeProps *timeprops_ptr) {
 
 	int i;
 	int num_buckets = El_Table->get_no_of_buckets();
@@ -49,7 +49,7 @@ void setup_geoflow(HashTable* El_Table, HashTable* NodeTable, int myid,
 				Element* Curr_El = (Element*) (currentPtr->value);
 				int refined = Curr_El->get_refined_flag();
 				if (Curr_El->get_adapted_flag() > 0) //if this is a refined element don't involve!!!
-						{
+				    {
 					Curr_El->find_positive_x_side(NodeTable);
 					Curr_El->calculate_dx(NodeTable);
 					Curr_El->calc_topo_data(matprops_ptr);
@@ -72,14 +72,14 @@ void setup_geoflow(HashTable* El_Table, HashTable* NodeTable, int myid,
 				Element* Curr_El = (Element*) (currentPtr->value);
 				int refined = Curr_El->get_refined_flag();
 				if (Curr_El->get_adapted_flag() > 0) //if this is a refined element don't involve!!!
-						{
+				    {
 					Curr_El->calc_d_gravity(El_Table);
-					double aaa = 1.3, ddd = .5;
-					if (*(Curr_El->pass_key()) == 2379037459
-							&& *(Curr_El->pass_key() + 1) == 2973438897) {
-						ddd = 0;
-						aaa = 0;
-					}
+//					double aaa = 1.3, ddd = .5;
+//					if (*(Curr_El->pass_key()) == 2379037459
+//							&& *(Curr_El->pass_key() + 1) == 2973438897) {
+//						ddd = 0;
+//						aaa = 0;
+//					}
 
 				}
 
@@ -88,4 +88,26 @@ void setup_geoflow(HashTable* El_Table, HashTable* NodeTable, int myid,
 		}
 
 	return;
+}
+
+void calc_d_gravity(HashTable* El_Table) {
+
+	int num_buckets = El_Table->get_no_of_buckets();
+	/* zero out the fluxes for all of the nodes */
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	for (int i = 0; i < num_buckets; i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				Element* Curr_El = (Element*) (currentPtr->value);
+				int refined = Curr_El->get_refined_flag();
+				if (Curr_El->get_adapted_flag() > 0) //if this is a refined element don't involve!!!
+				    {
+					Curr_El->calc_d_gravity(El_Table);
+
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
 }
