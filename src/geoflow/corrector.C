@@ -84,8 +84,6 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	double *curvature = EmTemp->get_curvature();
 	double bedfrict = EmTemp->get_effect_bedfrict();
 	double *Influx = EmTemp->get_influx();
-	double solid_den = matprops_ptr->den_solid;
-	double fluid_den = matprops_ptr->den_fluid;
 	double terminal_vel = matprops_ptr->v_terminal;
 	double navslip_coef = matprops_ptr->navslip_coef;
 
@@ -113,8 +111,7 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	EmTemp->convect_dryline(V_avg, dt); //this is necessary
 
 	int debuging, ggg = 0;
-	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1
-			&& timeprops->iter == ITER)
+	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1 && timeprops->iter == ITER)
 //	if (dabs(*(EmTemp->get_coord()) - X) < INCREMENT&& dabs(*(EmTemp->get_coord()+1) - Y)<INCREMENT
 //	&& timeprops->iter == ITER)
 		debuging = ggg = 1;
@@ -123,12 +120,11 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	correct_(state_vars, prev_state_vars, fluxxp, fluxyp, fluxxm, fluxym, &tiny, &dtdx, &dtdy, &dt,
 	    d_state_vars, (d_state_vars + NUM_STATE_VARS), &(zeta[0]), &(zeta[1]), curvature,
 	    &(matprops_ptr->intfrict), &bedfrict, gravity, d_gravity, kactxy, &(matprops_ptr->frict_tiny),
-	    forceint, forcebed, dragforce, &do_erosion, eroded, Vsolid, &solid_den, &fluid_den,
-	    &terminal_vel, &(matprops_ptr->epsilon), &IF_STOPPED, Influx);
+	    forceint, forcebed, dragforce, &do_erosion, eroded, Vsolid, &terminal_vel,
+	    &(matprops_ptr->epsilon), &IF_STOPPED, Influx);
 
 #ifdef DEBUG
-	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1
-			&& timeprops->iter == ITER) {
+	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1 && timeprops->iter == ITER) {
 		int state_num = NUM_STATE_VARS;
 		FILE *fp;
 		fp = fopen("debugfile", "w");

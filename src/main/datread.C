@@ -98,14 +98,6 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr,
 
     }
 
-    // cut-off extremes
-    assert(minphi <= maxphi);
-    if ( minphi < 0.1 )
-      matprops_ptr->flow_type = FLUID_FLOW;
-    else if ( maxphi > 0.85 )
-      matprops_ptr->flow_type = DRY_FLOW;
-    else
-      matprops_ptr->flow_type = TWOPHASE;
   }
 
   if ((*srctype)&0x2)
@@ -246,8 +238,7 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr,
     sqrt(matprops_ptr->LENGTH_SCALE*matprops_ptr->GRAVITY_SCALE);
 
   double diameter = 0.005;
-  double vterm = pow(diameter,2.)*(matprops_ptr->den_solid -
-                 matprops_ptr->den_fluid)*matprops_ptr->GRAVITY_SCALE/
+  double vterm = pow(diameter,2.)*(matprops_ptr->den_solid )*matprops_ptr->GRAVITY_SCALE/
                  (18.*matprops_ptr->viscosity);
   matprops_ptr->v_terminal = vterm;
   double smallestpileradius=HUGE_VAL;

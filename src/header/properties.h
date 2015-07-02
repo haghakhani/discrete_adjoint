@@ -472,14 +472,8 @@ struct MatProps {
 	//! tan(phi_{bed}), tangent of the bed friction angle
 	double *tanbedfrict;
 
-	//! v_f, legacy not used
-	double porosity;
-
 	//! density
 	double den_solid;
-
-	//! fluid density
-	double den_fluid;
 
 	//! fluid viscosity
 	double viscosity;
@@ -492,9 +486,6 @@ struct MatProps {
 
 	//! slope limiting stuff
 	double gamma;
-
-	//! Flow type flag
-	int flow_type;
 
 	//! length scaling factor
 	double LENGTH_SCALE;
@@ -526,7 +517,7 @@ struct MatProps {
 	 *  for many if not all of these
 	 */
 	MatProps(int material_countin, char **matnamesin, double intfrictin, double *bedfrictin,
-	    double porosityin, double muin, double rhoin, double rhofin, double epsilonin, double gammain,
+	    double muin, double rhoin, double epsilonin, double gammain,
 	    double frict_tinyin, double lscale, double hscale, double gscale) {
 
 		material_count = material_countin;
@@ -546,10 +537,8 @@ struct MatProps {
 
 		intfrict = intfrictin;
 		tanintfrict = tan(intfrict);
-		porosity = porosityin;
 		viscosity = muin;
 		den_solid = rhoin;
-		den_fluid = rhofin;
 		epsilon = epsilonin;
 		gamma = gammain;
 		frict_tiny = frict_tinyin;

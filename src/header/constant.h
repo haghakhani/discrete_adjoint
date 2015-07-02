@@ -84,15 +84,10 @@ extern void fhsfc2d_(double*, unsigned*, unsigned*);
 /* geoflow data */
 const int NUM_STATE_VARS = 3;
 const int NUM_ADJ_EQS = 3;
-const int EFF_ELL = 5;
+const int EFF_ELL = 9;
 
 const double GEOFLOW_TINY = 2.e-04;
 const double GEOFLOW_SHORT = 3.0e-03;
-
-/* two-phase stuff */
-const int TWOPHASE = 0;
-const int DRY_FLOW = 1;
-const int FLUID_FLOW = 2;
 
 const int GHOST = -9876; //"refined" GHOST CELL FLAG
 

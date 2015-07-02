@@ -18,7 +18,7 @@ C***********************************************************************
      1     tiny, dtdx, dtdy, dt, dUdx, dUdy, xslope, yslope, curv,
      2     intfrictang, bedfrictang, g, dgdx ,kactxy, frict_tiny,
      3     forceint,forcebed, dragfoce ,DO_EROSION, eroded, v_solid,
-     4     den_solid, den_fluid, terminal_vel, eps, IF_STOPPED,
+     4     terminal_vel, eps, IF_STOPPED,
      5     fluxsrc)
 C***********************************************************************
 
@@ -28,7 +28,6 @@ C***********************************************************************
       double precision forcebedx, forcebedy
       double precision forcebedmax, forcebedequil, forcegrav
       double precision unitvx, unitvy, v_solid(2)
-      double precision den_frac, den_solid, den_fluid
       double precision alphaxx, alphayy, alphaxy, alphaxz, alphayz
       double precision tanbed, terminal_vel, dragfoce(2)
 

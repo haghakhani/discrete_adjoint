@@ -243,7 +243,7 @@ extern "C" void gmfggetcoef_(double*, double*, double*, double*, double*,
 //! the actual calculation of wave speeds (eigen vectors of the flux jacoboians) is done by a fortran call, this should be ripped out and rewritten as a C++ Element member function
 extern "C" void eigen_(double *Uvec, double *eigenvxmax, double *eigenvymax,
 		double *evalue, double *tiny, double *kactxy,
-		double *gravity, double *Vs, double *eps, int *);
+		double *gravity, double *Vs, double *eps);
 
 //! the actual predictor half timestep update (finite difference predictor finite volume corrector) is done by a fortran call, this should be ripped out and rewritten as a C++ Element member function
 extern "C" void predict_(double *Uvec, double *dUdx, double *dUdy,
@@ -262,8 +262,7 @@ extern "C" void correct_(double *Uvec, double *Uprev, double *fluxxp,
 		double *bedfrictang, double *g, double *d_gravity,double *kactxy,
 		double *frict_tiny, double *forceint, double *forcebed, double *dragf,
 		int *do_erosion, double *eroded,
-		double *Vsolid, double *den_solid,
-		double *den_fluid, double *terminal_vel, double *eps,
+		double *Vsolid, double *terminal_vel, double *eps,
 		int *if_stopped, double *fluxcoef);
 #endif
 #ifdef IBMSP

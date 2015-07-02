@@ -17,11 +17,11 @@ C     *
 
 C***********************************************************************
       subroutine eigen(Uvec, eigenvxmax, eigenvymax, evalue, tiny,
-     1     kactxy, gravity, v_solid, eps, flowtype)
+     1     kactxy, gravity, v_solid, eps)
 C***********************************************************************
 
       include 'rnr.h'
-      integer flowtype
+
       double precision eigenvxmax, eigenvymax, v_solid(2)
       double precision evalue, tiny, Uvec(3), kactxy(2), gravity(3)
       double precision eps

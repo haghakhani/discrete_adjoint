@@ -61,9 +61,6 @@ int main(int argc, char *argv[]) {
 		MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 		MPI_Get_processor_name(processor_name, &namelen);
 
-		char debugfilename[256];
-		sprintf(debugfilename, "hpfem%04d.debug", myid);
-
 		double start, end;
 
 		start = MPI_Wtime();
@@ -71,22 +68,17 @@ int main(int argc, char *argv[]) {
 		/* create new MPI datastructures for class objects */
 		MPI_New_Datatype();
 
-		char filename[50];
-		sprintf(filename, "debug.main.%04d", myid);
-
-		unsigned checkkey[2] = { 2379037459, 2973438897 };
-
 		/* read original data from serial preprocessing
 		 code and then initialize element
 		 stiffness routines info */
 		int material_count = 0;
 		double epsilon = 1., intfrictang = 1, *bedfrictang = NULL, gamma = 1;
-		double frict_tiny = .1, mu = 1.0e-03, rho = 1600, rhof = 1000, porosity = 1;
+		double frict_tiny = .1, mu = 1.0e-03, rho = 1600;
 		char **matnames = NULL;
 		int xdmerr;
 
 		StatProps statprops;
-		MatProps matprops(material_count, matnames, intfrictang, bedfrictang, porosity, mu, rho, rhof,
+		MatProps matprops(material_count, matnames, intfrictang, bedfrictang,  mu, rho,
 		    epsilon, gamma, frict_tiny, 1.0, 1.0, 1.0);
 		TimeProps timeprops;
 		timeprops.starttime = time(NULL);

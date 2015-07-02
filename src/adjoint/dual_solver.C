@@ -123,7 +123,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
 		    rescomp);
 
-		if (timeprops_ptr->adjiter/*timeprops_ptr->ifadjoint_out() /*|| adjiter == 1*/)
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out() /*|| adjiter == 1*/)
 			tecplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, functional,
 			    tecflag);
 
@@ -229,8 +229,7 @@ void record_solution(MeshCTX* meshctx, PropCTX* propctx, SolRec* solrec) {
 							jacobian = new Jacobian(Curr_El->pass_key(), Curr_El->get_coord());
 							solrec->add(jacobian->get_key(), jacobian);
 
-						}
-						if (*(Curr_El->get_state_vars()) > 0.) {
+						} else if (*(Curr_El->get_state_vars()) > 0.) {
 							Solution *solution = new Solution(Curr_El->get_state_vars(),
 							    *(Curr_El->get_kactxy()));
 							jacobian->put_solution(solution, timeptr->iter);

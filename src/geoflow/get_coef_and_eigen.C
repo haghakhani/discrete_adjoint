@@ -129,7 +129,7 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* m
 
 					eigen_(EmTemp->get_state_vars(), (EmTemp->get_eigenvxymax()),
 					    (EmTemp->get_eigenvxymax() + 1), &evalue, &tiny, EmTemp->get_kactxy(),
-					    EmTemp->get_gravity(), Vsolid, &(matprops_ptr->epsilon), &(matprops_ptr->flow_type));
+					    EmTemp->get_gravity(), Vsolid, &(matprops_ptr->epsilon));
 #endif
 
 					// ***********************************************************
