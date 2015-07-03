@@ -72,14 +72,6 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr,
     for(isrc=0;isrc<numpiles;isrc++) {
       inD2>>pileprops_ptr->pileheight[isrc]; // pile height
 
-      // solid-volume fraction
-      inD2>>pileprops_ptr->vol_fract[isrc]; 
-      // search for min-max phi
-      if (pileprops_ptr->vol_fract[isrc] > maxphi)
-        maxphi = pileprops_ptr->vol_fract[isrc];
-      if (pileprops_ptr->vol_fract[isrc] < minphi)
-        minphi = pileprops_ptr->vol_fract[isrc];
-
       inD2>>pileprops_ptr->xCen[isrc];       // pile x-center
       inD2>>pileprops_ptr->yCen[isrc];       // pile y-center
       inD2>>pileprops_ptr->majorrad[isrc];   /* pile "major axis" radius

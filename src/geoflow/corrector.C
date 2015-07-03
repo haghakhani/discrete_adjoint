@@ -31,9 +31,9 @@
 #include "../header/hpfem.h"
 
 void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* matprops_ptr,
-    FluxProps *fluxprops, TimeProps *timeprops, void *EmTemp_in, double *forceint, double *forcebed,
+    FluxProps *fluxprops, TimeProps *timeprops, Element *EmTemp, double *forceint, double *forcebed,
     double *eroded, double *deposited) {
-	Element *EmTemp = (Element *) EmTemp_in;
+//	Element *EmTemp = (Element *) EmTemp_in;
 	double *dx = EmTemp->get_dx();
 	double dtdx = dt / dx[0];
 	double dtdy = dt / dx[1];

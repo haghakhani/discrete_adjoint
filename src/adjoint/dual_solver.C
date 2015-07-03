@@ -89,8 +89,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 		calc_d_gravity(El_Table);
 
-		calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, &outflow,
-		    resflag);
+		calc_flux(meshctx,  propctx,  myid,resflag);
+
 		slopes(El_Table, NodeTable, matprops_ptr, 1);
 
 		compute_functional(El_Table, &functional, timeprops_ptr);

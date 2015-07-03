@@ -13,8 +13,8 @@ extern void adapt_fluxsrc_region(HashTable *ElemTable, HashTable *NodeTable,
 				 FluxProps *fluxprops, TimeProps *timeprops, 
 				 double dt, int myid, int adaptflag);
 
-//! this fuction calculates the flux contribution of the current cell based on its position relative to the source center and outflow-profie.
-extern double calc_flux(Element *EmTemp, HashTable *NodeTable, 
-			FluxProps *fluxprops, TimeProps *timeprops);
+////! this fuction calculates the flux contribution of the current cell based on its position relative to the source center and outflow-profie.
+//extern double calc_flux(Element *EmTemp, HashTable *NodeTable,
+//			FluxProps *fluxprops, TimeProps *timeprops);
 
 #endif

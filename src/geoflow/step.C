@@ -191,14 +191,14 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump,
 					double *dxy = Curr_El->get_dx();
 					// if calculations are first-order, predict is never called
 					// ... so we need to update prev_states
-					void *Curr_El_out = (void *) Curr_El;	//I believe it's because we need correct function be a friend function of node class, but we do not want to add element header to node.h
+//					void *Curr_El_out = (void *) Curr_El;	//I believe it's because we need correct function be a friend function of node class, but we do not want to add element header to node.h
 					if (*order_flag == 1)
 						Curr_El->update_prev_state_vars();
 
 					//if (*(Curr_El->pass_key())==2151461179 && *(Curr_El->pass_key()+1)==330382099 /*&& timeprops->iter == 9 */)
 					//  cout<<"step is cheking the element"<<endl;
 
-					correct(NodeTable, El_Table, dt, matprops_ptr, fluxprops, timeprops_ptr, Curr_El_out,
+					correct(NodeTable, El_Table, dt, matprops_ptr, fluxprops, timeprops_ptr, Curr_El,
 							&elemforceint, &elemforcebed, &elemeroded, &elemdeposited);
 
 					forceint += fabs(elemforceint);

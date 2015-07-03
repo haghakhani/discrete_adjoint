@@ -32,13 +32,11 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter, int myid, int n
 
 	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
 
-	int order_flag = 1;	//this is dummy here
-	double outflow[1];	//this is dummy here
 	ResFlag resflag;
 	resflag.callflag = 1;
 	resflag.lgft = 0;
-	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, outflow,
-	    resflag);
+
+	calc_flux(meshctx,  propctx,  myid,resflag);
 
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;

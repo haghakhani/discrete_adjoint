@@ -219,9 +219,7 @@ void elliptical_pile_height(HashTable* HT_Node_Ptr, Element *EmTemp,
     //check each pile to see which has max height at this node
     for(int ipile=0;ipile<pileprops->numpiles;ipile++)
     {
-      if (pileprops->vol_fract[ipile] > vfract)
-        vfract = pileprops->vol_fract[ipile];
-        
+
       //get position relative to pile center
       double major=ndcoord[0]-pileprops->xCen[ipile];
       double minor=ndcoord[1]-pileprops->yCen[ipile];

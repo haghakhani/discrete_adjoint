@@ -34,7 +34,7 @@ extern int REFINE_LEVEL; //make REFINE_LEVEL a global variable that can be chang
 
 //! non member C++ function that wraps the fortran correct_() function
 void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* matprops_ptr,
-    FluxProps *fluxprops, TimeProps *timeprops, void *EmTemp, double *forceint, double *forcebed,
+    FluxProps *fluxprops, TimeProps *timeprops, Element *EmTemp, double *forceint, double *forcebed,
     double *eroded, double *deposited);
 
 //! this function is legacy, the prototype exists but the function is not defined
@@ -136,8 +136,9 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 
 int void_neigh_elem(HashTable* El_Table, Element* Curr_El, int effelement);
 
-void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, MatProps* matprops_ptr,
-    int effelement, int j, int myid, double increment);
+void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, int effelement, int j,
+    double increment, double fluxold[4][NUM_STATE_VARS],
+    double d_state_vars_old[DIMENSION * NUM_STATE_VARS]);
 
 void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
     int myid, double fluxold[4][NUM_STATE_VARS]);
@@ -158,6 +159,8 @@ void reverse_states(HashTable* El_Table, HashTable* solrec, int iter);
 void print_jacobian(HashTable* El_Table, int iter);
 
 void record_solution(MeshCTX* meshctx, PropCTX* propctx, SolRec* solrec);
+
+void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid, ResFlag resflag);
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);

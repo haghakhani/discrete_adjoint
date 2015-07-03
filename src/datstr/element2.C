@@ -1956,6 +1956,43 @@ void Element::xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 	return;
 }
 
+//x direction flux in current cell
+void Element::dual_xdirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag) {
+
+	if ((prev_state_vars[0] < GEOFLOW_TINY) || (resflag.lgft)) {
+		for (int i = 0; i < 3; i++)
+			for (int j = 0; j < NUM_STATE_VARS; j++)
+				hfv[i][j] = 0.0;
+	} else {
+
+		for (int i = 0; i < NUM_STATE_VARS; i++)
+			hfv[0][i] = prev_state_vars[i];
+
+		// Solid-phase velocity in x-dir
+		double Vel = hfv[0][1] / hfv[0][0];
+
+		// sound-speed : a^2 = k_ap*h*g(3)
+		double a = sqrt(kactxy[0] * hfv[0][0] * gravity[2]);
+
+		//fluxes
+		hfv[1][0] = hfv[0][1];
+		hfv[1][1] = hfv[0][1] * Vel + 0.5 * a * a * hfv[0][0];
+		hfv[1][2] = hfv[0][2] * Vel;
+
+		//wave speeds
+		hfv[2][0] = Vel - a;
+		hfv[2][1] = Vel;
+		hfv[2][2] = Vel + a;
+
+	}
+
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < NUM_STATE_VARS; j++)
+			if (isnan(hfv[i][j]))
+				cout << "flux is NAN" << endl;
+
+}
+
 //y direction flux in current cell
 void Element::ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
     double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag) {
@@ -2013,6 +2050,43 @@ void Element::ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 	return;
 }
 
+//y direction flux in current cell
+void Element::dual_ydirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag) {
+
+	if ((prev_state_vars[0] < GEOFLOW_TINY) || (resflag.lgft)) {
+		for (int i = 0; i < 3; i++)
+			for (int j = 0; j < NUM_STATE_VARS; j++)
+				hfv[i][j] = 0.0; //state variables
+	} else {		//state variables
+
+		for (int i = 0; i < NUM_STATE_VARS; i++)
+			hfv[0][i] = prev_state_vars[i];
+
+		// a = speed of sound through the medium
+		double a = sqrt(kactxy[1] * hfv[0][0] * gravity[2]);
+
+		// Solid-phase velocity in y-dir
+		double Vel = hfv[0][2] / hfv[0][0];
+
+		//fluxes
+		hfv[1][0] = hfv[0][2];
+		hfv[1][1] = hfv[0][1] * Vel;
+		hfv[1][2] = hfv[0][2] * Vel + 0.5 * a * a * hfv[0][0];
+
+		//wave speeds
+		hfv[2][0] = Vel - a;
+		hfv[2][1] = Vel;
+		hfv[2][2] = Vel + a;
+
+	}
+
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < NUM_STATE_VARS; j++)
+			if (isnan(hfv[i][j]))
+				cout << "flux is NAN" << endl;
+
+}
+
 //note z is not "z" but either x or y
 void Element::zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
     int order_flag, int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS],
@@ -2040,6 +2114,20 @@ void Element::zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matp
 		xdirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv, resflag);
 	else if (dir % 2 == 1)
 		ydirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv, resflag);
+	else {
+		printf("zdirflux: direction %d not known\n", dir);
+		exit(1);
+	}
+	return;
+}
+
+//note z is not "z" but either x or y
+void Element::dual_zdirflux(int dir, double hfv[3][NUM_STATE_VARS], ResFlag resflag) {
+
+	if (dir % 2 == 0)
+		dual_xdirflux(hfv, resflag);
+	else if (dir % 2 == 1)
+		dual_ydirflux(hfv, resflag);
 	else {
 		printf("zdirflux: direction %d not known\n", dir);
 		exit(1);
@@ -2193,7 +2281,7 @@ void riemannflux(double hfvl[3][NUM_STATE_VARS], double hfvr[3][NUM_STATE_VARS],
 	int ivar, i;
 
 	double interStFlux[3], hstar[3];
-	//int jacflag indicates that this function is being called from calc_jacobian function
+//int jacflag indicates that this function is being called from calc_jacobian function
 
 //Hossein added this part for mesh adaption based on discountinuty measure
 
@@ -2292,6 +2380,43 @@ void riemannflux(double hfvl[3][NUM_STATE_VARS], double hfvr[3][NUM_STATE_VARS],
 	return;
 }
 
+void dual_riemannflux(double hfvl[3][NUM_STATE_VARS], double hfvr[3][NUM_STATE_VARS],
+    double flux[NUM_STATE_VARS]) {
+//hfv: h=state variable, f=flux, v=wave speeds
+//l="left" (the minus side), r="right" (the plus side)
+
+	if ((hfvl[0][0] < 0.) && (hfvr[0][0] < 0.))
+		for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+			flux[ivar] = 0.0;
+	else {
+
+		double sl, sr;
+		if (hfvl[0][0] == 0./*2 * INCREMENT*/) {
+			sl = min(0, 2.0 * hfvr[2][0] - hfvr[2][1]);
+			sr = max(0, 2.0 * hfvr[2][2] - hfvr[2][1]);
+		} else if (hfvr[0][0] == 0./*2 * INCREMENT*/) {
+			sl = min(0, 2.0 * hfvl[2][0] - hfvl[2][1]);
+			sr = max(0, 2.0 * hfvl[2][2] - hfvl[2][1]);
+		} else {
+			sl = min(0, min(hfvl[2][0], hfvr[2][0]));
+			sr = max(0, max(hfvl[2][2], hfvr[2][2]));
+		}
+
+		if (sl >= 0.0)
+			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+				flux[ivar] = hfvl[1][ivar];
+
+		else if (sr <= 0.0)
+			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+				flux[ivar] = hfvr[1][ivar];
+
+		else
+			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+				flux[ivar] = (sr * hfvl[1][ivar] - sl * hfvr[1][ivar]
+				    + sl * sr * (hfvr[0][ivar] - hfvl[0][ivar])) / (sr - sl);
+	}
+
+}
 void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
     int myid, double dt, int* order_flag, double *outflow, ResFlag lresflag, ResFlag rresflag) {
 	Node *np, *np1, *np2, *nm, *nm1, *nm2;
@@ -2302,7 +2427,7 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 	int ivar;
 	const int SolFlux = 0, RefineFlux = 1; //indicate for which purpose flux is being calculated 0 is for solution and 1 is for refinement
 
-	//neutral resflag
+//neutral resflag
 	ResFlag nresflag;
 	nresflag.callflag = rresflag.callflag;
 	nresflag.lgft = 0;
@@ -2646,6 +2771,307 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 			}
 		}
 
+	}
+
+}
+
+void Element::calc_fluxes(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
+    ResFlag rresflag) {
+
+	for (int side = 0; side < 2; ++side)
+		calc_flux(El_Table, NodeTable, myid, side, lresflag, rresflag);
+
+}
+
+void Element::calc_xflux(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
+    ResFlag rresflag) {
+	calc_flux(El_Table, NodeTable, myid, 0, lresflag, rresflag);
+}
+
+void Element::calc_yflux(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
+    ResFlag rresflag) {
+	calc_flux(El_Table, NodeTable, myid, 1, lresflag, rresflag);
+}
+
+void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int side,
+    ResFlag lresflag, ResFlag rresflag) {
+
+	Node *np, *np1, *np2, *nm, *nm1, *nm2;
+	Element *elm1, *elm2;
+	int zp, zm;
+	int zp2, zm2; //positive_z_side_2 minus_z_side_2
+	int zelmpos = -100, zelmpos_2 = -100;
+
+//neutral resflag
+	ResFlag nresflag;
+	nresflag.callflag = rresflag.callflag;
+	nresflag.lgft = 0;
+
+	double hfv[3][NUM_STATE_VARS], hfv1[3][NUM_STATE_VARS], hfv2[3][NUM_STATE_VARS]; //update flux
+
+//ghost elements don't have nodes so you have to make temp storage for flux
+	double ghostflux[NUM_STATE_VARS]; //, (*fluxptr)[NUM_STATE_VARS];
+
+//  if (key[0]==3978454630 && key[1]==1717986917)
+//    cout<<"this element is being checked"<<endl;
+
+	zp = (positive_x_side + side) % 4;
+	zm = (zp + 2) % 4;
+	np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
+
+	if (neigh_proc[zp] == -1) {
+		nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
+
+		//outflow boundary conditions
+		for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
+			np->flux[ivar] = nm->flux[ivar];
+
+		}
+	} else if (neigh_proc[zp] != myid) {
+		np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
+		elm1 = (Element*) El_Table->lookup(&neighbor[zp][0]);
+		assert(elm1);
+
+		dual_zdirflux(side, hfv, lresflag);
+		elm1->dual_zdirflux(side + 2, hfv1, rresflag);
+
+		dual_riemannflux(hfv, hfv1, np->flux);
+
+		elm2 = (Element*) El_Table->lookup(&neighbor[zp + 4][0]);
+		assert(elm2);
+		dual_zdirflux(side, hfv, lresflag);
+		elm2->dual_zdirflux(side + 2, hfv2, rresflag);
+
+		//note a rectangular domain ensures that neigh_proc[zm+4]!=-1
+		if (neigh_proc[zp + 4] == myid) {
+			zm2 = elm2->which_neighbor(pass_key()) % 4;
+			nm2 = (Node*) NodeTable->lookup(&elm2->node_key[zm2 + 4][0]);
+
+			dual_riemannflux(hfv, hfv2, nm2->flux);
+
+			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+				np->flux[ivar] = 0.5 * (np->flux[ivar] + nm2->flux[ivar]);
+
+		} else {
+			dual_riemannflux(hfv, hfv2, ghostflux);
+			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+				np->flux[ivar] = 0.5 * (np->flux[ivar] + ghostflux[ivar]);
+
+		}
+	} else {
+
+		np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
+		elm1 = (Element*) El_Table->lookup(&neighbor[zp][0]);
+		assert(elm1);
+
+		dual_zdirflux(side, hfv, lresflag);
+		elm1->dual_zdirflux(side + 2, hfv1, rresflag);
+
+		dual_riemannflux(hfv, hfv1, np->flux);
+
+		/* CASE I
+		 ------------------- -------------------
+		 |                   |                   |
+		 |                   |                   |
+		 |                   |                   |
+		 |                   |                   |
+		 |                   |                   |
+		 |      this       np|         elm1      |
+		 |        h          |         hp        |
+		 |    kactxy_gz      |    kactxy_gz_n    |
+		 |                   |                   |
+		 |                   |                   |
+		 |                   |                   |
+		 ------------------- -------------------
+		 */
+
+		/*
+		 Case II
+		 --------- ----------------------------
+		 |         |         |                  |
+		 |positive_z_side--->|<----zelmpos      |
+		 |         | this  np|                  |
+		 |         |   h     |                  |
+		 |         |         |                  |
+		 |---------|---------|nm1   elm1        |
+		 |         |         |      hp          |
+		 |         |         |                  |
+		 |         | elm2 np2|                  |
+		 |         |         |                  |
+		 positive_z_side_2-->|                  |
+		 --------- ----------------------------
+		 */
+
+		if (np->info == S_S_CON) {
+			nm1 = NULL;
+			np2 = NULL;
+
+			zelmpos = elm1->which_neighbor(pass_key());
+			assert(zelmpos > -1);
+			nm1 = (Node*) NodeTable->lookup(&elm1->node_key[zelmpos % 4 + 4][0]);
+
+			elm2 = (Element*) El_Table->lookup(&elm1->neighbor[(zelmpos + 4) % 8][0]);
+			assert(elm2);
+
+			elm1->dual_zdirflux(side, hfv1, rresflag);
+			elm2->dual_zdirflux(side, hfv2, nresflag);
+
+			if (*(elm1->get_neigh_proc() + (zelmpos + 4) % 8) == myid) {
+				zp2 = elm2->which_neighbor(elm1->pass_key()) % 4;
+				np2 = (Node*) NodeTable->lookup(&elm2->node_key[zp2 + 4][0]);
+				dual_riemannflux(hfv2, hfv1, np2->flux);
+
+				for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+					nm1->flux[ivar] = 0.5 * (np->flux[ivar] + np2->flux[ivar]);
+
+			} else {
+
+				dual_riemannflux(hfv2, hfv1, ghostflux);
+				for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+					nm1->flux[ivar] = 0.5 * (np->flux[ivar] + ghostflux[ivar]);
+
+			}
+		}
+
+		/*  Case III
+		 ------------------- --------- ---------
+		 |                   |         |         |
+		 |positive_z_side--->|<----zelmpos_2     |
+		 |                   |nm2 elm2 |         |
+		 |                   |     hp2 |         |
+		 |                   |         |         |
+		 |       this        |---------|---------
+		 |        h          |         |         |
+		 |                   |         |         |
+		 |                   |nm1 elm1 |         |
+		 |                   |     hp1 |         |
+		 |                   |<----zelmpos       |
+		 ------------------- --------- ---------
+		 */
+
+		else if (np->info == S_C_CON) {
+
+			nm1 = NULL;
+			nm2 = NULL;
+
+			zelmpos = elm1->which_neighbor(pass_key()) % 4;
+			nm1 = (Node*) NodeTable->lookup(&elm1->node_key[zelmpos + 4][0]);
+
+			elm2 = (Element*) (El_Table->lookup(&neighbor[zp + 4][0]));
+			assert(elm2);
+
+			dual_zdirflux(side, hfv, lresflag);
+			elm2->dual_zdirflux(side + 2, hfv2, rresflag);
+
+			if (neigh_proc[zp + 4] == myid) {
+				zelmpos_2 = elm2->which_neighbor(pass_key()) % 4;
+				nm2 = (Node*) NodeTable->lookup(&elm2->node_key[zelmpos_2 + 4][0]);
+				dual_riemannflux(hfv, hfv2, nm2->flux);
+
+				for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
+					nm1->flux[ivar] = np->flux[ivar];
+					np->flux[ivar] = 0.5 * (nm1->flux[ivar] + nm2->flux[ivar]);
+
+				}
+			} else {
+				dual_riemannflux(hfv, hfv2, ghostflux);
+				for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
+					nm1->flux[ivar] = np->flux[ivar];
+					np->flux[ivar] = 0.5 * (nm1->flux[ivar] + ghostflux[ivar]);
+				}
+
+			}
+
+		}
+
+	}
+
+	if (neigh_proc[zm] != myid) {
+
+		if (neigh_proc[zm] == -1) {
+			np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
+			nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
+
+			//outflow boundary conditions
+			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+				nm->flux[ivar] = np->flux[ivar];
+
+		} else {
+			/* if an interface is on the x-minus or y-minus side, need to
+			 calculate those edgestates in this element */
+			// x-minus side
+			/*
+			 interface
+			 |
+			 |
+			 left cells-GHOST CELLS   |
+			 (no need to        |
+			 calculate         |
+			 fluxes )         |
+			 v
+			 Case I
+			 ------------------- -------------------
+			 |                   |                   |
+			 |                   |<--zm              |
+			 |                   |                   |
+			 |                   |                   |
+			 |                   |                   |
+			 |       elm1        |nm      this       |
+			 |        h          |         hp        |
+			 |                   |                   |
+			 |                   |                   |
+			 |                   |                   |
+			 |                   |                   |
+			 ------------------- -------------------
+			 Case II
+			 --------- -----------------------------
+			 |         |         |                   |
+			 |         |         |<--zm(z-minus side)|
+			 |         |  elm1   |                   |
+			 |         |   h     |                   |
+			 |         |         |                   |
+			 |---------|---------|nm    this         |
+			 |         |         |       hp          |
+			 |         |         |                   |
+			 |         | elm2    |                   |
+			 |         |   h2    |                   |
+			 |         |         |                   |
+			 --------- -----------------------------
+			 */
+
+			nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
+			elm1 = (Element*) El_Table->lookup(&neighbor[zm][0]);
+			assert(elm1);
+
+			dual_zdirflux(side + 2, hfv, rresflag);
+			elm1->dual_zdirflux(side, hfv1, lresflag);
+			dual_riemannflux(hfv1, hfv, nm->flux);
+
+			elm2 = (Element*) El_Table->lookup(&neighbor[zm + 4][0]);
+			assert(elm2);
+
+			dual_zdirflux(side + 2, hfv, rresflag);
+			elm2->dual_zdirflux(side, hfv2, nresflag);
+
+			//note a rectangular domain ensures that neigh_proc[zm+4]!=-1
+			if (neigh_proc[zm + 4] == myid) {
+				zp2 = elm2->which_neighbor(pass_key()) % 4;
+				np2 = (Node*) NodeTable->lookup(&elm2->node_key[zp2 + 4][0]);
+
+				dual_riemannflux(hfv2, hfv, np2->flux);
+
+				for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+					nm->flux[ivar] = 0.5 * (nm->flux[ivar] + np2->flux[ivar]);
+
+			} else {
+				dual_riemannflux(hfv2, hfv, ghostflux);
+
+				for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+					nm->flux[ivar] = 0.5 * (nm->flux[ivar] + ghostflux[ivar]);
+
+			}
+
+		}
 	}
 
 }
@@ -3616,7 +4042,7 @@ void Element::print_jacobian(int iter) {
 	cout << "key1:  " << key[0] << "  key2:  " << key[1] << '\n';
 	cout << "X:  " << coord[0] << "  Y:  " << coord[1] << '\n';
 	cout << "Jacobian: " << '\n';
-	//cout << "self"<<"
+//cout << "self"<<"
 	for (int i = 0; i < EFF_ELL; i++) {
 		cout << "Matrix=  " << i << "," << '\n';
 

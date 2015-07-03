@@ -348,6 +348,18 @@ public:
 	void ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag);
 
+	void dual_zdirflux(int dir, double hfv[3][NUM_STATE_VARS], ResFlag resflag);
+	void dual_ydirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag);
+	void dual_xdirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag);
+	void calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int side, ResFlag lresflag,
+	    ResFlag rresflag);
+	void calc_yflux(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
+	    ResFlag rresflag);
+	void calc_xflux(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
+	    ResFlag rresflag);
+	void calc_fluxes(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
+	    ResFlag rresflag);
+
 	//! this function (indirectly) calculates the fluxes that will be used to perform the finite volume corrector step and stores them in element edge nodes, indirectly because it calls other functions to calculate the analytical fluxes and then calls another function to compute the riemann fluxes from the analytical fluxes. Talk to me (Keith) before you modify this, as I am fairly certain that it is now completely bug free and parts of it can be slightly confusing.
 	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int myid,
 	    double dt, int* order_flag, double *outflow, ResFlag lresflag, ResFlag rresflag);

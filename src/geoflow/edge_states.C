@@ -82,3 +82,40 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matpr
 	*outflow = localoutflow_sum;
 	return;
 }
+
+void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid, ResFlag resflag) {
+
+	HashTable* El_Table = meshctx->el_table;
+	HashTable* NodeTable = meshctx->nd_table;
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
+
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashEntryPtr currentPtr;
+	Element* Curr_El;
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() > 0) {
+					//if this element doesn't belong on this processor don't involve
+
+					if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
+					    && timeprops_ptr->iter == ITER) {
+						int ddd, aa = 0;
+						int gg = ddd;
+					}
+
+					Curr_El->calc_fluxes(El_Table, NodeTable, myid, resflag, resflag);
+
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	return;
+}

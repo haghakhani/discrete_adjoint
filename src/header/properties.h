@@ -165,9 +165,6 @@ struct PileProps {
 	//!array holding pile height
 	double *pileheight;
 
-	//! array of volume -fractions
-	double *vol_fract;
-
 	//!array holding x coordinate of pile center
 	double *xCen;
 
@@ -201,7 +198,6 @@ struct PileProps {
 	void allocpiles(int numpiles_in) {
 		numpiles = numpiles_in;
 		pileheight = CAllocD1(numpiles);
-		vol_fract = CAllocD1(numpiles);
 		xCen = CAllocD1(numpiles);
 		yCen = CAllocD1(numpiles);
 		majorrad = CAllocD1(numpiles);
@@ -217,7 +213,6 @@ struct PileProps {
 	~PileProps() {
 		if (numpiles > 0) {
 			CDeAllocD1(pileheight);
-			CDeAllocD1(vol_fract);
 			CDeAllocD1(xCen);
 			CDeAllocD1(yCen);
 			CDeAllocD1(majorrad);
