@@ -15,9 +15,11 @@
 #endif
 #include "../header/hpfem.h"
 
-#define KEY0   1263446698
-#define KEY1   2863311530
-#define ITER   276
+#define DEBUGFILE1
+
+#define KEY0   3781669179
+#define KEY1   330382100
+#define ITER   11
 
 struct Func_CTX {
 
@@ -30,6 +32,7 @@ struct Func_CTX {
 };
 
 void calc_func_sens(HashTable *El_Table);
+int get_jacind(int effelement);
 
 void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 
@@ -75,9 +78,21 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 
 	HashTable* El_Table = meshctx->el_table;
 
+	ofstream myfile;
+	myfile.open("adjelem.txt", ios::app);
+#ifdef DEBUGFILE
+
+	ofstream myfile;
+	myfile.open("adjdebug.txt", ios::app);
+
+	myfile << "Elem Key[0]= " << *(Curr_El->pass_key()) << "  Key[1]= " << *(Curr_El->pass_key())
+	<< " iter= " << propctx->timeprops->iter << endl;
+
+#endif
+
 	if (propctx->timeprops->adjiter == 0) {
 
-		calc_func_sens(El_Table);
+//		calc_func_sens(El_Table);
 
 		for (int i = 0; i < NUM_STATE_VARS; ++i)
 			adjoint[i] = *(Curr_El->get_func_sens() + i);
@@ -99,52 +114,108 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 
 				for (int k = 0; k < NUM_STATE_VARS; ++k)
 					for (int l = 0; l < NUM_STATE_VARS; ++l)
-						adjcontr[k] += adjoint_pointer[l] * jacobianmat[0][k][l];
+						adjcontr[k] += adjoint_pointer[l] * jacobianmat[effelement][k][l];
 
-			} else {
+				if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
+				    && propctx->timeprops->iter == ITER) {
+					myfile << " eff_el= " << effelement << endl;
+					for (int k = 0; k < NUM_STATE_VARS; ++k)
+						myfile << " adjoint[" << k << "]= " << adjoint_pointer[k];
+					myfile << "\n";
+					for (int k = 0; k < NUM_STATE_VARS; ++k)
+						for (int l = 0; l < NUM_STATE_VARS; ++l)
+							myfile << "  Jacobian[" << effelement << "][" << k << "][" << l << "]= "
+							    << jacobianmat[effelement][k][l];
+					myfile << "\n";
+				}
 
-				neigh_elem = Curr_El->get_side_neighbor(El_Table, effelement - 1);//basically we are checking all neighbor elements, and start from xp neighbor
+#ifdef DEBUGFILE
+				myfile << " eff_el= " << effelement << endl;
+				for (int k = 0; k < NUM_STATE_VARS; ++k)
+				myfile << " adjoint[" << k << "]= " << adjoint_pointer[k];
+				myfile << "\n";
+				for (int k = 0; k < NUM_STATE_VARS; ++k)
+				for (int l = 0; l < NUM_STATE_VARS; ++l)
+				myfile << "  Jacobian[" << effelement << "][" << k << "][" << l << "]= "
+				<< jacobianmat[effelement][k][l];
+				myfile << "\n";
+#endif
+
+			} else if (effelement <= 4
+			    || (effelement > 4
+			        && !compare_key((Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH),
+			            (Curr_El->get_neighbors() + (effelement - 5) * KEYLENGTH)))) {
+
+				//basically we are checking all neighbor elements, and start from xp neighbor
+				neigh_elem = (Element*) (El_Table->lookup(
+				    Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
+
 				if (neigh_elem) {
 
 					adjoint_pointer = neigh_elem->get_prev_adjoint();
 					jacobianmat = neigh_elem->get_jacobian();
 
-					int jacind;
-
-					switch (effelement) {
-						case 1:	//in xp neighbor I have to read jacobian of xm, because position of curr_el is in xm side of that neighbor
-							jacind = 3;
-							break;
-						case 2:		    //for yp return ym
-							jacind = 4;
-							break;
-						case 3:		    //for xm return xp
-							jacind = 1;
-							break;
-						case 4:		    //for ym return yp
-							jacind = 2;
-							break;
-						default:
-							cout << "invalid neighbor position" << endl;
-					}
+					int jacind = neigh_elem->which_neighbor(Curr_El->pass_key());
+					// because we have to consider the element itself which is in jacind=0
+					jacind++;
 
 					for (int k = 0; k < NUM_STATE_VARS; ++k)
 						for (int l = 0; l < NUM_STATE_VARS; ++l)
 							adjcontr[k] += adjoint_pointer[l] * jacobianmat[jacind][k][l];
+
+					if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
+					    && propctx->timeprops->iter == ITER) {
+						myfile << " eff_el= " << effelement << endl;
+						for (int k = 0; k < NUM_STATE_VARS; ++k)
+							myfile << " adjoint[" << k << "]= " << adjoint_pointer[k];
+						myfile << "\n";
+						for (int k = 0; k < NUM_STATE_VARS; ++k)
+							for (int l = 0; l < NUM_STATE_VARS; ++l)
+								myfile << "  Jacobian[" << effelement << "][" << k << "][" << l << "]= "
+								    << jacobianmat[effelement][k][l];
+						myfile << "\n";
+					}
+
+#ifdef DEBUGFILE
+					myfile << " eff_el= " << effelement << endl;
+					for (int k = 0; k < NUM_STATE_VARS; ++k)
+					myfile << " adjoint[" << k << "]= " << adjoint_pointer[k];
+					myfile << "\n";
+					for (int k = 0; k < NUM_STATE_VARS; ++k)
+					for (int l = 0; l < NUM_STATE_VARS; ++l)
+					myfile << "  Jacobian[" << effelement << "][" << k << "][" << l << "]= "
+					<< jacobianmat[effelement][k][l];
+					myfile << "\n";
+#endif
 
 				}
 			}
 		}
 
 		for (int j = 0; j < NUM_STATE_VARS; j++)
-			adjoint[j] = /**(Curr_El->get_func_sens() + j)*/-adjcontr[j];
+			adjoint[j] = *(Curr_El->get_func_sens() + j) - adjcontr[j];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		if (isnan(adjoint[i]) || isinf(adjoint[i]))
 			cout << "it is incorrect  " << endl;
 
-	return;
+#ifdef DEBUGFILE1
+	ofstream adjdebug;
+	adjdebug.open("adjdebug.txt", ios::app);
+
+	adjdebug << "Elem Key[0]= " << *(Curr_El->pass_key()) << "  Key[1]= "
+	    << *(Curr_El->pass_key() + 1) << " iter= " << propctx->timeprops->iter << " elem pos x= "
+	    << *(Curr_El->get_coord()) << " y=" << *(Curr_El->get_coord() + 1) << endl;
+	for (int k = 0; k < NUM_STATE_VARS; ++k)
+		adjdebug << " adjoint[" << k << "]= " << adjoint[k];
+	adjdebug << "\n";
+#endif
+
+#ifdef DEBUGFILE
+
+	myfile.close();
+#endif
 }
 void Element::calc_func_sens(const void * ctx) {
 
@@ -205,5 +276,27 @@ void calc_func_sens(HashTable *El_Table) {
 			}
 		}
 
+}
+
+int get_jacind(int effelement) {
+	int jacind;
+
+	switch (effelement) {
+		case 1:	//in xp neighbor I have to read jacobian of xm, because position of curr_el is in xm side of that neighbor
+			jacind = 3;
+			break;
+		case 2:		    //for yp return ym
+			jacind = 4;
+			break;
+		case 3:		    //for xm return xp
+			jacind = 1;
+			break;
+		case 4:		    //for ym return yp
+			jacind = 2;
+			break;
+		default:
+			cout << "invalid neighbor position" << endl;
+	}
+	return jacind;
 }
 

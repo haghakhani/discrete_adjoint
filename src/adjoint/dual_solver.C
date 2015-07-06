@@ -55,13 +55,13 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 	calc_adjoint(meshctx, propctx);
 
-	uinform_refine(meshctx, propctx, numprocs, myid);
-
-	error_compute(meshctx, propctx, maxiter, myid, numprocs);
-
-	double UNREFINE_TARGET = .01;	//dummy value is not used in the function
-	unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
-	    rescomp);
+//	uinform_refine(meshctx, propctx, numprocs, myid);
+//
+//	error_compute(meshctx, propctx, maxiter, myid, numprocs);
+//
+//	double UNREFINE_TARGET = .01;	//dummy value is not used in the function
+//	unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
+//	    rescomp);
 
 	int tecflag = 2;
 	tecplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, functional, tecflag);
@@ -109,21 +109,21 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		//for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
 		//sensitivity w.r.t to parameters
 
-		uinform_refine(meshctx, propctx, numprocs, myid);
+//		uinform_refine(meshctx, propctx, numprocs, myid);
+//
+//		error_compute(meshctx, propctx, iter, myid, numprocs);
+//
+//		// in dual weighted error estimation if solver performs n step, we'll have n+1
+//		// solution and n+1 adjoint solution, but we'll have just n residual and as a
+//		// result n error estimate. The point is that at initial step (0'th step),
+//		// we know the solution from initial condition  so the error of 0th step is zero,
+//		// and we have to compute the error for other time steps.
+//
+//		double UNREFINE_TARGET = .01;	//dummy value is not used in the function
+//		unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
+//		    rescomp);
 
-		error_compute(meshctx, propctx, iter, myid, numprocs);
-
-		// in dual weighted error estimation if solver performs n step, we'll have n+1
-		// solution and n+1 adjoint solution, but we'll have just n residual and as a
-		// result n error estimate. The point is that at initial step (0'th step),
-		// we know the solution from initial condition  so the error of 0th step is zero,
-		// and we have to compute the error for other time steps.
-
-		double UNREFINE_TARGET = .01;	//dummy value is not used in the function
-		unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
-		    rescomp);
-
-		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out() /*|| adjiter == 1*/)
+		if (timeprops_ptr->adjiter/*timeprops_ptr->ifadjoint_out() /*|| adjiter == 1*/)
 			tecplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, functional,
 			    tecflag);
 

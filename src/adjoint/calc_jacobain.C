@@ -26,7 +26,7 @@
 
 //#define DEBUG
 
-void reset_resflag(ResFlag resflag[5]);
+void reset_resflag(ResFlag resflag[EFF_ELL]);
 
 void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
     double const increment) {
@@ -46,7 +46,6 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
 	Element* Curr_El = NULL;
-	Element *neigh_elem = NULL;
 
 	int iter = timeprops_ptr->iter;
 	double tiny = GEOFLOW_TINY;
@@ -54,8 +53,13 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 	cout << "computing jacobian for time iteration " << iter << endl;
 
 	//this array holds ResFlag for element itself and its neighbors
-	ResFlag resflag[5];
+	ResFlag resflag[EFF_ELL];
 	reset_resflag(resflag);
+
+#ifdef DEBUGFILE
+	ofstream myfile;
+	myfile.open("debug.txt",ios::app);
+#endif
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
@@ -130,13 +134,7 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 						    matprops_ptr->frict_tiny, orgSrcSgn, 0./*=increment*/, //3
 						    matprops_ptr->epsilon, check_stop); //2
 
-//						check_stop(El_Table, fluxold, dtdx, dtdy, dt, check_stop);
-
 						for (int effelement = 0; effelement < EFF_ELL; effelement++) { //0 for the element itself, and the rest id for neighbour elements
-
-							int xp = Curr_El->get_positive_x_side(); //finding the direction of element
-							int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
-							int jacmatind = jac_mat_index(effelement, xp); //this function returns the matrix that the jacobian matrix has to be stored
 
 #ifdef DEBUG
 							int gggflag = 0;
@@ -149,12 +147,18 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 							if (effelement == 0 && prev_state_vars[0] == 0.)
 
 								//this is a void element so the residual vector does not change by changing it's values
-								Curr_El->set_jacobianMat_zero(jacmatind);
+								Curr_El->set_jacobianMat_zero(effelement);
+
+							else if (effelement > 4
+							    && compare_key((Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH),
+							        (Curr_El->get_neighbors() + (effelement - 5) * KEYLENGTH)))
+
+								Curr_El->set_jacobianMat_zero(effelement);
 
 							else if (effelement != 0 && void_neigh_elem(El_Table, Curr_El, effelement))
 
 								//this is a void neighbor element so the residual of the curr_el does not depend on this neighbor
-								Curr_El->set_jacobianMat_zero(jacmatind);
+								Curr_El->set_jacobianMat_zero(effelement);
 
 							else {
 
@@ -196,13 +200,20 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 										double *d_state_vars = Curr_El->get_d_state_vars();
 
 										//here we compute the residuals
-										residual(vec_res, state_vars, prev_state_vars, flux[0], //4
-										    flux[1], flux[2], flux[3], dtdx, dtdy, dt, d_state_vars, //7
-										    (d_state_vars + NUM_STATE_VARS), curvature, //2
-										    matprops_ptr->intfrict, //1
-										    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), //4
-										    matprops_ptr->frict_tiny, orgSrcSgn, incr, //3
-										    matprops_ptr->epsilon, check_stop, srcflag, 0); //2
+										residual(vec_res, state_vars, prev_state_vars, flux[0],									//4
+										    flux[1], flux[2], flux[3], dtdx, dtdy, dt, d_state_vars,								//7
+										    (d_state_vars + NUM_STATE_VARS), curvature,									//2
+										    matprops_ptr->intfrict,									//1
+										    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()),									//4
+										    matprops_ptr->frict_tiny, orgSrcSgn, incr,									//3
+										    matprops_ptr->epsilon, check_stop, srcflag, 0);									//2
+
+#ifdef DEBUGFILE
+										myfile << "Elem Key[0]= " << *(Curr_El->pass_key()) << "  Key[1]= "
+										    << *(Curr_El->pass_key()) << " iter= " << iter << " eff_el= " << effelement
+										    << " j= " << j << " residual[0]= " << vec_res[0] << " residual[1]= "
+										    << vec_res[1] << " residual[2]= " << vec_res[2] << endl;
+#endif
 
 										//we have to return everything back
 										restore(El_Table, NodeTable, Curr_El, effelement, j, incr, fluxold,
@@ -221,7 +232,7 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 
 									double jacincr = increment; //= scheme == 0 ? increment : 2. * increment;
 
-									Curr_El->set_jacobian(jacmatind, total_res, j,
+									Curr_El->set_jacobian(effelement, total_res, j,
 									// following term is necessary to consider the scheme that whether it is forward difference or central difference
 									    jacincr); //sets the propper components of the Jacobian for this element
 
@@ -234,12 +245,17 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 			}
 		}
 	}
+
+#ifdef DEBUGFILE
+	myfile.close();
+#endif
+
 }
 
 int jac_mat_index(int effelement, int xp) {
 
 	int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
-	// effelement - 1 shows which neighbor we are processing
+// effelement - 1 shows which neighbor we are processing
 	if (effelement == 0)
 		return 0;
 	else if (effelement - 1 == xp)
@@ -353,7 +369,7 @@ void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, int ef
 
 void calc_flux_slope_kact(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El,
     MatProps* matprops_ptr, int myid, int effelement, int updateflux, int srcflag,
-    ResFlag resflag[5]) {
+    ResFlag resflag[EFF_ELL]) {
 
 	ResFlag dummyresflag;
 	dummyresflag.callflag = 1;
@@ -388,29 +404,29 @@ void calc_flux_slope_kact(HashTable* El_Table, HashTable* NodeTable, Element* Cu
 
 		Element* elem_xm = (Element*) (El_Table->lookup(Curr_El->get_neighbors() + xm * KEYLENGTH));
 		assert(elem_xm);
-		elem_xm->calc_xflux(El_Table, NodeTable, myid, resflag[3], resflag[0]);
+		elem_xm->calc_xflux(El_Table, NodeTable, myid, resflag[xm + 1], resflag[0]);
 
 		Element* elem_ym = (Element*) (El_Table->lookup(Curr_El->get_neighbors() + ym * KEYLENGTH));
 		assert(elem_ym);
-		elem_ym->calc_yflux(El_Table, NodeTable, myid, resflag[4], resflag[0]);
+		elem_ym->calc_yflux(El_Table, NodeTable, myid, resflag[ym + 1], resflag[0]);
 
 	} else if (effelement != 0 && updateflux) {
 
-		if ((effelement - 1) == xp)
-			Curr_El->calc_xflux(El_Table, NodeTable, myid, resflag[0], resflag[1]);
+		if ((effelement - 1) % 4 == xp)
+			Curr_El->calc_xflux(El_Table, NodeTable, myid, resflag[0], resflag[xp + 1]);
 		//if we change the state variables in xp or yp, just the flux at this element has to be updated
 
-		else if ((effelement - 1) == yp)
-			Curr_El->calc_yflux(El_Table, NodeTable, myid, resflag[0], resflag[2]);
+		else if ((effelement - 1) % 4 == yp)
+			Curr_El->calc_yflux(El_Table, NodeTable, myid, resflag[0], resflag[ym + 1]);
 
-		else if ((effelement - 1) == xm) {
+		else if ((effelement - 1) % 4 == xm) {
 
 			neigh_elem = (Element*) (El_Table->lookup(
 			    Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
 			assert(neigh_elem);
 
 			//otherwise the flux at the corresponding element has to be updated
-			neigh_elem->calc_xflux(El_Table, NodeTable, myid, resflag[3], resflag[0]);
+			neigh_elem->calc_xflux(El_Table, NodeTable, myid, resflag[xm + 1], resflag[0]);
 
 		} else {
 
@@ -418,7 +434,7 @@ void calc_flux_slope_kact(HashTable* El_Table, HashTable* NodeTable, Element* Cu
 			    Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
 			assert(neigh_elem);
 			//otherwise the flux at the corresponding element has to be updated
-			neigh_elem->calc_yflux(El_Table, NodeTable, myid, resflag[4], resflag[0]);
+			neigh_elem->calc_yflux(El_Table, NodeTable, myid, resflag[ym + 1], resflag[0]);
 
 		}
 
@@ -427,21 +443,18 @@ void calc_flux_slope_kact(HashTable* El_Table, HashTable* NodeTable, Element* Cu
 }
 
 void increment_state(HashTable* El_Table, Element* Curr_El, double increment, int effelement, int j,
-    int* updateflux, int* srcflag, ResFlag resflag[5]) {
+    int* updateflux, int* srcflag, ResFlag resflag[EFF_ELL]) {
 
 	*updateflux = 1;
 	*srcflag = 1;
 	double *prev_state_vars = Curr_El->get_prev_state_vars();
-
-	int xp = Curr_El->get_positive_x_side(); //finding the direction of element
-	int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
 
 	if (effelement == 0) { //this part of code add an increment to the state variables to find the Jacobian, but the problem is since it is called after correct, the increment shoud be added to the prev_state_vars
 
 		if (j == 0 && prev_state_vars[j] < GEOFLOW_TINY) {
 			*updateflux = 0;
 			*srcflag = 0;
-			resflag[0].lgft = 1;
+			resflag[effelement].lgft = 1;
 		}
 
 		prev_state_vars[j] += increment; //changing the state varibales at the element itself
@@ -454,7 +467,7 @@ void increment_state(HashTable* El_Table, Element* Curr_El, double increment, in
 
 		if (j == 0 && *(neigh_elem->get_prev_state_vars() + j) < GEOFLOW_TINY) {
 			*updateflux = 0;
-			resflag[jac_mat_index(effelement, xp)].lgft = 1;
+			resflag[effelement].lgft = 1;
 		}
 
 		*(neigh_elem->get_prev_state_vars() + j) += increment;
@@ -463,9 +476,9 @@ void increment_state(HashTable* El_Table, Element* Curr_El, double increment, in
 	return;
 }
 
-void reset_resflag(ResFlag resflag[5]) {
+void reset_resflag(ResFlag resflag[EFF_ELL]) {
 
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < EFF_ELL; i++) {
 		resflag[i].callflag = 1;
 		resflag[i].lgft = 0;
 	}

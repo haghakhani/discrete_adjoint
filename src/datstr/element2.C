@@ -4021,16 +4021,16 @@ void Element::new_jacobianMat() //in forward run we just save the solution and i
 		return;
 
 	int i, j, k;
-	jacobianMat = new double**[5];
-	for (i = 0; i < 5; i++) {
-		jacobianMat[i] = new double*[3];
-		for (j = 0; j < 3; j++)
-			jacobianMat[i][j] = new double[3];
+	jacobianMat = new double**[EFF_ELL];
+	for (i = 0; i < EFF_ELL; i++) {
+		jacobianMat[i] = new double*[NUM_STATE_VARS];
+		for (j = 0; j < NUM_STATE_VARS; j++)
+			jacobianMat[i][j] = new double[NUM_STATE_VARS];
 	}
 
-	for (i = 0; i < 5; i++)
-		for (j = 0; j < 3; j++)
-			for (k = 0; k < 3; k++)
+	for (i = 0; i < EFF_ELL; i++)
+		for (j = 0; j < NUM_STATE_VARS; j++)
+			for (k = 0; k < NUM_STATE_VARS; k++)
 				jacobianMat[i][j][k] = 0.0;
 
 	return;
