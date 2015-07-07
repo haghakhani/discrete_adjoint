@@ -1348,6 +1348,8 @@ struct PropCTX {
 	MatProps* matprops;
 	TimeProps* timeprops;
 	MapNames* mapnames;
+	int numproc;
+	int myid;
 
 };
 #endif

@@ -599,7 +599,7 @@ public:
 
 	void new_jacobianMat();
 
-	void rev_state_vars(Jacobian* jacobian, int iter);
+	void rev_state_vars(HashTable* solrec, int iter/*,int*,int*,int**/);
 
 	void set_jacobianMat_zero(int jacmatind);
 

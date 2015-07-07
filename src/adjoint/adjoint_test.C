@@ -232,7 +232,7 @@ int checkElement(HashTable *El_Table, double *max, unsigned *key) {
 	Element *Curr_El;
 	HashEntryPtr *buck = El_Table->getbucketptr();
 
-	*max = 0;
+	int gg= 0;
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -240,18 +240,13 @@ int checkElement(HashTable *El_Table, double *max, unsigned *key) {
 			while (currentPtr) {
 				Curr_El = (Element*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) {
-					Element* fth = (Element*) El_Table->lookup(Curr_El->pass_key());
-
-					if (*(fth->pass_key()) == key[0] && *(fth->pass_key() + 1) == key[1]) {
-						*max += 1;
-					}
+					if (*(Curr_El->pass_key()) == key[0] && *(Curr_El->pass_key() + 1) == key[1])
+						gg= 1;
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 
-
-	int gg = *max;
 
 	return (gg);
 }

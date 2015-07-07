@@ -30,24 +30,17 @@
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 
-	int myid, numprocs;
-	MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
-
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
 
 	TimeProps* timeprops_ptr = propctx->timeprops;
 	MapNames* mapname_ptr = propctx->mapnames;
 	MatProps* matprops_ptr = propctx->matprops;
+	int myid = propctx->myid, numprocs = propctx->numproc;
 
 	const int rescomp = 1;
 	const double increment = INCREMENT;
 	const int maxiter = timeprops_ptr->iter;
-
-	// dummy variables
-	int order_flag = 1;
-	double outflow = 0;
 
 	allocJacoMat(El_Table);
 
@@ -78,6 +71,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 		// we need this even for  iter = maxiter because after refine and unrefine
 		// the state variables are not same as forward run
+
 		reverse_states(El_Table, solrec, iter);
 
 		timeprops_ptr->adjoint_time(iter - 1);
@@ -89,7 +83,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 		calc_d_gravity(El_Table);
 
-		calc_flux(meshctx,  propctx,  myid,resflag);
+		calc_flux(meshctx, propctx, myid, resflag);
 
 		slopes(El_Table, NodeTable, matprops_ptr, 1);
 
@@ -126,6 +120,11 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		if (timeprops_ptr->adjiter/*timeprops_ptr->ifadjoint_out() /*|| adjiter == 1*/)
 			tecplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, functional,
 			    tecflag);
+//		meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0.);
+
+		dual_refine_unrefine(meshctx, propctx);
+
+//		cout << "num_elem= " << num_nonzero_elem(El_Table) << "\n";
 
 	}
 
@@ -223,20 +222,36 @@ void record_solution(MeshCTX* meshctx, PropCTX* propctx, SolRec* solrec) {
 				while (currentPtr) {
 					Curr_El = (Element*) (currentPtr->value);
 					if (Curr_El->get_adapted_flag() > 0) {
-						Jacobian *jacobian = (Jacobian *) solrec->lookup(Curr_El->pass_key());
 
-						if (!jacobian) {
+						int aa = 0, bb = 1;
+						unsigned keyy[2] = { 541694361, 2576980377 };
+						if (*(Curr_El->pass_key()) == keyy[0] && *(Curr_El->pass_key() + 1) == keyy[1]
+						    && timeptr->iter == 4)
+							bb = aa;
+
+						Jacobian *jacobian = (Jacobian *) solrec->lookup(Curr_El->pass_key());
+						if (jacobian) {
+							if (*(Curr_El->get_state_vars()) > 0.) {
+								Solution *solution = new Solution(Curr_El->get_state_vars(),
+								    *(Curr_El->get_kactxy()));
+								jacobian->put_solution(solution, timeptr->iter);
+
+							} else
+								jacobian->put_solution(solrec->get_zero_solution(), timeptr->iter);
+
+						} else {
 							jacobian = new Jacobian(Curr_El->pass_key(), Curr_El->get_coord());
 							solrec->add(jacobian->get_key(), jacobian);
 
-						} else if (*(Curr_El->get_state_vars()) > 0.) {
-							Solution *solution = new Solution(Curr_El->get_state_vars(),
-							    *(Curr_El->get_kactxy()));
-							jacobian->put_solution(solution, timeptr->iter);
+							if (*(Curr_El->get_state_vars()) > 0.) {
+								Solution *solution = new Solution(Curr_El->get_state_vars(),
+								    *(Curr_El->get_kactxy()));
+								jacobian->put_solution(solution, timeptr->iter);
 
-						} else
-							jacobian->put_solution(solrec->get_zero_solution(), timeptr->iter);
+							} else
+								jacobian->put_solution(solrec->get_zero_solution(), timeptr->iter);
 
+						}
 					}
 					currentPtr = currentPtr->next;
 				}
@@ -377,15 +392,14 @@ void reverse_states(HashTable* El_Table, HashTable* solrec, int iter) {
 			while (currentPtr) {
 				Curr_El = (Element*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) {
-					Jacobian *jacobian = (Jacobian *) solrec->lookup(Curr_El->pass_key());
-					Curr_El->rev_state_vars(jacobian, iter);
+
+					Curr_El->rev_state_vars(solrec, iter);
 
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 	}
-
 }
 
 void print_jacobian(HashTable* El_Table, int iter) {
@@ -481,5 +495,151 @@ void orgSourceSgn(Element* Curr_El, double frictiny, double* orgSgn) {
 
 	tmp = h_inv * (d_state_vars_x[2] - velocity[1] * d_state_vars_x[0]);
 	orgSgn[1] = tiny_sgn(tmp, frictiny);
+
+}
+
+void refinement_report(HashTable* El_Table) {
+
+	int newbuffer = 0, buffer = 0, newson = 0, newfather = 0, norecadapt = 0, tobedeleted = 0,
+	    oldfather = 0, oldson = 0;
+
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+
+				switch (Curr_El->get_adapted_flag()) {
+					case 5:
+						newbuffer++;
+						break;
+					case 4:
+						buffer++;
+						break;
+					case 3:
+						newson++;
+						break;
+					case 2:
+						newfather++;
+						break;
+					case 1:
+						norecadapt++;
+						break;
+					case 0:
+						tobedeleted++;
+						break;
+					case -6:
+						oldfather++;
+						break;
+					case -7:
+						oldson++;
+						break;
+					default:
+						cout << "this case is irregular \n";
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	cout << " new buffer: " << newbuffer << "\n buffer:     " << buffer << "\n newson:     " << newson
+	    << "\n newfather:  " << newfather << "\n norecadapt: " << norecadapt << "\n tobedeleted:"
+	    << tobedeleted << "\n oldfather:  " << oldfather << "\n oldson:     " << oldson << "\n";
+
+}
+
+void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx) {
+
+	HashTable* El_Table = meshctx->el_table;
+	HashTable* NodeTable = meshctx->nd_table;
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
+	int myid = propctx->myid, numprocs = propctx->numproc;
+
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+	ElemPtrList RefinedList, NewFatherList, OtherProcUpdate;
+
+	int rescomp = 0;
+
+	unsigned keyy[2] = { 3760697659, 330382100 };
+
+	//dummy value is not used in the function
+	double UNREFINE_TARGET = .01;
+
+	// start unrefinement
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) currentPtr->value;
+				currentPtr = currentPtr->next;
+				if (Curr_El->get_adapted_flag() == DUALUNREF)
+					Curr_El->put_adapted_flag(NOTRECADAPTED);
+			}
+		}
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) currentPtr->value;
+				//  need to get currentPtr->next now since currentPtr might get deleted!
+				currentPtr = currentPtr->next;
+				if (Curr_El->get_adapted_flag() == NOTRECADAPTED) {
+
+					if (*(Curr_El->pass_key()) == keyy[0] && *(Curr_El->pass_key() + 1) == keyy[1])
+						cout << "i found you \n";
+					//check to see if currentPtr might get deleted and if it might, find next ptr that won't
+					if (currentPtr != NULL) {
+						int newnext = 0;
+						while (newnext == 0 && currentPtr != NULL) {
+							Element* nextelm = (Element*) currentPtr->value;
+							if (nextelm->get_which_son() == 0)
+								newnext = 1;
+							else
+								currentPtr = currentPtr->next;
+						}
+					}
+					Curr_El->find_brothers(El_Table, NodeTable, UNREFINE_TARGET, myid, matprops_ptr,
+					    &NewFatherList, &OtherProcUpdate, rescomp);
+				}
+			}
+		}
+
+	unrefine_neigh_update(El_Table, NodeTable, myid, (void*) &NewFatherList);
+
+	unrefine_interp_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &OtherProcUpdate);
+
+	for (int k = 0; k < NewFatherList.get_num_elem(); k++)
+		delete_oldsons(El_Table, NodeTable, myid, NewFatherList.get(k));
+
+	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
+
+	// start refinement
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() == DUALREF)
+
+					refinewrapper(El_Table, NodeTable, matprops_ptr, &RefinedList, Curr_El, rescomp);
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	refine_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &RefinedList, timeprops_ptr);
+
+	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
 
 }

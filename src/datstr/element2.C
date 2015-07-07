@@ -210,12 +210,13 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 		el_error[i] = 0.0;
 
 	for (i = 0; i < KEYLENGTH; i++) {
-		father[i] = NULL;
+		father[i] = fthTemp->key[i];
 		key[i] = nodekeys[8][i]; //--using buble key to represent the element
 	}
 
 	int aa = 0, bb = 1;
-	if (key[0] == 2248710553 && key[1] == 2576980374)
+	unsigned keyy[2] = { 3760697659, 330382100 };
+	if (key[0] == keyy[0] && key[1] == keyy[1])
 		bb = aa;
 
 	elm_loc[0] = elm_loc_in[0];
@@ -349,6 +350,10 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 
 	for (ikey = 0; ikey < KEYLENGTH; ikey++)
 		key[ikey] = *(sons[2]->getNode() + ikey);
+
+	int aa = 0, bb = 1;
+	if (key[0] == 2183941828 && key[1] == 3964585199)
+		bb = aa;
 
 	for (ison = 0; ison < 4; ison++) {
 		sons[ison]->put_adapted_flag(OLDSON);
@@ -4058,7 +4063,9 @@ void Element::print_jacobian(int iter) {
 	return;
 }
 
-void Element::rev_state_vars(Jacobian* jacobian, int iter) {
+void Element::rev_state_vars(HashTable* solrec, int iter/*, int *reg, int* unref, int* ref*/) {
+
+	Jacobian *jacobian = (Jacobian *) solrec->lookup(key);
 
 	Solution* curr_sol = jacobian->get_solution(iter);
 	Solution* prev_sol = jacobian->get_solution(iter - 1);
@@ -4066,8 +4073,43 @@ void Element::rev_state_vars(Jacobian* jacobian, int iter) {
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		state_vars[i] = *(curr_sol->get_solution() + i);
 
-	for (int i = 0; i < NUM_STATE_VARS; i++)
-		prev_state_vars[i] = *(prev_sol->get_solution() + i);
+	if (prev_sol) {
+		// not refined and not unrefined element
+		for (int i = 0; i < NUM_STATE_VARS; i++)
+			prev_state_vars[i] = *(prev_sol->get_solution() + i);
+
+		adapted = DUALREG;
+		//*reg += 1;
+
+	} else {
+
+		// first we check to see whether the element has been refined, so we have to read from its father
+		jacobian = (Jacobian *) solrec->lookup(father);
+
+		if (jacobian) {
+			prev_sol = jacobian->get_solution(iter - 1);
+			adapted = DUALUNREF;
+			//*unref += 1;
+
+		} else {
+
+			// the only remaining case is that it has been unrefined so, we have to read from its sons
+			// first we zero the prev_state_vars
+			for (int i = 0; i < NUM_STATE_VARS; i++)
+				prev_state_vars[i] = 0.;
+
+			for (int i = 0; i < 4; ++i) {
+				jacobian = (Jacobian *) solrec->lookup(son[i]);
+				prev_sol = jacobian->get_solution(iter - 1);
+				for (int j = 0; j < NUM_STATE_VARS; j++)
+					prev_state_vars[j] += *(prev_sol->get_solution() + j) * .25;
+
+			}
+			adapted = DUALREF;
+			//*ref += 1;
+
+		}
+	}
 
 	kactxy[0] = curr_sol->get_kact();
 	kactxy[1] = kactxy[0];

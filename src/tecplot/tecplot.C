@@ -126,8 +126,10 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops, T
 			EmArray[0] = EmTemp = (Element*) entryp->value;
 			assert(EmTemp);
 			entryp = entryp->next;
-			if ((EmTemp->get_adapted_flag() != TOBEDELETED)
-			    && (abs(EmTemp->get_adapted_flag()) <= BUFFER)) {
+			if (((EmTemp->get_adapted_flag() != TOBEDELETED)
+			    && (abs(EmTemp->get_adapted_flag()) <= BUFFER)) ||
+			//Hossein added this for dual plot. this is temp. and has to be fixed
+			    (EmTemp->get_adapted_flag() > NEWBUFFER)) {
 				num_tec_node++;
 				EmTemp->put_ithelem(num_tec_node);
 
@@ -162,7 +164,8 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops, T
 							num_tec_tri++;
 				}	  //if(EmTemp->get_adapted_flag()>TOBEDELETED)
 			}	  //if((EmTemp->get_adapted_flag()!=TOBEDELETED)&&
-		}	  //while(entryp)
+		}
+		//while(entryp)
 	}	  //for(i_buck=0;i_buck<e_buckets;i_buck++)
 
 	int num_tec_elem = num_tec_quad + num_tec_tri;
@@ -179,7 +182,7 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops, T
 
 	FILE *fp = fopen(filename, "w");
 
-	//print the tecplot header
+//print the tecplot header
 	int hrs, mins;
 	double secs;
 	timeprops->chunktime(&hrs, &mins, &secs);
@@ -203,11 +206,11 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops, T
 	fprintf(fp, "\n");
 	fprintf(fp, "ZONE N=%d, E=%d, F=FEPOINT, ET=QUADRILATERAL\n", num_tec_node, num_tec_elem);
 
-	//print the element/BUBBLE-node information
+//print the element/BUBBLE-node information
 
 	int num_missing_bubble_node = 0;	  //for legacy debugging, I (Keith)
-	//believe the missing BUBBLE node problem has been solved, it
-	//doesn't seem to be a problem anymore
+//believe the missing BUBBLE node problem has been solved, it
+//doesn't seem to be a problem anymore
 
 	for (i_buck = 0; i_buck < e_buckets; i_buck++) {
 		entryp = *(El_Table->getbucketptr() + i_buck);
@@ -215,8 +218,9 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops, T
 			EmTemp = (Element*) entryp->value;
 			assert(EmTemp);
 			entryp = entryp->next;
-			if ((EmTemp->get_adapted_flag() != TOBEDELETED)
+			if (((EmTemp->get_adapted_flag() != TOBEDELETED)
 			    && (abs(EmTemp->get_adapted_flag()) <= BUFFER))
+			    || (EmTemp->get_adapted_flag() > NEWBUFFER))
 				num_missing_bubble_node += print_bubble_node(fp, NodeTable, matprops, timeprops, EmTemp,
 				    adjflag);
 		}
@@ -231,7 +235,8 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops, T
 			EmArray[0] = EmTemp = (Element*) entryp->value;
 			assert(EmTemp);
 			entryp = entryp->next;
-			if ((EmTemp->get_adapted_flag() > TOBEDELETED) && (EmTemp->get_adapted_flag() <= BUFFER)) {
+			if (((EmTemp->get_adapted_flag() > TOBEDELETED) && (EmTemp->get_adapted_flag() <= BUFFER))
+			    || (EmTemp->get_adapted_flag() > NEWBUFFER)) {
 
 				neigh_proc = EmTemp->get_neigh_proc();
 				gen = EmTemp->get_gen();
@@ -581,9 +586,9 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimePr
 	double momentum_scale = hscale * velocity_scale; // scaling factor for the momentums
 
 	double adjoint_scale[3] = { 1.0, 1.0, 1.0 };
-	adjoint_scale[0] = tscale;//hscale * hscale * lscale * lscale * tscale * tscale;
-	// scale of adjoint is different for first and two other component, and depend on the functional
-	adjoint_scale[1] = adjoint_scale[2] =  tscale * tscale*hscale/lscale;//hscale * hscale * lscale * tscale * tscale * tscale;
+	adjoint_scale[0] = tscale; //hscale * hscale * lscale * lscale * tscale * tscale;
+// scale of adjoint is different for first and two other component, and depend on the functional
+	adjoint_scale[1] = adjoint_scale[2] = tscale * tscale * hscale / lscale; //hscale * hscale * lscale * tscale * tscale * tscale;
 
 	double residual_scale[3]; //= { hscale, momentum_scale, momentum_scale };
 	residual_scale[0] = hscale / tscale;
@@ -591,8 +596,8 @@ int print_bubble_node(FILE *fp, HashTable* NodeTable, MatProps* matprops, TimePr
 
 	double error_scale, functional_scale;
 
-	// this must be equal to adjoint_scale[i] * residual_scale[i] foe any i
-	error_scale = functional_scale = hscale;//hscale * hscale * lscale * lscale * tscale;
+// this must be equal to adjoint_scale[i] * residual_scale[i] foe any i
+	error_scale = functional_scale = hscale; //hscale * hscale * lscale * lscale * tscale;
 	num_missing_bubble_node = get_elem_elev(NodeTable, matprops, EmTemp, &elevation);
 
 	double Vel[4];
@@ -819,8 +824,7 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 //fprintf ( fp, "TITLE= \"MESH OUTPUT\"\n" );
 
 	fprintf(fp, "VARIABLES = \"X\" \"Y\" \"Z\" \"PILE_HEIGHT\" \"SXMOMENTUM\" \"SYMOMENTUM\" "
-			"\"FXMOMENTUM\" \"FYMOMENTUM\" \"Vx_s\" \"Vy_s\" "
-			"\"VOL_FRACT\" \"ELEM_ERROR\" \"DRAGY\"");
+			"\"Vx_s\" \"Vy_s\"");
 
 	if (myid == TARGETPROCB) {
 		printf("at meshplotter 3.0\n");
@@ -868,13 +872,12 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 					assert(NodeTemp);
 					int jj = j;
 					if (NodeTemp->getinfo() != S_C_CON)
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e\n",
+						fprintf(fp, "%e %e %e %e %e %e %e %e\n",
 						    (*(NodeTemp->get_coord())) * (matprops)->LENGTH_SCALE,
 						    (*(NodeTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
 						    NodeTemp->get_elevation() * (matprops->LENGTH_SCALE),
 						    state_vars[0] * (matprops)->HEIGHT_SCALE, state_vars[1] * momentum_scale,
-						    state_vars[2] * momentum_scale, Vel[0], Vel[1], Vel[2], Vel[3], state_vars[1],
-						    *(EmTemp->get_el_error())/**(EmTemp->get_drag())*/, *(EmTemp->get_drag() + 1));
+						    state_vars[2] * momentum_scale, Vel[0], Vel[1]);
 
 					else // S_C_CON will have a discontinuity in the elevation so fix that by interpolation
 					{

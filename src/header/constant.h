@@ -95,7 +95,9 @@ const int GHOST = -9876; //"refined" GHOST CELL FLAG
 const double INCREMENT = 1.49e-08;
 
 //The magnitude of the "adapted" flag indicates whether the cell is NEWSON, NEWFATHER, NOTRECADAPTED, or TOBEDELETED.  A postive value indicates it's on this processor, a negative sign indicates a GHOST cell.
-
+#define DUALREG        8  // for a regular element in
+#define DUALUNREF      7  // for an element that has to be unrefined on nest step in dual solution
+#define DUALREF        6  // for an element that has to berefined on next step in dual solution
 #define NEWBUFFER      5  //NEWBUFFER elements have at least one current buffer element as a neighbor, a temporary marking needed for building the buffer layer, to be remarked as BUFFER elements
 #define BUFFER         4  //Do not refine or unrefine elements in the buffer layer, has to be a separate flag from NEWSON because of triggered refinement
 #define NEWSON         3  //Do not refine or unrefine new son elements
