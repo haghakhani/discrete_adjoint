@@ -188,6 +188,11 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 		for (int i = 0; i < NUM_STATE_VARS; i++) {
 			prev_state_vars[i] = 0.;
 			Influx[i] = 0.;
+			adjoint[i] = 0.;
+			prev_adjoint[i] = 0.;
+			consAdj[i] = 0.;
+			Influx[i] = 0.;
+			residual[i] = 0.;
 		}
 		for (int i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
 			d_state_vars[i] = 0.;
@@ -196,6 +201,9 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 			father[ikey] = brothers[0][ikey] = brothers[1][ikey] = brothers[2][ikey] = brothers[3][ikey] =
 			    son[0][ikey] = son[1][ikey] = son[2][ikey] = son[3][ikey] = 0;
 	}
+
+	for (int i = 0; i < NUM_STATE_VARS; i++)
+		func_sens[i] = 0.;
 
 	int i;
 	for (i = 0; i < 4; i++)
@@ -215,7 +223,7 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 	}
 
 	int aa = 0, bb = 1;
-	unsigned keyy[2] = { 3760697659, 330382100 };
+	unsigned keyy[2] = { 541694361, 2576980377 };
 	if (key[0] == keyy[0] && key[1] == keyy[1])
 		bb = aa;
 
@@ -337,10 +345,19 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 		for (int i = 0; i < NUM_STATE_VARS; i++) {
 			prev_state_vars[i] = 0.;
 			Influx[i] = 0.;
+			adjoint[i] = 0.;
+			prev_adjoint[i] = 0.;
+			consAdj[i] = 0.;
+			Influx[i] = 0.;
+			residual[i] = 0.;
+
 		}
 		for (int i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
 			d_state_vars[i] = 0.;
 	}
+
+	for (int i = 0; i < NUM_STATE_VARS; i++)
+		func_sens[i] = 0.;
 
 	for (int ikey = 0; ikey < KEYLENGTH; ikey++)
 		father[ikey] = brothers[0][ikey] = brothers[1][ikey] = brothers[2][ikey] = brothers[3][ikey] =
@@ -351,8 +368,9 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 	for (ikey = 0; ikey < KEYLENGTH; ikey++)
 		key[ikey] = *(sons[2]->getNode() + ikey);
 
+	unsigned keyy[2] = { 541694361, 2576980377 };
 	int aa = 0, bb = 1;
-	if (key[0] == 2183941828 && key[1] == 3964585199)
+	if (key[0] == keyy[0] && key[1] == keyy[1])
 		bb = aa;
 
 	for (ison = 0; ison < 4; ison++) {
@@ -4063,7 +4081,39 @@ void Element::print_jacobian(int iter) {
 	return;
 }
 
-void Element::rev_state_vars(HashTable* solrec, int iter/*, int *reg, int* unref, int* ref*/) {
+void Element::gen_my_sons_key(HashTable* El_Table, unsigned son_key[4][KEYLENGTH]) {
+
+	/*	---------
+	 | 3 | 2 |
+	 |   |   |
+	 ---------
+	 | 0 | 1 |
+	 |   |   |
+	 ---------*/
+
+	static double XRange[KEYLENGTH], YRange[KEYLENGTH];
+	double Xson[4] = { coord[0] - 0.25 * dx[0], coord[0] + 0.25 * dx[0], coord[0] + 0.25 * dx[0],
+	    coord[0] - 0.25 * dx[0] };
+	double Yson[4] = { coord[1] - 0.25 * dx[1], coord[1] - 0.25 * dx[1], coord[1] + 0.25 * dx[1],
+	    coord[1] + 0.25 * dx[1] };
+	double norm_coord[4][KEYLENGTH];
+	unsigned nkey = 2;
+
+	for (int i = 0; i < KEYLENGTH; ++i) {
+		XRange[i] = *(El_Table->get_Xrange() + i);
+		YRange[i] = *(El_Table->get_Yrange() + i);
+	}
+
+	for (int i = 0; i < 4; ++i) {
+		norm_coord[i][0] = (Xson[i] - XRange[0]) / (XRange[1] - XRange[0]);
+		norm_coord[i][1] = (Yson[i] - YRange[0]) / (YRange[1] - YRange[0]);
+	}
+
+	for (int i = 0; i < 4; ++i)
+		fhsfc2d_(norm_coord[i], &nkey, son_key[i]);
+}
+void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, int *reg, int* unref,
+    int* ref) {
 
 	Jacobian *jacobian = (Jacobian *) solrec->lookup(key);
 
@@ -4079,17 +4129,26 @@ void Element::rev_state_vars(HashTable* solrec, int iter/*, int *reg, int* unref
 			prev_state_vars[i] = *(prev_sol->get_solution() + i);
 
 		adapted = DUALREG;
-		//*reg += 1;
+		*reg += 1;
 
 	} else {
 
 		// first we check to see whether the element has been refined, so we have to read from its father
-		jacobian = (Jacobian *) solrec->lookup(father);
+		Element* EmTemp = (Element*) El_Table->lookup(&brothers[2][0]);
 
-		if (jacobian) {
-			prev_sol = jacobian->get_solution(iter - 1);
+		if (EmTemp) {
+			unsigned keyy[KEYLENGTH];
+			for (int ikey = 0; ikey < KEYLENGTH; ikey++)
+				keyy[ikey] = *(EmTemp->getNode() + ikey);
+//		compare_key(keyy,father);
+			jacobian = (Jacobian *) solrec->lookup(keyy);
+			if (jacobian)
+				prev_sol = jacobian->get_solution(iter - 1);
+		}
+		if (prev_sol) {
+
 			adapted = DUALUNREF;
-			//*unref += 1;
+			*unref += 1;
 
 		} else {
 
@@ -4098,15 +4157,19 @@ void Element::rev_state_vars(HashTable* solrec, int iter/*, int *reg, int* unref
 			for (int i = 0; i < NUM_STATE_VARS; i++)
 				prev_state_vars[i] = 0.;
 
+			unsigned son_key[4][KEYLENGTH];
+
+			gen_my_sons_key(El_Table, son_key);
+
 			for (int i = 0; i < 4; ++i) {
-				jacobian = (Jacobian *) solrec->lookup(son[i]);
+				jacobian = (Jacobian *) solrec->lookup(son_key[i]);
 				prev_sol = jacobian->get_solution(iter - 1);
 				for (int j = 0; j < NUM_STATE_VARS; j++)
 					prev_state_vars[j] += *(prev_sol->get_solution() + j) * .25;
 
 			}
 			adapted = DUALREF;
-			//*ref += 1;
+			*ref += 1;
 
 		}
 	}

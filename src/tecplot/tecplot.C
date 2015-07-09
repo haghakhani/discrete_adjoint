@@ -126,10 +126,10 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops, T
 			EmArray[0] = EmTemp = (Element*) entryp->value;
 			assert(EmTemp);
 			entryp = entryp->next;
-			if (((EmTemp->get_adapted_flag() != TOBEDELETED)
-			    && (abs(EmTemp->get_adapted_flag()) <= BUFFER)) ||
-			//Hossein added this for dual plot. this is temp. and has to be fixed
-			    (EmTemp->get_adapted_flag() > NEWBUFFER)) {
+			if ((EmTemp->get_adapted_flag() != TOBEDELETED)
+			    && (abs(EmTemp->get_adapted_flag()) <= BUFFER)) {	//||
+				//Hossein added this for dual plot. this is temp. and has to be fixed
+				//(EmTemp->get_adapted_flag() > NEWBUFFER)) {
 				num_tec_node++;
 				EmTemp->put_ithelem(num_tec_node);
 
@@ -218,9 +218,9 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops, T
 			EmTemp = (Element*) entryp->value;
 			assert(EmTemp);
 			entryp = entryp->next;
-			if (((EmTemp->get_adapted_flag() != TOBEDELETED)
+			if ((EmTemp->get_adapted_flag() != TOBEDELETED)
 			    && (abs(EmTemp->get_adapted_flag()) <= BUFFER))
-			    || (EmTemp->get_adapted_flag() > NEWBUFFER))
+				//|| (EmTemp->get_adapted_flag() > NEWBUFFER))
 				num_missing_bubble_node += print_bubble_node(fp, NodeTable, matprops, timeprops, EmTemp,
 				    adjflag);
 		}
@@ -235,8 +235,8 @@ void tecplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops, T
 			EmArray[0] = EmTemp = (Element*) entryp->value;
 			assert(EmTemp);
 			entryp = entryp->next;
-			if (((EmTemp->get_adapted_flag() > TOBEDELETED) && (EmTemp->get_adapted_flag() <= BUFFER))
-			    || (EmTemp->get_adapted_flag() > NEWBUFFER)) {
+			if ((EmTemp->get_adapted_flag() > TOBEDELETED) && (EmTemp->get_adapted_flag() <= BUFFER)) {
+				//|| (EmTemp->get_adapted_flag() > NEWBUFFER)) {
 
 				neigh_proc = EmTemp->get_neigh_proc();
 				gen = EmTemp->get_gen();
@@ -787,7 +787,7 @@ void viz_output(HashTable* El_Table, HashTable* NodeTable, int myid, int numproc
  **************************************
  *************************************/
 void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
-    TimeProps* timeprops, MapNames* mapnames, double v_star) {
+    TimeProps* timeprops, MapNames* mapnames, double v_star,int plotflag) {
 	int myid, i;
 	int numprocs;
 	int material;
@@ -803,12 +803,37 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	unsigned* nodes;
 	char filename[256];
 
-	sprintf(filename, "mshpl%02d%08d.tec", myid, timeprops->iter);
+	if (plotflag==2)
+		sprintf(filename, "dual%02d%08d.tec", myid, timeprops->iter);
+	else if(plotflag==1)
+		sprintf(filename, "dual%02d%08d.tec", myid, timeprops->iter-1);
+	else
+		sprintf(filename, "mshpl%02d%08d.tec", myid, timeprops->iter);
+
 	int order;
 	int e_buckets = El_Table->get_no_of_buckets();
 
-	double momentum_scale = matprops->HEIGHT_SCALE
-	    * sqrt(matprops->LENGTH_SCALE * (matprops->GRAVITY_SCALE)); // scaling factor for the momentums
+	double hscale = matprops->HEIGHT_SCALE;
+	double lscale = matprops->LENGTH_SCALE;
+	double tscale = timeprops->TIME_SCALE;
+	double gsacel = matprops->GRAVITY_SCALE;
+
+	double velocity_scale = sqrt(lscale * gsacel); // scaling factor for the velocities
+	double momentum_scale = hscale * velocity_scale; // scaling factor for the momentums
+
+	double adjoint_scale[3] = { 1.0, 1.0, 1.0 };
+	adjoint_scale[0] = tscale; //hscale * hscale * lscale * lscale * tscale * tscale;
+	// scale of adjoint is different for first and two other component, and depend on the functional
+	adjoint_scale[1] = adjoint_scale[2] = tscale * tscale * hscale / lscale; //hscale * hscale * lscale * tscale * tscale * tscale;
+
+	double residual_scale[3]; //= { hscale, momentum_scale, momentum_scale };
+	residual_scale[0] = hscale / tscale;
+	residual_scale[1] = residual_scale[2] = momentum_scale / tscale;
+
+	double error_scale, functional_scale;
+
+	// this must be equal to adjoint_scale[i] * residual_scale[i] foe any i
+	error_scale = functional_scale = hscale; //hscale * hscale * lscale * lscale * tscale;
 
 	FILE* fp;
 
@@ -823,8 +848,11 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 
 //fprintf ( fp, "TITLE= \"MESH OUTPUT\"\n" );
 
-	fprintf(fp, "VARIABLES = \"X\" \"Y\" \"Z\" \"PILE_HEIGHT\" \"SXMOMENTUM\" \"SYMOMENTUM\" "
-			"\"Vx_s\" \"Vy_s\"");
+	fprintf(fp, "VARIABLES = \"X\", \"Y\", \"Z\", \"PILE_HEIGHT\","
+			"\"X_MOMENTUM\", \"Y_MOMENTUM\","
+			"\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\","
+			"\"RESIDUAL1\", \"RESIDUAL2\", \"RESIDUAL3\","
+			"\"CORRECTION\", \"ERROR\"\n");
 
 	if (myid == TARGETPROCB) {
 		printf("at meshplotter 3.0\n");
@@ -862,8 +890,16 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 				}
 
 				nodes = EmTemp->getNode();
-				double* state_vars = EmTemp->get_state_vars();
-				double err = sqrt(*(EmTemp->get_el_error()));
+				double* state_vars;
+				if (plotflag==1)
+					state_vars= EmTemp->get_prev_state_vars();
+				else
+					state_vars= EmTemp->get_state_vars();
+
+				double* adjoint = EmTemp->get_adjoint();
+				double* residual = EmTemp->get_residual();
+				double*correction = EmTemp->get_correction();
+				double err = dabs(*(EmTemp->get_el_error() + 1));
 				double Vel[4];
 
 				EmTemp->eval_velocity(0., 0., Vel);
@@ -872,12 +908,15 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 					assert(NodeTemp);
 					int jj = j;
 					if (NodeTemp->getinfo() != S_C_CON)
-						fprintf(fp, "%e %e %e %e %e %e %e %e\n",
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
 						    (*(NodeTemp->get_coord())) * (matprops)->LENGTH_SCALE,
 						    (*(NodeTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
 						    NodeTemp->get_elevation() * (matprops->LENGTH_SCALE),
 						    state_vars[0] * (matprops)->HEIGHT_SCALE, state_vars[1] * momentum_scale,
-						    state_vars[2] * momentum_scale, Vel[0], Vel[1]);
+						    state_vars[2] * momentum_scale, Vel[0], Vel[1], adjoint[0] * adjoint_scale[0],
+						    adjoint[1] * adjoint_scale[1], adjoint[2] * adjoint_scale[2],
+						    residual[0] * residual_scale[0], residual[1] * residual_scale[1],
+						    residual[2] * residual_scale[2], err * error_scale, *correction * functional_scale);
 
 					else // S_C_CON will have a discontinuity in the elevation so fix that by interpolation
 					{
@@ -912,12 +951,15 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 
 						NodeTemp2 = (Node*) NodeTable->lookup(EmTemp2->getNode() + j * KEYLENGTH);
 						elev += .5 * NodeTemp2->get_elevation();
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e\n",
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
 						    (*(NodeTemp->get_coord())) * (matprops)->LENGTH_SCALE,
 						    (*(NodeTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
 						    elev * (matprops->LENGTH_SCALE), state_vars[0] * (matprops)->HEIGHT_SCALE,
 						    state_vars[1] * momentum_scale, state_vars[2] * momentum_scale, Vel[0], Vel[1],
-						    Vel[2], Vel[3], state_vars[1], *(EmTemp->get_drag()), *(EmTemp->get_drag() + 1));
+						    adjoint[0] * adjoint_scale[0], adjoint[1] * adjoint_scale[1],
+						    adjoint[2] * adjoint_scale[2], residual[0] * residual_scale[0],
+						    residual[1] * residual_scale[1], residual[2] * residual_scale[2], err * error_scale,
+						    *correction * functional_scale);
 					}
 				}
 			}

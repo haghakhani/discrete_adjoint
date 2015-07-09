@@ -188,7 +188,7 @@ void dualplot(DualMesh* dualmesh, MatProps* matprops, TimeProps* timeprops, MapN
 
 //! this function writes text tecplot output files in the mshplxxxxxxxx.plt format.  This is largely untouched since before I (Keith) joined the GMFG, just minor changes.  This is the preferred (by Professor Patra) format of output for debugging purposes even though tecplxxxxxxxx.plt create nicer images.
 extern void meshplotter(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps* matprops,
-    TimeProps* timeprops, MapNames* mapnames, double v_star);
+    TimeProps* timeprops, MapNames* mapnames, double v_star,int plotflag=0);
 
 //! one of "pady's" output functions, since Keith never met "pady" this is probably long out of date
 extern void vizplotter(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps* matprops,

@@ -57,7 +57,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 //	    rescomp);
 
 	int tecflag = 2;
-	tecplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, functional, tecflag);
+	meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0.,tecflag);
 
 	tecflag = 1;
 
@@ -118,13 +118,11 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 //		    rescomp);
 
 		if (timeprops_ptr->adjiter/*timeprops_ptr->ifadjoint_out() /*|| adjiter == 1*/)
-			tecplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, functional,
-			    tecflag);
-//		meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0.);
+			meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0.,tecflag);
 
 		dual_refine_unrefine(meshctx, propctx);
 
-//		cout << "num_elem= " << num_nonzero_elem(El_Table) << "\n";
+		cout << "num_elem= " << num_nonzero_elem(El_Table) << "\n";
 
 	}
 
@@ -200,7 +198,7 @@ void record_solution(MeshCTX* meshctx, PropCTX* propctx, SolRec* solrec) {
 
 						if (*(Curr_El->get_state_vars()) > 0.) {
 							Solution *solution = new Solution(Curr_El->get_state_vars(),
-							    *(Curr_El->get_kactxy()));
+									*(Curr_El->get_kactxy()));
 							jacobian->put_solution(solution, timeptr->iter);
 
 						} else
@@ -226,14 +224,14 @@ void record_solution(MeshCTX* meshctx, PropCTX* propctx, SolRec* solrec) {
 						int aa = 0, bb = 1;
 						unsigned keyy[2] = { 541694361, 2576980377 };
 						if (*(Curr_El->pass_key()) == keyy[0] && *(Curr_El->pass_key() + 1) == keyy[1]
-						    && timeptr->iter == 4)
+								&& timeptr->iter == 4)
 							bb = aa;
 
 						Jacobian *jacobian = (Jacobian *) solrec->lookup(Curr_El->pass_key());
 						if (jacobian) {
 							if (*(Curr_El->get_state_vars()) > 0.) {
 								Solution *solution = new Solution(Curr_El->get_state_vars(),
-								    *(Curr_El->get_kactxy()));
+										*(Curr_El->get_kactxy()));
 								jacobian->put_solution(solution, timeptr->iter);
 
 							} else
@@ -245,7 +243,7 @@ void record_solution(MeshCTX* meshctx, PropCTX* propctx, SolRec* solrec) {
 
 							if (*(Curr_El->get_state_vars()) > 0.) {
 								Solution *solution = new Solution(Curr_El->get_state_vars(),
-								    *(Curr_El->get_kactxy()));
+										*(Curr_El->get_kactxy()));
 								jacobian->put_solution(solution, timeptr->iter);
 
 							} else
@@ -386,6 +384,7 @@ void reverse_states(HashTable* El_Table, HashTable* solrec, int iter) {
 	exit(22);
 #endif
 
+	int reg = 0, ref = 0, unref = 0;
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
@@ -393,13 +392,15 @@ void reverse_states(HashTable* El_Table, HashTable* solrec, int iter) {
 				Curr_El = (Element*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) {
 
-					Curr_El->rev_state_vars(solrec, iter);
+					Curr_El->rev_state_vars(solrec, El_Table, iter, &reg, &unref, &ref);
 
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 	}
+
+	cout << "reg= " << reg << "  ref=" << ref << "  unref= " << unref << endl;
 }
 
 void print_jacobian(HashTable* El_Table, int iter) {
@@ -456,8 +457,8 @@ void compute_functional(HashTable* El_Table, double* functional, TimeProps* time
 					// flag is for time step 0
 
 					*functional += .5
-					    * (state_vars[0] * state_vars[0] + prev_state_vars[0] * prev_state_vars[0]) * dx[0]
-					    * dx[1] * dt;
+							* (state_vars[0] * state_vars[0] + prev_state_vars[0] * prev_state_vars[0]) * dx[0]
+							* dx[1] * dt;
 
 				}
 				currentPtr = currentPtr->next;
@@ -501,7 +502,7 @@ void orgSourceSgn(Element* Curr_El, double frictiny, double* orgSgn) {
 void refinement_report(HashTable* El_Table) {
 
 	int newbuffer = 0, buffer = 0, newson = 0, newfather = 0, norecadapt = 0, tobedeleted = 0,
-	    oldfather = 0, oldson = 0;
+			oldfather = 0, oldson = 0;
 
 	HashEntryPtr currentPtr;
 	Element *Curr_El;
@@ -514,40 +515,40 @@ void refinement_report(HashTable* El_Table) {
 				Curr_El = (Element*) (currentPtr->value);
 
 				switch (Curr_El->get_adapted_flag()) {
-					case 5:
-						newbuffer++;
-						break;
-					case 4:
-						buffer++;
-						break;
-					case 3:
-						newson++;
-						break;
-					case 2:
-						newfather++;
-						break;
-					case 1:
-						norecadapt++;
-						break;
-					case 0:
-						tobedeleted++;
-						break;
-					case -6:
-						oldfather++;
-						break;
-					case -7:
-						oldson++;
-						break;
-					default:
-						cout << "this case is irregular \n";
+				case 5:
+					newbuffer++;
+					break;
+				case 4:
+					buffer++;
+					break;
+				case 3:
+					newson++;
+					break;
+				case 2:
+					newfather++;
+					break;
+				case 1:
+					norecadapt++;
+					break;
+				case 0:
+					tobedeleted++;
+					break;
+				case -6:
+					oldfather++;
+					break;
+				case -7:
+					oldson++;
+					break;
+				default:
+					cout << "this case is irregular \n";
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 
 	cout << " new buffer: " << newbuffer << "\n buffer:     " << buffer << "\n newson:     " << newson
-	    << "\n newfather:  " << newfather << "\n norecadapt: " << norecadapt << "\n tobedeleted:"
-	    << tobedeleted << "\n oldfather:  " << oldfather << "\n oldson:     " << oldson << "\n";
+			<< "\n newfather:  " << newfather << "\n norecadapt: " << norecadapt << "\n tobedeleted:"
+			<< tobedeleted << "\n oldfather:  " << oldfather << "\n oldson:     " << oldson << "\n";
 
 }
 
@@ -566,9 +567,30 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx) {
 	HashEntryPtr *buck = El_Table->getbucketptr();
 	ElemPtrList RefinedList, NewFatherList, OtherProcUpdate;
 
-	int rescomp = 0;
+	int rescomp = 1;
 
-	unsigned keyy[2] = { 3760697659, 330382100 };
+//	unsigned keyy[2] = { 541694361, 2576980377 };
+
+	// start refinement
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() == DUALREF)
+
+					refinewrapper(El_Table, NodeTable, matprops_ptr, &RefinedList, Curr_El, rescomp);
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	refine_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &RefinedList, timeprops_ptr);
+
+	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
+
+
 
 	//dummy value is not used in the function
 	double UNREFINE_TARGET = .01;
@@ -595,8 +617,8 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx) {
 				currentPtr = currentPtr->next;
 				if (Curr_El->get_adapted_flag() == NOTRECADAPTED) {
 
-					if (*(Curr_El->pass_key()) == keyy[0] && *(Curr_El->pass_key() + 1) == keyy[1])
-						cout << "i found you \n";
+//					if (*(Curr_El->pass_key()) == keyy[0] && *(Curr_El->pass_key() + 1) == keyy[1])
+//						cout << "i found you \n";
 					//check to see if currentPtr might get deleted and if it might, find next ptr that won't
 					if (currentPtr != NULL) {
 						int newnext = 0;
@@ -609,7 +631,7 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx) {
 						}
 					}
 					Curr_El->find_brothers(El_Table, NodeTable, UNREFINE_TARGET, myid, matprops_ptr,
-					    &NewFatherList, &OtherProcUpdate, rescomp);
+							&NewFatherList, &OtherProcUpdate, rescomp);
 				}
 			}
 		}
@@ -619,27 +641,30 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx) {
 	unrefine_interp_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &OtherProcUpdate);
 
 	for (int k = 0; k < NewFatherList.get_num_elem(); k++)
-		delete_oldsons(El_Table, NodeTable, myid, NewFatherList.get(k));
+			delete_oldsons(El_Table, NodeTable, myid, NewFatherList.get(k));
 
-	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
-
-	// start refinement
-	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
-		if (*(buck + i)) {
-			currentPtr = *(buck + i);
-			while (currentPtr) {
-				Curr_El = (Element*) (currentPtr->value);
-
-				if (Curr_El->get_adapted_flag() == DUALREF)
-
-					refinewrapper(El_Table, NodeTable, matprops_ptr, &RefinedList, Curr_El, rescomp);
-
-				currentPtr = currentPtr->next;
-			}
-		}
-
-	refine_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &RefinedList, timeprops_ptr);
 
 	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
 
 }
+
+//void reset_adapted_flag(HashTable* El_Table){
+//
+//	HashEntryPtr currentPtr;
+//	Element *Curr_El;
+//	HashEntryPtr *buck = El_Table->getbucketptr();
+//
+//	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+//		if (*(buck + i)) {
+//			currentPtr = *(buck + i);
+//			while (currentPtr) {
+//				Curr_El = (Element*) (currentPtr->value);
+//
+//				if (Curr_El->get_adapted_flag() >0)
+//					Curr_El->put_adapted_flag(BUFFER);
+//
+//				currentPtr = currentPtr->next;
+//			}
+//		}
+//
+//}
