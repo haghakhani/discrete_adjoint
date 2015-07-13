@@ -27,6 +27,8 @@
 
 using namespace std;
 
+class ElemPtrList;
+
 //#define USE_FATHER
 
 //! The Element class is a data structure designed to hold all the information need for an h (cell edge length) p (polynomial order) adaptive finite element.  Titan doesn't use p adaptation because it is a finite difference/volume code, hence many of the members are legacy from afeapi (adaptive finite element application programmers interface) which serves as the core of titan.  There is a seperate Discontinuous Galerkin Method (finite elements + finite volumes) version of titan and the polynomial information is not legacy there.  However in this version of Titan elements function simply as finite volume cells.
@@ -35,42 +37,42 @@ class Element {
 	friend class HashTable;
 
 	friend void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable, int numprocs, int myid,
-			double loc);
+	    double loc);
 
 	friend void ElemBackgroundCheck(HashTable* El_Table, HashTable* NodeTable, unsigned *debugkey,
-			FILE *fp);
+	    FILE *fp);
 
 	friend void ElemBackgroundCheck2(HashTable* El_Table, HashTable* NodeTable, void *EmDebug,
-			FILE *fp);
+	    FILE *fp);
 
 	friend void NodeBackgroundCheck(HashTable* El_Table, HashTable* NodeTable, unsigned *debugkey,
-			FILE *fp);
+	    FILE *fp);
 
 	friend void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *EmFather);
 
 	friend void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int numprocs, int myid,
-			void* RefinedList, TimeProps* timeprops_ptr);
+	    void* RefinedList, TimeProps* timeprops_ptr);
 
 	friend void unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int myid,
-			void* NewFatherList);
+	    void* NewFatherList);
 
 	friend void unrefine_interp_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump,
-			int myid, void* OtherProcUpdate);
+	    int myid, void* OtherProcUpdate);
 
 	friend void BSFC_combine_elements(int side, Element *EmTemp, HashTable *HT_Elem_Ptr,
-			HashTable *HT_Node_Ptr, int destination_proc);
+	    HashTable *HT_Node_Ptr, int destination_proc);
 
 	friend void Pack_element(void *sendel, ElemPack* elem, HashTable* HT_Node_Ptr,
-			int destination_proc);
+	    int destination_proc);
 
 	friend void destroy_element(void *r_element, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
-			int target_pro, ELinkPtr* EL_head);
+	    int target_pro, ELinkPtr* EL_head);
 
 	friend void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
-			int myid, double* e_error);
+	    int myid, double* e_error);
 
 	friend void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, int myid,
-			double* e_error);
+	    double* e_error);
 
 public:
 
@@ -97,17 +99,17 @@ public:
 
 	//! constructor that creates an original element when funky is read in
 	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], BC *b, int mat,
-			int *elm_loc_in, double pile_height, int myid, unsigned *opposite_brother);
+	    int *elm_loc_in, double pile_height, int myid, unsigned *opposite_brother);
 
 	//! constructor that creates a son element from its father during refinement
 	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], BC *b, int gen,
-			int elm_loc_in[], int *ord, int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
-			HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
-			int iwetnodefather, double Awetfather, double *drypoint_in, int resComp);
+	    int elm_loc_in[], int *ord, int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
+	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
+	    int iwetnodefather, double Awetfather, double *drypoint_in, int resComp);
 
 	//! constructor that creates a father element from its four sons during unrefinement
 	Element(Element *sons[], HashTable *NodeTable, HashTable *El_Table, MatProps *matprops_ptr,
-			int resComp);
+	    int resComp);
 
 	//! constructor that creates/restores a saved element during restart
 	Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
@@ -337,32 +339,32 @@ public:
 
 	//! this function, based on the dir flag, chooses between calling xdirflux and ydirflux, which respectively, calculate either the x or y direction analytical cell center fluxes (or the fluxes at the the boundary if 2nd order flux option is checked on the gui). Keith wrote this.
 	void zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int order_flag,
-			int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], Element *EmNeigh,
-			double dt, ResFlag resflag);
+	    int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], Element *EmNeigh,
+	    double dt, ResFlag resflag);
 
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) x direction fluxes. Keith wrote this
 	void xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
-			double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag);
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag);
 
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) y direction fluxes. Keith wrote this
 	void ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
-			double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag);
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag);
 
 	void dual_zdirflux(int dir, double hfv[3][NUM_STATE_VARS], ResFlag resflag);
 	void dual_ydirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag);
 	void dual_xdirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag);
 	void calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int side, ResFlag lresflag,
-			ResFlag rresflag);
+	    ResFlag rresflag);
 	void calc_yflux(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
-			ResFlag rresflag);
+	    ResFlag rresflag);
 	void calc_xflux(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
-			ResFlag rresflag);
+	    ResFlag rresflag);
 	void calc_fluxes(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
-			ResFlag rresflag);
+	    ResFlag rresflag);
 
 	//! this function (indirectly) calculates the fluxes that will be used to perform the finite volume corrector step and stores them in element edge nodes, indirectly because it calls other functions to calculate the analytical fluxes and then calls another function to compute the riemann fluxes from the analytical fluxes. Talk to me (Keith) before you modify this, as I am fairly certain that it is now completely bug free and parts of it can be slightly confusing.
 	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int myid,
-			double dt, int* order_flag, double *outflow, ResFlag lresflag, ResFlag rresflag);
+	    double dt, int* order_flag, double *outflow, ResFlag lresflag, ResFlag rresflag);
 
 	/*! this function calculates the maximum x and y direction wavespeeds
 	 *  which are the eigenvalues of the flux jacobian
@@ -439,7 +441,7 @@ public:
 
 	//! this function is defined in unrefine.C, it is also called in that file, it finds this element's brothers
 	int find_brothers(HashTable* El_Table, HashTable* NodeTable, double target, int myid,
-			MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int rescomp);
+	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int rescomp);
 	/*
 	 //! this function is defined in unrefine.C, it is also called in that file, it finds this element's brothers
 	 int find_brothers(HashTable* El_Table, HashTable* NodeTable,
@@ -453,7 +455,7 @@ public:
 
 	//! this function updates this elements neighbor info when one of its neighbors has been unrefined
 	void change_neigh_info(unsigned *fth_key, unsigned *ng_key, int neworder, int ng_gen,
-			int fth_proc);
+	    int fth_proc);
 
 	//! this function returns the elm_loc variable, which is used in unrefinement beyond the initial coarse grid
 	int* get_elm_loc();
@@ -599,7 +601,8 @@ public:
 
 	void new_jacobianMat();
 
-	void rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, int*, int*, int*);
+	void rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, int*, int*, int*,
+	    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
 
 	void set_jacobianMat_zero(int jacmatind);
 

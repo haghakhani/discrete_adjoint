@@ -235,25 +235,25 @@ int main(int argc, char *argv[]) {
 			if ((adaptflag != 0) && (timeprops.iter % 5 == 4)) {
 				AssertMeshErrorFree(BT_Elem_Ptr, BT_Node_Ptr, numprocs, myid, -2.0);
 
-				unsigned keyy[2] = { 3410598297, 2576980374 };
-				if (checkElement(BT_Elem_Ptr, NULL, keyy))
-					cout << "I found the suspecious element \n";
-				refinement_report(BT_Elem_Ptr);
+//				unsigned keyy[2] = { 635356396, 1321528399 };
+//				if (checkElement(BT_Elem_Ptr, NULL, keyy))
+//					cout << "I found the suspecious element \n";
+//				refinement_report(BT_Elem_Ptr);
 
 				H_adapt(BT_Elem_Ptr, BT_Node_Ptr, h_count, TARGET, &matprops, &fluxprops, &timeprops, 5);
 
-				if (checkElement(BT_Elem_Ptr, NULL, keyy))
-					cout << "I found the suspecious element \n";
-				refinement_report(BT_Elem_Ptr);
+//				if (checkElement(BT_Elem_Ptr, NULL, keyy))
+//					cout << "I found the suspecious element \n";
+//				refinement_report(BT_Elem_Ptr);
 
 				move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
 				unrefine(BT_Elem_Ptr, BT_Node_Ptr, UNREFINE_TARGET, myid, numprocs, &timeprops, &matprops,
 						rescomp);
 
-				if (checkElement(BT_Elem_Ptr, NULL, keyy))
-					cout << "I found the suspecious element \n";
-				refinement_report(BT_Elem_Ptr);
+//				if (checkElement(BT_Elem_Ptr, NULL, keyy))
+//					cout << "I found the suspecious element \n";
+//				refinement_report(BT_Elem_Ptr);
 
 				MPI_Barrier(MPI_COMM_WORLD);      //for debug
 
@@ -271,7 +271,7 @@ int main(int argc, char *argv[]) {
 			step(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops, &pileprops, &fluxprops,
 					&statprops, &order_flag, &outline, &discharge, adaptflag);
 
-			cout << "num_elem= " << num_nonzero_elem(BT_Elem_Ptr) << "\n";
+//			cout << "num_elem= " << num_nonzero_elem(BT_Elem_Ptr) << "\n";
 
 			record_solution(&meshctx, &propctx, solrec);
 

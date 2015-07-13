@@ -223,7 +223,7 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 	}
 
 	int aa = 0, bb = 1;
-	unsigned keyy[2] = { 541694361, 2576980377 };
+	unsigned keyy[2] = { 3410598297, 2576980374 };
 	if (key[0] == keyy[0] && key[1] == keyy[1])
 		bb = aa;
 
@@ -4113,7 +4113,12 @@ void Element::gen_my_sons_key(HashTable* El_Table, unsigned son_key[4][KEYLENGTH
 		fhsfc2d_(norm_coord[i], &nkey, son_key[i]);
 }
 void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, int *reg, int* unref,
-    int* ref) {
+    int* ref,ElemPtrList* refinelist,  ElemPtrList* unrefinelist) {
+
+	int aa = 0, bb = 1;
+	unsigned keyy[2] = { 3410598297, 2576980374 };
+	if (key[0] == keyy[0] && key[1] == keyy[1])
+		bb = aa;
 
 	Jacobian *jacobian = (Jacobian *) solrec->lookup(key);
 
@@ -4128,7 +4133,6 @@ void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, i
 		for (int i = 0; i < NUM_STATE_VARS; i++)
 			prev_state_vars[i] = *(prev_sol->get_solution() + i);
 
-		adapted = DUALREG;
 		*reg += 1;
 
 	} else {
@@ -4147,7 +4151,7 @@ void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, i
 		}
 		if (prev_sol) {
 
-			adapted = DUALUNREF;
+			unrefinelist->add(this);
 			*unref += 1;
 
 		} else {
@@ -4168,7 +4172,7 @@ void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, i
 					prev_state_vars[j] += *(prev_sol->get_solution() + j) * .25;
 
 			}
-			adapted = DUALREF;
+			refinelist->add(this);
 			*ref += 1;
 
 		}

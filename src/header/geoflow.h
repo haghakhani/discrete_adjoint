@@ -154,7 +154,8 @@ void calc_flux_slope_kact(HashTable* El_Table, HashTable* NodeTable, Element* Cu
 void increment_state(HashTable* El_Table, Element* Curr_El, double increment, int effelement, int j,
     int* updateflux, int* srcflag, ResFlag resflag[5]);
 
-void reverse_states(HashTable* El_Table, HashTable* solrec, int iter);
+void reverse_states(HashTable* El_Table, HashTable* solrec, int iter, ElemPtrList* refinelist,
+    ElemPtrList* unrefinelist);
 
 void print_jacobian(HashTable* El_Table, int iter);
 
@@ -164,7 +165,10 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid, ResFlag resflag);
 
 void refinement_report(HashTable* El_Table);
 
-void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx);
+void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx,ElemPtrList* refinelist,
+    ElemPtrList* unrefinelist);
+
+void reset_adaption_flag(HashTable* El_Table);
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);

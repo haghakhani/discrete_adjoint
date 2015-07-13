@@ -234,7 +234,7 @@ int Element::find_brothers(HashTable* El_Table, HashTable* NodeTable, double tar
 		i++;
 	}
 
-	if (unrefine_flag == 1) { // we want to unrefine this element...
+	if (unrefine_flag ) { // we want to unrefine this element...
 		//first we create the father element
 		//printf("==============================\n unrefining an element \n===============================\n");
 		if (*(bros[1]->getfather()) == (unsigned) 1529353130)
