@@ -74,7 +74,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 
 	double* adjoint = Curr_El->get_adjoint();
 
-	Curr_El->calc_func_sens((const void *) &ctx);
+//	Curr_El->calc_func_sens((const void *) &ctx);
 
 	HashTable* El_Table = meshctx->el_table;
 
@@ -91,7 +91,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 
 	if (propctx->timeprops->adjiter == 0) {
 
-//		calc_func_sens(El_Table);
+		calc_func_sens(El_Table);
 
 		for (int i = 0; i < NUM_STATE_VARS; ++i)
 			adjoint[i] = *(Curr_El->get_func_sens() + i);
@@ -157,11 +157,11 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 					// because we have to consider the element itself which is in jacind=0
 					jacind++;
 
-#ifdef DEBUGFILE
-
 					for (int k = 0; k < NUM_STATE_VARS; ++k)
-					for (int l = 0; l < NUM_STATE_VARS; ++l)
-					adjcontr[k] += adjoint_pointer[l] * jacobianmat[jacind][k][l];
+						for (int l = 0; l < NUM_STATE_VARS; ++l)
+							adjcontr[k] += adjoint_pointer[l] * jacobianmat[jacind][k][l];
+
+#ifdef DEBUGFILE
 
 					if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
 							&& propctx->timeprops->iter == ITER) {
@@ -191,7 +191,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 		}
 
 		for (int j = 0; j < NUM_STATE_VARS; j++)
-			adjoint[j] = *(Curr_El->get_func_sens() + j) - adjcontr[j];
+			adjoint[j] = /**(Curr_El->get_func_sens() + j)*/-adjcontr[j];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)

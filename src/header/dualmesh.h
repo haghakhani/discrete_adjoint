@@ -19,6 +19,8 @@ public:
 	SolRec(double *doublekeyrangein, int size, int prime, double  XR[], double YR[], int ifrestart);
 	Solution* get_zero_solution();
 
+//	wrtie_sol_to_disk
+
 };
 
 //private:

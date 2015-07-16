@@ -183,9 +183,6 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 										increment_state(El_Table, Curr_El, incr, effelement, j, &updateflux, &srcflag,
 										    resflag);
 
-//																				calc_flux_slope_kact(El_Table, NodeTable, Curr_El, matprops_ptr, myid,
-//										    effelement, updateflux, srcflag, resflag);
-
 										calc_flux_slope_kact(El_Table, NodeTable, Curr_El, matprops_ptr, myid,
 										    effelement, updateflux, srcflag, resflag);
 
