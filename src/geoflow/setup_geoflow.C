@@ -101,12 +101,9 @@ void calc_d_gravity(HashTable* El_Table) {
 			while (currentPtr) {
 				Element* Curr_El = (Element*) (currentPtr->value);
 				int refined = Curr_El->get_refined_flag();
-				if (Curr_El->get_adapted_flag() > 0) //if this is a refined element don't involve!!!
-				    {
+				if (Curr_El->get_adapted_flag() > 0) {
 					Curr_El->calc_d_gravity(El_Table);
-
 				}
-
 				currentPtr = currentPtr->next;
 			}
 		}

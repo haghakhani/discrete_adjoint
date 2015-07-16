@@ -74,7 +74,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 
 	double* adjoint = Curr_El->get_adjoint();
 
-//	Curr_El->calc_func_sens((const void *) &ctx);
+	Curr_El->calc_func_sens((const void *) &ctx);
 
 	HashTable* El_Table = meshctx->el_table;
 
@@ -91,7 +91,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 
 	if (propctx->timeprops->adjiter == 0) {
 
-		calc_func_sens(El_Table);
+//		calc_func_sens(El_Table);
 
 		for (int i = 0; i < NUM_STATE_VARS; ++i)
 			adjoint[i] = *(Curr_El->get_func_sens() + i);
@@ -191,7 +191,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 		}
 
 		for (int j = 0; j < NUM_STATE_VARS; j++)
-			adjoint[j] =/* *(Curr_El->get_func_sens() + j)*/ - adjcontr[j];
+			adjoint[j] = *(Curr_El->get_func_sens() + j) - adjcontr[j];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)

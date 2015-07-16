@@ -22,9 +22,9 @@
 
 #define DEBUG1
 
-#define KEY0    3777862041
-#define KEY1    2576980374
-#define EFFELL  0
+#define KEY0   3920807148
+#define KEY1   1321528399
+#define ITER   10
 #define ITER    187
 #define J       0
 
@@ -42,11 +42,17 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 	const double increment = INCREMENT;
 	const int maxiter = timeprops_ptr->iter;
 
+	unsigned keyy[2] = { 3796806314, 2863311530 };
+//	if (checkElement(El_Table, NULL, keyy))
+//		cout << "I found the suspecious element \n";
+
 	allocJacoMat(El_Table);
 
 	reset_adaption_flag(El_Table);
 
 	double functional = 0.0, dt;
+
+	cout << "computing ADJOINT time step " << maxiter << endl;
 
 	calc_adjoint(meshctx, propctx);
 
@@ -62,21 +68,24 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 	meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
 
 	tecflag = 1;
-
-	ElemPtrList refinelist, unrefinelist;
-
 	for (int iter = maxiter; iter > 0; --iter) {
 
-		allocJacoMat(El_Table);
-
 		timeprops_ptr->iter = iter;
+		cout << "computing ADJOINT time step " << iter - 1 << endl;
 		dt = timeprops_ptr->dt.at(iter - 1);
 		timeprops_ptr->adjiter++;
 
 		// we need this even for  iter = maxiter because after refine and unrefine
 		// the state variables are not same as forward run
+		// reverse_states(El_Table, solrec, iter, &refinelist, &unrefinelist);
 
-		reverse_states(El_Table, solrec, iter, &refinelist, &unrefinelist);
+		setup_dual_flow(solrec, meshctx, propctx, iter);
+
+//		print_Elem_Table(El_Table,timeprops_ptr->iter,1);
+
+//		cout << "num_elem= " << num_nonzero_elem(El_Table) << "\n";
+
+		allocJacoMat(El_Table);
 
 		timeprops_ptr->adjoint_time(iter - 1);
 
@@ -85,9 +94,10 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		resflag.callflag = 1;
 		resflag.lgft = 0;
 
-		calc_d_gravity(El_Table);
-
 		calc_flux(meshctx, propctx, myid, resflag);
+
+//		if (checkElement(El_Table, NodeTable, NULL, keyy))
+//			cout << "I found the suspecious element \n";
 
 		slopes(El_Table, NodeTable, matprops_ptr, 1);
 
@@ -95,7 +105,11 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 		eleminfo->update_dual_func(functional);
 
+//		calc_d_gravity(El_Table);
+
 		calc_jacobian(meshctx, propctx, eleminfo, INCREMENT);
+
+//		check_state_vars_with_record(El_Table, solrec, iter);
 
 //		print_jacobian(El_Table, iter);
 
@@ -123,15 +137,6 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 		if (timeprops_ptr->adjiter/*timeprops_ptr->ifadjoint_out() /*|| adjiter == 1*/)
 			meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
-
-		if (timeprops_ptr->iter % 5 == 0)
-			dual_refine_unrefine(meshctx, propctx, &refinelist, &unrefinelist);
-
-//		cout << "num_elem= " << num_nonzero_elem(El_Table) << "\n";
-//
-//		unsigned keyy[2] = { 635356396, 1321528399 };
-//		if (checkElement(El_Table, NULL, keyy))
-//			cout << "I found the suspecious element \n";
 
 	}
 
@@ -195,7 +200,7 @@ void record_solution(MeshCTX* meshctx, PropCTX* propctx, SolRec* solrec) {
 	HashEntryPtr currentPtr;
 	Element* Curr_El;
 
-	if (timeptr->iter == 0) {
+	if (timeptr->iter == 1) {
 
 		for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 			if (*(buck + i)) {
@@ -206,12 +211,12 @@ void record_solution(MeshCTX* meshctx, PropCTX* propctx, SolRec* solrec) {
 						Jacobian *jacobian = new Jacobian(Curr_El->pass_key(), Curr_El->get_coord());
 
 						if (*(Curr_El->get_state_vars()) > 0.) {
-							Solution *solution = new Solution(Curr_El->get_state_vars(),
+							Solution *solution = new Solution(Curr_El->get_prev_state_vars(),
 							    *(Curr_El->get_kactxy()));
-							jacobian->put_solution(solution, timeptr->iter);
+							jacobian->put_solution(solution, timeptr->iter - 1);
 
 						} else
-							jacobian->put_solution(solrec->get_zero_solution(), timeptr->iter);
+							jacobian->put_solution(solrec->get_zero_solution(), timeptr->iter - 1);
 
 						solrec->add(jacobian->get_key(), jacobian);
 
@@ -231,32 +236,32 @@ void record_solution(MeshCTX* meshctx, PropCTX* propctx, SolRec* solrec) {
 					if (Curr_El->get_adapted_flag() > 0) {
 
 						int aa = 0, bb = 1;
-						unsigned keyy[2] = { 541694361, 2576980377 };
+						unsigned keyy[2] = { 3781669179, 330382100 };
 						if (*(Curr_El->pass_key()) == keyy[0] && *(Curr_El->pass_key() + 1) == keyy[1]
-						    && timeptr->iter == 4)
+						    && timeptr->iter == 11)
 							bb = aa;
 
 						Jacobian *jacobian = (Jacobian *) solrec->lookup(Curr_El->pass_key());
 						if (jacobian) {
 							if (*(Curr_El->get_state_vars()) > 0.) {
-								Solution *solution = new Solution(Curr_El->get_state_vars(),
+								Solution *solution = new Solution(Curr_El->get_prev_state_vars(),
 								    *(Curr_El->get_kactxy()));
-								jacobian->put_solution(solution, timeptr->iter);
+								jacobian->put_solution(solution, timeptr->iter - 1);
 
 							} else
-								jacobian->put_solution(solrec->get_zero_solution(), timeptr->iter);
+								jacobian->put_solution(solrec->get_zero_solution(), timeptr->iter - 1);
 
 						} else {
 							jacobian = new Jacobian(Curr_El->pass_key(), Curr_El->get_coord());
 							solrec->add(jacobian->get_key(), jacobian);
 
 							if (*(Curr_El->get_state_vars()) > 0.) {
-								Solution *solution = new Solution(Curr_El->get_state_vars(),
+								Solution *solution = new Solution(Curr_El->get_prev_state_vars(),
 								    *(Curr_El->get_kactxy()));
-								jacobian->put_solution(solution, timeptr->iter);
+								jacobian->put_solution(solution, timeptr->iter - 1);
 
 							} else
-								jacobian->put_solution(solrec->get_zero_solution(), timeptr->iter);
+								jacobian->put_solution(solrec->get_zero_solution(), timeptr->iter - 1);
 
 						}
 					}
@@ -636,7 +641,7 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 //		cout << "6 \n";
 //		refinement_report(El_Table);
 
-		int counter=0,unrefined=0;
+		int counter = 0, unrefined = 0;
 
 		do {
 
@@ -647,11 +652,11 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 				if ((Curr_El->get_which_son() == 0) && (Curr_El->get_adapted_flag() != OLDSON))
 
 					Curr_El->find_brothers(El_Table, NodeTable, target, myid, matprops_ptr, &NewFatherList,
-							&OtherProcUpdate, rescomp);
+					    &OtherProcUpdate, rescomp);
 
 			}
 
-			unrefined+=NewFatherList.get_num_elem();
+			unrefined += NewFatherList.get_num_elem();
 
 //			cout << "7 \n";
 //			refinement_report(El_Table);
@@ -663,15 +668,15 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 
 			unrefine_interp_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &OtherProcUpdate);
 
-
 			for (int k = 0; k < NewFatherList.get_num_elem(); k++)
 				delete_oldsons(El_Table, NodeTable, myid, NewFatherList.get(k));
 
 			reset_adaption_flag(El_Table);
+//			reset_newson_adaption_flag(El_Table);
 
 //			cout<<"this is the counter  "<<counter++<<endl;
 
-		}while (unrefined!=(unrefinelist->get_num_elem()/4));
+		} while (unrefined != (unrefinelist->get_num_elem() / 4));
 
 //		cout << "9 \n";
 //		refinement_report(El_Table);
@@ -679,9 +684,10 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 //		cout << "number of created elem after unref " << unrefined << "  number of unref list  "
 //		    << unrefinelist->get_num_elem() << endl;
 
-
 		move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
 	}
+
+//	calc_d_gravity(El_Table);
 
 	refinelist->trashlist();
 	unrefinelist->trashlist();
@@ -709,5 +715,136 @@ void reset_adaption_flag(HashTable* El_Table) {
 				currentPtr = currentPtr->next;
 			}
 		}
+
+}
+
+void reset_newson_adaption_flag(HashTable* El_Table) {
+
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() == NEWSON) {
+					Curr_El->put_adapted_flag(NOTRECADAPTED);
+					Curr_El->put_refined_flag(0);
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+}
+
+void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, int iter) {
+
+	HashTable* El_Table = meshctx->el_table;
+	HashTable* NodeTable = meshctx->nd_table;
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
+	int myid = propctx->myid, numprocs = propctx->numproc;
+
+	ElemPtrList refinelist, unrefinelist;
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	if (iter % 5 == 4) {
+
+		for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+			if (*(buck + i)) {
+				currentPtr = *(buck + i);
+				while (currentPtr) {
+					Curr_El = (Element*) (currentPtr->value);
+
+					if (Curr_El->get_adapted_flag() > 0)
+						Curr_El->check_refine_unrefine(solrec, El_Table, iter, &refinelist, &unrefinelist);
+
+					currentPtr = currentPtr->next;
+				}
+			}
+
+		dual_refine_unrefine(meshctx, propctx, &refinelist, &unrefinelist);
+
+//			setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
+
+		calc_d_gravity(El_Table);
+
+	}
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0)
+					Curr_El->update_state(solrec, El_Table, iter);
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+}
+
+void check_state_vars_with_record(HashTable* El_Table, HashTable* solrec, int iter) {
+
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0)
+					if (Curr_El->check_state(solrec, El_Table, iter))
+						cout << "the idea did not work \n";
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+}
+
+void print_Elem_Table(HashTable* El_Table,int iter,int place){
+
+	ofstream myfile;
+	char filename [50];
+	sprintf(filename,"El_Table_%d_%08d",place,iter);
+
+	myfile.open(filename,ios::app);
+
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+
+				myfile<<*(Curr_El->pass_key())<<" "<<*(Curr_El->pass_key()+1)<<" ";
+				for (int i=0;i<8*2;++i)
+					myfile<<*(Curr_El->get_neighbors()+i)<<" ";
+				for (int i=0;i<8;++i)
+					myfile<<*(Curr_El->get_neigh_gen()+i)<<" ";
+				myfile<<endl;
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	myfile.close();
 
 }

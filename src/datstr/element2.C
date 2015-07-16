@@ -3261,6 +3261,12 @@ int Element::determine_refinement(double target) {
 }
 
 void Element::calc_d_gravity(HashTable* El_Table) {
+
+	unsigned keyy[2] = { 3941335040, 0 };
+	int aa = 0, bb = 1;
+	if (key[0] == keyy[0] && key[1] == keyy[1])
+		bb = aa;
+
 	int xp, xm, yp, ym; //x plus, x minus, y plus, y minus
 	xp = positive_x_side;
 	switch (positive_x_side) {
@@ -4113,7 +4119,7 @@ void Element::gen_my_sons_key(HashTable* El_Table, unsigned son_key[4][KEYLENGTH
 		fhsfc2d_(norm_coord[i], &nkey, son_key[i]);
 }
 void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, int *reg, int* unref,
-    int* ref,ElemPtrList* refinelist,  ElemPtrList* unrefinelist) {
+    int* ref, ElemPtrList* refinelist, ElemPtrList* unrefinelist) {
 
 	int aa = 0, bb = 1;
 	unsigned keyy[2] = { 3410598297, 2576980374 };
@@ -4133,6 +4139,8 @@ void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, i
 		for (int i = 0; i < NUM_STATE_VARS; i++)
 			prev_state_vars[i] = *(prev_sol->get_solution() + i);
 
+		kactxy[0] =prev_sol->get_kact();
+
 		*reg += 1;
 
 	} else {
@@ -4144,12 +4152,17 @@ void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, i
 			unsigned keyy[KEYLENGTH];
 			for (int ikey = 0; ikey < KEYLENGTH; ikey++)
 				keyy[ikey] = *(EmTemp->getNode() + ikey);
-//		compare_key(keyy,father);
+
 			jacobian = (Jacobian *) solrec->lookup(keyy);
 			if (jacobian)
 				prev_sol = jacobian->get_solution(iter - 1);
 		}
 		if (prev_sol) {
+
+			for (int j = 0; j < NUM_STATE_VARS; j++)
+				prev_state_vars[j] = *(prev_sol->get_solution() + j);
+
+			kactxy[0] = prev_sol->get_kact();
 
 			unrefinelist->add(this);
 			*unref += 1;
@@ -4161,6 +4174,8 @@ void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, i
 			for (int i = 0; i < NUM_STATE_VARS; i++)
 				prev_state_vars[i] = 0.;
 
+			kactxy[0] = 0.;
+
 			unsigned son_key[4][KEYLENGTH];
 
 			gen_my_sons_key(El_Table, son_key);
@@ -4168,6 +4183,8 @@ void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, i
 			for (int i = 0; i < 4; ++i) {
 				jacobian = (Jacobian *) solrec->lookup(son_key[i]);
 				prev_sol = jacobian->get_solution(iter - 1);
+				kactxy[0] += prev_sol->get_kact() * .25;
+
 				for (int j = 0; j < NUM_STATE_VARS; j++)
 					prev_state_vars[j] += *(prev_sol->get_solution() + j) * .25;
 
@@ -4178,11 +4195,87 @@ void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, i
 		}
 	}
 
-	kactxy[0] = curr_sol->get_kact();
 	kactxy[1] = kactxy[0];
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		prev_adjoint[i] = adjoint[i];
+
+}
+
+void Element::check_refine_unrefine(HashTable* solrec, HashTable* El_Table, int iter,
+    ElemPtrList* refinelist, ElemPtrList* unrefinelist) {
+
+	int aa = 0, bb = 1;
+	unsigned keyy[2] = { 3410598297, 2576980374 };
+	if (key[0] == keyy[0] && key[1] == keyy[1])
+		bb = aa;
+
+	Jacobian* jacobian = (Jacobian *) solrec->lookup(key);
+
+	Solution* prev_sol = jacobian->get_solution(iter - 1);
+
+	if (!prev_sol) {
+
+		// first we check to see whether the element has been refined, so we have to read from its father
+		Element* EmTemp = (Element*) El_Table->lookup(&brothers[2][0]);
+
+		if (EmTemp) {
+
+			unsigned keyy[KEYLENGTH];
+			for (int ikey = 0; ikey < KEYLENGTH; ikey++)
+				keyy[ikey] = *(EmTemp->getNode() + ikey);
+
+			jacobian = (Jacobian *) solrec->lookup(keyy);
+			if (jacobian)
+				prev_sol = jacobian->get_solution(iter - 1);
+		}
+		if (prev_sol)
+
+			unrefinelist->add(this);
+
+		else
+
+			// the only remaining case is that it has been unrefined so, we have to read from its sons
+			refinelist->add(this);
+
+	}
+
+}
+
+void Element::update_state(HashTable* solrec, HashTable* El_Table, int iter) {
+
+	int aa = 0, bb = 1;
+	unsigned keyy[2] = { 3781669179, 330382100 };
+	if (key[0] == keyy[0] && key[1] == keyy[1])
+		bb = aa;
+
+	Jacobian *jacobian = (Jacobian *) solrec->lookup(key);
+
+	Solution* prev_sol = jacobian->get_solution(iter - 1);
+
+	for (int i = 0; i < NUM_STATE_VARS; i++)
+		prev_state_vars[i] = *(prev_sol->get_solution() + i);
+
+	kactxy[0] = prev_sol->get_kact();
+	kactxy[1] = kactxy[0];
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		prev_adjoint[i] = adjoint[i];
+
+}
+
+int Element::check_state(HashTable* solrec, HashTable* El_Table, int iter) {
+
+	Jacobian *jacobian = (Jacobian *) solrec->lookup(key);
+
+	Solution* curr_sol = jacobian->get_solution(iter);
+
+	if (curr_sol)
+		for (int i = 0; i < NUM_STATE_VARS; i++)
+			if (dabs(state_vars[i] - *(curr_sol->get_solution() + i)) > 1e-10)
+				return 1;
+
+	return 0;
 
 }
 

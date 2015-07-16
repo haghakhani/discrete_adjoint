@@ -616,6 +616,13 @@ public:
 
 	void gen_my_sons_key(HashTable* El_Table, unsigned son_key[4][KEYLENGTH]);
 
+	void check_refine_unrefine(HashTable* solrec, HashTable* El_Table, int iter,
+	    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
+
+	void update_state(HashTable* solrec, HashTable* El_Table, int iter);
+
+	int check_state(HashTable* solrec, HashTable* El_Table, int iter);
+
 private:
 	//! myprocess is id of the process(or) that owns this element
 	int myprocess;

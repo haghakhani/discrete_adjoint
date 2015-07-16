@@ -125,7 +125,7 @@ int jac_mat_index(int effelement, int xp);
 
 void orgSourceSgn(Element* Curr_El, double frictiny, double* orgSgn);
 
-int checkElement(HashTable *El_Table, double *max, unsigned *key);
+int checkElement(HashTable *El_Table, HashTable* NodeTable, double *max, unsigned *key);
 
 int num_nonzero_elem(HashTable *El_Table, int type);
 
@@ -165,10 +165,21 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid, ResFlag resflag);
 
 void refinement_report(HashTable* El_Table);
 
-void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx,ElemPtrList* refinelist,
+void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refinelist,
     ElemPtrList* unrefinelist);
 
 void reset_adaption_flag(HashTable* El_Table);
+
+void reset_newson_adaption_flag(HashTable* El_Table);
+
+void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, int iter);
+
+void check_state_vars_with_record(HashTable* El_Table, HashTable* solrec, int iter);
+
+void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, MatProps* matprops_ptr,
+    int effelement, int j, int myid, double increment);
+
+void print_Elem_Table(HashTable* El_Table,int iter,int place);
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);

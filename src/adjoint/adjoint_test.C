@@ -226,13 +226,15 @@ int check_elem_exist(HashTable *El_Table, unsigned *key) {
 	return (0);
 }
 
-int checkElement(HashTable *El_Table, double *max, unsigned *key) {
+int checkElement(HashTable *El_Table, HashTable *NodeTable, double *max, unsigned *key) {
 
 	HashEntryPtr currentPtr;
 	Element *Curr_El;
 	HashEntryPtr *buck = El_Table->getbucketptr();
 
-	int gg= 0;
+	int gg = 0;
+
+	double fluxold[4][NUM_STATE_VARS];
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -240,13 +242,46 @@ int checkElement(HashTable *El_Table, double *max, unsigned *key) {
 			while (currentPtr) {
 				Curr_El = (Element*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) {
-					if (*(Curr_El->pass_key()) == key[0] && *(Curr_El->pass_key() + 1) == key[1])
-						gg= 1;
+					if (*(Curr_El->pass_key()) == key[0] && *(Curr_El->pass_key() + 1) == key[1]) {
+						int xp = Curr_El->get_positive_x_side(); //finding the direction of element
+						int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+
+						Node* nxp = (Node*) NodeTable->lookup(Curr_El->getNode() + (xp + 4) * 2);
+
+						Node* nyp = (Node*) NodeTable->lookup(Curr_El->getNode() + (yp + 4) * 2);
+
+						Node* nxm = (Node*) NodeTable->lookup(Curr_El->getNode() + (xm + 4) * 2);
+
+						Node* nym = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
+
+						for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
+							fluxold[0][ivar] = nxp->flux[ivar];
+							fluxold[1][ivar] = nyp->flux[ivar];
+							fluxold[2][ivar] = nxm->flux[ivar];
+							fluxold[3][ivar] = nym->flux[ivar];
+						}
+						gg = 1;
+					}
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 
+	cout << " \n flux xp: \n";
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		cout << " " << fluxold[0][i];
+
+	cout << " \n flux yp: \n";
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		cout << " " << fluxold[1][i];
+
+	cout << " \n flux xm: \n";
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		cout << " " << fluxold[2][i];
+
+	cout << " \n flux ym: \n";
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		cout << " " << fluxold[3][i];
 
 	return (gg);
 }

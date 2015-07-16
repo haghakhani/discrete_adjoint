@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 
 		StatProps statprops;
 		MatProps matprops(material_count, matnames, intfrictang, bedfrictang, mu, rho, epsilon, gamma,
-				frict_tiny, 1.0, 1.0, 1.0);
+		    frict_tiny, 1.0, 1.0, 1.0);
 		TimeProps timeprops;
 		timeprops.starttime = time(NULL);
 
@@ -113,10 +113,10 @@ int main(int argc, char *argv[]) {
 		 later */
 
 		Read_data(myid, &matprops, &pileprops, &statprops, &timeprops, &fluxprops, &adaptflag,
-				&viz_flag, &order_flag, &mapnames, &discharge, &outline, &srctype);
+		    &viz_flag, &order_flag, &mapnames, &discharge, &outline, &srctype);
 
 		if (!loadrun(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &matprops, &timeprops, &mapnames,
-				&adaptflag, &order_flag, &statprops, &discharge, &outline)) {
+		    &adaptflag, &order_flag, &statprops, &discharge, &outline)) {
 			Read_grid(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &matprops, &outline, &solrec);
 
 			setup_geoflow(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops);
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 
 			//initialize pile height and if appropriate perform initial adaptation
 			init_piles(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, adaptflag, &matprops, &timeprops,
-					&mapnames, &pileprops, &fluxprops, &statprops);
+			    &mapnames, &pileprops, &fluxprops, &statprops);
 
 			setup_geoflow(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops);
 		}
@@ -135,10 +135,10 @@ int main(int argc, char *argv[]) {
 		if (myid == 0) {
 			for (int imat = 1; imat <= matprops.material_count; imat++)
 				printf("bed friction angle for \"%s\" is %g\n", matprops.matnames[imat],
-						matprops.bedfrict[imat] * 180.0 / PI);
+				    matprops.bedfrict[imat] * 180.0 / PI);
 
 			printf("internal friction angle is %g, epsilon is %g \n method order = %i\n",
-					matprops.intfrict * 180.0 / PI, matprops.epsilon, order_flag);
+			    matprops.intfrict * 180.0 / PI, matprops.epsilon, order_flag);
 			printf("REFINE_LEVEL=%d\n", REFINE_LEVEL);
 		}
 
@@ -160,14 +160,14 @@ int main(int argc, char *argv[]) {
 		propctx.numproc = numprocs;
 		propctx.myid = myid;
 
-		record_solution(&meshctx, &propctx, solrec);
+//		record_solution(&meshctx, &propctx, solrec);
 
 		if (myid == 0)
 			output_summary(&timeprops, &statprops, savefileflag);
 
 		if (viz_flag & 1)
 			tecplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames, statprops.vstar,
-					adjflag);
+			    adjflag);
 
 		if (viz_flag & 2)
 			meshplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames, statprops.vstar);
@@ -249,7 +249,7 @@ int main(int argc, char *argv[]) {
 				move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
 				unrefine(BT_Elem_Ptr, BT_Node_Ptr, UNREFINE_TARGET, myid, numprocs, &timeprops, &matprops,
-						rescomp);
+				    rescomp);
 
 //				if (checkElement(BT_Elem_Ptr, NULL, keyy))
 //					cout << "I found the suspecious element \n";
@@ -266,11 +266,18 @@ int main(int argc, char *argv[]) {
 					move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
 				}
 				move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
+
+				calc_d_gravity(BT_Elem_Ptr);
 			}
 
 			step(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops, &pileprops, &fluxprops,
-					&statprops, &order_flag, &outline, &discharge, adaptflag);
+			    &statprops, &order_flag, &outline, &discharge, adaptflag);
 
+//			print_Elem_Table(BT_Elem_Ptr,timeprops.iter,0);
+
+//			unsigned keyy[2] = { 3796806314, 2863311530 };
+//			if (checkElement(BT_Elem_Ptr, BT_Node_Ptr,NULL, keyy))
+//				cout << "I found the suspecious element \n";
 //			cout << "num_elem= " << num_nonzero_elem(BT_Elem_Ptr) << "\n";
 
 			record_solution(&meshctx, &propctx, solrec);
@@ -297,7 +304,7 @@ int main(int argc, char *argv[]) {
 
 				if (viz_flag & 1)
 					tecplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames, statprops.vstar,
-							adjflag);
+					    adjflag);
 
 				if (viz_flag & 2)
 					meshplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames, statprops.vstar);
@@ -358,7 +365,7 @@ int main(int argc, char *argv[]) {
 
 		if (viz_flag & 1)
 			tecplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames, statprops.vstar,
-					adjflag);
+			    adjflag);
 		//printf("hpfem.C 2: xcen=%g\n",statprops.xcen);
 		MPI_Barrier(MPI_COMM_WORLD);
 

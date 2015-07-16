@@ -66,6 +66,8 @@ class Node {
 	    double increment, double fluxold[4][NUM_STATE_VARS],
 	    double d_state_vars_old[DIMENSION * NUM_STATE_VARS]);
 
+	friend int checkElement(HashTable *El_Table, HashTable *NodeTable, double *max, unsigned *key);
+
 	/*
 	 friend void unrefine_interp_neigh_update(HashTable* El_Table,
 	 HashTable* NodeTable, int nump,
