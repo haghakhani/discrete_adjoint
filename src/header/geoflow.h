@@ -90,13 +90,15 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
     double const increment);
 
-void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter, int myid, int numprocs);
+void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter);
+
+void dual_unrefine(MeshCTX* meshctx, PropCTX* propctx);
 
 void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El);
 
 void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx);
 
-void uinform_refine(MeshCTX* meshctx, PropCTX* propctx, int numprocs, int myid);
+void uinform_refine(MeshCTX* meshctx, PropCTX* propctx);
 
 void bilinear_interp(HashTable* El_Table);
 
@@ -159,8 +161,6 @@ void reverse_states(HashTable* El_Table, HashTable* solrec, int iter, ElemPtrLis
 
 void print_jacobian(HashTable* El_Table, int iter);
 
-void record_solution(MeshCTX* meshctx, PropCTX* propctx, SolRec* solrec);
-
 void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid, ResFlag resflag);
 
 void refinement_report(HashTable* El_Table);
@@ -172,14 +172,16 @@ void reset_adaption_flag(HashTable* El_Table);
 
 void reset_newson_adaption_flag(HashTable* El_Table);
 
-void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, int iter);
+void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
 
 void check_state_vars_with_record(HashTable* El_Table, HashTable* solrec, int iter);
 
 void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, MatProps* matprops_ptr,
-    int effelement, int j, int myid, double increment);
+    int effelement, int j, int myid, double increment, double* d_state_vars_old);
 
-void print_Elem_Table(HashTable* El_Table,int iter,int place);
+void print_Elem_Table(HashTable* El_Table, HashTable* NodeTable, int iter, int place);
+
+bool must_write(MemUse* memuse_ptr);
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);

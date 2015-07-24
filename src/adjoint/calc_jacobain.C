@@ -17,9 +17,9 @@
 #endif
 #include "../header/hpfem.h"
 
-#define KEY0   3941335040
-#define KEY1   0
-#define ITER   9
+#define KEY0   3918024388
+#define KEY1   3964585199
+#define ITER   1
 #define EFFELL 0
 #define J      0
 #define JACIND 0
@@ -27,6 +27,9 @@
 //#define DEBUG
 
 void reset_resflag(ResFlag resflag[EFF_ELL]);
+
+int check_restore(double* prev_state_vars, double* d_state_vars, double* prev_state_vars_old,
+    double* d_state_vars_old, double flux[][NUM_STATE_VARS], double fluxold[][NUM_STATE_VARS]);
 
 void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
     double const increment) {
@@ -83,6 +86,7 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 						double state_vars[NUM_STATE_VARS], gravity[NUM_STATE_VARS];
 						double d_gravity[DIMENSION], curvature[DIMENSION];
 						double d_state_vars_old[NUM_STATE_VARS * DIMENSION];
+						double prev_state_vars_old[NUM_STATE_VARS * DIMENSION];
 						double *prev_state_vars = Curr_El->get_prev_state_vars();
 						Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
 						double bedfrict = Curr_El->get_effect_bedfrict();
@@ -103,6 +107,9 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 
 						for (int ind = 0; ind < NUM_STATE_VARS * DIMENSION; ++ind)
 							d_state_vars_old[ind] = *(Curr_El->get_d_state_vars() + ind);
+
+						for (int ind = 0; ind < NUM_STATE_VARS * DIMENSION; ++ind)
+							prev_state_vars_old[ind] = *(Curr_El->get_prev_state_vars() + ind);
 
 						if (timeprops_ptr->iter < 51)
 							matprops_ptr->frict_tiny = 0.1;
@@ -133,6 +140,11 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 						    matprops_ptr->frict_tiny, orgSrcSgn, 0./*=increment*/, //3
 						    matprops_ptr->epsilon, check_stop); //2
 
+						for (int side = 0; side < 4; side++)
+							if (*(Curr_El->get_neigh_proc() + side) == INIT) // this is a boundary!
+								for (int ind = 0; ind < NUM_STATE_VARS; ind++)
+									*(Curr_El->get_state_vars() + ind) = 0;
+
 						for (int ind = 0; ind < NUM_STATE_VARS; ++ind)
 							state_vars[ind] = *(Curr_El->get_state_vars() + ind);
 
@@ -160,6 +172,9 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 							else if (effelement != 0 && void_neigh_elem(El_Table, Curr_El, effelement))
 
 								//this is a void neighbor element so the residual of the curr_el does not depend on this neighbor
+								Curr_El->set_jacobianMat_zero(effelement);
+
+							else if (effelement > 0 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == INIT)
 								Curr_El->set_jacobianMat_zero(effelement);
 
 							else {
@@ -220,7 +235,12 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 										//we have to return everything back
 //										restore(El_Table, NodeTable, Curr_El, effelement, j, incr, fluxold,
 //										    d_state_vars_old);
-										restore(El_Table, NodeTable, Curr_El, matprops_ptr, effelement, j, myid, incr);
+										restore(El_Table, NodeTable, Curr_El, matprops_ptr, effelement, j, myid, incr,
+										    d_state_vars_old);
+
+//										if (check_restore(prev_state_vars, d_state_vars, prev_state_vars_old,
+//										    d_state_vars_old, flux, fluxold))
+//											cout << "this would cause incorrect result" << endl;
 
 										for (int ind = 0; ind < NUM_STATE_VARS; ind++)
 											total_res[ind] += signe * vec_res[ind];
@@ -306,7 +326,7 @@ int void_neigh_elem(HashTable* El_Table, Element* Curr_El, int effelement) {
 }
 
 void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, MatProps* matprops_ptr,
-    int effelement, int j, int myid, double increment) {
+    int effelement, int j, int myid, double increment, double* d_state_vars_old) {
 
 	Element* neigh_elem;
 	double *prev_state_vars = Curr_El->get_prev_state_vars();
@@ -354,7 +374,11 @@ void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, MatPro
 			    &outflow, resflag, resflag); //otherwise the flux at the corresponding element has to be updated
 
 	}
-	Curr_El->get_slopes(El_Table, NodeTable, matprops_ptr->gamma);
+//	Curr_El->get_slopes(El_Table, NodeTable, matprops_ptr->gamma);
+	double* d_state_vars = Curr_El->get_d_state_vars();
+
+	for (int i = 0; i < NUM_STATE_VARS * DIMENSION; ++i)
+		d_state_vars[i] = d_state_vars_old[i];
 	return;
 }
 
@@ -626,5 +650,24 @@ void calc_flux_slope_kact(HashTable* El_Table, HashTable* NodeTable, Element* Cu
 
 	return;
 
+}
+
+int check_restore(double* prev_state_vars, double* d_state_vars, double* prev_state_vars_old,
+    double* d_state_vars_old, double flux[][NUM_STATE_VARS], double fluxold[][NUM_STATE_VARS]) {
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		if (prev_state_vars[i] != prev_state_vars_old[i])
+			return 1;
+
+	for (int i = 0; i < NUM_STATE_VARS * DIMENSION; ++i)
+		if (d_state_vars[i] != d_state_vars_old[i])
+			return 1;
+
+	for (int j = 0; j < 4; ++j)
+		for (int i = 0; i < NUM_STATE_VARS; ++i)
+			if (flux[j][i] != fluxold[j][i])
+				return 1;
+
+	return 0;
 }
 

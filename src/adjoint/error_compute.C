@@ -21,7 +21,7 @@
 #define KEY1   2863311530
 #define ITER   5
 
-void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter, int myid, int numprocs) {
+void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter) {
 
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
@@ -29,6 +29,8 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter, int myid, int n
 	TimeProps* timeprops_ptr = propctx->timeprops;
 	MapNames* mapname_ptr = propctx->mapnames;
 	MatProps* matprops_ptr = propctx->matprops;
+
+	int myid = propctx->myid, numprocs = propctx->numproc;
 
 	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
 
@@ -95,9 +97,9 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter, int myid, int n
 						    dtdy, dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature,
 						    matprops_ptr->intfrict, bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()),
 						    matprops_ptr->frict_tiny, orgSrcSgn, 0./*here increment is zero*/,
-						    matprops_ptr->epsilon, dummy_stop);
+						    matprops_ptr->epsilon, dummy_stop,1,0);
 
-						el_error[1] = 0.0;
+						el_error[0]=el_error[1] = 0.0;
 						*correction = 0.0;
 
 						for (int j = 0; j < NUM_STATE_VARS; j++) {

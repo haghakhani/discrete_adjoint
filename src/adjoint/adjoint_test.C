@@ -254,12 +254,13 @@ int checkElement(HashTable *El_Table, HashTable *NodeTable, double *max, unsigne
 
 						Node* nym = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
 
-						for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
-							fluxold[0][ivar] = nxp->flux[ivar];
-							fluxold[1][ivar] = nyp->flux[ivar];
-							fluxold[2][ivar] = nxm->flux[ivar];
-							fluxold[3][ivar] = nym->flux[ivar];
-						}
+//						for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
+//							fluxold[0][ivar] = nxp->flux[ivar];
+//							fluxold[1][ivar] = nyp->flux[ivar];
+//							fluxold[2][ivar] = nxm->flux[ivar];
+//							fluxold[3][ivar] = nym->flux[ivar];
+//						}
+						cout<<"flux yp  "<<nyp->flux[0]<<endl;
 						gg = 1;
 					}
 				}
@@ -267,21 +268,21 @@ int checkElement(HashTable *El_Table, HashTable *NodeTable, double *max, unsigne
 			}
 		}
 
-	cout << " \n flux xp: \n";
-	for (int i = 0; i < NUM_STATE_VARS; ++i)
-		cout << " " << fluxold[0][i];
-
-	cout << " \n flux yp: \n";
-	for (int i = 0; i < NUM_STATE_VARS; ++i)
-		cout << " " << fluxold[1][i];
-
-	cout << " \n flux xm: \n";
-	for (int i = 0; i < NUM_STATE_VARS; ++i)
-		cout << " " << fluxold[2][i];
-
-	cout << " \n flux ym: \n";
-	for (int i = 0; i < NUM_STATE_VARS; ++i)
-		cout << " " << fluxold[3][i];
+//	cout << " \n flux xp: \n";
+//	for (int i = 0; i < NUM_STATE_VARS; ++i)
+//		cout << " " << fluxold[0][i];
+//
+//	cout << " \n flux yp: \n";
+//	for (int i = 0; i < NUM_STATE_VARS; ++i)
+//		cout << " " << fluxold[1][i];
+//
+//	cout << " \n flux xm: \n";
+//	for (int i = 0; i < NUM_STATE_VARS; ++i)
+//		cout << " " << fluxold[2][i];
+//
+//	cout << " \n flux ym: \n";
+//	for (int i = 0; i < NUM_STATE_VARS; ++i)
+//		cout << " " << fluxold[3][i];
 
 	return (gg);
 }

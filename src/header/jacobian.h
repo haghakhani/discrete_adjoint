@@ -49,6 +49,8 @@ public:
 	//constructors
 	Jacobian(unsigned* key, double* position);
 
+	Jacobian(unsigned* key);
+
 	double* get_position();
 
 	unsigned* get_key();
@@ -56,6 +58,12 @@ public:
 	void put_solution(Solution* sol,int iter);
 
 	Solution* get_solution(int iter);
+
+	void erase_solution(int iter);
+
+	bool is_container_empty();
+
+	void clear_container();
 
 	//destructor
 	virtual ~Jacobian();

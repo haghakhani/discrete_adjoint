@@ -16,7 +16,6 @@
  */
 
 //modifed 2003/08/29 11:29:35 by kdalbey
-
 #ifndef HPFEM_H
 #define HPFEM_H
 
@@ -27,6 +26,8 @@
 #include <fortran.h>
 #endif 
 
+#include "sys/types.h"
+#include "sys/sysinfo.h"
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -58,6 +59,4 @@ using namespace std;
 #undef CRAY
 
 #endif
-
-
 

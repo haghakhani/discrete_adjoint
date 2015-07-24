@@ -12,79 +12,54 @@
 #include "jacobian.h"
 
 class SolRec: public HashTable {
+
 private:
+
+	// this is a solution class for void region to avoid memmory allocation for each of the void region
 	Solution* solution_zero;
 
+	// this integer shows the first time step that its solution is vailable in SolRec
+	int first_solution_time_step;
+
+	// this integer shows the last time step that its solution is vailable in SolRec
+	int last_solution_time_step;
+
 public:
-	SolRec(double *doublekeyrangein, int size, int prime, double  XR[], double YR[], int ifrestart);
+
+	// constructor
+	SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[], int ifrestart);
+
+	// this function returns he pointer of solution_zero
 	Solution* get_zero_solution();
 
-//	wrtie_sol_to_disk
+	// this function records the solution of last time step
+	void record_solution(MeshCTX* meshctx, PropCTX* propctx);
+
+	// this function writes the recorded solution to files, and for each time step separately
+	void wrtie_sol_to_disk();
+
+	// this function reads the recorded solution from files, and for each time step separately and store it in SolRec
+	void read_sol_from_disk(int iter);
+
+	// this functions deletes the SolRec and deallocate the allocated memory
+	void delete_empty_jacobians();
+
+	// this function changes first_solution_time_step to the next time step
+	void update_first_sol_time(int iter);
+
+	// this function changes last_solution_time_step to the new time step
+	void update_last_sol_time(int iter);
+
+	int get_first_solution();
+
+	int get_last_solution();
+
+	void load_new_set_of_solution();
+
+	void free_all_available_sol();
+
+	int data_range();
 
 };
-
-//private:
-//	//! number of cells in the x direction on the map
-//	int Nx;
-//
-//	//! number of cells in the y direction on the map
-//	int Ny;
-//
-//	//! length of a cell in the x direction
-//	double dx;
-//
-//	//! length of a cell in the y direction
-//	double dy;
-//
-//	//! min and max x coordinate on the map
-//	double xminmax[2];
-//
-//	//! min and max y coordinate on the map
-//	double yminmax[2];
-//
-//	//!
-//	DualCell ***dualcell;
-//
-//	Solution* zero_solution;
-//
-//public:
-//
-//	DualMesh(double *dxy, int power, double *XRange, double *YRange);
-//
-//	void update_sol(Element* Curr_El, Solution* solution);
-//
-//	void allocCellMem();
-//
-//	int get_Nx();
-//
-//	int get_Ny();
-//
-//	double get_dx();
-//
-//	double get_dy();
-//
-//	DualCell* get_dualcell(int i, int j);
-//
-//	void pos_to_ind(double y, double x, int* ind);
-//
-//	void ind_to_pos(int indy, int indx, double* position);
-//
-//	void calc_flux();
-//
-//	void calc_slopes();
-//
-//	void initialize_dual_flow(MatProps* matprops_ptr);
-//
-//	const double* get_xminmax() const;
-//
-//	const double* get_yminmax() const;
-//
-//	void calc_func_sens();
-//
-//	void set_sol_zero(Element* Curr_El);
-//
-//
-//	~DualMesh();
-//};
 
 #endif /* DUALMESH_H */

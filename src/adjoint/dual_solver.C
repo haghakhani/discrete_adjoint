@@ -25,8 +25,8 @@
 #define KEY0   3920807148
 #define KEY1   1321528399
 #define ITER   10
-#define ITER    187
-#define J       0
+#define ITER   187
+#define J      0
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 
@@ -42,12 +42,6 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 	const double increment = INCREMENT;
 	const int maxiter = timeprops_ptr->iter;
 
-	unsigned keyy[2] = { 3796806314, 2863311530 };
-//	if (checkElement(El_Table, NULL, keyy))
-//		cout << "I found the suspecious element \n";
-
-	allocJacoMat(El_Table);
-
 	reset_adaption_flag(El_Table);
 
 	double functional = 0.0, dt;
@@ -56,16 +50,17 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 	calc_adjoint(meshctx, propctx);
 
-//	uinform_refine(meshctx, propctx, numprocs, myid);
-//
-//	error_compute(meshctx, propctx, maxiter, myid, numprocs);
-//
-//	double UNREFINE_TARGET = .01;	//dummy value is not used in the function
-//	unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
-//	    rescomp);
-
 	int tecflag = 2;
+
+	uinform_refine(meshctx, propctx);
+
+	error_compute(meshctx, propctx, maxiter);
+
+	dual_unrefine(meshctx, propctx);
+
 	meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
+
+	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
 
 	tecflag = 1;
 	for (int iter = maxiter; iter > 0; --iter) {
@@ -75,39 +70,17 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		dt = timeprops_ptr->dt.at(iter - 1);
 		timeprops_ptr->adjiter++;
 
-		// we need this even for  iter = maxiter because after refine and unrefine
-		// the state variables are not same as forward run
-		// reverse_states(El_Table, solrec, iter, &refinelist, &unrefinelist);
-
-		setup_dual_flow(solrec, meshctx, propctx, iter);
-
-//		print_Elem_Table(El_Table,timeprops_ptr->iter,1);
-
-//		cout << "num_elem= " << num_nonzero_elem(El_Table) << "\n";
-
-		allocJacoMat(El_Table);
+		setup_dual_flow(solrec, meshctx, propctx);
 
 		timeprops_ptr->adjoint_time(iter - 1);
-
-		//this array holds ResFlag for element itself and its neighbors
-		ResFlag resflag;
-		resflag.callflag = 1;
-		resflag.lgft = 0;
-
-		calc_flux(meshctx, propctx, myid, resflag);
-
-//		if (checkElement(El_Table, NodeTable, NULL, keyy))
-//			cout << "I found the suspecious element \n";
-
-		slopes(El_Table, NodeTable, matprops_ptr, 1);
 
 		compute_functional(El_Table, &functional, timeprops_ptr);
 
 		eleminfo->update_dual_func(functional);
 
-//		calc_d_gravity(El_Table);
-
 		calc_jacobian(meshctx, propctx, eleminfo, INCREMENT);
+
+		print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 1);
 
 //		check_state_vars_with_record(El_Table, solrec, iter);
 
@@ -121,21 +94,19 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		//for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
 		//sensitivity w.r.t to parameters
 
-//		uinform_refine(meshctx, propctx, numprocs, myid);
-//
-//		error_compute(meshctx, propctx, iter, myid, numprocs);
-//
-//		// in dual weighted error estimation if solver performs n step, we'll have n+1
-//		// solution and n+1 adjoint solution, but we'll have just n residual and as a
-//		// result n error estimate. The point is that at initial step (0'th step),
-//		// we know the solution from initial condition  so the error of 0th step is zero,
-//		// and we have to compute the error for other time steps.
-//
-//		double UNREFINE_TARGET = .01;	//dummy value is not used in the function
-//		unrefine(El_Table, NodeTable, UNREFINE_TARGET, myid, numprocs, timeprops_ptr, matprops_ptr,
-//		    rescomp);
+		uinform_refine(meshctx, propctx);
 
-		if (timeprops_ptr->adjiter/*timeprops_ptr->ifadjoint_out() /*|| adjiter == 1*/)
+		error_compute(meshctx, propctx, iter);
+
+		// in dual weighted error estimation if solver performs n step, we'll have n+1
+		// solution and n+1 adjoint solution, but we'll have just n residual and as a
+		// result n error estimate. The point is that at initial step (0'th step),
+		// we know the solution from initial condition  so the error of 0th step is zero,
+		// and we have to compute the error for other time steps.
+
+		dual_unrefine(meshctx, propctx);
+
+		if (timeprops_ptr->adjiter /*timeprops_ptr->ifadjoint_out()*//*|| adjiter == 1*/)
 			meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
 
 	}
@@ -162,142 +133,6 @@ int num_nonzero_elem(HashTable *El_Table) {
 
 	return (num);
 }
-
-//void initSolRec(HashTable* El_Table, HashTable* NodeTable, DualMesh *dualmesh, double dt,
-//    int myid) {
-//
-//	HashEntryPtr* buck = El_Table->getbucketptr();
-//	HashEntryPtr currentPtr;
-//	Element* Curr_El;
-//	int num = 0;
-//
-//	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) { // this part allocate memory and initialize jacobian matrices inside the corresponding Jacobian
-//		if (*(buck + i)) {
-//			currentPtr = *(buck + i);
-//			while (currentPtr) {
-//				Curr_El = (Element*) (currentPtr->value);
-//				if (Curr_El->get_adapted_flag() > 0) {
-//
-//					Solution *solution = new Solution(Curr_El->get_state_vars(), *(Curr_El->get_kactxy()));
-//
-//					dualmesh->update_sol(Curr_El, solution);
-//
-//				}
-//				currentPtr = currentPtr->next;
-//			}
-//		}
-//	}
-//	return;
-//}
-
-void record_solution(MeshCTX* meshctx, PropCTX* propctx, SolRec* solrec) {
-
-	HashTable* El_Table = meshctx->el_table;
-
-	TimeProps* timeptr = propctx->timeprops;
-
-	HashEntryPtr* buck = El_Table->getbucketptr();
-	HashEntryPtr currentPtr;
-	Element* Curr_El;
-
-	if (timeptr->iter == 1) {
-
-		for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
-			if (*(buck + i)) {
-				currentPtr = *(buck + i);
-				while (currentPtr) {
-					Curr_El = (Element*) (currentPtr->value);
-					if (Curr_El->get_adapted_flag() > 0) {
-						Jacobian *jacobian = new Jacobian(Curr_El->pass_key(), Curr_El->get_coord());
-
-						if (*(Curr_El->get_state_vars()) > 0.) {
-							Solution *solution = new Solution(Curr_El->get_prev_state_vars(),
-							    *(Curr_El->get_kactxy()));
-							jacobian->put_solution(solution, timeptr->iter - 1);
-
-						} else
-							jacobian->put_solution(solrec->get_zero_solution(), timeptr->iter - 1);
-
-						solrec->add(jacobian->get_key(), jacobian);
-
-					}
-					currentPtr = currentPtr->next;
-				}
-			}
-		}
-
-	} else {
-
-		for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
-			if (*(buck + i)) {
-				currentPtr = *(buck + i);
-				while (currentPtr) {
-					Curr_El = (Element*) (currentPtr->value);
-					if (Curr_El->get_adapted_flag() > 0) {
-
-						int aa = 0, bb = 1;
-						unsigned keyy[2] = { 3781669179, 330382100 };
-						if (*(Curr_El->pass_key()) == keyy[0] && *(Curr_El->pass_key() + 1) == keyy[1]
-						    && timeptr->iter == 11)
-							bb = aa;
-
-						Jacobian *jacobian = (Jacobian *) solrec->lookup(Curr_El->pass_key());
-						if (jacobian) {
-							if (*(Curr_El->get_state_vars()) > 0.) {
-								Solution *solution = new Solution(Curr_El->get_prev_state_vars(),
-								    *(Curr_El->get_kactxy()));
-								jacobian->put_solution(solution, timeptr->iter - 1);
-
-							} else
-								jacobian->put_solution(solrec->get_zero_solution(), timeptr->iter - 1);
-
-						} else {
-							jacobian = new Jacobian(Curr_El->pass_key(), Curr_El->get_coord());
-							solrec->add(jacobian->get_key(), jacobian);
-
-							if (*(Curr_El->get_state_vars()) > 0.) {
-								Solution *solution = new Solution(Curr_El->get_prev_state_vars(),
-								    *(Curr_El->get_kactxy()));
-								jacobian->put_solution(solution, timeptr->iter - 1);
-
-							} else
-								jacobian->put_solution(solrec->get_zero_solution(), timeptr->iter - 1);
-
-						}
-					}
-					currentPtr = currentPtr->next;
-				}
-			}
-		}
-	}
-}
-
-//void initSolRec(HashTable* El_Table, HashTable* NodeTable, DualMesh *dualmesh, double dt,
-//    int myid) {
-//
-//	HashEntryPtr* buck = El_Table->getbucketptr();
-//	HashEntryPtr currentPtr;
-//	Element* Curr_El;
-//	int num = 0;
-//
-//	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) { // this part allocate memory and initialize jacobian matrices inside the corresponding Jacobian
-//		if (*(buck + i)) {
-//			currentPtr = *(buck + i);
-//			while (currentPtr) {
-//				Curr_El = (Element*) (currentPtr->value);
-//				if (Curr_El->get_adapted_flag() > 0) {
-//
-//					Solution *solution = new Solution(Curr_El->get_state_vars(), *(Curr_El->get_kactxy()));
-//
-//					dualmesh->update_sol(Curr_El, solution);
-//
-//				}
-//				currentPtr = currentPtr->next;
-//			}
-//		}
-//	}
-//	return;
-//}
 
 void allocJacoMat(HashTable *El_Table) {
 
@@ -581,7 +416,7 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 
 	ElemPtrList NewFatherList, OtherProcUpdate;
 
-	int rescomp = 1;
+	int rescomp = 0;
 
 //	unsigned keyy[2] = { 3410598297, 2576980374 };
 
@@ -635,13 +470,13 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 	}
 
 	if (unrefinelist->get_num_elem()) {
-		int newfthelem = 0;
+
 		Element* brothers[4];
 
 //		cout << "6 \n";
 //		refinement_report(El_Table);
 
-		int counter = 0, unrefined = 0;
+		int unrefined = 0;
 
 		do {
 
@@ -741,7 +576,7 @@ void reset_newson_adaption_flag(HashTable* El_Table) {
 
 }
 
-void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, int iter) {
+void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
@@ -750,11 +585,17 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, int ite
 	MapNames* mapname_ptr = propctx->mapnames;
 	MatProps* matprops_ptr = propctx->matprops;
 	int myid = propctx->myid, numprocs = propctx->numproc;
+	int iter = propctx->timeprops->iter;
 
 	ElemPtrList refinelist, unrefinelist;
 	HashEntryPtr currentPtr;
 	Element *Curr_El;
 	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	if (solrec->get_first_solution() >= iter) {
+		solrec->free_all_available_sol();
+		solrec->load_new_set_of_solution();
+	}
 
 	if (iter % 5 == 4) {
 
@@ -792,6 +633,30 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, int ite
 			}
 		}
 
+	allocJacoMat(El_Table);
+
+	int num_node_buckets = NodeTable->get_no_of_buckets();
+	buck = NodeTable->getbucketptr();
+	for (int i = 0; i < num_node_buckets; i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				Node* Curr_Node = (Node*) (currentPtr->value);
+				Curr_Node->zero_flux();
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	//this array holds ResFlag for element itself and its neighbors
+	ResFlag resflag;
+	resflag.callflag = 1;
+	resflag.lgft = 0;
+
+	calc_flux(meshctx, propctx, myid, resflag);
+
+	slopes(El_Table, NodeTable, matprops_ptr, 1);
+
 }
 
 void check_state_vars_with_record(HashTable* El_Table, HashTable* solrec, int iter) {
@@ -816,13 +681,13 @@ void check_state_vars_with_record(HashTable* El_Table, HashTable* solrec, int it
 
 }
 
-void print_Elem_Table(HashTable* El_Table,int iter,int place){
+void print_Elem_Table(HashTable* El_Table, HashTable* NodeTable, int iter, int place) {
 
 	ofstream myfile;
-	char filename [50];
-	sprintf(filename,"El_Table_%d_%08d",place,iter);
+	char filename[50];
+	sprintf(filename, "El_Table_%d_%08d", place, iter);
 
-	myfile.open(filename,ios::app);
+	myfile.open(filename, ios::app);
 
 	HashEntryPtr currentPtr;
 	Element *Curr_El;
@@ -833,18 +698,216 @@ void print_Elem_Table(HashTable* El_Table,int iter,int place){
 			currentPtr = *(buck + i);
 			while (currentPtr) {
 				Curr_El = (Element*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() > 0) {
+					int print = 1;
+					for (int j = 0; j < 4; j++)
+						if (*(Curr_El->get_neigh_proc() + j) == INIT) {
+							print = 0;
+							break;
+						}
+					if (print) {
 
-				myfile<<*(Curr_El->pass_key())<<" "<<*(Curr_El->pass_key()+1)<<" ";
-				for (int i=0;i<8*2;++i)
-					myfile<<*(Curr_El->get_neighbors()+i)<<" ";
-				for (int i=0;i<8;++i)
-					myfile<<*(Curr_El->get_neigh_gen()+i)<<" ";
-				myfile<<endl;
+						int xp = Curr_El->get_positive_x_side(); //finding the direction of element
+						int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+
+						Node* nxp = (Node*) NodeTable->lookup(Curr_El->getNode() + (xp + 4) * 2);
+
+						Node* nyp = (Node*) NodeTable->lookup(Curr_El->getNode() + (yp + 4) * 2);
+
+						Node* nxm = (Node*) NodeTable->lookup(Curr_El->getNode() + (xm + 4) * 2);
+
+						Node* nym = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
+
+						double flux[4][NUM_STATE_VARS];
+
+						for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
+							flux[0][ivar] = *(nxp->get_flux() + ivar);
+							flux[1][ivar] = *(nyp->get_flux() + ivar);
+							flux[2][ivar] = *(nxm->get_flux() + ivar);
+							flux[3][ivar] = *(nym->get_flux() + ivar);
+						}
+
+						double flux_diff[DIMENSION][NUM_STATE_VARS];
+
+						for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
+							flux_diff[0][ivar] = flux[0][ivar] - flux[2][ivar];
+							flux_diff[1][ivar] = flux[1][ivar] - flux[3][ivar];
+						}
+
+						myfile << "key: ";
+						myfile << *(Curr_El->pass_key()) << " " << *(Curr_El->pass_key() + 1) << " ";
+
+						myfile << "neighbors: ";
+						for (int i = 0; i < 8 * 2; ++i)
+							myfile << *(Curr_El->get_neighbors() + i) << " ";
+
+						myfile << "neighbors_gen: ";
+						for (int i = 0; i < 8; ++i)
+							myfile << *(Curr_El->get_neigh_gen() + i) << " ";
+
+						myfile << "neighbors_proc: ";
+						for (int i = 0; i < 8; ++i)
+							myfile << *(Curr_El->get_neigh_proc() + i) << " ";
+
+//					myfile << "state_vars: ";
+//					for (int i = 0; i < NUM_STATE_VARS; ++i)
+//						myfile << *(Curr_El->get_state_vars() + i) << " ";
+
+						myfile << "prev_state_vars: ";
+						for (int i = 0; i < NUM_STATE_VARS; ++i)
+							myfile << *(Curr_El->get_prev_state_vars() + i) << " ";
+
+						myfile << "d_state_vars: ";
+						for (int i = 0; i < NUM_STATE_VARS * DIMENSION; ++i)
+							myfile << *(Curr_El->get_d_state_vars() + i) << " ";
+
+//					myfile << "flux_diff_x: ";
+//					for (int i = 0; i < NUM_STATE_VARS; ++i)
+//						myfile << flux_diff[0][i] << " ";
+//
+//					myfile << "flux_diffy: ";
+//					for (int i = 0; i < NUM_STATE_VARS; ++i)
+//						myfile << flux_diff[1][i] << " ";
+//
+						myfile << "flux_xp: ";
+						for (int i = 0; i < NUM_STATE_VARS; ++i)
+							myfile << flux[0][i] << " ";
+
+						myfile << "flux_yp: ";
+						for (int i = 0; i < NUM_STATE_VARS; ++i)
+							myfile << flux[1][i] << " ";
+
+						myfile << "flux_xm: ";
+						for (int i = 0; i < NUM_STATE_VARS; ++i)
+							myfile << flux[2][i] << " ";
+
+						myfile << "flux_ym: ";
+						for (int i = 0; i < NUM_STATE_VARS; ++i)
+							myfile << flux[3][i] << " ";
+
+//				myfile <<"gravity: ";
+//				for (int i = 0; i < NUM_STATE_VARS; ++i)
+//					myfile << *(Curr_El->get_gravity() + i) << " ";
+//
+//				myfile <<"d_gravity: ";
+//				for (int i = 0; i < DIMENSION; ++i)
+//					myfile << *(Curr_El->get_d_gravity() + i) << " ";
+
+						myfile << endl;
+					}
+				}
 
 				currentPtr = currentPtr->next;
 			}
 		}
 
 	myfile.close();
+
+}
+
+bool must_write(MemUse* memuse_ptr) {
+
+	struct sysinfo memInfo;
+	sysinfo(&memInfo);
+	unsigned long totalPhysMem = memInfo.totalram;
+	unsigned long freeram = memInfo.freeram;
+	unsigned long current_physMemUsed = memInfo.totalram - memInfo.freeram;
+	long long last_time_step_use = current_physMemUsed - memuse_ptr->usedmem;
+
+//	if (memuse_ptr->usedmem > 0) {
+//		memuse_ptr->usedmem = current_physMemUsed;
+//
+//		double ratio = ((long double) last_time_step_use) / ((long double) memInfo.freeram);
+	double ratio1 = ((long double) current_physMemUsed) / ((long double) totalPhysMem);
+	double ratio2 = ((long double) freeram) / ((long double) totalPhysMem);
+//		cout << "ratio of last time use over free mem " << ratio << "  and ratio od used mem" << endl;
+	printf(" ratio of used mem over total mem is %4f \n", ratio1);
+
+	if (ratio2 < .05)
+		return true;
+//	} else
+//		memuse_ptr->usedmem = current_physMemUsed;
+
+	return false;
+
+}
+
+void dual_unrefine(MeshCTX* meshctx, PropCTX* propctx) {
+
+	HashTable* El_Table = meshctx->el_table;
+	HashTable* NodeTable = meshctx->nd_table;
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
+	int myid = propctx->myid, numprocs = propctx->numproc;
+
+	vector<RefUnref> unref_list;
+
+ElemPtrList NewFatherList, OtherProcUpdate;
+
+	HashEntryPtr currentPtr;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Element *Curr_El = (Element*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() == NEWSON && Curr_El->get_which_son() == 0){
+					RefUnref sample(Curr_El->pass_key());
+					unref_list.push_back(sample);
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	int unrefined = 0;
+	int rescomp = 1;
+	double target = 0.1;
+
+	int to_be_unrefined = unref_list.size();
+
+	while (unrefined != to_be_unrefined) {
+
+		NewFatherList.trashlist();
+		OtherProcUpdate.trashlist();
+
+		for (int i = 0; i < to_be_unrefined; ++i) {
+			Element* Curr_El = (Element*) El_Table->lookup(unref_list[i].key);
+			if (Curr_El && Curr_El->get_adapted_flag() != OLDSON)
+
+				Curr_El->find_brothers(El_Table, NodeTable, target, myid, matprops_ptr, &NewFatherList,
+				    &OtherProcUpdate, rescomp);
+
+		}
+
+		unrefined += NewFatherList.get_num_elem();
+//		cout << unrefined << endl;
+
+//			cout << "7 \n";
+//			refinement_report(El_Table);
+
+		unrefine_neigh_update(El_Table, NodeTable, myid, (void*) &NewFatherList);
+
+//			cout << "8 \n";
+//			refinement_report(El_Table);
+
+		unrefine_interp_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &OtherProcUpdate);
+
+		for (int k = 0; k < NewFatherList.get_num_elem(); k++)
+			delete_oldsons(El_Table, NodeTable, myid, NewFatherList.get(k));
+
+//		refinement_report(El_Table);
+
+		reset_adaption_flag(El_Table);
+//			reset_newson_adaption_flag(El_Table);
+
+//			cout<<"this is the counter  "<<counter++<<endl;
+
+	}
 
 }

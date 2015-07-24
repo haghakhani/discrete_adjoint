@@ -21,9 +21,9 @@
 
 #include "../header/hpfem.h"
 
-#define KEY0   310842289
-#define KEY1   991146299
-#define ITER   10
+#define KEY0   4235662257
+#define KEY1   991146300
+#define ITER   21
 
 /*! calc_edge_states() cycles through the element Hashtable (listing of all 
  *  elements) and for each element (that has not been refined this iteration 

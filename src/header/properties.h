@@ -512,8 +512,8 @@ struct MatProps {
 	 *  for many if not all of these
 	 */
 	MatProps(int material_countin, char **matnamesin, double intfrictin, double *bedfrictin,
-	    double muin, double rhoin, double epsilonin, double gammain,
-	    double frict_tinyin, double lscale, double hscale, double gscale) {
+	    double muin, double rhoin, double epsilonin, double gammain, double frict_tinyin,
+	    double lscale, double hscale, double gscale) {
 
 		material_count = material_countin;
 
@@ -1350,6 +1350,24 @@ struct PropCTX {
 	MapNames* mapnames;
 	int numproc;
 	int myid;
+
+};
+
+struct MemUse {
+	long long usedmem;
+
+};
+
+struct RefUnref {
+
+	unsigned key[2];
+	int done;
+
+	RefUnref(unsigned* key_in){
+		key[0]=key_in[0];
+		key[1]=key_in[1];
+		done=0;
+	}
 
 };
 #endif

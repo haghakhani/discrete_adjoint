@@ -21,7 +21,7 @@
 #define KEY1   2576980374
 //#define DEBUG
 
-void uinform_refine(MeshCTX* meshctx, PropCTX* propctx, int numprocs, int myid) {
+void uinform_refine(MeshCTX* meshctx, PropCTX* propctx) {
 
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
@@ -30,6 +30,8 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx, int numprocs, int myid) 
 	MapNames* mapname_ptr = propctx->mapnames;
 	MatProps* matprops_ptr = propctx->matprops;
 
+	int myid = propctx->myid, numprocs = propctx->numproc;
+
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
 	Element* Curr_El = NULL;
@@ -37,7 +39,7 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx, int numprocs, int myid) 
 
 	//for debugging perpose
 	unsigned key[2] = { KEY0, KEY1 };
-	double max=0;
+	double max = 0;
 
 #ifdef DEBUG
 	double dummyv_star = 0.0;
@@ -59,7 +61,6 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx, int numprocs, int myid) 
 
 	htflush(El_Table, NodeTable, 1);
 	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
-
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
@@ -84,8 +85,7 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx, int numprocs, int myid) 
 				currentPtr = currentPtr->next;
 				if (Curr_El->get_adapted_flag() == NOTRECADAPTED) {
 
-					refinewrapper(El_Table, NodeTable, matprops_ptr, &RefinedList,
-							Curr_El, rescomp);
+					refinewrapper(El_Table, NodeTable, matprops_ptr, &RefinedList, Curr_El, rescomp);
 				}
 
 			}
@@ -106,16 +106,26 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx, int numprocs, int myid) 
 	<< "number of elements  5   " << num_nonzero_elem(El_Table, 5) << endl;
 #endif
 
-	bilinear_interp(El_Table);	//this function reconstruct linear interpolation
+	//this function reconstruct linear interpolation
+	bilinear_interp(El_Table);
 
-	refine_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &RefinedList,
-			timeprops_ptr);	//this function delete old father elements
+	//this function delete old father elements
+	refine_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &RefinedList, timeprops_ptr);
 
 //	cout << "here is the problem   "<<checkElement(El_Table, &max, key) << endl;
 
 	RefinedList.trashlist();
 
 	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
+
+	//this array holds ResFlag for element itself and its neighbors
+	ResFlag resflag;
+	resflag.callflag = 1;
+	resflag.lgft = 0;
+
+	calc_flux(meshctx, propctx, myid, resflag);
+
+	slopes(El_Table, NodeTable, matprops_ptr, 1);
 
 	return;
 }

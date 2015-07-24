@@ -51,8 +51,8 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 				Curr_El = (Element*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0) {
-					if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
-						aa = bb;
+//					if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
+//						aa = bb;
 
 					calc_adjoint_elem(meshctx, propctx, Curr_El);
 				}
@@ -280,13 +280,13 @@ int get_jacind(int effelement) {
 		case 1:	//in xp neighbor I have to read jacobian of xm, because position of curr_el is in xm side of that neighbor
 			jacind = 3;
 			break;
-		case 2:		    //for yp return ym
+		case 2:	//for yp return ym
 			jacind = 4;
 			break;
-		case 3:		    //for xm return xp
+		case 3:	//for xm return xp
 			jacind = 1;
 			break;
-		case 4:		    //for ym return yp
+		case 4:	//for ym return yp
 			jacind = 2;
 			break;
 		default:

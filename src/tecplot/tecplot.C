@@ -787,7 +787,7 @@ void viz_output(HashTable* El_Table, HashTable* NodeTable, int myid, int numproc
  **************************************
  *************************************/
 void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
-    TimeProps* timeprops, MapNames* mapnames, double v_star,int plotflag) {
+    TimeProps* timeprops, MapNames* mapnames, double v_star, int plotflag) {
 	int myid, i;
 	int numprocs;
 	int material;
@@ -803,10 +803,10 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	unsigned* nodes;
 	char filename[256];
 
-	if (plotflag==2)
+	if (plotflag == 2)
 		sprintf(filename, "dual%02d%08d.tec", myid, timeprops->iter);
-	else if(plotflag==1)
-		sprintf(filename, "dual%02d%08d.tec", myid, timeprops->iter-1);
+	else if (plotflag == 1)
+		sprintf(filename, "dual%02d%08d.tec", myid, timeprops->iter - 1);
 	else
 		sprintf(filename, "mshpl%02d%08d.tec", myid, timeprops->iter);
 
@@ -889,12 +889,16 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 						order = help_order;
 				}
 
+//				unsigned keyy[2] = { 3910790222, 3303820997 };
+//				if (keyy[0] == *(EmTemp->pass_key()) && keyy[1] == *(EmTemp->pass_key() + 1))
+//					cout << "why?" << endl;
+
 				nodes = EmTemp->getNode();
 				double* state_vars;
-				if (plotflag==1)
-					state_vars= EmTemp->get_prev_state_vars();
+				if (plotflag == 1)
+					state_vars = EmTemp->get_prev_state_vars();
 				else
-					state_vars= EmTemp->get_state_vars();
+					state_vars = EmTemp->get_state_vars();
 
 				double* adjoint = EmTemp->get_adjoint();
 				double* residual = EmTemp->get_residual();
@@ -909,14 +913,13 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 					int jj = j;
 					if (NodeTemp->getinfo() != S_C_CON)
 						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
-						    (*(NodeTemp->get_coord())) * (matprops)->LENGTH_SCALE,
-						    (*(NodeTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
-						    NodeTemp->get_elevation() * (matprops->LENGTH_SCALE),
-						    state_vars[0] * (matprops)->HEIGHT_SCALE, state_vars[1] * momentum_scale,
-						    state_vars[2] * momentum_scale, adjoint[0] * adjoint_scale[0],
-						    adjoint[1] * adjoint_scale[1], adjoint[2] * adjoint_scale[2],
-						    residual[0] * residual_scale[0], residual[1] * residual_scale[1],
-						    residual[2] * residual_scale[2], err * error_scale, *correction * functional_scale);
+						    (*(NodeTemp->get_coord())) * lscale, (*(NodeTemp->get_coord() + 1)) * lscale,
+						    NodeTemp->get_elevation() * lscale, state_vars[0] * hscale,
+						    state_vars[1] * momentum_scale, state_vars[2] * momentum_scale,
+						    adjoint[0] * adjoint_scale[0], adjoint[1] * adjoint_scale[1],
+						    adjoint[2] * adjoint_scale[2], residual[0] * residual_scale[0],
+						    residual[1] * residual_scale[1], residual[2] * residual_scale[2],
+						    *correction * functional_scale, err * error_scale);
 
 					else // S_C_CON will have a discontinuity in the elevation so fix that by interpolation
 					{
@@ -952,14 +955,12 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 						NodeTemp2 = (Node*) NodeTable->lookup(EmTemp2->getNode() + j * KEYLENGTH);
 						elev += .5 * NodeTemp2->get_elevation();
 						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
-						    (*(NodeTemp->get_coord())) * (matprops)->LENGTH_SCALE,
-						    (*(NodeTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
-						    elev * (matprops->LENGTH_SCALE), state_vars[0] * (matprops)->HEIGHT_SCALE,
-						    state_vars[1] * momentum_scale, state_vars[2] * momentum_scale,
-						    adjoint[0] * adjoint_scale[0], adjoint[1] * adjoint_scale[1],
-						    adjoint[2] * adjoint_scale[2], residual[0] * residual_scale[0],
-						    residual[1] * residual_scale[1], residual[2] * residual_scale[2], err * error_scale,
-						    *correction * functional_scale);
+						    (*(NodeTemp->get_coord())) * lscale, (*(NodeTemp->get_coord() + 1)) * lscale,
+						    elev * lscale, state_vars[0] * hscale, state_vars[1] * momentum_scale,
+						    state_vars[2] * momentum_scale, adjoint[0] * adjoint_scale[0],
+						    adjoint[1] * adjoint_scale[1], adjoint[2] * adjoint_scale[2],
+						    residual[0] * residual_scale[0], residual[1] * residual_scale[1],
+						    residual[2] * residual_scale[2], *correction * functional_scale, err * error_scale);
 					}
 				}
 			}

@@ -108,7 +108,7 @@ void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* 
 			    << " eff_elem   " << effelement << "  j  " << j << "  value  " << abs_fluxx_diff[ivar]
 			    << endl;
 
-		abs_fluxy_diff[ivar] = dabs(fluxxold[ivar] - fluxxnew[ivar]);
+		abs_fluxy_diff[ivar] = dabs(fluxyold[ivar] - fluxynew[ivar]);
 		if (abs_fluxy_diff[ivar] > 0. )
 			cout << "change effects the flux_y for var  " << ivar << " eff_elem   " << effelement
 			    << "  j  " << j << "  value  " << abs_fluxy_diff[ivar] << endl;

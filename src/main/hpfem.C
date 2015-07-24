@@ -50,6 +50,8 @@ int main(int argc, char *argv[]) {
 		HashTable* BT_Elem_Ptr;
 
 		SolRec* solrec;
+		MemUse memuse;
+		memuse.usedmem = 0;
 
 		//-- MPI
 		int myid, master, numprocs;
@@ -160,8 +162,6 @@ int main(int argc, char *argv[]) {
 		propctx.numproc = numprocs;
 		propctx.myid = myid;
 
-//		record_solution(&meshctx, &propctx, solrec);
-
 		if (myid == 0)
 			output_summary(&timeprops, &statprops, savefileflag);
 
@@ -242,18 +242,10 @@ int main(int argc, char *argv[]) {
 
 				H_adapt(BT_Elem_Ptr, BT_Node_Ptr, h_count, TARGET, &matprops, &fluxprops, &timeprops, 5);
 
-//				if (checkElement(BT_Elem_Ptr, NULL, keyy))
-//					cout << "I found the suspecious element \n";
-//				refinement_report(BT_Elem_Ptr);
-
 				move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
 				unrefine(BT_Elem_Ptr, BT_Node_Ptr, UNREFINE_TARGET, myid, numprocs, &timeprops, &matprops,
 				    rescomp);
-
-//				if (checkElement(BT_Elem_Ptr, NULL, keyy))
-//					cout << "I found the suspecious element \n";
-//				refinement_report(BT_Elem_Ptr);
 
 				MPI_Barrier(MPI_COMM_WORLD);      //for debug
 
@@ -273,14 +265,14 @@ int main(int argc, char *argv[]) {
 			step(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops, &pileprops, &fluxprops,
 			    &statprops, &order_flag, &outline, &discharge, adaptflag);
 
-//			print_Elem_Table(BT_Elem_Ptr,timeprops.iter,0);
+//			print_Elem_Table(BT_Elem_Ptr, BT_Node_Ptr, timeprops.iter, 0);
 
-//			unsigned keyy[2] = { 3796806314, 2863311530 };
-//			if (checkElement(BT_Elem_Ptr, BT_Node_Ptr,NULL, keyy))
-//				cout << "I found the suspecious element \n";
-//			cout << "num_elem= " << num_nonzero_elem(BT_Elem_Ptr) << "\n";
+			solrec->record_solution(&meshctx, &propctx);
 
-			record_solution(&meshctx, &propctx, solrec);
+			if (solrec->data_range()>100 || must_write(&memuse)) {
+				solrec->wrtie_sol_to_disk();
+				solrec->delete_empty_jacobians();
+			}
 
 			compute_functional(BT_Elem_Ptr, &functional, &timeprops);
 
