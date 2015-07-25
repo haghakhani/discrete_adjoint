@@ -269,7 +269,7 @@ int main(int argc, char *argv[]) {
 
 			solrec->record_solution(&meshctx, &propctx);
 
-			if (solrec->data_range()>100 || must_write(&memuse)) {
+			if (solrec->data_range()>20 || must_write(&memuse)) {
 				solrec->wrtie_sol_to_disk();
 				solrec->delete_empty_jacobians();
 			}

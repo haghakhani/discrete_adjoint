@@ -80,7 +80,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 		calc_jacobian(meshctx, propctx, eleminfo, INCREMENT);
 
-		print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 1);
+//		print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 1);
 
 //		check_state_vars_with_record(El_Table, solrec, iter);
 
@@ -106,7 +106,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 		dual_unrefine(meshctx, propctx);
 
-		if (timeprops_ptr->adjiter /*timeprops_ptr->ifadjoint_out()*//*|| adjiter == 1*/)
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 			meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
 
 	}
@@ -844,11 +844,10 @@ void dual_unrefine(MeshCTX* meshctx, PropCTX* propctx) {
 
 	vector<RefUnref> unref_list;
 
-ElemPtrList NewFatherList, OtherProcUpdate;
+	ElemPtrList NewFatherList, OtherProcUpdate;
 
 	HashEntryPtr currentPtr;
 	HashEntryPtr *buck = El_Table->getbucketptr();
-
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -856,7 +855,7 @@ ElemPtrList NewFatherList, OtherProcUpdate;
 			while (currentPtr) {
 				Element *Curr_El = (Element*) (currentPtr->value);
 
-				if (Curr_El->get_adapted_flag() == NEWSON && Curr_El->get_which_son() == 0){
+				if (Curr_El->get_adapted_flag() == NEWSON && Curr_El->get_which_son() == 0) {
 					RefUnref sample(Curr_El->pass_key());
 					unref_list.push_back(sample);
 				}

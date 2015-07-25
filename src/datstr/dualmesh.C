@@ -124,7 +124,7 @@ void SolRec::wrtie_sol_to_disk() {
 			}
 
 		fclose(myfile);
-		cout<<"number of readed elem  "<<count<<endl;
+		cout<<"number of written elem  "<<count<<endl;
 	}
 	first_solution_time_step = last_solution_time_step;
 
@@ -142,14 +142,14 @@ void SolRec::delete_empty_jacobians() {
 
 				Jacobian* jacobian = (Jacobian*) (currentPtr->value);
 				currentPtr = currentPtr->next;
-				if (jacobian->is_container_empty()) {
+//				if (jacobian->is_container_empty()) {
 
 //					unsigned key[2] = { 3780766798, 3303820997 };
 //					if (key[0] == *(jacobian->get_key()) && key[1] == *(jacobian->get_key() + 1))
 //						cout << "problem found \n";
 					this->remove(jacobian->get_key());
 
-				}
+//				}
 
 			}
 		}
@@ -251,7 +251,7 @@ void SolRec::load_new_set_of_solution() {
 	unsigned long totalPhysMem, freeram;
 	last_solution_time_step = first_solution_time_step - 1;
 
-	while (ratio > .1 && data_range()<100 && first_solution_time_step) {
+	while (ratio > .1 && data_range()<20 && first_solution_time_step) {
 
 		read_sol_from_disk(first_solution_time_step - 1);
 		first_solution_time_step--;
