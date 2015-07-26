@@ -148,6 +148,7 @@ void SolRec::delete_empty_jacobians() {
 //					if (key[0] == *(jacobian->get_key()) && key[1] == *(jacobian->get_key() + 1))
 //						cout << "problem found \n";
 					this->remove(jacobian->get_key());
+                                        delete jacobian;
 
 //				}
 

@@ -80,7 +80,8 @@ unsigned* Jacobian::get_key() {
 }
 
 void Jacobian::erase_solution(int iter) {
-
+Solution* sol=get_solution(iter);
+delete sol;
 	// this function should call destructor of solution, so there is no need to call them explicitly
 	solContainer.erase(iter);
 }
