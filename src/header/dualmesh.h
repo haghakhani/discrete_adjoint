@@ -24,6 +24,12 @@ private:
 	// this integer shows the last time step that its solution is vailable in SolRec
 	int last_solution_time_step;
 
+	int readflag;
+
+	int writeflag;
+
+	const int range=100;
+
 public:
 
 	// constructor
@@ -59,6 +65,10 @@ public:
 	void free_all_available_sol();
 
 	int data_range();
+
+	int write_sol();
+
+	int read_sol();
 
 };
 

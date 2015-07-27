@@ -16,6 +16,8 @@ SolRec::SolRec(double *doublekeyrangein, int size, int prime, double XR[], doubl
 	solution_zero = new Solution(zero_sol, kact_z);
 	first_solution_time_step = 0;
 	last_solution_time_step = 0;
+	readflag = 0;
+	writeflag = 0;
 
 }
 
@@ -86,7 +88,7 @@ void SolRec::wrtie_sol_to_disk() {
 	double *solution, kact;
 
 	for (int step = first_solution_time_step; step < last_solution_time_step; ++step) {
-		int count=0;
+		int count = 0;
 
 		sprintf(filename, "solution_%08d", step);
 		myfile = fopen(filename, "w");
@@ -124,7 +126,7 @@ void SolRec::wrtie_sol_to_disk() {
 			}
 
 		fclose(myfile);
-		cout<<"number of written elem  "<<count<<endl;
+		cout << "number of written elem  " << count << endl;
 	}
 	first_solution_time_step = last_solution_time_step;
 
@@ -147,8 +149,8 @@ void SolRec::delete_empty_jacobians() {
 //					unsigned key[2] = { 3780766798, 3303820997 };
 //					if (key[0] == *(jacobian->get_key()) && key[1] == *(jacobian->get_key() + 1))
 //						cout << "problem found \n";
-					this->remove(jacobian->get_key());
-                                        delete jacobian;
+				this->remove(jacobian->get_key());
+				delete jacobian;
 
 //				}
 
@@ -174,7 +176,7 @@ void SolRec::read_sol_from_disk(int iter) {
 	double kact = 0.;
 	unsigned key[DIMENSION] = { 0, 0 };
 	Solution * solution;
-	int dbg,count=0;
+	int dbg, count = 0;
 
 	sprintf(filename, "solution_%08d", iter);
 	myfile = fopen(filename, "r");
@@ -209,7 +211,7 @@ void SolRec::read_sol_from_disk(int iter) {
 	}
 
 	fclose(myfile);
-	cout<<"number of readed elem  "<<count<<endl;
+	cout << "number of readed elem  " << count << endl;
 }
 
 int SolRec::get_first_solution() {
@@ -241,8 +243,22 @@ void SolRec::free_all_available_sol() {
 
 }
 
-int SolRec::data_range(){
-	return last_solution_time_step-first_solution_time_step;
+int SolRec::data_range() {
+	return last_solution_time_step - first_solution_time_step;
+}
+
+int SolRec::write_sol() {
+	if (data_range() > range)
+		return 1;
+
+	return 0;
+}
+
+int SolRec::read_sol() {
+	if (data_range() < range)
+		return 1;
+
+	return 0;
 }
 
 void SolRec::load_new_set_of_solution() {
@@ -252,7 +268,7 @@ void SolRec::load_new_set_of_solution() {
 	unsigned long totalPhysMem, freeram;
 	last_solution_time_step = first_solution_time_step - 1;
 
-	while (ratio > .1 && data_range()<20 && first_solution_time_step) {
+	while ((data_range() < 2 || read_sol()) && first_solution_time_step) {
 
 		read_sol_from_disk(first_solution_time_step - 1);
 		first_solution_time_step--;
