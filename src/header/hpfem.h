@@ -55,6 +55,7 @@ using namespace std;
 #include "../useful/useful_lib.h"
 #include "FileFormat.h"
 #include "flux_srcs.h"
+#include <unistd.h>
 
 #undef CRAY
 

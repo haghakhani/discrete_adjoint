@@ -116,6 +116,9 @@ void SolRec::wrtie_sol_to_disk() {
 						fprintf(myfile, "%u %u %.8e %.8e %.8e %.8e\n", *(jacobian->get_key()),
 								*(jacobian->get_key() + 1), solution[0], solution[1], solution[2], sol->get_kact());
 
+						fflush(myfile);
+						fsync(fileno(myfile));
+
 						if (sol != solution_zero)
 							jacobian->erase_solution(step);
 					}
