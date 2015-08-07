@@ -9,7 +9,7 @@
 
 SolRec::SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[],
 		int ifrestart) :
-		HashTable(doublekeyrangein, size, prime, XR, YR, ifrestart) {
+		HashTable(doublekeyrangein, size, prime, XR, YR, ifrestart) , range(100){
 
 	double zero_sol[3] = { 0., 0., 0. };
 	double kact_z = 0.;
@@ -117,7 +117,7 @@ void SolRec::wrtie_sol_to_disk() {
 								*(jacobian->get_key() + 1), solution[0], solution[1], solution[2], sol->get_kact());
 
 						fflush(myfile);
-						fsync(fileno(myfile));
+						//fsync(fileno(myfile));
 
 						if (sol != solution_zero)
 							jacobian->erase_solution(step);

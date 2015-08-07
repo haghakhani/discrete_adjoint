@@ -28,7 +28,7 @@ private:
 
 	int writeflag;
 
-	const int range=100;
+	const int range;
 
 public:
 

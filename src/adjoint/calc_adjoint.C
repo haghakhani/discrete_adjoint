@@ -252,7 +252,8 @@ void calc_func_sens(HashTable *El_Table) {
 				Curr_El = (Element*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0)
-					max = *(Curr_El->get_state_vars()) > max ? *(Curr_El->get_state_vars()) : max;
+					if (*(Curr_El->get_state_vars()) > max)
+						max = *(Curr_El->get_state_vars());
 
 				currentPtr = currentPtr->next;
 			}
@@ -265,7 +266,9 @@ void calc_func_sens(HashTable *El_Table) {
 				Curr_El = (Element*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0)
-					*(Curr_El->get_func_sens()) = *(Curr_El->get_state_vars()) == max ? 1 : 0.;
+					if (*(Curr_El->get_state_vars()) == max)
+						*(Curr_El->get_func_sens()) = 1.;
+				*(Curr_El->get_func_sens()) = 0.;
 
 				currentPtr = currentPtr->next;
 			}
