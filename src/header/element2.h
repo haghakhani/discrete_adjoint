@@ -32,6 +32,14 @@ class ElemPtrList;
 //#define USE_FATHER
 
 //! The Element class is a data structure designed to hold all the information need for an h (cell edge length) p (polynomial order) adaptive finite element.  Titan doesn't use p adaptation because it is a finite difference/volume code, hence many of the members are legacy from afeapi (adaptive finite element application programmers interface) which serves as the core of titan.  There is a seperate Discontinuous Galerkin Method (finite elements + finite volumes) version of titan and the polynomial information is not legacy there.  However in this version of Titan elements function simply as finite volume cells.
+
+struct FluxJac {
+
+	//first 3 is because at most for each flux there are 3 contributing elements
+	double jacob_mat[3][NUM_STATE_VARS][NUM_STATE_VARS];
+
+};
+
 class Element {
 
 	friend class HashTable;
@@ -340,31 +348,31 @@ public:
 	//! this function, based on the dir flag, chooses between calling xdirflux and ydirflux, which respectively, calculate either the x or y direction analytical cell center fluxes (or the fluxes at the the boundary if 2nd order flux option is checked on the gui). Keith wrote this.
 	void zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int order_flag,
 	    int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], Element *EmNeigh,
-	    double dt, ResFlag resflag);
+	    double dt);
 
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) x direction fluxes. Keith wrote this
 	void xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
-	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag);
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
 
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) y direction fluxes. Keith wrote this
 	void ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
-	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag);
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
 
-	void dual_zdirflux(int dir, double hfv[3][NUM_STATE_VARS], ResFlag resflag);
-	void dual_ydirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag);
-	void dual_xdirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag);
-	void calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int side, ResFlag lresflag,
-	    ResFlag rresflag);
-	void calc_yflux(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
-	    ResFlag rresflag);
-	void calc_xflux(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
-	    ResFlag rresflag);
-	void calc_fluxes(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
-	    ResFlag rresflag);
+	void calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int side);
+	void calc_yflux(HashTable* El_Table, HashTable* NodeTable, int myid);
+	void calc_xflux(HashTable* El_Table, HashTable* NodeTable, int myid);
+	void calc_fluxes(HashTable* El_Table, HashTable* NodeTable, int myid);
+
+	void dual_zdirflux(int dir, double hfv[3][NUM_STATE_VARS], double flux_jac[3][NUM_STATE_VARS],
+	    double s_jac[3][NUM_STATE_VARS]);
+	void dual_ydirflux(double hfv[3][NUM_STATE_VARS], double flux_jac[3][NUM_STATE_VARS],
+	    double s_jac[3][NUM_STATE_VARS]);
+	void dual_xdirflux(double hfv[3][NUM_STATE_VARS], double flux_jac[3][NUM_STATE_VARS],
+	    double s_jac[3][NUM_STATE_VARS]);
 
 	//! this function (indirectly) calculates the fluxes that will be used to perform the finite volume corrector step and stores them in element edge nodes, indirectly because it calls other functions to calculate the analytical fluxes and then calls another function to compute the riemann fluxes from the analytical fluxes. Talk to me (Keith) before you modify this, as I am fairly certain that it is now completely bug free and parts of it can be slightly confusing.
 	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int myid,
-	    double dt, int* order_flag, double *outflow, ResFlag lresflag, ResFlag rresflag);
+	    double dt, int* order_flag, double *outflow);
 
 	/*! this function calculates the maximum x and y direction wavespeeds
 	 *  which are the eigenvalues of the flux jacobian
@@ -623,6 +631,11 @@ public:
 
 	int check_state(HashTable* solrec, HashTable* El_Table, int iter);
 
+	void set_fluxjac(int side, int direction, int indx, double jac[NUM_STATE_VARS][NUM_STATE_VARS]);
+
+	void set_fluxjac(int side, int direction, int indx, double jac[NUM_STATE_VARS][NUM_STATE_VARS],
+	    double jac1[NUM_STATE_VARS][NUM_STATE_VARS]);
+
 private:
 	//! myprocess is id of the process(or) that owns this element
 	int myprocess;
@@ -809,6 +822,11 @@ private:
 	double ***jacobianMat;
 
 	double func_sens[NUM_STATE_VARS];
+
+	// this array holds the jacobian of fluxes,and its indexing is [side:x=0,y=1][direction:neg=0,pos=1]
+	FluxJac fluxjac[DIMENSION][DIMENSION];
+
+	double hslope_sens[DIMENSION][5];
 
 };
 

@@ -83,7 +83,7 @@ void delete_ghost_elms(HashTable* El_Table, int myid);
 
 //! This function loops through all the non-ghost current elements and calls the Element member function Element::calc_edge_states() which calculates the Riemann fluxes between elements and stores the Riemann fluxes in the edge nodes. 
 void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
-    TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow, ResFlag resflag);
+    TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow);
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo);
 
@@ -161,7 +161,7 @@ void reverse_states(HashTable* El_Table, HashTable* solrec, int iter, ElemPtrLis
 
 void print_jacobian(HashTable* El_Table, int iter);
 
-void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid, ResFlag resflag);
+void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid);
 
 void refinement_report(HashTable* El_Table);
 
@@ -194,8 +194,6 @@ void find_adjoint_sol(HashTable* El_Table, vector<Jacobian*>* solHyst, PertElemI
 int check_elem_exist(HashTable *El_Table, unsigned *key);
 
 void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo);
-
-void riemannflux();
 
 //! c++ sgn function 
 inline double c_sgn(double zz) {

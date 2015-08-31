@@ -118,12 +118,10 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx) {
 
 	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
 
-	//this array holds ResFlag for element itself and its neighbors
-	ResFlag resflag;
-	resflag.callflag = 1;
-	resflag.lgft = 0;
+	double outflow=0.;
+	int order_flag=1
 
-	calc_flux(meshctx, propctx, myid, resflag);
+	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, &outflow);
 
 	slopes(El_Table, NodeTable, matprops_ptr, 1);
 

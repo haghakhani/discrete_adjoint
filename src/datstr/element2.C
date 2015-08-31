@@ -907,6 +907,11 @@ void Element::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double 
 	if (bc == 1) {
 		for (j = 0; j < NUM_STATE_VARS * DIMENSION; j++)
 			d_state_vars[j] = 0;
+
+		for (int i = 0; i < DIMENSION; ++i)
+			for (int k = 0; k < 5; ++k)
+				hslope_sens[i][k] = 0.;
+
 		return;
 	}
 
@@ -934,17 +939,21 @@ void Element::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double 
 			ym = 2;
 			break;
 	}
+
 	/* x direction */
 	Element *ep = (Element*) (El_Table->lookup(&neighbor[xp][0]));
 	Element *em = (Element*) (El_Table->lookup(&neighbor[xm][0]));
 	Element *ep2 = NULL;
 	Element *em2 = NULL;
-//check if element has 2 neighbors on either side
+
+	//check if element has 2 neighbors on either side
 	Node* ndtemp = (Node*) NodeTable->lookup(&node_key[xp + 4][0]);
+
 	if (ndtemp->info == S_C_CON) {
 		ep2 = (Element*) (El_Table->lookup(&neighbor[xp + 4][0]));
 		assert(neigh_proc[xp + 4] >= 0 && ep2);
 	}
+
 	ndtemp = (Node*) NodeTable->lookup(&node_key[xm + 4][0]);
 	if (ndtemp->info == S_C_CON) {
 		em2 = (Element*) (El_Table->lookup(&neighbor[xm + 4][0]));
@@ -954,18 +963,79 @@ void Element::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double 
 	double dp, dm, dc, dxp, dxm;
 	dxp = ep->coord[0] - coord[0];
 	dxm = coord[0] - em->coord[0];
-	for (j = 0; j < NUM_STATE_VARS; j++) {
-		dp = (ep->prev_state_vars[j] - prev_state_vars[j]) / dxp;
-		if (ep2 != NULL)
-			dp = .5 * (dp + (ep2->prev_state_vars[j] - prev_state_vars[j]) / dxp);
-		dm = (prev_state_vars[j] - em->prev_state_vars[j]) / dxm;
-		if (em2 != NULL)
-			dm = .5 * (dm + (prev_state_vars[j] - em2->prev_state_vars[j]) / dxm);
 
-		dc = (dp * dxm + dm * dxp) / (dxm + dxp);  // weighted average
+	double inv_dxp = 1 / dxp, inv_dxm = 1 / dxm, inv_sdxpdxm = 1 / (dxm + dxp);
+
+	double min_slopes;
+
+	for (j = 0; j < NUM_STATE_VARS; j++) {
+
+		dp = (ep->prev_state_vars[j] - prev_state_vars[j]) * inv_dxp;
+
+		if (ep2 != NULL)
+			dp = .5 * (dp + (ep2->prev_state_vars[j] - prev_state_vars[j]) * inv_dxp);
+
+		dm = (prev_state_vars[j] - em->prev_state_vars[j]) * inv_dxm;
+
+		if (em2 != NULL)
+			dm = .5 * (dm + (prev_state_vars[j] - em2->prev_state_vars[j]) * inv_dxm);
+
+		dc = (dp * dxm + dm * dxp) * inv_sdxpdxm;  // weighted average
+
+		min_slopes = c_dmin1(gamma * dabs(dp), gamma * dabs(dm), dabs(dc));
+
 		//do slope limiting
-		d_state_vars[j] = .5 * (c_sgn(dp) + c_sgn(dm))
-		    * c_dmin1(gamma * dabs(dp), gamma * dabs(dm), dabs(dc));
+		d_state_vars[j] = .5 * (c_sgn(dp) + c_sgn(dm)) * min_slopes;
+
+		if (j == 0)
+			// if dp and dm have different signes
+			if (.5 * (c_sgn(dp) + c_sgn(dm)) == 0)
+				for (int i = 0; i < 5; ++i)
+					hslope_sens[0][i] = 0.;
+
+			else if (min_slopes == gamma * dabs(dp)) {
+
+				hslope_sens[0][0] = -inv_dxp;
+				hslope_sens[0][1] = 0.;
+				hslope_sens[0][3] = 0.;
+				hslope_sens[0][2] = inv_dxp;
+				hslope_sens[0][4] = 0.;
+
+				if (ep2 != NULL)
+					hslope_sens[0][2] = hslope_sens[0][4] = .5 * inv_dxp;
+
+			} else if (min_slopes == gamma * dabs(dm)) {
+
+				hslope_sens[0][0] = inv_dxm;
+				hslope_sens[0][2] = 0.;
+				hslope_sens[0][4] = 0.;
+				hslope_sens[0][1] = -inv_dxm;
+				hslope_sens[0][3] = 0.;
+
+				if (em2 != NULL)
+					hslope_sens[0][1] = hslope_sens[0][3] = -.5 * inv_dxm;
+
+			} else {
+
+				// under any circumstances hslope_sens[0][0] is this
+				hslope_sens[0][0] = inv_dxm - inv_dxp;
+				hslope_sens[0][1] = -inv_dxm;
+				hslope_sens[0][2] = inv_dxp;
+				hslope_sens[0][3] = 0.;
+				hslope_sens[0][4] = 0.;
+
+				if (ep2 != NULL)
+					hslope_sens[0][2] = hslope_sens[0][4] = .5 * inv_dxp;
+
+				if (em2 != NULL)
+					hslope_sens[0][1] = hslope_sens[0][3] = -.5 * inv_dxm;
+
+				hslope_sens[0][1] *= dxp * inv_sdxpdxm;
+				hslope_sens[0][2] *= dxm * inv_sdxpdxm;
+				hslope_sens[0][3] *= dxp * inv_sdxpdxm;
+				hslope_sens[0][4] *= dxm * inv_sdxpdxm;
+
+			}
 	}
 
 	/* y direction */
@@ -990,18 +1060,74 @@ void Element::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double 
 
 	dxp = ep->coord[1] - coord[1];
 	dxm = coord[1] - em->coord[1];
-	for (j = 0; j < NUM_STATE_VARS; j++) {
-		dp = (ep->prev_state_vars[j] - prev_state_vars[j]) / dxp;
-		if (ep2 != NULL)
-			dp = .5 * (dp + (ep2->prev_state_vars[j] - prev_state_vars[j]) / dxp);
-		dm = (prev_state_vars[j] - em->prev_state_vars[j]) / dxm;
-		if (em2 != NULL)
-			dm = .5 * (dm + (prev_state_vars[j] - em2->prev_state_vars[j]) / dxm);
 
-		dc = (dp * dxm + dm * dxp) / (dxm + dxp);  // weighted average
+	inv_dxp = 1 / dxp;
+	inv_dxm = 1 / dxm;
+	inv_sdxpdxm = 1 / (dxm + dxp);
+
+	for (j = 0; j < NUM_STATE_VARS; j++) {
+		dp = (ep->prev_state_vars[j] - prev_state_vars[j]) * inv_dxp;
+		if (ep2 != NULL)
+			dp = .5 * (dp + (ep2->prev_state_vars[j] - prev_state_vars[j]) * inv_dxp);
+		dm = (prev_state_vars[j] - em->prev_state_vars[j]) * inv_dxm;
+		if (em2 != NULL)
+			dm = .5 * (dm + (prev_state_vars[j] - em2->prev_state_vars[j]) * inv_dxm);
+
+		dc = (dp * dxm + dm * dxp) * inv_sdxpdxm;  // weighted average
+
+		min_slopes = c_dmin1(gamma * dabs(dp), gamma * dabs(dm), dabs(dc));
 		//do slope limiting
-		d_state_vars[j + NUM_STATE_VARS] = .5 * (c_sgn(dp) + c_sgn(dm))
-		    * c_dmin1(gamma * dabs(dp), gamma * dabs(dm), dabs(dc));
+		d_state_vars[j + NUM_STATE_VARS] = .5 * (c_sgn(dp) + c_sgn(dm)) * min_slopes;
+
+		if (j == 0)
+			// if dp and dm have different signes
+			if (.5 * (c_sgn(dp) + c_sgn(dm)) == 0)
+				for (int i = 0; i < 5; ++i)
+					hslope_sens[1][i] = 0.;
+
+			else if (min_slopes == gamma * dabs(dp)) {
+
+				hslope_sens[1][0] = -inv_dxp;
+				hslope_sens[1][1] = 0.;
+				hslope_sens[1][3] = 0.;
+				hslope_sens[1][2] = inv_dxp;
+				hslope_sens[1][4] = 0.;
+
+				if (ep2 != NULL)
+					hslope_sens[1][2] = hslope_sens[1][4] = .5 * inv_dxp;
+
+			} else if (min_slopes == gamma * dabs(dm)) {
+
+				hslope_sens[1][0] = inv_dxm;
+				hslope_sens[1][2] = 0.;
+				hslope_sens[1][4] = 0.;
+				hslope_sens[1][1] = -inv_dxm;
+				hslope_sens[1][3] = 0.;
+
+				if (em2 != NULL)
+					hslope_sens[1][1] = hslope_sens[1][3] = -.5 * inv_dxm;
+
+			} else {
+
+				// under any circumstances hslope_sens[0][0] is this
+				hslope_sens[1][0] = inv_dxm - inv_dxp;
+				hslope_sens[1][1] = -inv_dxm;
+				hslope_sens[1][2] = inv_dxp;
+				hslope_sens[1][3] = 0.;
+				hslope_sens[1][4] = 0.;
+
+				if (ep2 != NULL)
+					hslope_sens[1][2] = hslope_sens[1][4] = .5 * inv_dxp;
+
+				if (em2 != NULL)
+					hslope_sens[1][1] = hslope_sens[1][3] = -.5 * inv_dxm;
+
+				hslope_sens[1][1] *= dxp * inv_sdxpdxm;
+				hslope_sens[1][2] *= dxm * inv_sdxpdxm;
+				hslope_sens[1][3] *= dxp * inv_sdxpdxm;
+				hslope_sens[1][4] *= dxm * inv_sdxpdxm;
+
+			}
 	}
 
 	return;
@@ -1176,19 +1302,17 @@ void Element::insert_coord(HashTable* NodeTable) {
 }
 
 double max(double x, double y) {
-	if (x >= y) {
+	if (x > y)
 		return (x);
-	} else {
-		return (y);
-	}
+
+	return (y);
 }
 
 double min(double x, double y) {
-	if (x >= y) {
+	if (x > y)
 		return (y);
-	} else {
-		return (x);
-	}
+
+	return (x);
 }
 
 // the element member function calc_wet_dry_orient() calculates the
@@ -1929,24 +2053,19 @@ double Element::convect_dryline(double VxVy[2], double dt) {
 
 //x direction flux in current cell
 void Element::xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
-    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag) {
+    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]) {
 	int i, j;
 	double a, Vel;
 
-	if ((state_vars[0] < GEOFLOW_TINY && resflag.callflag == 0)
-	    || (prev_state_vars[0] < GEOFLOW_TINY && resflag.callflag == 1)
-	    || (resflag.lgft && resflag.callflag)) {
+	if (state_vars[0] < GEOFLOW_TINY) {
 		for (i = 0; i < 3; i++)
 			for (j = 0; j < NUM_STATE_VARS; j++)
 				hfv[i][j] = 0.0;
 	} else {
-		if (resflag.callflag == 0)
-			//state variables
-			for (i = 0; i < NUM_STATE_VARS; i++)
-				hfv[0][i] = state_vars[i] + d_state_vars[i] * dz;
-		else
-			for (i = 0; i < NUM_STATE_VARS; i++)
-				hfv[0][i] = prev_state_vars[i];
+
+		//state variables
+		for (i = 0; i < NUM_STATE_VARS; i++)
+			hfv[0][i] = state_vars[i] + d_state_vars[i] * dz;
 
 		if ((0.0 < Awet) && (Awet < 1.0))
 			for (i = 0; i < NUM_STATE_VARS; i++)
@@ -1982,9 +2101,10 @@ void Element::xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 }
 
 //x direction flux in current cell
-void Element::dual_xdirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag) {
+void Element::dual_xdirflux(double hfv[3][NUM_STATE_VARS], double flux_jac[3][NUM_STATE_VARS],
+    double s_jac[3][NUM_STATE_VARS]) {
 
-	if ((prev_state_vars[0] < GEOFLOW_TINY) || (resflag.lgft)) {
+	if ((prev_state_vars[0] < GEOFLOW_TINY)) {
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < NUM_STATE_VARS; j++)
 				hfv[i][j] = 0.0;
@@ -1993,8 +2113,10 @@ void Element::dual_xdirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag) {
 		for (int i = 0; i < NUM_STATE_VARS; i++)
 			hfv[0][i] = prev_state_vars[i];
 
+		double h_inv = hfv[0][0];
+
 		// Solid-phase velocity in x-dir
-		double Vel = hfv[0][1] / hfv[0][0];
+		double Vel = hfv[0][1] * h_inv;
 
 		// sound-speed : a^2 = k_ap*h*g(3)
 		double a = sqrt(kactxy[0] * hfv[0][0] * gravity[2]);
@@ -2009,6 +2131,32 @@ void Element::dual_xdirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag) {
 		hfv[2][1] = Vel;
 		hfv[2][2] = Vel + a;
 
+		// jacobian of flux
+		flux_jac[0][0] = 0;
+		flux_jac[0][1] = 1;
+		flux_jac[0][2] = 0;
+
+		flux_jac[1][0] = kactxy[0] * gravity[2] * hfv[0][0] - Vel * Vel;
+		flux_jac[1][1] = 2 * Vel;
+		flux_jac[1][2] = 0;
+
+		flux_jac[2][0] = -Vel * hfv[0][2] * h_inv;
+		flux_jac[2][1] = hfv[0][2] * h_inv;
+		flux_jac[2][2] = Vel;
+
+		//jacobian of speed
+		s_jac[0][0] = .5 * a * h_inv - Vel * h_inv;
+		s_jac[0][1] = h_inv;
+		s_jac[0][2] = 0;
+
+		s_jac[1][0] = -Vel * h_inv;
+		s_jac[1][1] = h_inv;
+		s_jac[1][2] = 0;
+
+		s_jac[2][0] = -.5 * a * h_inv - Vel * h_inv;
+		s_jac[2][1] = h_inv;
+		s_jac[2][2] = 0;
+
 	}
 
 	for (int i = 0; i < 3; i++)
@@ -2020,27 +2168,22 @@ void Element::dual_xdirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag) {
 
 //y direction flux in current cell
 void Element::ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
-    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag) {
+    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]) {
 	int i, j;
 	double Vel, a;
 
 //the "update flux" values (hfv) are the fluxes used to update the solution,
 // they may or may not be "reset" from their standard values based on whether
 // or not the stopping criteria is triggering a change intended to cause the flow to stop.
-	if ((state_vars[0] < GEOFLOW_TINY && resflag.callflag == 0)
-	    || (prev_state_vars[0] < GEOFLOW_TINY && resflag.callflag == 1)
-	    || (resflag.lgft && resflag.callflag)) {
+	if (state_vars[0] < GEOFLOW_TINY) {
 		for (i = 0; i < 3; i++)
 			for (j = 0; j < NUM_STATE_VARS; j++)
 				hfv[i][j] = 0.0; //state variables
 	} else {
 		//state variables
-		if (resflag.callflag == 0)
-			for (i = 0; i < NUM_STATE_VARS; i++)
-				hfv[0][i] = state_vars[i] + d_state_vars[NUM_STATE_VARS + i] * dz;
-		else
-			for (i = 0; i < NUM_STATE_VARS; i++)
-				hfv[0][i] = prev_state_vars[i];
+
+		for (i = 0; i < NUM_STATE_VARS; i++)
+			hfv[0][i] = state_vars[i] + d_state_vars[NUM_STATE_VARS + i] * dz;
 
 		if ((0.0 < Awet) && (Awet < 1.0))
 			for (i = 0; i < NUM_STATE_VARS; i++)
@@ -2076,9 +2219,10 @@ void Element::ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 }
 
 //y direction flux in current cell
-void Element::dual_ydirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag) {
+void Element::dual_ydirflux(double hfv[3][NUM_STATE_VARS], double flux_jac[3][NUM_STATE_VARS],
+    double s_jac[3][NUM_STATE_VARS]) {
 
-	if ((prev_state_vars[0] < GEOFLOW_TINY) || (resflag.lgft)) {
+	if ((prev_state_vars[0] < GEOFLOW_TINY)) {
 		for (int i = 0; i < 3; i++)
 			for (int j = 0; j < NUM_STATE_VARS; j++)
 				hfv[i][j] = 0.0; //state variables
@@ -2090,8 +2234,10 @@ void Element::dual_ydirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag) {
 		// a = speed of sound through the medium
 		double a = sqrt(kactxy[1] * hfv[0][0] * gravity[2]);
 
+		double h_inv = 1 / hfv[0][0];
+
 		// Solid-phase velocity in y-dir
-		double Vel = hfv[0][2] / hfv[0][0];
+		double Vel = hfv[0][2] * h_inv;
 
 		//fluxes
 		hfv[1][0] = hfv[0][2];
@@ -2102,6 +2248,32 @@ void Element::dual_ydirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag) {
 		hfv[2][0] = Vel - a;
 		hfv[2][1] = Vel;
 		hfv[2][2] = Vel + a;
+
+		// jacobian of flux
+		flux_jac[0][0] = 0;
+		flux_jac[0][1] = 0;
+		flux_jac[0][2] = 1;
+
+		flux_jac[1][0] = -Vel * hfv[0][1] * h_inv;
+		flux_jac[1][1] = Vel;
+		flux_jac[1][2] = hfv[0][1] * h_inv;
+
+		flux_jac[2][0] = kactxy[0] * gravity[2] * hfv[0][0] - Vel * Vel;
+		flux_jac[2][1] = 0;
+		flux_jac[2][2] = 2 * Vel;
+
+		//jacobian of speed
+		s_jac[0][0] = .5 * a * h_inv - Vel * h_inv;
+		s_jac[0][1] = 0;
+		s_jac[0][2] = h_inv;
+
+		s_jac[1][0] = -Vel * h_inv;
+		s_jac[1][1] = 0;
+		s_jac[1][2] = h_inv;
+
+		s_jac[2][0] = -.5 * a * h_inv - Vel * h_inv;
+		s_jac[2][1] = 0;
+		s_jac[2][2] = h_inv;
 
 	}
 
@@ -2115,7 +2287,7 @@ void Element::dual_ydirflux(double hfv[3][NUM_STATE_VARS], ResFlag resflag) {
 //note z is not "z" but either x or y
 void Element::zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
     int order_flag, int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS],
-    Element *EmNeigh, double dt, ResFlag resflag) {
+    Element *EmNeigh, double dt) {
 	double dz = 0.0;
 	int ineigh = which_neighbor(EmNeigh->pass_key());
 
@@ -2136,9 +2308,9 @@ void Element::zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matp
 		dz = (1.0 + dir % 2 - dir) * 0.5 * dx[dir % 2]; //+ or - 1/2 dx or dy
 
 	if (dir % 2 == 0)
-		xdirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv, resflag);
+		xdirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv);
 	else if (dir % 2 == 1)
-		ydirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv, resflag);
+		ydirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv);
 	else {
 		printf("zdirflux: direction %d not known\n", dir);
 		exit(1);
@@ -2147,12 +2319,13 @@ void Element::zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matp
 }
 
 //note z is not "z" but either x or y
-void Element::dual_zdirflux(int dir, double hfv[3][NUM_STATE_VARS], ResFlag resflag) {
+void Element::dual_zdirflux(int dir, double hfv[3][NUM_STATE_VARS],
+    double flux_jac[3][NUM_STATE_VARS], double s_jac[3][NUM_STATE_VARS]) {
 
 	if (dir % 2 == 0)
-		dual_xdirflux(hfv, resflag);
+		dual_xdirflux(hfv, flux_jac, s_jac);
 	else if (dir % 2 == 1)
-		dual_ydirflux(hfv, resflag);
+		dual_ydirflux(hfv, flux_jac, s_jac);
 	else {
 		printf("zdirflux: direction %d not known\n", dir);
 		exit(1);
@@ -2335,57 +2508,14 @@ void riemannflux(double hfvl[3][NUM_STATE_VARS], double hfvr[3][NUM_STATE_VARS],
 
 }
 
-void dual_riemannflux(double hfvl[3][NUM_STATE_VARS], double hfvr[3][NUM_STATE_VARS],
-    double flux[NUM_STATE_VARS]) {
-//hfv: h=state variable, f=flux, v=wave speeds
-//l="left" (the minus side), r="right" (the plus side)
-
-	if ((hfvl[0][0] == 0.) && (hfvr[0][0] == 0.))
-		for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
-			flux[ivar] = 0.0;
-	else {
-
-		double sl, sr;
-		if (hfvl[0][0] == 0./*2 * INCREMENT*/) {
-			sl = min(0, 2.0 * hfvr[2][0] - hfvr[2][1]);
-			sr = max(0, 2.0 * hfvr[2][2] - hfvr[2][1]);
-		} else if (hfvr[0][0] == 0./*2 * INCREMENT*/) {
-			sl = min(0, 2.0 * hfvl[2][0] - hfvl[2][1]);
-			sr = max(0, 2.0 * hfvl[2][2] - hfvl[2][1]);
-		} else {
-			sl = min(0, min(hfvl[2][0], hfvr[2][0]));
-			sr = max(0, max(hfvl[2][2], hfvr[2][2]));
-		}
-
-		if (sl >= 0.0)
-			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
-				flux[ivar] = hfvl[1][ivar];
-
-		else if (sr <= 0.0)
-			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
-				flux[ivar] = hfvr[1][ivar];
-
-		else
-			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
-				flux[ivar] = (sr * hfvl[1][ivar] - sl * hfvr[1][ivar]
-				    + sl * sr * (hfvr[0][ivar] - hfvl[0][ivar])) / (sr - sl);
-	}
-
-}
 void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
-    int myid, double dt, int* order_flag, double *outflow, ResFlag lresflag, ResFlag rresflag) {
+    int myid, double dt, int* order_flag, double *outflow) {
 	Node *np, *np1, *np2, *nm, *nm1, *nm2;
 	Element *elm1, *elm2;
 	int side, zp, zm;
 	int zp2, zm2; //positive_z_side_2 minus_z_side_2
 	int zelmpos = -100, zelmpos_2 = -100;
 	int ivar;
-	const int SolFlux = 0, RefineFlux = 1; //indicate for which purpose flux is being calculated 0 is for solution and 1 is for refinement
-
-//neutral resflag
-	ResFlag nresflag;
-	nresflag.callflag = rresflag.callflag;
-	nresflag.lgft = 0;
 
 	double hfv[3][NUM_STATE_VARS], hfv1[3][NUM_STATE_VARS], hfv2[3][NUM_STATE_VARS]; //update flux
 	double hrfv[3][NUM_STATE_VARS], hrfv1[3][NUM_STATE_VARS], hrfv2[3][NUM_STATE_VARS]; //refinement flux
@@ -2416,18 +2546,18 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 			elm1 = (Element*) El_Table->lookup(&neighbor[zp][0]);
 			assert(elm1);
 
-			zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm1, dt, lresflag);
+			zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm1, dt);
 			elm1->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv1, hrfv1, this,
-			    dt, rresflag);
+			    dt);
 
 			riemannflux(hfv, hfv1, np->flux);
 			riemannflux(hrfv, hrfv1, np->refinementflux);
 
 			elm2 = (Element*) El_Table->lookup(&neighbor[zp + 4][0]);
 			assert(elm2);
-			zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm2, dt, lresflag);
+			zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm2, dt);
 			elm2->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv2, hrfv2, this,
-			    dt, rresflag);
+			    dt);
 
 			//note a rectangular domain ensures that neigh_proc[zm+4]!=-1
 			if (neigh_proc[zp + 4] == myid) {
@@ -2456,9 +2586,9 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 			elm1 = (Element*) El_Table->lookup(&neighbor[zp][0]);
 			assert(elm1);
 
-			zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm1, dt, lresflag);
+			zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm1, dt);
 			elm1->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv1, hrfv1, this,
-			    dt, rresflag);
+			    dt);
 
 			riemannflux(hfv, hfv1, np->flux);
 			riemannflux(hrfv, hrfv1, np->refinementflux);
@@ -2507,10 +2637,8 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 				elm2 = (Element*) El_Table->lookup(&elm1->neighbor[(zelmpos + 4) % 8][0]);
 				assert(elm2);
 
-				elm1->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv1, hrfv1, elm2, dt,
-				    rresflag);
-				elm2->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv2, hrfv2, elm1, dt,
-				    nresflag);
+				elm1->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv1, hrfv1, elm2, dt);
+				elm2->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv2, hrfv2, elm1, dt);
 
 				if (*(elm1->get_neigh_proc() + (zelmpos + 4) % 8) == myid) {
 					zp2 = elm2->which_neighbor(elm1->pass_key()) % 4;
@@ -2563,10 +2691,9 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 				elm2 = (Element*) (El_Table->lookup(&neighbor[zp + 4][0]));
 				assert(elm2);
 
-				zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm2, dt,
-				    lresflag);
+				zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm2, dt);
 				elm2->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv2, hrfv2, this,
-				    dt, rresflag);
+				    dt);
 
 				if (neigh_proc[zp + 4] == myid) {
 					zelmpos_2 = elm2->which_neighbor(pass_key()) % 4;
@@ -2658,10 +2785,8 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 				elm1 = (Element*) El_Table->lookup(&neighbor[zm][0]);
 				assert(elm1);
 
-				zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv, hrfv, elm1, dt,
-				    rresflag);
-				elm1->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv1, hrfv1, this, dt,
-				    lresflag);
+				zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv, hrfv, elm1, dt);
+				elm1->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv1, hrfv1, this, dt);
 				riemannflux(hfv1, hfv, nm->flux);
 
 				riemannflux(hrfv1, hrfv, nm->refinementflux);
@@ -2669,10 +2794,8 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 				elm2 = (Element*) El_Table->lookup(&neighbor[zm + 4][0]);
 				assert(elm2);
 
-				zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv, hrfv, elm2, dt,
-				    rresflag);
-				elm2->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv2, hrfv2, this, dt,
-				    nresflag);
+				zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv, hrfv, elm2, dt);
+				elm2->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv2, hrfv2, this, dt);
 
 				//note a rectangular domain ensures that neigh_proc[zm+4]!=-1
 				if (neigh_proc[zm + 4] == myid) {
@@ -2706,26 +2829,236 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 
 }
 
-void Element::calc_fluxes(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
-    ResFlag rresflag) {
+void dual_riemannflux(double hfvl[3][NUM_STATE_VARS], double hfvr[3][NUM_STATE_VARS],
+    double flux[NUM_STATE_VARS], double flux_jac_l[3][NUM_STATE_VARS],
+    double flux_jac_r[3][NUM_STATE_VARS], double s_jac_l[3][NUM_STATE_VARS],
+    double s_jac_r[3][NUM_STATE_VARS], double jac_l[3][NUM_STATE_VARS],
+    double jac_r[3][NUM_STATE_VARS]) {
+//hfv: h=state variable, f=flux, v=wave speeds
+//l="left" (the minus side), r="right" (the plus side)
+
+	if ((hfvl[0][0] == 0.) && (hfvr[0][0] == 0.)) {
+		for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+			flux[ivar] = 0.0;
+
+		for (int i = 0; i < NUM_STATE_VARS; ++i)
+			for (int j = 0; j < NUM_STATE_VARS; ++j)
+
+				jac_r[i][j] = jac_l[i][j] = 0.;
+
+	} else {
+
+		double sl, sr;
+		double d_sl_l[3], d_sl_r[3], d_sr_l[3], d_sr_r[3];
+
+		if (hfvl[0][0] == 0.) {
+
+			sl = fmin(0, 2.0 * hfvr[2][0] - hfvr[2][1]);
+
+			if (sl == 0) {
+				for (int i = 0; i < NUM_STATE_VARS; ++i)
+					d_sl_l[i] = d_sl_r[i] = 0.;
+
+			} else {
+				for (int i = 0; i < NUM_STATE_VARS; ++i)
+					d_sl_l[i] = 0.;
+				// now we have to implement chain rule
+				// \frac{\partial s_l}{\partial h}=
+				// 2.0*\frac{\partial hfvr[2][0]}{\partial h_r}-\frac{\partial hfvr[2][1]}{\partial h_r}
+				// and similarly for other terms
+				d_sl_r[0] = 2 * s_jac_r[0][0] - s_jac_r[1][0];
+				d_sl_r[1] = 2 * s_jac_r[0][1] - s_jac_r[1][1];
+				d_sl_r[2] = 2 * s_jac_r[0][2] - s_jac_r[1][2];
+
+			}
+
+			sr = fmax(0, 2.0 * hfvr[2][2] - hfvr[2][1]);
+
+			if (sr == 0) {
+				for (int i = 0; i < NUM_STATE_VARS; ++i)
+					d_sr_l[i] = d_sr_r[i] = 0.;
+
+			} else {
+
+				for (int i = 0; i < NUM_STATE_VARS; ++i)
+					d_sr_l[i] = 0.;
+
+				// now we have to implement chain rule
+				d_sr_r[0] = 2 * s_jac_r[2][0] - s_jac_r[1][0];
+				d_sr_r[1] = 2 * s_jac_r[2][1] - s_jac_r[1][1];
+				d_sr_r[2] = 2 * s_jac_r[2][2] - s_jac_r[1][2];
+
+			}
+
+		} else if (hfvr[0][0] == 0.) {
+			sl = fmin(0, 2.0 * hfvl[2][0] - hfvl[2][1]);
+
+			if (sl == 0) {
+				for (int i = 0; i < NUM_STATE_VARS; ++i)
+					d_sl_l[i] = d_sl_r[i] = 0.;
+
+			} else {
+				for (int i = 0; i < NUM_STATE_VARS; ++i)
+					d_sl_r[i] = 0.;
+
+				// now we have to implement chain rule
+				d_sl_l[0] = 2 * s_jac_l[0][0] - s_jac_l[1][0];
+				d_sl_l[1] = 2 * s_jac_l[0][1] - s_jac_l[1][1];
+				d_sl_l[2] = 2 * s_jac_l[0][2] - s_jac_l[1][2];
+
+			}
+
+			sr = fmax(0, 2.0 * hfvl[2][2] - hfvl[2][1]);
+
+			if (sr == 0) {
+				for (int i = 0; i < NUM_STATE_VARS; ++i)
+					d_sr_l[i] = d_sr_r[i] = 0.;
+
+			} else {
+				for (int i = 0; i < NUM_STATE_VARS; ++i)
+					d_sr_r[i] = 0.;
+				// now we have to implement chain rule
+				d_sr_l[0] = 2 * s_jac_l[2][0] - s_jac_l[1][0];
+				d_sr_l[1] = 2 * s_jac_l[2][1] - s_jac_l[1][1];
+				d_sr_l[2] = 2 * s_jac_l[2][2] - s_jac_l[1][2];
+
+			}
+
+		} else {
+			sl = fmin(0, fmin(hfvl[2][0], hfvr[2][0]));
+
+			if (sl == 0) {
+				for (int i = 0; i < NUM_STATE_VARS; ++i)
+					d_sr_l[i] = d_sr_r[i] = 0.;
+
+			} else if (sl == hfvl[2][0]) {
+				for (int i = 0; i < NUM_STATE_VARS; ++i)
+					d_sl_r[i] = 0.;
+
+				d_sl_l[0] = s_jac_l[0][0];
+				d_sl_l[1] = s_jac_l[0][1];
+				d_sl_l[2] = s_jac_l[0][2];
+
+			} else {
+
+				for (int i = 0; i < NUM_STATE_VARS; ++i)
+					d_sl_l[i] = 0.;
+
+				d_sl_r[0] = s_jac_r[0][0];
+				d_sl_r[1] = s_jac_r[0][1];
+				d_sl_r[2] = s_jac_r[0][2];
+
+			}
+			sr = fmax(0, fmax(hfvl[2][2], hfvr[2][2]));
+		}
+
+		if (sl >= 0.0) {
+			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+				flux[ivar] = hfvl[1][ivar];
+
+			for (int i = 0; i < NUM_STATE_VARS; ++i)
+				for (int j = 0; j < NUM_STATE_VARS; ++j) {
+					jac_r[i][j] = 0.;
+					jac_l[i][j] = flux_jac_l[i][j];
+				}
+
+		} else if (sr <= 0.0) {
+			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+				flux[ivar] = hfvr[1][ivar];
+
+			for (int i = 0; i < NUM_STATE_VARS; ++i)
+				for (int j = 0; j < NUM_STATE_VARS; ++j) {
+					jac_r[i][j] = flux_jac_r[i][j];
+					jac_l[i][j] = 0.;
+				}
+
+		} else {
+
+			double inv_speed_diff = 1 / (sr - sl);
+			double v_diff[NUM_STATE_VARS];
+			double d_flux_d_sr[NUM_STATE_VARS], d_flux_d_sl[NUM_STATE_VARS];
+
+			for (int i = 0; i < NUM_STATE_VARS; ++i)
+				v_diff[i] = hfvr[0][i] - hfvl[0][i];
+
+			// in this formulation flux is a function of 5 variables: sr, sl, Fr, Fl, v_diff
+			// then we find the derivative by chain rule
+			for (int i = 0; i < NUM_STATE_VARS; ++i)
+				flux[i] = (sr * hfvl[1][i] - sl * hfvr[1][i] + sl * sr * v_diff[i]) * inv_speed_diff;
+
+			for (int i = 0; i < NUM_STATE_VARS; i++) {
+				d_flux_d_sr[i] = (hfvl[1][i] + sl * v_diff[i] - flux[i]) * inv_speed_diff;
+				d_flux_d_sl[i] = (-hfvr[1][i] + sr * v_diff[i] + flux[i]) * inv_speed_diff;
+			}
+
+			double jac_v_diff_r[3][3], jac_v_diff_l[3][3];
+
+			for (int i = 0; i < NUM_STATE_VARS; ++i)
+				for (int j = 0; j < NUM_STATE_VARS; ++j) {
+
+					if (i == j) {
+						jac_v_diff_r[i][j] = sr * sl * inv_speed_diff;
+						jac_v_diff_l[i][j] = -sr * sl * inv_speed_diff;
+					} else
+
+						jac_v_diff_r[i][j] = jac_v_diff_l[i][j] = 0.;
+				}
+
+			//---------------------------------------
+//			double d_flux_d_Fr = sr * inv_speed_diff;
+//			double d_flux_d_Fl = -sl * inv_speed_diff;
+			// very interestingly I noticed that in jacobian computation I have following terms:
+			// d_flux_d_Fr*jac_flux_r[i][j]*d_flux_d_Fl*jac_flux_r[i][j]
+			// which can simplify to:
+			// jac_flux_r[i][j]
+
+			for (int i = 0; i < NUM_STATE_VARS; ++i)
+				for (int j = 0; j < NUM_STATE_VARS; ++j) {
+
+					jac_r[i][j] = d_flux_d_sr[i] * d_sr_r[j] + d_flux_d_sl[i] * d_sl_r[j] + flux_jac_r[i][j]
+					    + jac_v_diff_r[i][j];
+
+					jac_l[i][j] = d_flux_d_sr[i] * d_sr_l[j] + d_flux_d_sl[i] * d_sl_l[j] + flux_jac_l[i][j]
+					    + jac_v_diff_l[i][j];
+				}
+
+		}
+	}
+
+}
+
+void Element::calc_fluxes(HashTable* El_Table, HashTable* NodeTable, int myid) {
 
 	for (int side = 0; side < 2; ++side)
-		calc_flux(El_Table, NodeTable, myid, side, lresflag, rresflag);
+		calc_flux(El_Table, NodeTable, myid, side);
 
 }
 
-void Element::calc_xflux(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
-    ResFlag rresflag) {
-	calc_flux(El_Table, NodeTable, myid, 0, lresflag, rresflag);
+void Element::calc_xflux(HashTable* El_Table, HashTable* NodeTable, int myid) {
+	calc_flux(El_Table, NodeTable, myid, 0);
 }
 
-void Element::calc_yflux(HashTable* El_Table, HashTable* NodeTable, int myid, ResFlag lresflag,
-    ResFlag rresflag) {
-	calc_flux(El_Table, NodeTable, myid, 1, lresflag, rresflag);
+void Element::calc_yflux(HashTable* El_Table, HashTable* NodeTable, int myid) {
+	calc_flux(El_Table, NodeTable, myid, 1);
 }
 
-void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int side,
-    ResFlag lresflag, ResFlag rresflag) {
+void Element::set_fluxjac(int side, int direction, int indx,
+    double jac[NUM_STATE_VARS][NUM_STATE_VARS]) {
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		for (int j = 0; j < NUM_STATE_VARS; ++j)
+			fluxjac[side][direction].jacob_mat[indx][i][j] = jac[i][j];
+}
+
+void Element::set_fluxjac(int side, int direction, int indx,
+    double jac[NUM_STATE_VARS][NUM_STATE_VARS], double jac1[NUM_STATE_VARS][NUM_STATE_VARS]) {
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		for (int j = 0; j < NUM_STATE_VARS; ++j)
+			fluxjac[side][direction].jacob_mat[indx][i][j] = .5 * (jac[i][j] + jac1[i][j]);
+}
+
+void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int side) {
 
 	Node *np, *np1, *np2, *nm, *nm1, *nm2;
 	Element *elm1, *elm2;
@@ -2733,15 +3066,18 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 	int zp2, zm2; //positive_z_side_2 minus_z_side_2
 	int zelmpos = -100, zelmpos_2 = -100;
 
-//neutral resflag
-	ResFlag nresflag;
-	nresflag.callflag = rresflag.callflag;
-	nresflag.lgft = 0;
-
 	double hfv[3][NUM_STATE_VARS], hfv1[3][NUM_STATE_VARS], hfv2[3][NUM_STATE_VARS]; //update flux
+	double flux_jac[3][NUM_STATE_VARS], flux_jac1[3][NUM_STATE_VARS], flux_jac2[3][NUM_STATE_VARS];
+	double s_jac[3][NUM_STATE_VARS], s_jac1[3][NUM_STATE_VARS], s_jac2[3][NUM_STATE_VARS];
+	double jac[3][NUM_STATE_VARS], jac_neigh1[3][NUM_STATE_VARS], jac_neigh2[3][NUM_STATE_VARS],
+	    jac_zero[3][NUM_STATE_VARS], jac_res[3][NUM_STATE_VARS]; // the latest one is for times we need to evaluate riemannflux for the current element twice
 
 //ghost elements don't have nodes so you have to make temp storage for flux
 	double ghostflux[NUM_STATE_VARS]; //, (*fluxptr)[NUM_STATE_VARS];
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		for (int j = 0; j < NUM_STATE_VARS; ++j)
+			jac_zero[i][j] = 0.;
 
 //  if (key[0]==3978454630 && key[1]==1717986917)
 //    cout<<"this element is being checked"<<endl;
@@ -2753,52 +3089,100 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 	if (neigh_proc[zp] == -1) {
 		nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
 
-		//outflow boundary conditions
-		for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
+//outflow boundary conditions
+		for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
 			np->flux[ivar] = nm->flux[ivar];
 
-		}
+		//by default fluxes_jac has been initialized to zero, but to be on the safe side
+		for (int i = 0; i < NUM_STATE_VARS; ++i)
+			set_fluxjac(side, 1, i, jac_zero);
+
 	} else if (neigh_proc[zp] != myid) {
+
 		np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
 		elm1 = (Element*) El_Table->lookup(&neighbor[zp][0]);
 		assert(elm1);
 
-		dual_zdirflux(side, hfv, lresflag);
-		elm1->dual_zdirflux(side + 2, hfv1, rresflag);
+		dual_zdirflux(side, hfv, flux_jac, s_jac);
+		elm1->dual_zdirflux(side + 2, hfv1, flux_jac1, s_jac1);
 
-		dual_riemannflux(hfv, hfv1, np->flux);
+		dual_riemannflux(hfv, hfv1, np->flux, flux_jac, flux_jac1, s_jac, s_jac1, jac, jac_neigh1);
 
+		//now we can store jacobians in elements
+		set_fluxjac(side, 1, 0, jac);
+		set_fluxjac(side, 1, 1, jac_neigh1);
+		set_fluxjac(side, 1, 2, jac_zero);
+
+		// here the element elm1 must be a ghost element
+		elm1->set_fluxjac(side, 0, 0, jac_neigh1);
+		elm1->set_fluxjac(side, 0, 1, jac);
+		elm1->set_fluxjac(side, 0, 2, jac_zero);
+
+		// why element elm2 which must be a ghost element always exists?????(Hossein asking)
 		elm2 = (Element*) El_Table->lookup(&neighbor[zp + 4][0]);
 		assert(elm2);
-		dual_zdirflux(side, hfv, lresflag);
-		elm2->dual_zdirflux(side + 2, hfv2, rresflag);
+		dual_zdirflux(side, hfv, flux_jac, s_jac);
+		elm2->dual_zdirflux(side + 2, hfv2, flux_jac2, s_jac2);
 
 		//note a rectangular domain ensures that neigh_proc[zm+4]!=-1
 		if (neigh_proc[zp + 4] == myid) {
+
 			zm2 = elm2->which_neighbor(pass_key()) % 4;
 			nm2 = (Node*) NodeTable->lookup(&elm2->node_key[zm2 + 4][0]);
 
-			dual_riemannflux(hfv, hfv2, nm2->flux);
+			dual_riemannflux(hfv, hfv2, nm2->flux, flux_jac, flux_jac2, s_jac, s_jac2, jac_res,
+			    jac_neigh2);
 
 			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
 				np->flux[ivar] = 0.5 * (np->flux[ivar] + nm2->flux[ivar]);
 
+			set_fluxjac(side, 1, 0, jac, jac_res);
+			set_fluxjac(side, 1, 1, jac_neigh1, jac_zero);
+			set_fluxjac(side, 1, 2, jac_neigh2, jac_zero);
+
+			// here the element elm1 must be a ghost element
+			elm2->set_fluxjac(side, 0, 0, jac_neigh2);
+			elm2->set_fluxjac(side, 0, 1, jac_res);
+			elm2->set_fluxjac(side, 0, 2, jac_zero);
+
 		} else {
-			dual_riemannflux(hfv, hfv2, ghostflux);
+
+			dual_riemannflux(hfv, hfv2, ghostflux, flux_jac, flux_jac2, s_jac, s_jac2, jac_res,
+			    jac_neigh2);
 			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
 				np->flux[ivar] = 0.5 * (np->flux[ivar] + ghostflux[ivar]);
 
+			set_fluxjac(side, 1, 0, jac, jac_res);
+			set_fluxjac(side, 1, 1, jac_neigh1, jac_zero);
+			set_fluxjac(side, 1, 2, jac_neigh2);
+
+			// here the element elm1 must be a ghost element
+			elm2->set_fluxjac(side, 0, 0, jac_neigh2);
+			elm2->set_fluxjac(side, 0, 1, jac_res);
+			elm2->set_fluxjac(side, 0, 2, jac_zero);
+
 		}
+
 	} else {
 
 		np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
 		elm1 = (Element*) El_Table->lookup(&neighbor[zp][0]);
 		assert(elm1);
 
-		dual_zdirflux(side, hfv, lresflag);
-		elm1->dual_zdirflux(side + 2, hfv1, rresflag);
+		dual_zdirflux(side, hfv, flux_jac, s_jac);
+		elm1->dual_zdirflux(side + 2, hfv1, flux_jac1, s_jac1);
 
-		dual_riemannflux(hfv, hfv1, np->flux);
+		dual_riemannflux(hfv, hfv1, np->flux, flux_jac, flux_jac1, s_jac, s_jac1, jac, jac_neigh1);
+
+		//now we can store jacobians in elements
+		set_fluxjac(side, 1, 0, jac);
+		set_fluxjac(side, 1, 1, jac_neigh1);
+		set_fluxjac(side, 1, 2, jac_zero);
+
+		// here the element elm1 must be a ghost element
+		elm1->set_fluxjac(side, 0, 0, jac_neigh1);
+		elm1->set_fluxjac(side, 0, 1, jac);
+		elm1->set_fluxjac(side, 0, 2, jac_zero);
 
 		/* CASE I
 		 ------------------- -------------------
@@ -2844,24 +3228,38 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 			elm2 = (Element*) El_Table->lookup(&elm1->neighbor[(zelmpos + 4) % 8][0]);
 			assert(elm2);
 
-			elm1->dual_zdirflux(side, hfv1, rresflag);
-			elm2->dual_zdirflux(side, hfv2, nresflag);
+			elm1->dual_zdirflux(side, hfv1, flux_jac1, s_jac1);
+			elm2->dual_zdirflux(side, hfv2, flux_jac2, s_jac2);
 
 			if (*(elm1->get_neigh_proc() + (zelmpos + 4) % 8) == myid) {
+
 				zp2 = elm2->which_neighbor(elm1->pass_key()) % 4;
 				np2 = (Node*) NodeTable->lookup(&elm2->node_key[zp2 + 4][0]);
-				dual_riemannflux(hfv2, hfv1, np2->flux);
+
+				dual_riemannflux(hfv2, hfv1, np2->flux, flux_jac2, flux_jac1, s_jac2, s_jac1, jac_neigh2,
+				    jac_res);
 
 				for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
 					nm1->flux[ivar] = 0.5 * (np->flux[ivar] + np2->flux[ivar]);
 
 			} else {
 
-				dual_riemannflux(hfv2, hfv1, ghostflux);
+				dual_riemannflux(hfv2, hfv1, ghostflux, flux_jac2, flux_jac1, s_jac2, s_jac1, jac_neigh2,
+				    jac_res);
 				for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
 					nm1->flux[ivar] = 0.5 * (np->flux[ivar] + ghostflux[ivar]);
 
 			}
+
+			// here the element elm1 must be a ghost element
+			elm1->set_fluxjac(side, 0, 0, jac_neigh1, jac_res);
+			elm1->set_fluxjac(side, 0, 1, jac, jac_zero);
+			elm1->set_fluxjac(side, 0, 2, jac_neigh2, jac_zero);
+
+			// here the element elm1 must be a ghost element
+			elm2->set_fluxjac(side, 1, 0, jac_neigh2);
+			elm2->set_fluxjac(side, 1, 1, jac_res);
+			elm2->set_fluxjac(side, 1, 2, jac_zero);
 		}
 
 		/*  Case III
@@ -2891,13 +3289,16 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 			elm2 = (Element*) (El_Table->lookup(&neighbor[zp + 4][0]));
 			assert(elm2);
 
-			dual_zdirflux(side, hfv, lresflag);
-			elm2->dual_zdirflux(side + 2, hfv2, rresflag);
+			dual_zdirflux(side, hfv, flux_jac, s_jac);
+			elm2->dual_zdirflux(side + 2, hfv2, flux_jac2, s_jac2);
 
 			if (neigh_proc[zp + 4] == myid) {
+
 				zelmpos_2 = elm2->which_neighbor(pass_key()) % 4;
 				nm2 = (Node*) NodeTable->lookup(&elm2->node_key[zelmpos_2 + 4][0]);
-				dual_riemannflux(hfv, hfv2, nm2->flux);
+
+				dual_riemannflux(hfv, hfv2, nm2->flux, flux_jac, flux_jac2, s_jac, s_jac2, jac_res,
+				    jac_neigh2);
 
 				for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
 					nm1->flux[ivar] = np->flux[ivar];
@@ -2905,13 +3306,29 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 
 				}
 			} else {
-				dual_riemannflux(hfv, hfv2, ghostflux);
+				dual_riemannflux(hfv, hfv2, ghostflux, flux_jac, flux_jac2, s_jac, s_jac2, jac_res,
+				    jac_neigh2);
 				for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
 					nm1->flux[ivar] = np->flux[ivar];
 					np->flux[ivar] = 0.5 * (nm1->flux[ivar] + ghostflux[ivar]);
 				}
 
 			}
+
+			//now we can store jacobians in elements
+			set_fluxjac(side, 1, 0, jac);
+			set_fluxjac(side, 1, 1, jac_neigh1, jac_zero); // to halve the effect of this element
+			set_fluxjac(side, 1, 2, jac_neigh2, jac_zero); // to halve the effect of this element
+
+			// here the element elm1 must be a ghost element
+			elm1->set_fluxjac(side, 0, 0, jac_neigh1);
+			elm1->set_fluxjac(side, 0, 1, jac);
+			elm1->set_fluxjac(side, 0, 2, jac_zero);
+
+			// here the element elm1 must be a ghost element
+			elm2->set_fluxjac(side, 0, 0, jac_neigh2);
+			elm2->set_fluxjac(side, 0, 1, jac_res);
+			elm2->set_fluxjac(side, 0, 2, jac_zero);
 
 		}
 
@@ -2926,6 +3343,10 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 			//outflow boundary conditions
 			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
 				nm->flux[ivar] = np->flux[ivar];
+
+			//by default fluxes_jac has been initialized to zero, but to be on the safe side
+			for (int i = 0; i < NUM_STATE_VARS; ++i)
+				set_fluxjac(side, 0, i, jac_zero);
 
 		} else {
 			/* if an interface is on the x-minus or y-minus side, need to
@@ -2974,31 +3395,54 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 			elm1 = (Element*) El_Table->lookup(&neighbor[zm][0]);
 			assert(elm1);
 
-			dual_zdirflux(side + 2, hfv, rresflag);
-			elm1->dual_zdirflux(side, hfv1, lresflag);
-			dual_riemannflux(hfv1, hfv, nm->flux);
+			dual_zdirflux(side + 2, hfv, flux_jac, s_jac);
+			elm1->dual_zdirflux(side, hfv1, flux_jac1, s_jac1);
+			dual_riemannflux(hfv1, hfv, nm->flux, flux_jac1, flux_jac, s_jac1, s_jac, jac_neigh1, jac);
+
+			//now we can store jacobians in elements
+			set_fluxjac(side, 0, 0, jac);
+			set_fluxjac(side, 0, 1, jac_neigh1);
+			set_fluxjac(side, 0, 2, jac_zero);
+
+			//*** in this section elem1 & elem2 are ghost element, and we do not need to update them here
+			// here the element elm1 must be a ghost element
+//			elm1->set_fluxjac(side, 1, 0, jac_neigh1);
+//			elm1->set_fluxjac(side, 1, 1, jac);
+//			elm1->set_fluxjac(side, 1, 2, jac_zero);
 
 			elm2 = (Element*) El_Table->lookup(&neighbor[zm + 4][0]);
 			assert(elm2);
 
-			dual_zdirflux(side + 2, hfv, rresflag);
-			elm2->dual_zdirflux(side, hfv2, nresflag);
+			dual_zdirflux(side + 2, hfv, flux_jac, s_jac);
+			elm2->dual_zdirflux(side, hfv2, flux_jac2, s_jac2);
 
 			//note a rectangular domain ensures that neigh_proc[zm+4]!=-1
 			if (neigh_proc[zm + 4] == myid) {
 				zp2 = elm2->which_neighbor(pass_key()) % 4;
 				np2 = (Node*) NodeTable->lookup(&elm2->node_key[zp2 + 4][0]);
 
-				dual_riemannflux(hfv2, hfv, np2->flux);
+				dual_riemannflux(hfv2, hfv, np2->flux, flux_jac2, flux_jac, s_jac2, s_jac, jac_neigh2,
+				    jac_res);
 
 				for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
 					nm->flux[ivar] = 0.5 * (nm->flux[ivar] + np2->flux[ivar]);
 
+				//now we can store jacobians in elements
+				set_fluxjac(side, 0, 0, jac, jac_res);
+				set_fluxjac(side, 0, 1, jac_neigh1);
+				set_fluxjac(side, 0, 2, jac_neigh2);
+
 			} else {
-				dual_riemannflux(hfv2, hfv, ghostflux);
+				dual_riemannflux(hfv2, hfv, ghostflux, flux_jac2, flux_jac, s_jac2, s_jac, jac_neigh2,
+				    jac_res);
 
 				for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
 					nm->flux[ivar] = 0.5 * (nm->flux[ivar] + ghostflux[ivar]);
+
+				//now we can store jacobians in elements
+				set_fluxjac(side, 0, 0, jac, jac_res);
+				set_fluxjac(side, 0, 1, jac_neigh1);
+				set_fluxjac(side, 0, 2, jac_neigh2);
 
 			}
 
@@ -3220,7 +3664,7 @@ void Element::calc_d_gravity(HashTable* El_Table) {
 		dxp = ep->coord[0] - coord[0];
 		d_gravity[0] = (ep->gravity[2] - gravity[2]) / dxp;
 	} else
-		//no neighbors on either side -- assume that the ground is flat
+//no neighbors on either side -- assume that the ground is flat
 		d_gravity[0] = 0;
 
 	/* y direction */
@@ -3243,7 +3687,7 @@ void Element::calc_d_gravity(HashTable* El_Table) {
 		dxp = ep->coord[1] - coord[1];
 		d_gravity[1] = (ep->gravity[2] - gravity[2]) / dxp;
 	} else
-		//no neighbors on either side -- assume that the ground is flat
+//no neighbors on either side -- assume that the ground is flat
 		d_gravity[1] = 0;
 
 	return;
@@ -3286,7 +3730,7 @@ void Element::calc_topo_data(MatProps* matprops_ptr) {
 	if (matprops_ptr->material_count == 1) //only one material so don't need map
 		material = 1; //GIS material id tag/index starts from 1
 	else
-		//more than one material so need to get material from map
+//more than one material so need to get material from map
 		Get_raster_id(resolution, xcoord, ycoord, &material);
 
 //flat plane!!!
@@ -3396,8 +3840,8 @@ void Element::find_opposite_brother(HashTable* El_Table) {
 	unsigned nullkey[2] = { 0, 0 };
 	if (!(compare_key(brothers[(which_son + 1) % 4], nullkey)
 	    && compare_key(brothers[(which_son + 3) % 4], nullkey))) {
-		//use space filling curve to compute the key of opposite
-		//brother from it's bubble node coordinates
+//use space filling curve to compute the key of opposite
+//brother from it's bubble node coordinates
 		double bro_norm_coord[2];
 		unsigned nkey = KEYLENGTH;
 
@@ -3688,7 +4132,7 @@ int Element::if_source_boundary(HashTable *ElemTable) {
 				if (*(ElemNeigh->get_influx() + 0) <= 0.0)
 					return (2); //inside of line bounding area with a mass source
 			}
-		//else if(neigh_proc[ineigh%4]==-1) return(2); //mass source on boundary of domain
+//else if(neigh_proc[ineigh%4]==-1) return(2); //mass source on boundary of domain
 	}
 
 	else if (Influx[0] == 0.0) {
@@ -3724,7 +4168,7 @@ int Element::if_source_boundary(HashTable *ElemTable) {
 				if (*(ElemNeigh->get_influx() + 0) >= 0.0)
 					return (-1); //inside of line bounding area with a mass sink
 			}
-		//else if(neigh_proc[ineigh%4]==-1) return(-1); //mass sink on boundary of domain
+//else if(neigh_proc[ineigh%4]==-1) return(-1); //mass sink on boundary of domain
 	}
 
 	return (0); //not on line bounding area with mass source/sink
@@ -3784,7 +4228,7 @@ int Element::if_next_buffer_boundary(HashTable *ElemTable, HashTable *NodeTable,
 	int ifnextbuffer;
 	ifnextbuffer = 0;
 	if (adapted <= 0)
-		//GHOST element or element that should be deleted soon
+//GHOST element or element that should be deleted soon
 		return (adapted - 1);
 
 	if ((adapted != BUFFER) && //this element is not in the buffer
@@ -4044,7 +4488,7 @@ void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, i
 		state_vars[i] = *(curr_sol->get_solution() + i);
 
 	if (prev_sol) {
-		// not refined and not unrefined element
+// not refined and not unrefined element
 		for (int i = 0; i < NUM_STATE_VARS; i++)
 			prev_state_vars[i] = *(prev_sol->get_solution() + i);
 
@@ -4054,7 +4498,7 @@ void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, i
 
 	} else {
 
-		// first we check to see whether the element has been refined, so we have to read from its father
+// first we check to see whether the element has been refined, so we have to read from its father
 		Element* EmTemp = (Element*) El_Table->lookup(&brothers[2][0]);
 
 		if (EmTemp) {
@@ -4125,7 +4569,7 @@ void Element::check_refine_unrefine(HashTable* solrec, HashTable* El_Table, int 
 
 	if (!prev_sol) {
 
-		// first we check to see whether the element has been refined, so we have to read from its father
+// first we check to see whether the element has been refined, so we have to read from its father
 		Element* EmTemp = (Element*) El_Table->lookup(&brothers[2][0]);
 
 		if (EmTemp) {
@@ -4345,7 +4789,7 @@ void Element::save_elem(FILE* fp, FILE *fptxt) {
 		}
 #ifdef DEBUG_SAVE_ELEM
 		fprintf(fpdb,"(%u %u) ",neighbor[itemp][0],neighbor[itemp][1]);
-#endif 
+#endif
 	}
 	assert(Itemp == 68);
 
@@ -4435,7 +4879,7 @@ void Element::save_elem(FILE* fp, FILE *fptxt) {
 			fprintf(fpdb,"%d ",bcptr->type[itemp]);
 #endif
 		}
-		//assert(Itemp==122);
+//assert(Itemp==122);
 		assert(Itemp == 112);
 #ifdef DEBUG_SAVE_ELEM
 		fprintf(fpdb,"}\n");
@@ -4628,7 +5072,7 @@ Element::Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myi
 
 		bcptr = new BC;
 
-		//boundary conditions start here
+//boundary conditions start here
 		for (itemp = 0; itemp < 4; itemp++) {
 			temp4.u = readspace[Itemp++];
 			bcptr->type[itemp] = temp4.i;

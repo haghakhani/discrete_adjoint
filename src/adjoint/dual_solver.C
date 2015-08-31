@@ -25,7 +25,6 @@
 #define KEY0   3920807148
 #define KEY1   1321528399
 #define ITER   10
-#define ITER   187
 #define J      0
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
@@ -648,12 +647,9 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			}
 		}
 
-	//this array holds ResFlag for element itself and its neighbors
-	ResFlag resflag;
-	resflag.callflag = 1;
-	resflag.lgft = 0;
-
-	calc_flux(meshctx, propctx, myid, resflag);
+	double outflow=0.;
+	int order_flag=1;
+	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, &outflow);
 
 	slopes(El_Table, NodeTable, matprops_ptr, 1);
 

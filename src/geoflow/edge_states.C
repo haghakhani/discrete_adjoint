@@ -34,7 +34,7 @@
  *  GIS map).  Also, the elements are checked for multiple pile-height values 
  */
 void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
-    TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow, ResFlag resflag) {
+    TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow) {
 	int i, j, k, counter, iter, keys1, keys2;
 	double tiny = GEOFLOW_TINY;
 	int el_counter = 0;
@@ -73,7 +73,7 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matpr
 					}
 
 					Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid, timeprops_ptr->dtime,
-					    order_flag, &localoutflow, resflag, resflag);
+					    order_flag, &localoutflow);
 					localoutflow_sum += localoutflow;
 				}
 				currentPtr = currentPtr->next;
@@ -83,7 +83,7 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matpr
 	return;
 }
 
-void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid, ResFlag resflag) {
+void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid) {
 
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
@@ -110,7 +110,7 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid, ResFlag resflag) {
 						int gg = ddd;
 					}
 
-					Curr_El->calc_fluxes(El_Table, NodeTable, myid, resflag, resflag);
+					Curr_El->calc_fluxes(El_Table, NodeTable, myid);
 
 				}
 				currentPtr = currentPtr->next;
