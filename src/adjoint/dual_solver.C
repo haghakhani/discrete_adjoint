@@ -145,20 +145,11 @@ void allocJacoMat(HashTable *El_Table) {
 			while (currentPtr) {
 				Curr_El = (Element*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0)
-					Curr_El->new_jacobianMat();
+					Curr_El->alloc_jacobianMat();
 				currentPtr = currentPtr->next;
 			}
 		}
 
-}
-
-double tiny_sgn(double num, double tiny) {
-	if (dabs(num) < tiny)
-		return 0.;
-	else if (num > tiny)
-		return 1.;
-	else
-		return -1.;
 }
 
 int num_nonzero_elem(HashTable *El_Table, int type) {
@@ -647,10 +638,12 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			}
 		}
 
-	double outflow=0.;
-	int order_flag=1;
-	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, &outflow);
+	// this function computes fluxes based on prev_state_vars (we need for dual problem),
+	// and jacobian of fluxes and store the in elements
+	calc_flux(meshctx, propctx, myid);
 
+	//this function computes slopes based on prev_state_vars and dh/dh_e where h_e is pile height in neighbor element
+	// we need this term to compute jacobian of elements
 	slopes(El_Table, NodeTable, matprops_ptr, 1);
 
 }

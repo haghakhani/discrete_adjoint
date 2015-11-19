@@ -10,8 +10,9 @@
 #endif
 #include "../header/hpfem.h"
 
-void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
-		MatProps* matprops_ptr, int myid, double fluxold[4][NUM_STATE_VARS]) {
+
+void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
+		MatProps* matprops_ptr, int myid, double flux[4][NUM_STATE_VARS]) {
 
 	Element* Curr_El = (Element*) (El_Table->lookup(key));
 
@@ -27,10 +28,10 @@ void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
 	Node* nym = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
 
 	for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
-		fluxold[0][ivar] = nxp->flux[ivar];
-		fluxold[1][ivar] = nyp->flux[ivar];
-		fluxold[2][ivar] = nxm->flux[ivar];
-		fluxold[3][ivar] = nym->flux[ivar];
+		flux[0][ivar] = nxp->flux[ivar];
+		flux[1][ivar] = nyp->flux[ivar];
+		flux[2][ivar] = nxm->flux[ivar];
+		flux[3][ivar] = nym->flux[ivar];
 	}
 }
 

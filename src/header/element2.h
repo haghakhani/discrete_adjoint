@@ -28,17 +28,11 @@
 using namespace std;
 
 class ElemPtrList;
+#include "../header/matrix.h"
 
 //#define USE_FATHER
 
 //! The Element class is a data structure designed to hold all the information need for an h (cell edge length) p (polynomial order) adaptive finite element.  Titan doesn't use p adaptation because it is a finite difference/volume code, hence many of the members are legacy from afeapi (adaptive finite element application programmers interface) which serves as the core of titan.  There is a seperate Discontinuous Galerkin Method (finite elements + finite volumes) version of titan and the polynomial information is not legacy there.  However in this version of Titan elements function simply as finite volume cells.
-
-struct FluxJac {
-
-	//first 3 is because at most for each flux there are 3 contributing elements
-	double jacob_mat[3][NUM_STATE_VARS][NUM_STATE_VARS];
-
-};
 
 class Element {
 
@@ -85,7 +79,7 @@ class Element {
 public:
 
 	//! default constructor, does nothing except set stoppedflags=2, this should never be used
-	Element() {
+	Element():hslope_sens(2, 5, 0.) {
 		counted = 0;
 		father[0] = father[1] = 0; //initialize the father key to zero
 		for (int i = 0; i < NUM_STATE_VARS; i++)
@@ -363,12 +357,9 @@ public:
 	void calc_xflux(HashTable* El_Table, HashTable* NodeTable, int myid);
 	void calc_fluxes(HashTable* El_Table, HashTable* NodeTable, int myid);
 
-	void dual_zdirflux(int dir, double hfv[3][NUM_STATE_VARS], double flux_jac[3][NUM_STATE_VARS],
-	    double s_jac[3][NUM_STATE_VARS]);
-	void dual_ydirflux(double hfv[3][NUM_STATE_VARS], double flux_jac[3][NUM_STATE_VARS],
-	    double s_jac[3][NUM_STATE_VARS]);
-	void dual_xdirflux(double hfv[3][NUM_STATE_VARS], double flux_jac[3][NUM_STATE_VARS],
-	    double s_jac[3][NUM_STATE_VARS]);
+	void dual_zdirflux(int dir, Mat3x3<double>& hfv, Mat3x3<double>& flux_jac, Mat3x3<double>& s_jac);
+	void dual_ydirflux(Mat3x3<double>& hfv, Mat3x3<double>& flux_jac, Mat3x3<double>& s_jac);
+	void dual_xdirflux(Mat3x3<double>& hfv, Mat3x3<double>& flux_jac, Mat3x3<double>& s_jac);
 
 	//! this function (indirectly) calculates the fluxes that will be used to perform the finite volume corrector step and stores them in element edge nodes, indirectly because it calls other functions to calculate the analytical fluxes and then calls another function to compute the riemann fluxes from the analytical fluxes. Talk to me (Keith) before you modify this, as I am fairly certain that it is now completely bug free and parts of it can be slightly confusing.
 	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int myid,
@@ -598,16 +589,16 @@ public:
 	//! this function returns the correction term
 	double* get_correction();
 
-	void set_jacobian(int neigh_num, double elemjacob[3], int state_vars_num, const double incr);
+//	void set_jacobian(int neigh_num, double elemjacob[3], int state_vars_num, const double incr);
 
 	// this function sets the jacobian for a boundary element
 	void set_jacobian();
 
 	void print_jacobian(int iter);
 
-	double*** get_jacobian();
+	Vec_Mat& get_jacobian();
 
-	void new_jacobianMat();
+	void alloc_jacobianMat();
 
 	void rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, int*, int*, int*,
 	    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
@@ -631,10 +622,9 @@ public:
 
 	int check_state(HashTable* solrec, HashTable* El_Table, int iter);
 
-	void set_fluxjac(int side, int direction, int indx, double jac[NUM_STATE_VARS][NUM_STATE_VARS]);
+	FluxJac& get_flx_jac_cont();
 
-	void set_fluxjac(int side, int direction, int indx, double jac[NUM_STATE_VARS][NUM_STATE_VARS],
-	    double jac1[NUM_STATE_VARS][NUM_STATE_VARS]);
+	Matrix<double>& get_hslope_sens();
 
 private:
 	//! myprocess is id of the process(or) that owns this element
@@ -819,14 +809,15 @@ private:
 	double correction;
 
 	//! double jacobianMat [8][3][3],self[3][3],neigh1[3][3],neigh2[3][3],neigh3[3][3],neigh4[3][3]
-	double ***jacobianMat;
+	Vec_Mat jacobianMat;
 
 	double func_sens[NUM_STATE_VARS];
 
 	// this array holds the jacobian of fluxes,and its indexing is [side:x=0,y=1][direction:neg=0,pos=1]
-	FluxJac fluxjac[DIMENSION][DIMENSION];
+	//Matrix<Matrix> FluxJac (2,2);
+	FluxJac flx_jac_cont;
 
-	double hslope_sens[DIMENSION][5];
+	Matrix<double> hslope_sens;
 
 };
 
@@ -1265,6 +1256,15 @@ inline double* Element::get_residual() {
 
 inline double* Element::get_func_sens() {
 	return func_sens;
+}
+
+inline FluxJac& Element::get_flx_jac_cont() {
+
+	return flx_jac_cont;
+}
+
+inline Matrix<double>& Element::get_hslope_sens(){
+	return hslope_sens;
 }
 /*************************************************************************/
 /*************************************************************************/

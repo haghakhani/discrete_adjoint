@@ -44,9 +44,6 @@ extern void test_h_refine(HashTable* HT_Elem_Ptr, int myid, int h_count);
 extern void all_check(HashTable* eltab, HashTable* ndtab, int myid, int m,
 		double TARGET);
 
-//#define REFINE_THRESHOLD 250000*GEOFLOW_TINY
-//#define REFINE_THRESHOLD 10*GEOFLOW_TINY
-//#define REFINE_THRESHOLD 35*GEOFLOW_TINY
 #define REFINE_THRESHOLD1  5*GEOFLOW_TINY
 #define REFINE_THRESHOLD2 15*GEOFLOW_TINY
 #define REFINE_THRESHOLD  40*GEOFLOW_TINY

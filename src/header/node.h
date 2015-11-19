@@ -41,7 +41,7 @@ class Node {
 	friend void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
 	    double const increment);
 
-	friend void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
+	friend void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
 			MatProps* matprops_ptr, int myid,  double fluxold[4][NUM_STATE_VARS]);
 
 	friend void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable,

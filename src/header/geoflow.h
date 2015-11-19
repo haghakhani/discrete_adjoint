@@ -90,6 +90,13 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
     double const increment);
 
+void calc_jacobian_elem(Mat3x3<double>& jacobian, const Mat3x3<double>& jac_flux_n_x,
+    const Mat3x3<double>& jac_flux_p_x, const Mat3x3<double>& jac_flux_n_y,
+    const Mat3x3<double>& jac_flux_p_y, double* state_vars, double* d_state_vars_x,
+    double* d_state_vars_y, double *curvature, double* gravity, double* d_gravity, double* dh_sens,
+    double int_fric, double bedfrict, double kact, int effelem, double dtdx, double dtdy, double dt,
+    int* stop, double* OrgSgn);
+
 void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter);
 
 void dual_unrefine(MeshCTX* meshctx, PropCTX* propctx);
@@ -117,6 +124,12 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
     double *dgdx, double kactxyelem, double fric_tiny, double* orgSrcSgn, //4
     double increment, double epsilon, int* check_stop_crit, int srcflag = 1, int org_res_flag = 1); //5
 
+void update_states(double *state_vars, double *prev_state_vars, //2
+    double *fluxxp, double *fluxyp, double *fluxxm, double *fluxym, double dtdx, //5
+    double dtdy, double dt, double *d_state_vars_x, double *d_state_vars_y, //4
+    double *curvature, double intfrictang, double bedfrict, double *gravity, //4
+    double *dgdx, double kactxyelem, double fric_tiny, int* stop, double* orgSrcSgn); //5
+
 void save_solution(HashTable* El_Table, HashTable* NodeTable, HashTable* solHystPtr,
     TimeProps* timeprops_ptr);
 
@@ -142,7 +155,7 @@ void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, int ef
     double increment, double fluxold[4][NUM_STATE_VARS],
     double d_state_vars_old[DIMENSION * NUM_STATE_VARS]);
 
-void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
+void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
     int myid, double fluxold[4][NUM_STATE_VARS]);
 
 void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* fluxypold,
@@ -194,6 +207,8 @@ void find_adjoint_sol(HashTable* El_Table, vector<Jacobian*>* solHyst, PertElemI
 int check_elem_exist(HashTable *El_Table, unsigned *key);
 
 void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo);
+
+double tiny_sgn(double num, double tiny);
 
 //! c++ sgn function 
 inline double c_sgn(double zz) {

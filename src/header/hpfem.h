@@ -41,6 +41,7 @@ using namespace std;
 //#undef SEEK_END
 //#undef SEEK_CUR
 #include <mpi.h>
+#include "matrix.h"
 #include "hashtab.h"
 #include "node.h"
 #include "properties.h"

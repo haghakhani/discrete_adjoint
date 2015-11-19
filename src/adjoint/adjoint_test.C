@@ -53,7 +53,7 @@ void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo) {
 	HashEntryPtr *buck = El_Table->getbucketptr();
 	Jacobian *jacobian, *neighjac;
 	Element *neigh_elem;
-	double*** jacobianmat;
+	Vec_Mat jacobianmat;
 	double *curr_adj_ptr, *prev_adj_ptr;
 
 	const double epsilon = INCREMENT;
@@ -96,7 +96,7 @@ void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo) {
 								for (int k = 0; k < 3; ++k)
 									for (int l = 0; l < 3; ++l)
 										eleminfo->neigh_jac[effelement].jacobianMat[k][l] =
-										    jacobianmat[effelement][k][l];
+										    jacobianmat(effelement,k,l);
 
 							} else {
 
@@ -134,7 +134,7 @@ void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo) {
 
 									for (int k = 0; k < 3; ++k)
 										for (int l = 0; l < 3; ++l)
-											eleminfo->neigh_jac[effelement].jacobianMat[k][l] = jacobianmat[jacind][k][l];
+											eleminfo->neigh_jac[effelement].jacobianMat[k][l] = jacobianmat(effelement,k,l);
 
 								}
 							}

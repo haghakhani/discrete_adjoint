@@ -87,7 +87,7 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter) {
 						orgSourceSgn(Curr_El, matprops_ptr->frict_tiny, orgSrcSgn);
 
 						double flux[4][NUM_STATE_VARS];
-						record_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
+						get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
 
 //						if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
 //							dbgflag = 1;
