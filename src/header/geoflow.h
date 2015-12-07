@@ -87,15 +87,13 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matpr
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo);
 
-void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
-    double const increment);
+void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo);
 
-void calc_jacobian_elem(Mat3x3<double>& jacobian, const Mat3x3<double>& jac_flux_n_x,
-    const Mat3x3<double>& jac_flux_p_x, const Mat3x3<double>& jac_flux_n_y,
-    const Mat3x3<double>& jac_flux_p_y, double* state_vars, double* d_state_vars_x,
-    double* d_state_vars_y, double *curvature, double* gravity, double* d_gravity, double* dh_sens,
-    double int_fric, double bedfrict, double kact, int effelem, double dtdx, double dtdy, double dt,
-    int* stop, double* OrgSgn);
+void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3x3& jac_flux_p_x,
+    const Mat3x3& jac_flux_n_y, const Mat3x3& jac_flux_p_y, double* prev_state_vars,
+    double* d_state_vars_x, double* d_state_vars_y, double *curvature, double* gravity,
+    double* d_gravity, double* dh_sens, double int_fric, double bedfrict, double kact, int effelem,
+    double dtdx, double dtdy, double dt, int* stop, double* OrgSgn);
 
 void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter);
 
@@ -174,7 +172,7 @@ void reverse_states(HashTable* El_Table, HashTable* solrec, int iter, ElemPtrLis
 
 void print_jacobian(HashTable* El_Table, int iter);
 
-void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid);
+void calc_flux(MeshCTX* meshctx, PropCTX* propctx);
 
 void refinement_report(HashTable* El_Table);
 

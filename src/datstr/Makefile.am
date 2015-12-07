@@ -6,7 +6,7 @@
 
 noinst_LIBRARIES = libdatstr.a
 
-libdatstr_a_SOURCES = matrix.C element2.C hashtab2.C htflush.C node.C jacobian.C dualmesh.C Makefile.am
+libdatstr_a_SOURCES =element2.C hashtab2.C htflush.C node.C jacobian.C dualmesh.C Makefile.am
 
 
 

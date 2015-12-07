@@ -247,5 +247,8 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 
 	}
 
+	for (int i=0;i<NUM_STATE_VARS;++i)
+		assert(!isnan(state_vars[i]) && !isinf(state_vars[i]));
+
 }
 

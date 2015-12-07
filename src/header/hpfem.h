@@ -50,12 +50,12 @@ using namespace std;
 #include "dualmesh.h"
 #include "recv.h"
 #include "extfun.h"
-#include "geoflow.h"
 #include "scale.h"
 #include "../gisapi/GisApi.h"
 #include "../useful/useful_lib.h"
 #include "FileFormat.h"
 #include "flux_srcs.h"
+#include "geoflow.h"
 #include <unistd.h>
 
 #undef CRAY

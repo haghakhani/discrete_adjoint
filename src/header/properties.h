@@ -349,6 +349,8 @@ struct TimeProps {
 		time = 0.0;
 		dtime = 0.0;
 		vstarmax = 0.0;
+		// we clear for case that we need to use timpeprops again
+		dt.clear();
 	}
 
 	//! this function increments the time step, after, if neccessary, decreasing the time step to land evenly on the next time to output save or end the simulation

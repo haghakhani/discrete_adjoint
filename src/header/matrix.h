@@ -8,100 +8,197 @@
 #ifndef SRC_HEADER_MATRIX_H_
 #define SRC_HEADER_MATRIX_H_
 
-#include <vector>
-
-template<typename T> class Matrix {
+template<typename T, unsigned Row, unsigned Col>
+class Matrix {
 
 protected:
-	std::vector<std::vector<T> > mat;
+	T* mat;
 	unsigned rows;
 	unsigned cols;
 
 public:
-	Matrix();
-	Matrix(unsigned _rows, unsigned _cols, const T& _initial);
-	Matrix(unsigned _rows, unsigned _cols);
-	Matrix(const Matrix<T>& rhs);
-	virtual ~Matrix();
+	Matrix() {
+		mat = new T[Row * Col];
+		rows = Row;
+		cols = Col;
+		for (unsigned i = 0; i < rows * cols; ++i)
+			mat[i]=T();
+
+	}
+	;
+
+	Matrix(const Matrix& rhs) {
+
+		rows = rhs.get_rows();
+		cols = rhs.get_cols();
+
+		mat = new T[rows * cols];
+
+		for (unsigned i = 0; i < rows * cols; ++i)
+			mat[i] = rhs.mat[i];
+	}
+	;
+
+	virtual ~Matrix() {
+		delete[] mat;
+//		std::cout<<"Now the matrix is getting deleted \n";
+
+	}
+	;
 
 	// Operator overloading, for "standard" mathematical matrix operations
-	Matrix<T>& operator=(const Matrix<T>& rhs);
+	Matrix<T, Row, Col>& operator=(const Matrix<T, Row, Col>& rhs) {
+
+		//	std::assert(rows == rhs.get_rows() && cols == rhs.get_cols());
+		if (this != &rhs)
+			for (unsigned i = 0; i < rows * cols; ++i)
+				mat[i] = rhs.mat[i];
+
+		return *this;
+	}
+	;
 
 	// Matrix mathematical operations
-	Matrix<T> operator+(const Matrix<T>& rhs);
-	Matrix<T>& operator+=(const Matrix<T>& rhs);
-	Matrix<T> operator-(const Matrix<T>& rhs);
-	Matrix<T>& operator-=(const Matrix<T>& rhs);
-	Matrix<T> operator*(const Matrix<T>& rhs);
-	Matrix<T>& operator*=(const Matrix<T>& rhs);
-	Matrix<T> transpose();
+	Matrix<T, Row, Col> operator+(const Matrix<T, Row, Col>& rhs) {
+
+		Matrix<T, Row, Col> result;
+
+		for (unsigned i = 0; i < rows * cols; ++i)
+			result.mat[i] = this->mat[i] + rhs.mat[i];
+
+		return result;
+	}
+	;
+
+	Matrix<T, Row, Col>& operator+=(const Matrix<T, Row, Col>& rhs) {
+
+		for (unsigned i = 0; i < rows * cols; ++i)
+			this->mat[i] += rhs.mat[i];
+		return *this;
+	}
+	;
 
 	// Matrix/scalar operations
-	Matrix<T> operator+(const T& rhs);
-	Matrix<T> operator-(const T& rhs);
-	Matrix<T> operator*(const T& rhs);
-	Matrix<T> operator/(const T& rhs);
+	Matrix<T, Row, Col> operator+(const T& rhs) {
 
-	// Matrix/vector operations
-	std::vector<T> operator*(const std::vector<T>& rhs);
-	std::vector<T> diag_vec();
+		Matrix<T, Row, Col> result;
+
+		for (unsigned i = 0; i < rows * cols; ++i)
+			result.mat[i] = this->mat[i] + rhs;
+
+		return result;
+	}
+	;
+
+	Matrix<T, Row, Col> operator-(const T& rhs) {
+
+		Matrix<T, Row, Col> result;
+
+		for (unsigned i = 0; i < rows * cols; ++i)
+			result.mat[i] = this->mat[i] - rhs;
+
+		return result;
+	}
+	;
+	Matrix<T, Row, Col> operator*(const T& rhs) {
+
+		Matrix<T, Row, Col> result;
+
+		for (unsigned i = 0; i < rows * cols; ++i)
+			result.mat[i] = this->mat[i] * rhs;
+
+		return result;
+	}
+	;
+	Matrix<T, Row, Col> operator/(const T& rhs) {
+
+		Matrix<T, Row, Col> result;
+
+		for (unsigned i = 0; i < rows * cols; ++i)
+			result.mat[i] = this->mat[i] / rhs;
+
+		return result;
+	}
+	;
 
 	// Access the individual elements
-	T& operator()(const unsigned& row, const unsigned& col);
-	const T& operator()(const unsigned& row, const unsigned& col) const;
+	T& operator()(const unsigned& row, const unsigned& col) {
+
+		return this->mat[row * cols + col];
+	}
+	;
+	const T& operator()(const unsigned& row, const unsigned& col) const {
+
+		return this->mat[row * cols + col];
+	}
+	;
 
 	// Access the row and column sizes
-	unsigned get_rows() const;
-	unsigned get_cols() const;
-
-};
-
-template<typename T>
-class Mat3x3: public Matrix<T> {
-
-public:
-	Mat3x3() :
-			Matrix<T>(3, 3, 0.) {
+	unsigned get_rows() const {
+		return rows;
+	}
+	;
+	unsigned get_cols() const {
+		return cols;
 	}
 	;
 
-	using Matrix<T>::operator=;
-
-	~Mat3x3() {
-	}
-	;
 };
+
+typedef Matrix<double, 3, 3> Mat3x3;
 
 //this matrix is a 3x3x3 matrix that keeps the sensitivity of each elements flux
 //w.r.t to its two possible neighbors and itself when we are computing its flux
 //in specific direction
+template<unsigned size>
 class Vec_Mat {
 
 private:
-	std::vector<Mat3x3<double> > vec_mat;
+	Mat3x3* vec_mat;
 
 public:
 	Vec_Mat() {
+
+		vec_mat = new Mat3x3[size];
 	}
 	;
 
-	Vec_Mat(int num_vec) :
-			vec_mat(num_vec) {
+	Vec_Mat(const Vec_Mat& rhs) {
+
+		vec_mat = new Mat3x3[size];
+		for (unsigned i = 0; i < size; ++i)
+			vec_mat[i] = rhs.vec_mat[i];
+
 	}
 	;
-
-	void set_size(int num_vec) {
-		vec_mat.resize(num_vec);
-	}
-	;
-
-	Mat3x3<double>& operator()(const unsigned& index);
-
-	double operator()(const unsigned& index,const unsigned& i,const unsigned& j);
 
 	~Vec_Mat() {
+
+		delete[] vec_mat;
+//		std::cout<<"Now the vec_mat is getting deleted \n";
 	}
 	;
+
+	Mat3x3& operator()(const unsigned& index) {
+		return vec_mat[index];
+
+	}
+	;
+
+	double operator()(const unsigned& index, const unsigned& i, const unsigned& j) {
+		Mat3x3& A = vec_mat[index];
+		return A(i, j);
+	}
+	;
+
+	Vec_Mat<size>& operator=(const Vec_Mat<size>& rhs) {
+		if (this != &rhs)
+			for (unsigned i = 0; i < size; ++i)
+				vec_mat[i] = rhs.vec_mat[i];
+
+		return *this;
+
+	}
 
 };
 
@@ -110,18 +207,31 @@ public:
 class FluxJac {
 
 private:
-	Matrix<Vec_Mat> mat_flux_jac;
+	Matrix<Vec_Mat<3>, 2, 2> mat_flux_jac;
 
 public:
-	FluxJac();
 
-	void set(int side, int dir, int index, const Mat3x3<double> jac_matrix);
-	void set(int side, int direction, int indx, Mat3x3<double>& jac1, Mat3x3<double>& jac2);
-	Mat3x3<double>& operator()(const unsigned& index,const unsigned& i,const unsigned& j);
+	void set(int side, int dir, int index, const Mat3x3 jac_matrix) {
 
-	~FluxJac() {
+		(mat_flux_jac(side, dir))(index) = jac_matrix;
+
 	}
 	;
+	void set(int side, int direction, int indx, Mat3x3& jac1, Mat3x3& jac2) {
+		Mat3x3 dummy;
+		dummy = (jac1 + jac2) * .5;
+		set(side, direction, indx, dummy);
+
+	}
+	;
+	Mat3x3& operator()(const unsigned& i, const unsigned& j,const unsigned& index) {
+		return (mat_flux_jac(i, j))(index);
+	}
+	;
+
+	virtual ~FluxJac(){
+//		std::cout<<"Now flux_jac is getting deleted \n";
+	};
 
 };
 

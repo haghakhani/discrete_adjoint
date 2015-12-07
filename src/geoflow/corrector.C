@@ -22,17 +22,21 @@
 #define DO_EROSION
 #define DEBUG
 
-#define KEY0   3918024388
-#define KEY1   3964585199
-#define ITER   1
+#define KEY0   3781669179
+#define KEY1   330382100
+#define ITER   11
+#define EFFELL 1
+#define J      0
+#define JACIND 0
 #define X      1.97853625e-01
 #define Y      2.30663500e-01
 
 #include "../header/hpfem.h"
 
-void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* matprops_ptr,
-    FluxProps *fluxprops, TimeProps *timeprops, Element *EmTemp, double *forceint, double *forcebed,
-    double *eroded, double *deposited) {
+void correct(HashTable* NodeTable, HashTable* El_Table, double dt,
+		MatProps* matprops_ptr, FluxProps *fluxprops, TimeProps *timeprops,
+		Element *EmTemp, double *forceint, double *forcebed, double *eroded,
+		double *deposited) {
 //	Element *EmTemp = (Element *) EmTemp_in;
 	double *dx = EmTemp->get_dx();
 	double dtdx = dt / dx[0];
@@ -111,54 +115,26 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	EmTemp->convect_dryline(V_avg, dt); //this is necessary
 
 	int debuging, ggg = 0;
-	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1 && timeprops->iter == ITER)
+	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1
+			&& timeprops->iter == ITER)
 //	if (dabs(*(EmTemp->get_coord()) - X) < INCREMENT&& dabs(*(EmTemp->get_coord()+1) - Y)<INCREMENT
 //	&& timeprops->iter == ITER)
 		debuging = ggg = 1;
 
 	double dragforce[2] = { 0., 0. };
-	correct_(state_vars, prev_state_vars, fluxxp, fluxyp, fluxxm, fluxym, &tiny, &dtdx, &dtdy, &dt,
-	    d_state_vars, (d_state_vars + NUM_STATE_VARS), &(zeta[0]), &(zeta[1]), curvature,
-	    &(matprops_ptr->intfrict), &bedfrict, gravity, d_gravity, kactxy, &(matprops_ptr->frict_tiny),
-	    forceint, forcebed, dragforce, &do_erosion, eroded, Vsolid, &terminal_vel,
-	    &(matprops_ptr->epsilon), &IF_STOPPED, Influx);
+	correct_(state_vars, prev_state_vars, fluxxp, fluxyp, fluxxm, fluxym, &tiny,
+			&dtdx, &dtdy, &dt, d_state_vars, (d_state_vars + NUM_STATE_VARS),
+			&(zeta[0]), &(zeta[1]), curvature, &(matprops_ptr->intfrict), &bedfrict,
+			gravity, d_gravity, kactxy, &(matprops_ptr->frict_tiny), forceint,
+			forcebed, dragforce, &do_erosion, eroded, Vsolid, &terminal_vel,
+			&(matprops_ptr->epsilon), &IF_STOPPED, Influx);
+
+	char filename[] = "corrector";
 
 #ifdef DEBUG
-	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1 && timeprops->iter == ITER) {
-		int state_num = NUM_STATE_VARS;
-		FILE *fp;
-		fp = fopen("debugfile", "w");
-
-		fprintf(fp,
-		    "In corrector time step %d with dt=%f dtdx=%f dtdy=%f kactx=%f , kacty=%f , x=%6f, y=%6f \n state vars are: \n",
-		    timeprops->iter, dt, dtdx, dtdy, *(EmTemp->get_kactxy()), *(EmTemp->get_kactxy() + 1),
-		    *(EmTemp->get_coord()), *(EmTemp->get_coord() + 1));
-		for (i = 0; i < state_num; i++)
-			fprintf(fp, "%10e ", state_vars[i]);
-		fprintf(fp, "\n prev state vars are: \n");
-		for (i = 0; i < state_num; i++)
-			fprintf(fp, "%10e ", prev_state_vars[i]);
-		fprintf(fp, "\n xp: \n");
-		for (int state = 0; state < state_num; state++)
-			fprintf(fp, "%10e ", fluxxp[state]);
-		fprintf(fp, "\n xm: \n");
-		for (int state = 0; state < state_num; state++)
-			fprintf(fp, "%10e ", fluxxm[state]);
-		fprintf(fp, "\n yp: \n");
-		for (int state = 0; state < state_num; state++)
-			fprintf(fp, "%10e ", fluxyp[state]);
-		fprintf(fp, "\n ym: \n");
-		for (int state = 0; state < state_num; state++)
-			fprintf(fp, "%10e ", fluxym[state]);
-		fprintf(fp, "\n dUdx: \n");
-		for (int state = 0; state < state_num; state++)
-			fprintf(fp, "%10e ", d_state_vars[state]);
-		fprintf(fp, "\n dUdy: \n");
-		for (int state = 0; state < state_num; state++)
-			fprintf(fp, "%10e ", d_state_vars[state + NUM_STATE_VARS]);
-		fprintf(fp, "\n");
-
-		fclose(fp);
+	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1
+			&& timeprops->iter == ITER) {
+		EmTemp->write_elem_info(NodeTable, filename, timeprops->iter, dt);
 	}
 #endif
 
@@ -176,10 +152,12 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 		double tempU[NUM_STATE_VARS];
 		for (i = 0; i < NUM_STATE_VARS; i++)
 			tempU[i] = prev_state_vars[i] - dtdx * (fluxxp[i] - fluxxm[i])
-			    - dtdy * (fluxyp[i] - fluxym[i]);
-		printf("ElemKey: %d   ElemKey2: %d\n ", *EmTemp->pass_key(), *(EmTemp->pass_key() + 1));
+					- dtdy * (fluxyp[i] - fluxym[i]);
+		printf("ElemKey: %d   ElemKey2: %d\n ", *EmTemp->pass_key(),
+				*(EmTemp->pass_key() + 1));
 		printf("Kactxy = %10.5e, %10.5e\n", kactxy[0], kactxy[1]);
-		printf("BedFrict: %10.5e: IntFrict: %10.5e\n", bedfrict, matprops_ptr->intfrict);
+		printf("BedFrict: %10.5e: IntFrict: %10.5e\n", bedfrict,
+				matprops_ptr->intfrict);
 
 		printf("state_vars: \n");
 		for (i = 0; i < NUM_STATE_VARS; i++)
@@ -198,8 +176,8 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 
 		printf("fluxes: \n");
 		for (i = 0; i < NUM_STATE_VARS; i++)
-			printf("fluxxp:%10.5e, fluxxm:%10.5e, fluxyp:%10.5e, fluxym:%10.5e \n ", fluxxp[i], fluxxm[i],
-			    fluxyp[i], fluxym[i]);
+			printf("fluxxp:%10.5e, fluxxm:%10.5e, fluxyp:%10.5e, fluxym:%10.5e \n ",
+					fluxxp[i], fluxxm[i], fluxyp[i], fluxym[i]);
 
 		exit(1);
 	}

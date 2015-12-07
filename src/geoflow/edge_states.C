@@ -21,9 +21,9 @@
 
 #include "../header/hpfem.h"
 
-#define KEY0   4235662257
-#define KEY1   991146300
-#define ITER   21
+#define KEY0   2695539370
+#define KEY1   2863311530
+#define ITER   1
 
 /*! calc_edge_states() cycles through the element Hashtable (listing of all 
  *  elements) and for each element (that has not been refined this iteration 
@@ -33,8 +33,9 @@
  *  GIS map's cummulative outflow (defined as the mass flow off of the
  *  GIS map).  Also, the elements are checked for multiple pile-height values 
  */
-void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
-    TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow) {
+void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
+		MatProps* matprops_ptr, TimeProps* timeprops_ptr, int myid, int* order_flag,
+		double *outflow) {
 	int i, j, k, counter, iter, keys1, keys2;
 	double tiny = GEOFLOW_TINY;
 	int el_counter = 0;
@@ -66,14 +67,15 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matpr
 				if (Curr_El->get_adapted_flag() > 0) {
 					//if this element doesn't belong on this processor don't involve
 
-					if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
-					    && timeprops_ptr->iter == ITER) {
+					if (Curr_El->get_ithelem() == 4
+					/**(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
+					 /*&& timeprops_ptr->iter == ITER*/) {
 						int ddd, aa = 0;
 						int gg = ddd;
 					}
 
-					Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid, timeprops_ptr->dtime,
-					    order_flag, &localoutflow);
+					Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
+							timeprops_ptr->dtime, order_flag, &localoutflow);
 					localoutflow_sum += localoutflow;
 				}
 				currentPtr = currentPtr->next;
@@ -83,7 +85,7 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matpr
 	return;
 }
 
-void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid) {
+void calc_flux(MeshCTX* meshctx, PropCTX* propctx) {
 
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
@@ -91,6 +93,7 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid) {
 	TimeProps* timeprops_ptr = propctx->timeprops;
 	MapNames* mapname_ptr = propctx->mapnames;
 	MatProps* matprops_ptr = propctx->matprops;
+	int myid = propctx->myid;
 
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
@@ -104,8 +107,9 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx, int myid) {
 				if (Curr_El->get_adapted_flag() > 0) {
 					//if this element doesn't belong on this processor don't involve
 
-					if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
-					    && timeprops_ptr->iter == ITER) {
+					if (Curr_El->get_ithelem() == 4
+					//*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
+							/*&& timeprops_ptr->iter == ITER*/) {
 						int ddd, aa = 0;
 						int gg = ddd;
 					}

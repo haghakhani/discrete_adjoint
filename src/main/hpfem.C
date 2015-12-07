@@ -433,7 +433,7 @@ int main(int argc, char *argv[]) {
 		fclose(fpperf);
 #endif
 
-		Delete_Table(BT_Elem_Ptr, BT_Node_Ptr);
+		Delete_Table(BT_Elem_Ptr, BT_Node_Ptr,solrec);
 //		if (!test)
 //			delete dualmesh;
 

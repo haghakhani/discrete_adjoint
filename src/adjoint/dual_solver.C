@@ -51,11 +51,11 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 	int tecflag = 2;
 
-	uinform_refine(meshctx, propctx);
+//	uinform_refine(meshctx, propctx);
 
-	error_compute(meshctx, propctx, maxiter);
+//	error_compute(meshctx, propctx, maxiter);
 
-	dual_unrefine(meshctx, propctx);
+//	dual_unrefine(meshctx, propctx);
 
 	meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
 
@@ -77,7 +77,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 		eleminfo->update_dual_func(functional);
 
-		calc_jacobian(meshctx, propctx, eleminfo, INCREMENT);
+		calc_jacobian(meshctx, propctx, eleminfo);
 
 //		print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 1);
 
@@ -93,9 +93,9 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		//for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
 		//sensitivity w.r.t to parameters
 
-		uinform_refine(meshctx, propctx);
+//		uinform_refine(meshctx, propctx);
 
-		error_compute(meshctx, propctx, iter);
+//		error_compute(meshctx, propctx, iter);
 
 		// in dual weighted error estimation if solver performs n step, we'll have n+1
 		// solution and n+1 adjoint solution, but we'll have just n residual and as a
@@ -103,7 +103,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		// we know the solution from initial condition  so the error of 0th step is zero,
 		// and we have to compute the error for other time steps.
 
-		dual_unrefine(meshctx, propctx);
+//		dual_unrefine(meshctx, propctx);
 
 		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 			meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
@@ -133,24 +133,24 @@ int num_nonzero_elem(HashTable *El_Table) {
 	return (num);
 }
 
-void allocJacoMat(HashTable *El_Table) {
-
-	HashEntryPtr currentPtr;
-	Element *Curr_El;
-	HashEntryPtr *buck = El_Table->getbucketptr();
-
-	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
-		if (*(buck + i)) {
-			currentPtr = *(buck + i);
-			while (currentPtr) {
-				Curr_El = (Element*) (currentPtr->value);
-				if (Curr_El->get_adapted_flag() > 0)
-					Curr_El->alloc_jacobianMat();
-				currentPtr = currentPtr->next;
-			}
-		}
-
-}
+//void allocJacoMat(HashTable *El_Table) {
+//
+//	HashEntryPtr currentPtr;
+//	Element *Curr_El;
+//	HashEntryPtr *buck = El_Table->getbucketptr();
+//
+//	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+//		if (*(buck + i)) {
+//			currentPtr = *(buck + i);
+//			while (currentPtr) {
+//				Curr_El = (Element*) (currentPtr->value);
+//				if (Curr_El->get_adapted_flag() > 0)
+//					Curr_El->alloc_jacobianMat();
+//				currentPtr = currentPtr->next;
+//			}
+//		}
+//
+//}
 
 int num_nonzero_elem(HashTable *El_Table, int type) {
 	int num = 0;
@@ -623,7 +623,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			}
 		}
 
-	allocJacoMat(El_Table);
+//	allocJacoMat(El_Table);
 
 	int num_node_buckets = NodeTable->get_no_of_buckets();
 	buck = NodeTable->getbucketptr();
@@ -640,7 +640,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	// this function computes fluxes based on prev_state_vars (we need for dual problem),
 	// and jacobian of fluxes and store the in elements
-	calc_flux(meshctx, propctx, myid);
+	calc_flux(meshctx, propctx);
 
 	//this function computes slopes based on prev_state_vars and dh/dh_e where h_e is pile height in neighbor element
 	// we need this term to compute jacobian of elements

@@ -9,316 +9,147 @@
 #define __MATRIX
 
 #include "../header/matrix.h"
+#include <cassert>
 
-//Basic Constructor
-template<typename T>
-Matrix<T>::Matrix() {
-	rows = 0;
-	cols = 0;
+template<typename T, unsigned Row, unsigned Col>
+Matrix<T, Row, Col>::Matrix() {
+	mat = new T[Row * Col];
+	rows = Row;
+	cols = Col;
 }
 
-// Parameter Constructor
-template<typename T>
-Matrix<T>::Matrix(unsigned _rows, unsigned _cols, const T& _initial) {
-	mat.resize(_rows);
-	for (unsigned i = 0; i < mat.size(); i++) {
-		mat[i].resize(_cols, _initial);
-	}
-	rows = _rows;
-	cols = _cols;
+template<typename T, unsigned Row, unsigned Col>
+Matrix<T, Row, Col>::~Matrix() {
+	delete[] mat;
 }
 
-//another constructor
-template<typename T>
-Matrix<T>::Matrix(unsigned _rows, unsigned _cols) {
-	mat.resize(_rows);
-	for (unsigned i = 0; i < mat.size(); i++) {
-		mat[i].resize(_cols);
-	}
-	rows = _rows;
-	cols = _cols;
-}
+template<typename T, unsigned Row, unsigned Col>
+Matrix<T, Row, Col>& Matrix<T, Row, Col>::operator=(const Matrix<T, Row, Col>& rhs) {
 
-// Copy Constructor
-template<typename T>
-Matrix<T>::Matrix(const Matrix<T>& rhs) {
-	mat = rhs.mat;
-	rows = rhs.get_rows();
-	cols = rhs.get_cols();
-}
+//	std::assert(rows == rhs.get_rows() && cols == rhs.get_cols());
 
-// (Virtual) Destructor
-template<typename T>
-Matrix<T>::~Matrix() {
-}
-
-// Assignment Operator
-template<typename T>
-Matrix<T>& Matrix<T>::operator=(const Matrix<T>& rhs) {
-	if (&rhs == this)
-		return *this;
-
-	unsigned new_rows = rhs.get_rows();
-	unsigned new_cols = rhs.get_cols();
-
-	mat.resize(new_rows);
-	for (unsigned i = 0; i < mat.size(); i++) {
-		mat[i].resize(new_cols);
-	}
-
-	for (unsigned i = 0; i < new_rows; i++) {
-		for (unsigned j = 0; j < new_cols; j++) {
-			mat[i][j] = rhs(i, j);
-		}
-	}
-	rows = new_rows;
-	cols = new_cols;
+	for (unsigned i = 0; i < rows * cols; ++i)
+		mat[i] = rhs.mat[i];
 
 	return *this;
 }
 
-// Addition of two matrices
-template<typename T>
-Matrix<T> Matrix<T>::operator+(const Matrix<T>& rhs) {
-	Matrix result(rows, cols, 0.0);
+template<typename T, unsigned Row, unsigned Col>
+Matrix<T, Row, Col> Matrix<T, Row, Col>::operator+(const Matrix<T, Row, Col>& rhs) {
 
-	for (unsigned i = 0; i < rows; i++) {
-		for (unsigned j = 0; j < cols; j++) {
-			result(i, j) = this->mat[i][j] + rhs(i, j);
-		}
-	}
+	Matrix<T, Row, Col> result;
+
+	for (unsigned i = 0; i < rows * cols; ++i)
+		result.mat[i] = this->mat[i] + rhs.mat[i];
 
 	return result;
 }
 
-// Cumulative addition of this matrix and another
-template<typename T>
-Matrix<T>& Matrix<T>::operator+=(const Matrix<T>& rhs) {
-	unsigned rows = rhs.get_rows();
-	unsigned cols = rhs.get_cols();
+template<typename T, unsigned Row, unsigned Col>
+Matrix<T, Row, Col>& Matrix<T, Row, Col>::operator+=(const Matrix<T, Row, Col>& rhs) {
 
-	for (unsigned i = 0; i < rows; i++) {
-		for (unsigned j = 0; j < cols; j++) {
-			this->mat[i][j] += rhs(i, j);
-		}
-	}
-
+	for (unsigned i = 0; i < rows * cols; ++i)
+		this->mat[i] += rhs.mat[i];
 	return *this;
 }
 
-// Subtraction of this matrix and another
-template<typename T>
-Matrix<T> Matrix<T>::operator-(const Matrix<T>& rhs) {
-	unsigned rows = rhs.get_rows();
-	unsigned cols = rhs.get_cols();
-	Matrix result(rows, cols, 0.0);
+// Matrix/scalar operations
+template<typename T, unsigned Row, unsigned Col>
+Matrix<T, Row, Col> Matrix<T, Row, Col>::operator+(const T& rhs) {
 
-	for (unsigned i = 0; i < rows; i++) {
-		for (unsigned j = 0; j < cols; j++) {
-			result(i, j) = this->mat[i][j] - rhs(i, j);
-		}
-	}
+	Matrix<T, Row, Col> result;
+
+	for (unsigned i = 0; i < rows * cols; ++i)
+		result.mat[i] = this->mat[i] + rhs;
 
 	return result;
 }
 
-// Cumulative subtraction of this matrix and another
-template<typename T>
-Matrix<T>& Matrix<T>::operator-=(const Matrix<T>& rhs) {
-	unsigned rows = rhs.get_rows();
-	unsigned cols = rhs.get_cols();
+template<typename T, unsigned Row, unsigned Col>
+Matrix<T, Row, Col> Matrix<T, Row, Col>::operator-(const T& rhs) {
 
-	for (unsigned i = 0; i < rows; i++) {
-		for (unsigned j = 0; j < cols; j++) {
-			this->mat[i][j] -= rhs(i, j);
-		}
-	}
+	Matrix<T, Row, Col> result;
 
-	return *this;
-}
-
-// Left multiplication of this matrix and another
-template<typename T>
-Matrix<T> Matrix<T>::operator*(const Matrix<T>& rhs) {
-	unsigned rows = rhs.get_rows();
-	unsigned cols = rhs.get_cols();
-	Matrix result(rows, cols, 0.0);
-
-	for (unsigned i = 0; i < rows; i++) {
-		for (unsigned j = 0; j < cols; j++) {
-			for (unsigned k = 0; k < rows; k++) {
-				result(i, j) += this->mat[i][k] * rhs(k, j);
-			}
-		}
-	}
+	for (unsigned i = 0; i < rows * cols; ++i)
+		result.mat[i] = this->mat[i] - rhs;
 
 	return result;
 }
 
-// Cumulative left multiplication of this matrix and another
-template<typename T>
-Matrix<T>& Matrix<T>::operator*=(const Matrix<T>& rhs) {
-	Matrix result = (*this) * rhs;
-	(*this) = result;
-	return *this;
-}
+template<typename T, unsigned Row, unsigned Col>
+Matrix<T, Row, Col> Matrix<T, Row, Col>::operator*(const T& rhs) {
 
-// Calculate a transpose of this matrix
-template<typename T>
-Matrix<T> Matrix<T>::transpose() {
-	Matrix result(rows, cols, 0.0);
+	Matrix<T, Row, Col> result;
 
-	for (unsigned i = 0; i < rows; i++) {
-		for (unsigned j = 0; j < cols; j++) {
-			result(i, j) = this->mat[j][i];
-		}
-	}
+	for (unsigned i = 0; i < rows * cols; ++i)
+		result.mat[i] = this->mat[i] * rhs;
 
 	return result;
 }
 
-// Matrix/scalar addition
-template<typename T>
-Matrix<T> Matrix<T>::operator+(const T& rhs) {
-	Matrix result(rows, cols, 0.0);
+template<typename T, unsigned Row, unsigned Col>
+Matrix<T, Row, Col> Matrix<T, Row, Col>::operator/(const T& rhs) {
 
-	for (unsigned i = 0; i < rows; i++) {
-		for (unsigned j = 0; j < cols; j++) {
-			result(i, j) = this->mat[i][j] + rhs;
-		}
-	}
+	Matrix<T, Row, Col> result;
 
-	return result;
-}
-
-// Matrix/scalar subtraction
-template<typename T>
-Matrix<T> Matrix<T>::operator-(const T& rhs) {
-	Matrix result(rows, cols, 0.0);
-
-	for (unsigned i = 0; i < rows; i++) {
-		for (unsigned j = 0; j < cols; j++) {
-			result(i, j) = this->mat[i][j] - rhs;
-		}
-	}
-
-	return result;
-}
-
-// Matrix/scalar multiplication
-template<typename T>
-Matrix<T> Matrix<T>::operator*(const T& rhs) {
-	Matrix result(rows, cols, 0.0);
-
-	for (unsigned i = 0; i < rows; i++) {
-		for (unsigned j = 0; j < cols; j++) {
-			result(i, j) = this->mat[i][j] * rhs;
-		}
-	}
-
-	return result;
-}
-
-// Matrix/scalar division
-template<typename T>
-Matrix<T> Matrix<T>::operator/(const T& rhs) {
-	Matrix result(rows, cols, 0.0);
-
-	for (unsigned i = 0; i < rows; i++) {
-		for (unsigned j = 0; j < cols; j++) {
-			result(i, j) = this->mat[i][j] / rhs;
-		}
-	}
-
-	return result;
-}
-
-// Multiply a matrix with a vector
-template<typename T>
-std::vector<T> Matrix<T>::operator*(const std::vector<T>& rhs) {
-	std::vector<T> result(rhs.size(), 0.0);
-
-	for (unsigned i = 0; i < rows; i++) {
-		for (unsigned j = 0; j < cols; j++) {
-			result[i] = this->mat[i][j] * rhs[j];
-		}
-	}
-
-	return result;
-}
-
-// Obtain a vector of the diagonal elements
-template<typename T>
-std::vector<T> Matrix<T>::diag_vec() {
-	std::vector<T> result(rows, 0.0);
-
-	for (unsigned i = 0; i < rows; i++) {
-		result[i] = this->mat[i][i];
-	}
+	for (unsigned i = 0; i < rows * cols; ++i)
+		result.mat[i] = this->mat[i] / rhs;
 
 	return result;
 }
 
 // Access the individual elements
-template<typename T>
-T& Matrix<T>::operator()(const unsigned& row, const unsigned& col) {
-	return this->mat[row][col];
+template<typename T, unsigned Row, unsigned Col>
+T& Matrix<T, Row, Col>::operator()(const unsigned& row, const unsigned& col){
+
+	return this->mat[row*cols+col];
 }
 
-// Access the individual elements (const)
-template<typename T>
-const T& Matrix<T>::operator()(const unsigned& row, const unsigned& col) const {
-	return this->mat[row][col];
+template<typename T, unsigned Row, unsigned Col>
+const T& Matrix<T, Row, Col>::operator()(const unsigned& row, const unsigned& col) const{
+
+	return this->mat[row*cols+col];
 }
 
-// Get the number of rows of the matrix
-template<typename T>
-unsigned Matrix<T>::get_rows() const {
-	return this->rows;
+template<unsigned size>
+Vec_Mat<size>::Vec_Mat() {
+
+	vec_mat = new Mat3x3[size];
 }
 
-// Get the number of columns of the matrix
-template<typename T>
-unsigned Matrix<T>::get_cols() const {
-	return this->cols;
+template<unsigned size>
+Vec_Mat<size>::~Vec_Mat() {
+
+	delete[] vec_mat;
 }
 
-Mat3x3<double>& Vec_Mat::operator()(const unsigned& index) {
+template<unsigned size>
+Mat3x3& Vec_Mat<size>::operator()(const unsigned& index) {
 	return vec_mat[index];
 
 }
 
-double Vec_Mat::operator()(const unsigned& index, const unsigned& i,
-		const unsigned& j) {
-	Mat3x3<double>& A=vec_mat[index];
+template<unsigned size>
+double Vec_Mat<size>::operator()(const unsigned& index, const unsigned& i, const unsigned& j) {
+	Mat3x3& A = vec_mat[index];
 	return A(i, j);
 }
 
-FluxJac::FluxJac() :mat_flux_jac(2,2){
-
-	for (int i = 0; i < 2; ++i)
-		for (int j = 0; j < 2; ++j)
-			mat_flux_jac(i, j).set_size(3);
-}
-
-void FluxJac::set(int side, int dir, int index,
-		const Mat3x3<double> jac_matrix) {
+void FluxJac::set(int side, int dir, int index, const Mat3x3 jac_matrix) {
 
 	(mat_flux_jac(side, dir))(index) = jac_matrix;
 
 }
 
-void FluxJac::set(int side, int direction, int indx, Mat3x3<double>& jac1,
-		Mat3x3<double>& jac2) {
-	Mat3x3<double> dummy;
+void FluxJac::set(int side, int direction, int indx, Mat3x3& jac1, Mat3x3& jac2) {
+	Mat3x3 dummy;
 	dummy = (jac1 + jac2) * .5;
 	set(side, direction, indx, dummy);
 
 }
 
-Mat3x3<double>& FluxJac::operator()(const unsigned& i,const unsigned& j,const unsigned& index){
+Mat3x3& FluxJac::operator()(const unsigned& i, const unsigned& j, const unsigned& index) {
 	return (mat_flux_jac(i, j))(index);
 }
-
 
 #endif

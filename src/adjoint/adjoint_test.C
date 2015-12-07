@@ -53,7 +53,7 @@ void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo) {
 	HashEntryPtr *buck = El_Table->getbucketptr();
 	Jacobian *jacobian, *neighjac;
 	Element *neigh_elem;
-	Vec_Mat jacobianmat;
+	Vec_Mat<9> jacobianmat;
 	double *curr_adj_ptr, *prev_adj_ptr;
 
 	const double epsilon = INCREMENT;
