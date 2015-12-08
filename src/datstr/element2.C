@@ -2117,30 +2117,30 @@ void Element::dual_xdirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac) {
 		hfv(2, 2) = Vel + a;
 
 		// jacobian of flux
-		flux_jac(0, 0) = 0;
-		flux_jac(0, 1) = 1;
-		flux_jac(0, 2) = 0;
+		flux_jac(0, 0) = 0.;
+		flux_jac(0, 1) = 1.;
+		flux_jac(0, 2) = 0.;
 
 		flux_jac(1, 0) = kactxy[0] * gravity[2] * hfv(0, 0) - Vel * Vel;
 		flux_jac(1, 1) = 2 * Vel;
-		flux_jac(1, 2) = 0;
+		flux_jac(1, 2) = 0.;
 
 		flux_jac(2, 0) = -Vel * hfv(0, 2) * h_inv;
 		flux_jac(2, 1) = hfv(0, 2) * h_inv;
 		flux_jac(2, 2) = Vel;
 
 		//jacobian of speed
-		s_jac(0, 0) = .5 * a * h_inv - Vel * h_inv;
+		s_jac(0, 0) = -.5 * a * h_inv - Vel * h_inv;
 		s_jac(0, 1) = h_inv;
-		s_jac(0, 2) = 0;
+		s_jac(0, 2) = 0.;
 
 		s_jac(1, 0) = -Vel * h_inv;
 		s_jac(1, 1) = h_inv;
-		s_jac(1, 2) = 0;
+		s_jac(1, 2) = 0.;
 
-		s_jac(2, 0) = -.5 * a * h_inv - Vel * h_inv;
+		s_jac(2, 0) = .5 * a * h_inv - Vel * h_inv;
 		s_jac(2, 1) = h_inv;
-		s_jac(2, 2) = 0;
+		s_jac(2, 2) = 0.;
 
 	}
 
@@ -2234,8 +2234,8 @@ void Element::dual_ydirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac) {
 		hfv(2, 2) = Vel + a;
 
 		// jacobian of flux
-		flux_jac(0, 0) = 0;
-		flux_jac(0, 1) = 0;
+		flux_jac(0, 0) = 0.;
+		flux_jac(0, 1) = 0.;
 		flux_jac(0, 2) = 1;
 
 		flux_jac(1, 0) = -Vel * hfv(0, 1) * h_inv;
@@ -2243,20 +2243,20 @@ void Element::dual_ydirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac) {
 		flux_jac(1, 2) = hfv(0, 1) * h_inv;
 
 		flux_jac(2, 0) = kactxy[0] * gravity[2] * hfv(0, 0) - Vel * Vel;
-		flux_jac(2, 1) = 0;
+		flux_jac(2, 1) = 0.;
 		flux_jac(2, 2) = 2 * Vel;
 
 		//jacobian of speed
-		s_jac(0, 0) = .5 * a * h_inv - Vel * h_inv;
-		s_jac(0, 1) = 0;
+		s_jac(0, 0) = -.5 * a * h_inv - Vel * h_inv;
+		s_jac(0, 1) = 0.;
 		s_jac(0, 2) = h_inv;
 
 		s_jac(1, 0) = -Vel * h_inv;
-		s_jac(1, 1) = 0;
+		s_jac(1, 1) = 0.;
 		s_jac(1, 2) = h_inv;
 
-		s_jac(2, 0) = -.5 * a * h_inv - Vel * h_inv;
-		s_jac(2, 1) = 0;
+		s_jac(2, 0) = .5 * a * h_inv - Vel * h_inv;
+		s_jac(2, 1) = 0.;
 		s_jac(2, 2) = h_inv;
 
 	}
@@ -2461,7 +2461,7 @@ void riemannflux(double hfvl[3][NUM_STATE_VARS], double hfvr[3][NUM_STATE_VARS],
 
 	if ((hfvl[0][0] == 0.) && (hfvr[0][0] == 0.))
 		for (ivar = 0; ivar < NUM_STATE_VARS; ivar++)
-			flux[ivar] = 0.0;
+			flux[ivar] = 0.;
 	else {
 
 		double sl, sr;
@@ -2804,12 +2804,9 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 					for (ivar = 0; ivar < NUM_STATE_VARS; ivar++)
 						nm->refinementflux[ivar] = 0.5 * (nm->refinementflux[ivar] + ghostflux[ivar]);
 				}
-
 			}
 		}
-
 	}
-
 }
 
 void dual_riemannflux(Mat3x3& hfvl, Mat3x3& hfvr, double flux[NUM_STATE_VARS], Mat3x3& flux_jac_l,
