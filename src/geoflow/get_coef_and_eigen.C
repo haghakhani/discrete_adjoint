@@ -105,8 +105,8 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* m
 #ifdef SUNOS
 
 					int debuging, ggg = 0;
-					if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1
-					    && timeprops_ptr->iter == ITER)
+					if (EmTemp->get_ithelem() ==13 /* *(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1
+					    && timeprops_ptr->iter == ITER*/)
 						debuging = ggg = 1;
 
 					gmfggetcoef_(EmTemp->get_state_vars(), d_uvec, (d_uvec + NUM_STATE_VARS), dx_ptr,

@@ -983,8 +983,8 @@ void Element::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double 
 
 				hslope_sens(0, 0) = -inv_dxp;
 				hslope_sens(0, 1) = 0.;
-				hslope_sens(0, 2) = 0.;
-				hslope_sens(0, 3) = inv_dxp;
+				hslope_sens(0, 2) = inv_dxp;
+				hslope_sens(0, 3) = 0.;
 				hslope_sens(0, 4) = 0.;
 
 				if (ep2 != NULL)
@@ -993,9 +993,9 @@ void Element::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double 
 			} else if (min_slopes == gamma * dabs(dm)) {
 
 				hslope_sens(0, 0) = inv_dxm;
-				hslope_sens(0, 1) = 0.;
+				hslope_sens(0, 1) = -inv_dxm;
 				hslope_sens(0, 2) = 0.;
-				hslope_sens(0, 3) = -inv_dxm;
+				hslope_sens(0, 3) = 0.;
 				hslope_sens(0, 4) = 0.;
 
 				if (em2 != NULL)
@@ -1069,14 +1069,14 @@ void Element::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double 
 			// if dp and dm have different signes
 			if (.5 * (c_sgn(dp) + c_sgn(dm)) == 0)
 				for (int i = 0; i < 5; ++i)
-					hslope_sens(0, i) = 0.;
+					hslope_sens(1, i) = 0.;
 
 			else if (min_slopes == gamma * dabs(dp)) {
 
 				hslope_sens(1, 0) = -inv_dxp;
 				hslope_sens(1, 1) = 0.;
-				hslope_sens(1, 2) = 0.;
-				hslope_sens(1, 3) = inv_dxp;
+				hslope_sens(1, 2) = inv_dxp;
+				hslope_sens(1, 3) = 0.;
 				hslope_sens(1, 4) = 0.;
 
 				if (ep2 != NULL)
@@ -1085,9 +1085,9 @@ void Element::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double 
 			} else if (min_slopes == gamma * dabs(dm)) {
 
 				hslope_sens(1, 0) = inv_dxm;
-				hslope_sens(1, 1) = 0.;
+				hslope_sens(1, 1) = -inv_dxm;
 				hslope_sens(1, 2) = 0.;
-				hslope_sens(1, 3) = -inv_dxm;
+				hslope_sens(1, 3) = 0.;
 				hslope_sens(1, 4) = 0.;
 
 				if (em2 != NULL)

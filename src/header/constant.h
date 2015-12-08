@@ -87,7 +87,7 @@ const int NUM_STATE_VARS = 3;
 const int NUM_ADJ_EQS = 3;
 const int EFF_ELL = 9;
 
-const double GEOFLOW_TINY = 2.e-04;
+const double GEOFLOW_TINY = 1.e-04;
 const double GEOFLOW_SHORT = 3.0e-03;
 
 const int GHOST = -9876; //"refined" GHOST CELL FLAG

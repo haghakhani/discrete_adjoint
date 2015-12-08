@@ -38,46 +38,43 @@ class Element {
 
 	friend class HashTable;
 
-	friend void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable,
-			int numprocs, int myid, double loc);
+	friend void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable, int numprocs, int myid,
+	    double loc);
 
-	friend void ElemBackgroundCheck(HashTable* El_Table, HashTable* NodeTable,
-			unsigned *debugkey, FILE *fp);
+	friend void ElemBackgroundCheck(HashTable* El_Table, HashTable* NodeTable, unsigned *debugkey,
+	    FILE *fp);
 
-	friend void ElemBackgroundCheck2(HashTable* El_Table, HashTable* NodeTable,
-			void *EmDebug, FILE *fp);
+	friend void ElemBackgroundCheck2(HashTable* El_Table, HashTable* NodeTable, void *EmDebug,
+	    FILE *fp);
 
-	friend void NodeBackgroundCheck(HashTable* El_Table, HashTable* NodeTable,
-			unsigned *debugkey, FILE *fp);
+	friend void NodeBackgroundCheck(HashTable* El_Table, HashTable* NodeTable, unsigned *debugkey,
+	    FILE *fp);
 
-	friend void delete_oldsons(HashTable* El_Table, HashTable* NodeTable,
-			int myid, void *EmFather);
+	friend void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *EmFather);
 
-	friend void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable,
-			int numprocs, int myid, void* RefinedList,
-			TimeProps* timeprops_ptr);
+	friend void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int numprocs, int myid,
+	    void* RefinedList, TimeProps* timeprops_ptr);
 
-	friend void unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable,
-			int myid, void* NewFatherList);
+	friend void unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int myid,
+	    void* NewFatherList);
 
-	friend void unrefine_interp_neigh_update(HashTable* El_Table,
-			HashTable* NodeTable, int nump, int myid, void* OtherProcUpdate);
+	friend void unrefine_interp_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump,
+	    int myid, void* OtherProcUpdate);
 
-	friend void BSFC_combine_elements(int side, Element *EmTemp,
-			HashTable *HT_Elem_Ptr, HashTable *HT_Node_Ptr,
-			int destination_proc);
+	friend void BSFC_combine_elements(int side, Element *EmTemp, HashTable *HT_Elem_Ptr,
+	    HashTable *HT_Node_Ptr, int destination_proc);
 
-	friend void Pack_element(void *sendel, ElemPack* elem,
-			HashTable* HT_Node_Ptr, int destination_proc);
+	friend void Pack_element(void *sendel, ElemPack* elem, HashTable* HT_Node_Ptr,
+	    int destination_proc);
 
-	friend void destroy_element(void *r_element, HashTable* HT_Elem_Ptr,
-			HashTable* HT_Node_Ptr, int target_pro, ELinkPtr* EL_head);
+	friend void destroy_element(void *r_element, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
+	    int target_pro, ELinkPtr* EL_head);
 
-	friend void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr,
-			HashTable* HT_Node_Ptr, int myid, double* e_error);
+	friend void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
+	    int myid, double* e_error);
 
-	friend void construct_el(Element* newelement, ElemPack* elem2,
-			HashTable* HT_Node_Ptr, int myid, double* e_error);
+	friend void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, int myid,
+	    double* e_error);
 
 public:
 
@@ -103,21 +100,18 @@ public:
 	;
 
 	//! constructor that creates an original element when funky is read in
-	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH],
-			int n_pro[], BC *b, int mat, int *elm_loc_in, double pile_height,
-			int myid, unsigned *opposite_brother);
+	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], BC *b, int mat,
+	    int *elm_loc_in, double pile_height, int myid, unsigned *opposite_brother);
 
 	//! constructor that creates a son element from its father during refinement
-	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH],
-			int n_pro[], BC *b, int gen, int elm_loc_in[], int *ord,
-			int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
-			HashTable *El_Table, HashTable *NodeTable, int myid,
-			MatProps *matprops_ptr, int iwetnodefather, double Awetfather,
-			double *drypoint_in, int resComp);
+	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], BC *b, int gen,
+	    int elm_loc_in[], int *ord, int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
+	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
+	    int iwetnodefather, double Awetfather, double *drypoint_in, int resComp);
 
 	//! constructor that creates a father element from its four sons during unrefinement
-	Element(Element *sons[], HashTable *NodeTable, HashTable *El_Table,
-			MatProps *matprops_ptr, int resComp);
+	Element(Element *sons[], HashTable *NodeTable, HashTable *El_Table, MatProps *matprops_ptr,
+	    int resComp);
 
 	//! constructor that creates/restores a saved element during restart
 	Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
@@ -213,8 +207,7 @@ public:
 	int get_adapted_flag();
 
 	//! call this function after this element's neighbor(s) have been refined, proc is processor id for neighbor[which_side+4]
-	void change_neighbor(unsigned *newneighbs, int which_side, int proc,
-			int reg);
+	void change_neighbor(unsigned *newneighbs, int which_side, int proc, int reg);
 
 	//! set this element's refined flag to i, can set it to normal (hasn't just been refined and isn't a ghost cell), "temporarily" set to "refined" (has just been refined so don't refine again), or say that it's a GHOST cell, see constant.h, (which means you don't update it, instead you get new values from the processor that owns it and you don't refine it.) refined, get_refined_flag(), put_refined_flag() are the partly replaced predecessors of adapted, get_adapted_flag(), and put_adapted_flag().
 	void put_refined_flag(int i);
@@ -301,8 +294,7 @@ public:
 	/* geoflow functions */
 
 	//! this function initializes pileheight, momentums and shortspeed (also known as the L'Hosptial speed see calc_shortspeed for an explanation),this function is called in init_piles.C
-	void put_height_mom(double pile_height, double vfract, double xmom,
-			double ymom);
+	void put_height_mom(double pile_height, double vfract, double xmom, double ymom);
 
 	//! this function assigns a specified value to the pileheight and zeros to the momentums and shortspeed
 	void put_height(double pile_height);
@@ -348,21 +340,19 @@ public:
 	void insert_coord(HashTable* NodeTable);
 
 	//! this function, based on the dir flag, chooses between calling xdirflux and ydirflux, which respectively, calculate either the x or y direction analytical cell center fluxes (or the fluxes at the the boundary if 2nd order flux option is checked on the gui). Keith wrote this.
-	void zdirflux(HashTable* El_Table, HashTable* NodeTable,
-			MatProps* matprops_ptr, int order_flag, int dir,
-			double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS],
-			Element *EmNeigh, double dt);
+	void zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int order_flag,
+	    int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], Element *EmNeigh,
+	    double dt);
 
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) x direction fluxes. Keith wrote this
 	void xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
-			double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
 
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) y direction fluxes. Keith wrote this
 	void ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
-			double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
 
-	void calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid,
-			int side);
+	void calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int side);
 	void calc_yflux(HashTable* El_Table, HashTable* NodeTable, int myid);
 	void calc_xflux(HashTable* El_Table, HashTable* NodeTable, int myid);
 	void calc_fluxes(HashTable* El_Table, HashTable* NodeTable, int myid);
@@ -372,9 +362,8 @@ public:
 	void dual_xdirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac);
 
 	//! this function (indirectly) calculates the fluxes that will be used to perform the finite volume corrector step and stores them in element edge nodes, indirectly because it calls other functions to calculate the analytical fluxes and then calls another function to compute the riemann fluxes from the analytical fluxes. Talk to me (Keith) before you modify this, as I am fairly certain that it is now completely bug free and parts of it can be slightly confusing.
-	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
-			MatProps* matprops_ptr, int myid, double dt, int* order_flag,
-			double *outflow);
+	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int myid,
+	    double dt, int* order_flag, double *outflow);
 
 	/*! this function calculates the maximum x and y direction wavespeeds
 	 *  which are the eigenvalues of the flux jacobian
@@ -450,9 +439,8 @@ public:
 	void calc_gravity_vector(MatProps *matprops_ptr);
 
 	//! this function is defined in unrefine.C, it is also called in that file, it finds this element's brothers
-	int find_brothers(HashTable* El_Table, HashTable* NodeTable, double target,
-			int myid, MatProps* matprops_ptr, void* NewFatherList,
-			void* OtherProcUpdate, int rescomp);
+	int find_brothers(HashTable* El_Table, HashTable* NodeTable, double target, int myid,
+	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int rescomp);
 	/*
 	 //! this function is defined in unrefine.C, it is also called in that file, it finds this element's brothers
 	 int find_brothers(HashTable* El_Table, HashTable* NodeTable,
@@ -465,8 +453,8 @@ public:
 	int check_unrefinement(HashTable *El_Table, double target);
 
 	//! this function updates this elements neighbor info when one of its neighbors has been unrefined
-	void change_neigh_info(unsigned *fth_key, unsigned *ng_key, int neworder,
-			int ng_gen, int fth_proc);
+	void change_neigh_info(unsigned *fth_key, unsigned *ng_key, int neworder, int ng_gen,
+	    int fth_proc);
 
 	//! this function returns the elm_loc variable, which is used in unrefinement beyond the initial coarse grid
 	int* get_elm_loc();
@@ -502,8 +490,7 @@ public:
 	double *get_influx();
 
 	//! this function calculates the extrusion (out of the ground) fluxes for this elements
-	void calc_flux(HashTable *NodeTable, FluxProps *fluxprops,
-			TimeProps *timeprops);
+	void calc_flux(HashTable *NodeTable, FluxProps *fluxprops, TimeProps *timeprops);
 
 	//! this function returns 2 if this element contains pileheight>=contour_height and has a neighbor who contains pileheight<contour_height.  It returns 1 if this element contains pileheight<contour_height and has a neighbor who contains pileheight>=contour_height.  It returns 0 otherwise. The intended use if if(EmTemp->if_pile_boundary(ElemTable,contour_height)) but I (Keith) added the distinction bewteen 1 and 2 to allow future developers to distinguish between the inside and outside of a pileheight contour line, as this functionality could be useful in the future.
 	int if_pile_boundary(HashTable *ElemTable, double contour_height);
@@ -515,8 +502,7 @@ public:
 	int if_first_buffer_boundary(HashTable *ElemTable, double contour_height);
 
 	//! the buffer layer is a layer of refined cells on the outside of the pile, i.e. ((pileheight<contour_height)&&(Influx[0]==0)) and adjacent to the pile.  It is "N" elements wide, and the "N" element width is increased one element at a time.  This function returns 2 if this element a member of the boundary of the buffer that is one element wider than the current buffer and does not need to be adapted.  It returns 1 if this elment needs to be refined and some of its sons will be in the next buffer boundary
-	int if_next_buffer_boundary(HashTable *ElemTable, HashTable *NodeTable,
-			double contour_height);
+	int if_next_buffer_boundary(HashTable *ElemTable, HashTable *NodeTable, double contour_height);
 
 	//! for debugging only
 	int get_counted();
@@ -614,8 +600,8 @@ public:
 
 	void alloc_jacobianMat();
 
-	void rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, int*,
-			int*, int*, ElemPtrList* refinelist, ElemPtrList* unrefinelist);
+	void rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, int*, int*, int*,
+	    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
 
 	void set_jacobianMat_zero(int jacmatind);
 
@@ -630,7 +616,7 @@ public:
 	void gen_my_sons_key(HashTable* El_Table, unsigned son_key[4][KEYLENGTH]);
 
 	void check_refine_unrefine(HashTable* solrec, HashTable* El_Table, int iter,
-			ElemPtrList* refinelist, ElemPtrList* unrefinelist);
+	    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
 
 	void update_state(HashTable* solrec, HashTable* El_Table, int iter);
 
@@ -640,8 +626,7 @@ public:
 
 	Matrix<double, 2, 5>& get_hslope_sens();
 
-	void write_elem_info(HashTable* NodeTable, char* filename, int iter,
-			double dt);
+	void write_elem_info(HashTable* NodeTable, char* filename, int iter, double dt);
 
 private:
 	//! myprocess is id of the process(or) that owns this element
@@ -834,6 +819,9 @@ private:
 	//Matrix<Matrix> FluxJac (2,2);
 	FluxJac flx_jac_cont;
 
+	//2: 0->for x direction, 1-> for y direction
+	//5: 0-> element itself, 1->first neighbor in left(down), 2->first neighbor in right(up),
+	//3->second neighbor in left(down), 4->second neighbor in right(up),
 	Matrix<double, 2, 5> hslope_sens;
 
 };
@@ -898,8 +886,7 @@ inline int Element::get_opposite_brother_flag() {
 }
 ;
 
-inline void Element::put_height_mom(double pile_height, double volf,
-		double xmom, double ymom) {
+inline void Element::put_height_mom(double pile_height, double volf, double xmom, double ymom) {
 	prev_state_vars[0] = state_vars[0] = pile_height;
 	prev_state_vars[1] = state_vars[1] = xmom;
 	prev_state_vars[2] = state_vars[2] = ymom;
