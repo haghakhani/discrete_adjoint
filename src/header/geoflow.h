@@ -194,6 +194,8 @@ void print_Elem_Table(HashTable* El_Table, HashTable* NodeTable, int iter, int p
 
 bool must_write(MemUse* memuse_ptr);
 
+//extern const Mat3x3 ZERO_MATRIX;
+
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);
 

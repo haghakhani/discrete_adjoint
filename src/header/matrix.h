@@ -22,7 +22,7 @@ public:
 		rows = Row;
 		cols = Col;
 		for (unsigned i = 0; i < rows * cols; ++i)
-			mat[i]=T();
+			mat[i] = T();
 
 	}
 	;
@@ -224,14 +224,15 @@ public:
 
 	}
 	;
-	Mat3x3& operator()(const unsigned& i, const unsigned& j,const unsigned& index) {
+	Mat3x3& operator()(const unsigned& i, const unsigned& j, const unsigned& index) {
 		return (mat_flux_jac(i, j))(index);
 	}
 	;
 
-	virtual ~FluxJac(){
+	virtual ~FluxJac() {
 //		std::cout<<"Now flux_jac is getting deleted \n";
-	};
+	}
+	;
 
 };
 
