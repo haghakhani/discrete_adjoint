@@ -105,10 +105,12 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 		for (int j = 0; j < NUM_STATE_VARS; ++j)
 			if (isnan(jacobian(i, j)) || isinf(jacobian(i, j)))
 				cout << "hello, I found you \n";
+#ifdef DEBUG
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		for (int j = 0; j < NUM_STATE_VARS; ++j)
 			if (dabs(jacobian(i, j))>10.)
 				cout << "WARNING for Jacobian \n";
+#endif
 }
 
