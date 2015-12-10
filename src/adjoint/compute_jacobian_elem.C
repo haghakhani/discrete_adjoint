@@ -10,6 +10,8 @@
 #endif
 #include "../header/hpfem.h"
 
+#define DEBUG
+
 void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3x3& jac_flux_p_x,
     const Mat3x3& jac_flux_n_y, const Mat3x3& jac_flux_p_y, double* prev_state_vars,
     double* d_state_vars_x, double* d_state_vars_y, double *curvature, double* gravity,

@@ -149,9 +149,6 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 
 int void_neigh_elem(HashTable* El_Table, Element* Curr_El, int effelement);
 
-void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, int effelement, int j,
-    double increment, double fluxold[4][NUM_STATE_VARS],
-    double d_state_vars_old[DIMENSION * NUM_STATE_VARS]);
 
 void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
     int myid, double fluxold[4][NUM_STATE_VARS]);
@@ -159,13 +156,6 @@ void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps
 void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* fluxypold,
     double* fluxymold, double* fluxxp, double* fluxxm, double* fluxyp, double* fluxym,
     int effelement, int j, int iter, double dt);
-
-void calc_flux_slope_kact(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El,
-    MatProps* matprops_ptr, int myid, int effelement, int updateflux, int srcflag,
-    ResFlag resflag[5]);
-
-void increment_state(HashTable* El_Table, Element* Curr_El, double increment, int effelement, int j,
-    int* updateflux, int* srcflag, ResFlag resflag[5]);
 
 void reverse_states(HashTable* El_Table, HashTable* solrec, int iter, ElemPtrList* refinelist,
     ElemPtrList* unrefinelist);
@@ -186,9 +176,6 @@ void reset_newson_adaption_flag(HashTable* El_Table);
 void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
 
 void check_state_vars_with_record(HashTable* El_Table, HashTable* solrec, int iter);
-
-void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, MatProps* matprops_ptr,
-    int effelement, int j, int myid, double increment, double* d_state_vars_old);
 
 void print_Elem_Table(HashTable* El_Table, HashTable* NodeTable, int iter, int place);
 
