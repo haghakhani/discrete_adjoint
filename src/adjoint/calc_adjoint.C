@@ -112,7 +112,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 
 				for (int k = 0; k < NUM_STATE_VARS; ++k)
 					for (int l = 0; l < NUM_STATE_VARS; ++l)
-						adjcontr[k] += adjoint_pointer[l] * jacobianmat(effelement, k, l);
+						adjcontr[k] += adjoint_pointer[l] * jacobianmat(effelement, l, k);
 
 #ifdef DEBUGFILE
 				if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
@@ -151,9 +151,13 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 					adjoint_pointer = neigh_elem->get_prev_adjoint();
 					Vec_Mat<9>& jacobianmat = neigh_elem->get_jacobian();
 
+					int jacind = neigh_elem->which_neighbor(Curr_El->pass_key());
+					// because we have to consider the element itself which is in jacind=0
+					jacind++;
+
 					for (int k = 0; k < NUM_STATE_VARS; ++k)
 						for (int l = 0; l < NUM_STATE_VARS; ++l)
-							adjcontr[k] += adjoint_pointer[l] * jacobianmat(effelement, k, l);
+							adjcontr[k] += adjoint_pointer[l] * jacobianmat(jacind, l, k);
 
 #ifdef DEBUGFILE
 

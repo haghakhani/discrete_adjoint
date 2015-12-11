@@ -10,7 +10,7 @@
 #endif
 #include "../header/hpfem.h"
 
-#define DEBUG
+//#define DEBUG
 
 void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3x3& jac_flux_p_x,
     const Mat3x3& jac_flux_n_y, const Mat3x3& jac_flux_p_y, double* prev_state_vars,
@@ -111,8 +111,11 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		for (int j = 0; j < NUM_STATE_VARS; ++j)
-			if (dabs(jacobian(i, j))>10.)
+			if (dabs(jacobian(i, j))>2000.){
 				cout << "WARNING for Jacobian \n";
+				if (dabs(jacobian(i, j))>max_jac)
+					max_jac=dabs(jacobian(i, j));
+			}
 #endif
 }
 

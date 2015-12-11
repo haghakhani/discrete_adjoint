@@ -36,6 +36,8 @@ void set_fluxes_hsens(Element* Curr_El, const Mat3x3*& jac_flux_n_x, const Mat3x
 
 const Mat3x3 ZERO_MATRIX;
 
+double max_jac=0.;
+
 void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 
 	int myid, numprocs;
@@ -56,6 +58,7 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 
 	int iter = timeprops_ptr->iter;
 	double tiny = GEOFLOW_TINY;
+
 
 #ifdef DEBUGFILE
 	ofstream myfile;
@@ -159,6 +162,8 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 			}
 		}
 	}
+
+//	cout<<"max jacobian:  "<<max_jac<<endl;
 
 #ifdef DEBUGFILE
 	myfile.close();

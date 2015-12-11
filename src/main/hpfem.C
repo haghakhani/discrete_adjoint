@@ -80,8 +80,8 @@ int main(int argc, char *argv[]) {
 		int xdmerr;
 
 		StatProps statprops;
-		MatProps matprops(material_count, matnames, intfrictang, bedfrictang, mu,
-				rho, epsilon, gamma, frict_tiny, 1.0, 1.0, 1.0);
+		MatProps matprops(material_count, matnames, intfrictang, bedfrictang, mu, rho, epsilon, gamma,
+		    frict_tiny, 1.0, 1.0, 1.0);
 		TimeProps timeprops;
 		timeprops.starttime = time(NULL);
 
@@ -114,45 +114,38 @@ int main(int argc, char *argv[]) {
 		 criteria paper... plan to include in v_star implicitly
 		 later */
 
-		Read_data(myid, &matprops, &pileprops, &statprops, &timeprops, &fluxprops,
-				&adaptflag, &viz_flag, &order_flag, &mapnames, &discharge, &outline,
-				&srctype);
+		Read_data(myid, &matprops, &pileprops, &statprops, &timeprops, &fluxprops, &adaptflag,
+		    &viz_flag, &order_flag, &mapnames, &discharge, &outline, &srctype);
 
-		if (!loadrun(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &matprops,
-				&timeprops, &mapnames, &adaptflag, &order_flag, &statprops, &discharge,
-				&outline)) {
-			Read_grid(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &matprops, &outline,
-					&solrec);
+		if (!loadrun(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &matprops, &timeprops, &mapnames,
+		    &adaptflag, &order_flag, &statprops, &discharge, &outline)) {
+			Read_grid(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &matprops, &outline, &solrec);
 
-			setup_geoflow(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops,
-					&timeprops);
+			setup_geoflow(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops);
 
 			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
 			AssertMeshErrorFree(BT_Elem_Ptr, BT_Node_Ptr, numprocs, myid, -1.0);
 
 			//initialize pile height and if appropriate perform initial adaptation
-			init_piles(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, adaptflag, &matprops,
-					&timeprops, &mapnames, &pileprops, &fluxprops, &statprops);
+			init_piles(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, adaptflag, &matprops, &timeprops,
+			    &mapnames, &pileprops, &fluxprops, &statprops);
 
-			setup_geoflow(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops,
-					&timeprops);
+			setup_geoflow(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops);
 		}
 
 		if (myid == 0) {
 			for (int imat = 1; imat <= matprops.material_count; imat++)
 				printf("bed friction angle for \"%s\" is %g\n", matprops.matnames[imat],
-						matprops.bedfrict[imat] * 180.0 / PI);
+				    matprops.bedfrict[imat] * 180.0 / PI);
 
-			printf(
-					"internal friction angle is %g, epsilon is %g \n method order = %i\n",
-					matprops.intfrict * 180.0 / PI, matprops.epsilon, order_flag);
+			printf("internal friction angle is %g, epsilon is %g \n method order = %i\n",
+			    matprops.intfrict * 180.0 / PI, matprops.epsilon, order_flag);
 			printf("REFINE_LEVEL=%d\n", REFINE_LEVEL);
 		}
 
-		MPI_Barrier (MPI_COMM_WORLD);
-		calc_stats(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops, &timeprops,
-				&statprops, &discharge, 0.0);
+		MPI_Barrier(MPI_COMM_WORLD);
+		calc_stats(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops, &timeprops, &statprops, &discharge, 0.0);
 
 		output_discharge(&matprops, &timeprops, &discharge, myid);
 
@@ -173,12 +166,11 @@ int main(int argc, char *argv[]) {
 			output_summary(&timeprops, &statprops, savefileflag);
 
 		if (viz_flag & 1)
-			tecplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames,
-					statprops.vstar, adjflag);
+			tecplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames, statprops.vstar,
+			    adjflag);
 
 		if (viz_flag & 2)
-			meshplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames,
-					statprops.vstar);
+			meshplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames, statprops.vstar);
 
 #ifdef HAVE_HDF5
 		if(viz_flag&8)
@@ -188,8 +180,7 @@ int main(int argc, char *argv[]) {
 		if (viz_flag & 16) {
 			if (myid == 0)
 				grass_sites_header_output(&timeprops);
-			grass_sites_proc_output(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops,
-					&timeprops);
+			grass_sites_proc_output(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops, &timeprops);
 		}
 
 		if (!test)
@@ -238,8 +229,7 @@ int main(int argc, char *argv[]) {
 			//check for changes in topography and update if necessary
 			//may want to put an "if(timeprops.iter %20==0)" (20 is arbitrary) here
 			if (timeprops.iter == 200) {
-				update_topo(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops,
-						&timeprops, &mapnames);
+				update_topo(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops, &mapnames);
 			}
 
 			if ((adaptflag != 0) && (timeprops.iter % 5 == 4)) {
@@ -250,13 +240,12 @@ int main(int argc, char *argv[]) {
 //					cout << "I found the suspecious element \n";
 //				refinement_report(BT_Elem_Ptr);
 
-				H_adapt(BT_Elem_Ptr, BT_Node_Ptr, h_count, TARGET, &matprops,
-						&fluxprops, &timeprops, 5);
+				H_adapt(BT_Elem_Ptr, BT_Node_Ptr, h_count, TARGET, &matprops, &fluxprops, &timeprops, 5);
 
 				move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
-				unrefine(BT_Elem_Ptr, BT_Node_Ptr, UNREFINE_TARGET, myid, numprocs,
-						&timeprops, &matprops, rescomp);
+				unrefine(BT_Elem_Ptr, BT_Node_Ptr, UNREFINE_TARGET, myid, numprocs, &timeprops, &matprops,
+				    rescomp);
 
 				MPI_Barrier(MPI_COMM_WORLD);      //for debug
 
@@ -273,9 +262,8 @@ int main(int argc, char *argv[]) {
 				calc_d_gravity(BT_Elem_Ptr);
 			}
 
-			step(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops,
-					&pileprops, &fluxprops, &statprops, &order_flag, &outline, &discharge,
-					adaptflag);
+			step(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops, &pileprops, &fluxprops,
+			    &statprops, &order_flag, &outline, &discharge, adaptflag);
 
 //			print_Elem_Table(BT_Elem_Ptr, BT_Node_Ptr, timeprops.iter, 0);
 
@@ -307,12 +295,11 @@ int main(int argc, char *argv[]) {
 				}
 
 				if (viz_flag & 1)
-					tecplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames,
-							statprops.vstar, adjflag);
+					tecplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames, statprops.vstar,
+					    adjflag);
 
 				if (viz_flag & 2)
-					meshplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops,
-							&mapnames, statprops.vstar);
+					meshplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames, statprops.vstar);
 
 #ifdef HAVE_HDF5
 				if(viz_flag&8)
@@ -322,8 +309,7 @@ int main(int argc, char *argv[]) {
 				if (viz_flag & 16) {
 					if (myid == 0)
 						grass_sites_header_output(&timeprops);
-					grass_sites_proc_output(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops,
-							&timeprops);
+					grass_sites_proc_output(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops, &timeprops);
 				}
 			}
 			//}
@@ -373,20 +359,22 @@ int main(int argc, char *argv[]) {
 			dual_solver(solrec, &meshctx, &propctx, eleminfo);
 
 		MPI_Barrier(MPI_COMM_WORLD);
+		cout << "test of adjoint: " << simple_test(BT_Elem_Ptr) << endl;
+
+		MPI_Barrier(MPI_COMM_WORLD);
 		if (myid == 0)
 			output_summary(&timeprops, &statprops, savefileflag);
 
 		//printf("hpfem.C 1: xcen=%g\n",statprops.xcen);
 
 		if (viz_flag & 1)
-			tecplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames,
-					statprops.vstar, adjflag);
+			tecplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames, statprops.vstar,
+			    adjflag);
 		//printf("hpfem.C 2: xcen=%g\n",statprops.xcen);
 		MPI_Barrier(MPI_COMM_WORLD);
 
 		if (viz_flag & 2)
-			meshplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames,
-					statprops.vstar);
+			meshplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames, statprops.vstar);
 		MPI_Barrier(MPI_COMM_WORLD);
 
 #ifdef HAVE_HDF5
@@ -398,8 +386,7 @@ int main(int argc, char *argv[]) {
 		if (viz_flag & 16) {
 			if (myid == 0)
 				grass_sites_header_output(&timeprops);
-			grass_sites_proc_output(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops,
-					&timeprops);
+			grass_sites_proc_output(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops, &timeprops);
 		}
 		MPI_Barrier(MPI_COMM_WORLD);
 
@@ -430,7 +417,7 @@ int main(int argc, char *argv[]) {
 		outline2.init2(dxy, outline.xminmax, outline.yminmax);
 		int NxNyout = outline.Nx * outline.Ny;
 		MPI_Reduce(*(outline.pileheight), *(outline2.pileheight), NxNyout,
-				MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+		MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 		if (myid == 0)
 			outline2.output(&matprops, &statprops);
 

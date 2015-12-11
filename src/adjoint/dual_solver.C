@@ -106,7 +106,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 //		dual_unrefine(meshctx, propctx);
 
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-			meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
+		meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
 
 	}
 
@@ -132,25 +132,6 @@ int num_nonzero_elem(HashTable *El_Table) {
 
 	return (num);
 }
-
-//void allocJacoMat(HashTable *El_Table) {
-//
-//	HashEntryPtr currentPtr;
-//	Element *Curr_El;
-//	HashEntryPtr *buck = El_Table->getbucketptr();
-//
-//	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
-//		if (*(buck + i)) {
-//			currentPtr = *(buck + i);
-//			while (currentPtr) {
-//				Curr_El = (Element*) (currentPtr->value);
-//				if (Curr_El->get_adapted_flag() > 0)
-//					Curr_El->alloc_jacobianMat();
-//				currentPtr = currentPtr->next;
-//			}
-//		}
-//
-//}
 
 int num_nonzero_elem(HashTable *El_Table, int type) {
 	int num = 0;
@@ -898,4 +879,28 @@ void dual_unrefine(MeshCTX* meshctx, PropCTX* propctx) {
 
 	}
 
+}
+
+double simple_test(HashTable* El_Table) {
+
+	double dot=0.;
+
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() > 0){
+					dot+=*(Curr_El->get_adjoint())* *(Curr_El->get_state_vars());
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	return dot;
 }
