@@ -242,7 +242,7 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 			state_vars[2] += dt * (s1 - s2 - s3);
 		else {
 			state_vars[2] = 0.;
-			stop[0] = 1;
+			stop[1] = 1;
 		}
 
 	}

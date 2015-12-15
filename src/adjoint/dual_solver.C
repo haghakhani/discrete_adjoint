@@ -27,6 +27,8 @@
 #define ITER   10
 #define J      0
 
+double initial_dot(HashTable* El_Table);
+
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 
 	HashTable* El_Table = meshctx->el_table;
@@ -57,7 +59,13 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 //	dual_unrefine(meshctx, propctx);
 
+	set_ithm(El_Table);
+
+	plot_ithm(El_Table);
+
 	meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
+
+	cout << "test of adjoint: " << initial_dot(El_Table) << endl;
 
 	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
 
@@ -79,7 +87,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 		calc_jacobian(meshctx, propctx, eleminfo);
 
-//		print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 1);
+		print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 1);
 
 //		check_state_vars_with_record(El_Table, solrec, iter);
 
@@ -107,6 +115,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 		meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
+
+		cout << "test of adjoint: " << simple_test(El_Table) << endl;
 
 	}
 
@@ -883,7 +893,7 @@ void dual_unrefine(MeshCTX* meshctx, PropCTX* propctx) {
 
 double simple_test(HashTable* El_Table) {
 
-	double dot=0.;
+	double dot = 0.;
 
 	HashEntryPtr currentPtr;
 	Element *Curr_El;
@@ -894,8 +904,9 @@ double simple_test(HashTable* El_Table) {
 			currentPtr = *(buck + i);
 			while (currentPtr) {
 				Curr_El = (Element*) (currentPtr->value);
-				if (Curr_El->get_adapted_flag() > 0){
-					dot+=*(Curr_El->get_adjoint())* *(Curr_El->get_state_vars());
+				if (Curr_El->get_adapted_flag() > 0) {
+					for (int i = 0; i < NUM_STATE_VARS; ++i)
+						dot += *(Curr_El->get_adjoint() + i) * *(Curr_El->get_prev_state_vars() + i);
 				}
 
 				currentPtr = currentPtr->next;
@@ -903,4 +914,67 @@ double simple_test(HashTable* El_Table) {
 		}
 
 	return dot;
+}
+
+double initial_dot(HashTable* El_Table) {
+
+	double dot = 0.;
+
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() > 0 && *(Curr_El->get_state_vars()) > dot)
+					dot = *(Curr_El->get_state_vars());
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	return dot;
+}
+
+void set_ithm(HashTable* El_Table) {
+
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	int count = 0;
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+				currentPtr = currentPtr->next;
+				if (Curr_El->get_adapted_flag() > 0) {
+					Curr_El->put_ithelem(count);
+					++count;
+				}
+			}
+		}
+}
+
+void plot_ithm(HashTable* El_Table) {
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+				currentPtr = currentPtr->next;
+				if (Curr_El->get_adapted_flag() > 0) {
+					*(Curr_El->get_residual()) = Curr_El->get_ithelem();
+				}
+			}
+		}
 }

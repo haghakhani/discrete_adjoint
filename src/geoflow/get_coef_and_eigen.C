@@ -49,7 +49,6 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* m
 	if ((maxinflux = fluxprops_ptr->MaxInfluxNow(matprops_ptr, timeprops_ptr)
 	    * (matprops_ptr->epsilon)) > 0.0) {
 		double mindx = -1.0;
-		;
 
 		for (ibuck = 0; ibuck < num_elem_buckets; ibuck++) {
 			entryp = *(elem_bucket_zero + ibuck);
@@ -78,6 +77,7 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* m
 	} //end of section that SHOULD ____NOT___ be openmp'd
 
 	double kactxy[DIMENSION];
+//	double dummy_kactxy[DIMENSION]={1.,1.};
 	double* d_uvec, *dx_ptr;
 	int intswap;
 	double *curve, maxcurve;

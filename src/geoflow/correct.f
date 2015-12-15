@@ -107,7 +107,7 @@ c     the internal friction force
          forceintx=sgn_dudy*uvec(1)*kactxy*(g(3)*dUdy(1)
      $        +dgdx(2)*uvec(1))*dsin(intfrictang)
 
-c     the bed friction force for fast moving flow 
+c     the bed friction force for fast moving flow
          forcebedx=unitvx*
      $        dmax1(g(3)*Uvec(1)+v_solid(1)*Uvec(2)*curv(1),0.0d0)
      $        *tanbed
@@ -133,7 +133,7 @@ c     the internal friction force
          forceinty=sgn_dvdx*Uvec(1)*kactxy*(g(3)*
      $        dUdx(1)+dgdx(1)*Uvec(1))*dsin(intfrictang)
 
-c     the bed friction force for fast moving flow 
+c     the bed friction force for fast moving flow
          forcebedy=unitvy
      $        *dmax1(g(3)*Uvec(1)+v_solid(2)*Uvec(3)*curv(2),0.0d0)
      $        *tanbed

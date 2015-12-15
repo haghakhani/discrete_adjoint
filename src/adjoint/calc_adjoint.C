@@ -42,8 +42,6 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 	Element* Curr_El = NULL;
 	int iter = propctx->timeprops->iter;
 
-	double aa = 0, bb = .1;
-
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
@@ -51,16 +49,25 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 				Curr_El = (Element*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0) {
-//					if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
-//						aa = bb;
+					int boundary = 0;
+					//this part handles if the Curr_El is a boundary element
+					for (int neighnum = 0; neighnum < 4; neighnum++)
+						if (*(Curr_El->get_neigh_proc() + neighnum) == INIT) {
+							boundary = 1;
+							for (int j = 0; j < NUM_STATE_VARS; ++j)
+								*(Curr_El->get_adjoint() + j) = 0.;
 
-					calc_adjoint_elem(meshctx, propctx, Curr_El);
+							break;
+						}
+					if (!boundary)
+						calc_adjoint_elem(meshctx, propctx, Curr_El);
+
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 	}
-	return;
+
 }
 
 void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
@@ -99,20 +106,20 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 	} else {
 
 		Element *neigh_elem;
-		double* adjoint_pointer;
+		double* adjoint_prev;
 		double adjcontr[NUM_STATE_VARS] = { 0., 0., 0. };
 
 		for (int effelement = 0; effelement < EFF_ELL; effelement++) { //0 for the element itself, and the rest id for neighbour elements
 
 			if (effelement == 0) {		    //this part of code
 
-				adjoint_pointer = (Curr_El->get_prev_adjoint());
+				adjoint_prev = (Curr_El->get_prev_adjoint());
 
 				Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
 
 				for (int k = 0; k < NUM_STATE_VARS; ++k)
 					for (int l = 0; l < NUM_STATE_VARS; ++l)
-						adjcontr[k] += adjoint_pointer[l] * jacobianmat(effelement, l, k);
+						adjcontr[k] += adjoint_prev[l] * jacobianmat(effelement, l, k);
 
 #ifdef DEBUGFILE
 				if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
@@ -139,16 +146,15 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 #endif
 
 			} else if (effelement <= 4
-					|| (effelement > 4
-							&& *(Curr_El->get_neigh_proc() + (effelement - 1)) >= 0)) {
+			    || (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) >= 0)) {
 
 				//basically we are checking all neighbor elements, and start from xp neighbor
 				neigh_elem = (Element*) (El_Table->lookup(
-						Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
+				    Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
 
 				if (neigh_elem) {
 
-					adjoint_pointer = neigh_elem->get_prev_adjoint();
+					adjoint_prev = neigh_elem->get_prev_adjoint();
 					Vec_Mat<9>& jacobianmat = neigh_elem->get_jacobian();
 
 					int jacind = neigh_elem->which_neighbor(Curr_El->pass_key());
@@ -157,7 +163,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 
 					for (int k = 0; k < NUM_STATE_VARS; ++k)
 						for (int l = 0; l < NUM_STATE_VARS; ++l)
-							adjcontr[k] += adjoint_pointer[l] * jacobianmat(jacind, l, k);
+							adjcontr[k] += adjoint_prev[l] * jacobianmat(jacind, l, k);
 
 #ifdef DEBUGFILE
 
@@ -189,7 +195,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 		}
 
 		for (int j = 0; j < NUM_STATE_VARS; j++)
-			adjoint[j] = /**(Curr_El->get_func_sens() + j)*/-adjcontr[j];
+			adjoint[j] = /**(Curr_El->get_func_sens() + j)*/+adjcontr[j];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
@@ -231,8 +237,7 @@ void Element::calc_func_sens(const void * ctx) {
 
 		double dt_n = contx->timeprops->dt.at(contx->iter - 1);
 		double dt_p = contx->timeprops->dt.at(contx->iter - 2);
-		func_sens[0] = .5 * prev_state_vars[0] * (dt_n + dt_p) * contx->dx
-				* contx->dy;
+		func_sens[0] = .5 * prev_state_vars[0] * (dt_n + dt_p) * contx->dx * contx->dy;
 
 	}
 }
@@ -250,8 +255,7 @@ void calc_func_sens(HashTable *El_Table) {
 			while (currentPtr) {
 				Curr_El = (Element*) (currentPtr->value);
 
-				if (Curr_El->get_adapted_flag() > 0
-						&& *(Curr_El->get_state_vars()) > max)
+				if (Curr_El->get_adapted_flag() > 0 && *(Curr_El->get_state_vars()) > max)
 					max = *(Curr_El->get_state_vars());
 
 				currentPtr = currentPtr->next;
@@ -280,20 +284,20 @@ int get_jacind(int effelement) {
 	int jacind;
 
 	switch (effelement) {
-	case 1:	//in xp neighbor I have to read jacobian of xm, because position of curr_el is in xm side of that neighbor
-		jacind = 3;
-		break;
-	case 2:	//for yp return ym
-		jacind = 4;
-		break;
-	case 3:	//for xm return xp
-		jacind = 1;
-		break;
-	case 4:	//for ym return yp
-		jacind = 2;
-		break;
-	default:
-		cout << "invalid neighbor position" << endl;
+		case 1:	//in xp neighbor I have to read jacobian of xm, because position of curr_el is in xm side of that neighbor
+			jacind = 3;
+			break;
+		case 2:	//for yp return ym
+			jacind = 4;
+			break;
+		case 3:	//for xm return xp
+			jacind = 1;
+			break;
+		case 4:	//for ym return yp
+			jacind = 2;
+			break;
+		default:
+			cout << "invalid neighbor position" << endl;
 	}
 	return jacind;
 }

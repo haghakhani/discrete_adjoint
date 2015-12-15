@@ -185,6 +185,10 @@ extern double max_jac;
 
 double simple_test(HashTable* El_Table);
 
+void plot_ithm(HashTable* El_Table);
+
+void set_ithm(HashTable* El_Table);
+
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);
 

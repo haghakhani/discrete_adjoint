@@ -32,11 +32,12 @@ int check_restore(double* prev_state_vars, double* d_state_vars, double* prev_st
     double* d_state_vars_old, double flux[][NUM_STATE_VARS], double fluxold[][NUM_STATE_VARS]);
 
 void set_fluxes_hsens(Element* Curr_El, const Mat3x3*& jac_flux_n_x, const Mat3x3*& jac_flux_p_x,
-    const Mat3x3*& jac_flux_n_y, const Mat3x3*& jac_flux_p_y, double* dh_sens, const int& effelement);
+    const Mat3x3*& jac_flux_n_y, const Mat3x3*& jac_flux_p_y, double* dh_sens,
+    const int& effelement);
 
 const Mat3x3 ZERO_MATRIX;
 
-double max_jac=0.;
+double max_jac = 0.;
 
 void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 
@@ -58,7 +59,6 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 
 	int iter = timeprops_ptr->iter;
 	double tiny = GEOFLOW_TINY;
-
 
 #ifdef DEBUGFILE
 	ofstream myfile;
@@ -128,16 +128,16 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 #ifdef DEBUG
 							char filename[] = "jacobian";
 
-							if (/*Curr_El->get_ithelem() == 4*/ *(Curr_El->pass_key()) == KEY0
+							if (Curr_El->get_ithelem() == 11/* *(Curr_El->pass_key()) == KEY0
 							 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER
-							 && effelement == EFFELL)
+							 && effelement == EFFELL*/)
 								Curr_El->write_elem_info(NodeTable, filename, timeprops_ptr->iter, dt);
 #endif
 
-							if ((effelement == 0 && prev_state_vars[0] == 0.) || //this is a void element so the residual vector does not change by changing it's values
-							    (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == -2) || //one neighbor in this side
-							    (effelement != 0 && void_neigh_elem(El_Table, Curr_El, effelement)) || //this is a void neighbor element so the residual of the curr_el does not depend on this neighbor
-							    (effelement > 0 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == INIT))
+							if (/*(effelement == 0 && prev_state_vars[0] == 0.) ||*/ //this is a void element so the residual vector does not change by changing it's values
+							(effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == -2) //|| //one neighbor in this side
+							/*(effelement != 0 && void_neigh_elem(El_Table, Curr_El, effelement)) || *///this is a void neighbor element so the residual of the curr_el does not depend on this neighbor
+							/*(effelement > 0 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == INIT)*/)
 
 								Curr_El->set_jacobianMat_zero(effelement);
 
@@ -204,7 +204,8 @@ int check_restore(double* prev_state_vars, double* d_state_vars, double* prev_st
 }
 
 void set_fluxes_hsens(Element* Curr_El, const Mat3x3 *&jac_flux_n_x, const Mat3x3 *&jac_flux_p_x,
-    const Mat3x3 *&jac_flux_n_y, const Mat3x3 *&jac_flux_p_y, double* dh_sens, const int& effelement) {
+    const Mat3x3 *&jac_flux_n_y, const Mat3x3 *&jac_flux_p_y, double* dh_sens,
+    const int& effelement) {
 
 	// (side:x=0,y=1)(direction:neg=0,pos=1)
 	FluxJac& flux_jac = (Curr_El->get_flx_jac_cont());

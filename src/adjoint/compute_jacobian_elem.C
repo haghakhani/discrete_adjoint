@@ -10,7 +10,7 @@
 #endif
 #include "../header/hpfem.h"
 
-//#define DEBUG
+#define DEBUG
 
 void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3x3& jac_flux_p_x,
     const Mat3x3& jac_flux_n_y, const Mat3x3& jac_flux_p_y, double* prev_state_vars,
@@ -70,14 +70,15 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 				        - alpha * gravity[2] * d_state_vars_y[0]
 				        - unitvx * tan_bed_frict * (gravity[2] - vx_sq * curvature[0]));
 
-				if (speed > 0.) {
+				if (speed > 0. && unitvx != 0.) {
 
-					jacobian(1, 1) += dt * speed_inv
-					    * ((unitvx * unitvx - 3.) * curvature[0] * tan_bed_frict * vx_sq
-					        + (unitvx * unitvx - 1.) * tan_bed_frict * gravity[2]);
+					jacobian(1, 1) +=
+					    dt * speed_inv * tan_bed_frict
+					        * ((unitvx * unitvx - 3.) * curvature[0] * vx_sq
+					            + (unitvx * unitvx - 1.) * gravity[2]);
 
-					jacobian(1, 2) += dt * speed_inv
-					    * (tan_bed_frict * unitvx * unitvy * (gravity[2] + vx_sq * curvature[0]));
+					jacobian(1, 2) += dt * speed_inv * tan_bed_frict * unitvx * unitvy
+					    * (gravity[2] + vx_sq * curvature[0]);
 				}
 			}
 
@@ -90,13 +91,14 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 				        - beta * gravity[2] * d_state_vars_x[0]
 				        - unitvy * tan_bed_frict * (gravity[2] - vy_sq * curvature[1]));
 
-				if (speed > 0.) {
-					jacobian(2, 1) += dt * speed_inv
-					    * (tan_bed_frict * unitvx * unitvy * (gravity[2] + vy_sq * curvature[1]));
+				if (speed > 0. && unitvy != 0.) {
+					jacobian(2, 1) += dt * speed_inv * tan_bed_frict * unitvx * unitvy
+					    * (gravity[2] + vy_sq * curvature[1]);
 
-					jacobian(2, 2) += dt * speed_inv
-					    * ((unitvy * unitvy - 3.) * curvature[1] * tan_bed_frict * vy_sq
-					        + (unitvy * unitvy - 1.) * gravity[2] * tan_bed_frict);
+					jacobian(2, 2) +=
+					    dt * speed_inv * tan_bed_frict
+					        * ((unitvy * unitvy - 3.) * curvature[1] * vy_sq
+					            + (unitvy * unitvy - 1.) * gravity[2]);
 
 				}
 			}
@@ -111,10 +113,10 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		for (int j = 0; j < NUM_STATE_VARS; ++j)
-			if (dabs(jacobian(i, j))>2000.){
+			if (dabs(jacobian(i, j)) > 5.) {
 				cout << "WARNING for Jacobian \n";
-				if (dabs(jacobian(i, j))>max_jac)
-					max_jac=dabs(jacobian(i, j));
+				if (dabs(jacobian(i, j)) > max_jac)
+					max_jac = dabs(jacobian(i, j));
 			}
 #endif
 }

@@ -308,6 +308,9 @@ public:
 	//! this function returns the vector of prev_adjoint
 	double* get_prev_adjoint();
 
+	// ! updates prev_adjoint before computing adjoint
+	void update_adjoint();
+
 	//! this function returns the vector of x and y derivatives of state variables, all the x derivatives come first as a group followed by the y derivatives as a group
 	double* get_d_state_vars();
 
@@ -918,6 +921,12 @@ inline double* Element::get_adjoint() {
 
 inline double* Element::get_prev_adjoint() {
 	return prev_adjoint;
+}
+;
+
+inline void Element::update_adjoint(){
+	for (int i=0;i<NUM_STATE_VARS;++i)
+		prev_adjoint[i]=adjoint[i];
 }
 ;
 
