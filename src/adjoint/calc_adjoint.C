@@ -80,6 +80,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 	ctx.adjiter = propctx->timeprops->adjiter;
 
 	double* adjoint = Curr_El->get_adjoint();
+	double adjcontr[NUM_STATE_VARS] = { 0., 0., 0. };
 
 //	Curr_El->calc_func_sens((const void *) &ctx);
 
@@ -105,15 +106,11 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 
 	} else {
 
-		Element *neigh_elem;
-		double* adjoint_prev;
-		double adjcontr[NUM_STATE_VARS] = { 0., 0., 0. };
-
 		for (int effelement = 0; effelement < EFF_ELL; effelement++) { //0 for the element itself, and the rest id for neighbour elements
 
 			if (effelement == 0) {		    //this part of code
 
-				adjoint_prev = (Curr_El->get_prev_adjoint());
+				double* adjoint_prev = (Curr_El->get_prev_adjoint());
 
 				Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
 
@@ -121,40 +118,16 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 					for (int l = 0; l < NUM_STATE_VARS; ++l)
 						adjcontr[k] += adjoint_prev[l] * jacobianmat(effelement, l, k);
 
-#ifdef DEBUGFILE
-				if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
-						&& propctx->timeprops->iter == ITER) {
-					myfile << " eff_el= " << effelement << endl;
-					for (int k = 0; k < NUM_STATE_VARS; ++k)
-					myfile << " adjoint[" << k << "]= " << adjoint_pointer[k];
-					myfile << "\n";
-					for (int k = 0; k < NUM_STATE_VARS; ++k)
-					for (int l = 0; l < NUM_STATE_VARS; ++l)
-					myfile << "  Jacobian[" << effelement << "][" << k << "][" << l << "]= "
-					<< jacobianmat[effelement][k][l];
-					myfile << "\n";
-
-					myfile << " eff_el= " << effelement << endl;
-					for (int k = 0; k < NUM_STATE_VARS; ++k)
-					myfile << " adjoint[" << k << "]= " << adjoint_pointer[k];
-					myfile << "\n";
-					for (int k = 0; k < NUM_STATE_VARS; ++k)
-					for (int l = 0; l < NUM_STATE_VARS; ++l)
-					myfile << "  Jacobian[" << effelement << "][" << k << "][" << l << "]= "
-					<< jacobianmat[effelement][k][l];
-					myfile << "\n";
-#endif
-
 			} else if (effelement <= 4
 			    || (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) >= 0)) {
 
 				//basically we are checking all neighbor elements, and start from xp neighbor
-				neigh_elem = (Element*) (El_Table->lookup(
+				Element * neigh_elem = (Element*) (El_Table->lookup(
 				    Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
 
 				if (neigh_elem) {
 
-					adjoint_prev = neigh_elem->get_prev_adjoint();
+					double* adjoint_prev = neigh_elem->get_prev_adjoint();
 					Vec_Mat<9>& jacobianmat = neigh_elem->get_jacobian();
 
 					int jacind = neigh_elem->which_neighbor(Curr_El->pass_key());
@@ -165,37 +138,12 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 						for (int l = 0; l < NUM_STATE_VARS; ++l)
 							adjcontr[k] += adjoint_prev[l] * jacobianmat(jacind, l, k);
 
-#ifdef DEBUGFILE
-
-					if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
-							&& propctx->timeprops->iter == ITER) {
-						myfile << " eff_el= " << effelement << endl;
-						for (int k = 0; k < NUM_STATE_VARS; ++k)
-						myfile << " adjoint[" << k << "]= " << adjoint_pointer[k];
-						myfile << "\n";
-						for (int k = 0; k < NUM_STATE_VARS; ++k)
-						for (int l = 0; l < NUM_STATE_VARS; ++l)
-						myfile << "  Jacobian[" << effelement << "][" << k << "][" << l << "]= "
-						<< jacobianmat[effelement][k][l];
-						myfile << "\n";
-					}
-					myfile << " eff_el= " << effelement << endl;
-					for (int k = 0; k < NUM_STATE_VARS; ++k)
-					myfile << " adjoint[" << k << "]= " << adjoint_pointer[k];
-					myfile << "\n";
-					for (int k = 0; k < NUM_STATE_VARS; ++k)
-					for (int l = 0; l < NUM_STATE_VARS; ++l)
-					myfile << "  Jacobian[" << effelement << "][" << k << "][" << l << "]= "
-					<< jacobianmat[effelement][k][l];
-					myfile << "\n";
-#endif
-
 				}
 			}
 		}
 
 		for (int j = 0; j < NUM_STATE_VARS; j++)
-			adjoint[j] = /**(Curr_El->get_func_sens() + j)*/+adjcontr[j];
+			adjoint[j] = /**(Curr_El->get_func_sens() + j)*/-adjcontr[j];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
@@ -222,24 +170,26 @@ void Element::calc_func_sens(const void * ctx) {
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		func_sens[i] = 0.;
+	func_sens[1] = coord[0] * coord[1] * state_vars[1];
+	func_sens[2] = coord[0] * coord[1] * state_vars[2];
 
-	if (contx->adjiter == 0) {
-
-		double dt_n = contx->timeprops->dt.at(contx->iter - 1);
-		func_sens[0] = .5 * state_vars[0] * dt_n * contx->dx * contx->dy;
-
-	} else if (contx->iter == 1) {
-
-		double dt_n = contx->timeprops->dt.at(contx->iter - 1);
-		func_sens[0] = .5 * prev_state_vars[0] * dt_n * contx->dx * contx->dy;
-
-	} else {
-
-		double dt_n = contx->timeprops->dt.at(contx->iter - 1);
-		double dt_p = contx->timeprops->dt.at(contx->iter - 2);
-		func_sens[0] = .5 * prev_state_vars[0] * (dt_n + dt_p) * contx->dx * contx->dy;
-
-	}
+//	if (contx->adjiter == 0) {
+//
+//		double dt_n = contx->timeprops->dt.at(contx->iter - 1);
+//		func_sens[0] = .5 * state_vars[0] * dt_n * contx->dx * contx->dy;
+//
+//	} else if (contx->iter == 1) {
+//
+//		double dt_n = contx->timeprops->dt.at(contx->iter - 1);
+//		func_sens[0] = .5 * prev_state_vars[0] * dt_n * contx->dx * contx->dy;
+//
+//	} else {
+//
+//		double dt_n = contx->timeprops->dt.at(contx->iter - 1);
+//		double dt_p = contx->timeprops->dt.at(contx->iter - 2);
+//		func_sens[0] = .5 * prev_state_vars[0] * (dt_n + dt_p) * contx->dx * contx->dy;
+//
+//	}
 }
 
 void calc_func_sens(HashTable *El_Table) {
@@ -248,6 +198,19 @@ void calc_func_sens(HashTable *El_Table) {
 	HashEntryPtr currentPtr;
 	Element* Curr_El = NULL;
 	double max = 0.;
+
+//	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+//		if (*(buck + i)) {
+//			currentPtr = *(buck + i);
+//			while (currentPtr) {
+//				Curr_El = (Element*) (currentPtr->value);
+//
+//				if (Curr_El->get_adapted_flag() > 0 )
+//					Curr_El->calc_func_sens((void *) &max);
+//
+//				currentPtr = currentPtr->next;
+//			}
+//		}
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {

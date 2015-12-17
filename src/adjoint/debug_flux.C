@@ -118,3 +118,28 @@ void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* 
 	return;
 }
 
+void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
+		MatProps* matprops_ptr, int myid, double fluxold[4][NUM_STATE_VARS]) {
+
+	Element* Curr_El = (Element*) (El_Table->lookup(key));
+
+	int xp = Curr_El->get_positive_x_side(); //finding the direction of element
+	int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+
+	Node* nxp = (Node*) NodeTable->lookup(Curr_El->getNode() + (xp + 4) * 2);
+
+	Node* nyp = (Node*) NodeTable->lookup(Curr_El->getNode() + (yp + 4) * 2);
+
+	Node* nxm = (Node*) NodeTable->lookup(Curr_El->getNode() + (xm + 4) * 2);
+
+	Node* nym = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
+
+	for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
+		fluxold[0][ivar] = nxp->flux[ivar];
+		fluxold[1][ivar] = nyp->flux[ivar];
+		fluxold[2][ivar] = nxm->flux[ivar];
+		fluxold[3][ivar] = nym->flux[ivar];
+	}
+}
+
+

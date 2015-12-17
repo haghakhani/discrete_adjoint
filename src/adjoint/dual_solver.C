@@ -19,6 +19,7 @@
 # include <config.h>
 #endif
 #include "../header/hpfem.h"
+#include <map>
 
 #define DEBUG1
 
@@ -28,6 +29,10 @@
 #define J      0
 
 double initial_dot(HashTable* El_Table);
+
+void copy_jacobian(HashTable* El_Table, map<int, Vec_Mat<9>>& jac_code);
+
+void compare_jacobians(map<int, Vec_Mat<9>>& jac_code, map<int, Vec_Mat<9>>& jac_diff);
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 
@@ -79,24 +84,40 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 		setup_dual_flow(solrec, meshctx, propctx);
 
+		cout << "test of adjoint: " << simple_test(El_Table) << endl;
+
 		timeprops_ptr->adjoint_time(iter - 1);
 
-		compute_functional(El_Table, &functional, timeprops_ptr);
+//		compute_functional(El_Table, &functional, timeprops_ptr);
 
 		eleminfo->update_dual_func(functional);
 
 		calc_jacobian(meshctx, propctx, eleminfo);
 
-		print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 1);
+		cout<<" max jac is: "<<max_jac<<endl;
+
+		calc_adjoint(meshctx, propctx);
+
+//		map<int, Vec_Mat<9>> jac_code;
+//
+//		copy_jacobian(El_Table, jac_code);
+//
+//		calc_jacobian_old(meshctx, propctx);
+//
+//		map<int, Vec_Mat<9>> jac_diff;
+//
+//		copy_jacobian(El_Table, jac_diff);
+//
+//		compare_jacobians(jac_code, jac_diff);
+
+//		print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 1);
 
 //		check_state_vars_with_record(El_Table, solrec, iter);
 
 //		print_jacobian(El_Table, iter);
 
-		calc_adjoint(meshctx, propctx);
-
-		if (eleminfo->iter == iter - 1)
-			fill_pertelem_info(El_Table, eleminfo);
+//		if (eleminfo->iter == iter - 1)
+//			fill_pertelem_info(El_Table, eleminfo);
 
 		//for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
 		//sensitivity w.r.t to parameters
@@ -115,8 +136,6 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 		meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
-
-		cout << "test of adjoint: " << simple_test(El_Table) << endl;
 
 	}
 
@@ -906,7 +925,7 @@ double simple_test(HashTable* El_Table) {
 				Curr_El = (Element*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) {
 					for (int i = 0; i < NUM_STATE_VARS; ++i)
-						dot += *(Curr_El->get_adjoint() + i) * *(Curr_El->get_prev_state_vars() + i);
+						dot += *(Curr_El->get_prev_adjoint() + i) * *(Curr_El->get_prev_state_vars() + i);
 				}
 
 				currentPtr = currentPtr->next;
@@ -977,4 +996,48 @@ void plot_ithm(HashTable* El_Table) {
 				}
 			}
 		}
+}
+
+void copy_jacobian(HashTable* El_Table, map<int, Vec_Mat<9>>& jac_map) {
+
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+				currentPtr = currentPtr->next;
+				if (Curr_El->get_adapted_flag() > 0) {
+					jac_map[Curr_El->get_ithelem()] = Curr_El->get_jacobian();
+				}
+			}
+		}
+
+}
+
+void compare_jacobians(map<int, Vec_Mat<9>>& jac_code, map<int, Vec_Mat<9>>& jac_diff) {
+
+	for (map<int, Vec_Mat<9>>::iterator it = jac_code.begin(); it != jac_code.end(); ++it) {
+		Vec_Mat<9>& jacdiff = jac_diff[it->first];
+		Vec_Mat<9>& jaccode = jac_code[it->first];
+
+		for (int i = 0; i < EFF_ELL; ++i)
+			for (int j = 0; j < NUM_STATE_VARS; ++j)
+				for (int k = 0; k < NUM_STATE_VARS; ++k)
+					if (fabs(jacdiff(i, j, k) - jaccode(i, j, k)) > 1e-5 && jacdiff(i, j, k) != 0.){
+						double denum;
+						if (jacdiff(i, j, k)!=0.)
+							denum= dabs(jacdiff(i, j, k));
+						cout << "in element  " << it->first << " in indices: " << i << " , " << j << " , " << k
+						    << "  there is a difference of  "
+						    << 100 * dabs(jacdiff(i, j, k) - jaccode(i, j, k)) /denum
+						    << "  jacobian diff= " << jacdiff(i, j, k) << "  jacobian code=" << jaccode(i, j, k)
+						    << endl;
+					}
+
+	}
+
 }

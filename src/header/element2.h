@@ -347,6 +347,18 @@ public:
 	    int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], Element *EmNeigh,
 	    double dt);
 
+	void zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
+	    int order_flag, int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS],
+	    Element *EmNeigh, double dt, ResFlag resflag);
+
+	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) x direction fluxes. Keith wrote this
+	void xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag);
+
+	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) y direction fluxes. Keith wrote this
+	void ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag);
+
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) x direction fluxes. Keith wrote this
 	void xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
@@ -597,6 +609,9 @@ public:
 	// this function sets the jacobian for a boundary element
 	void set_jacobian();
 
+	void set_jacobian(int neigh_num, double elemjacob[NUM_STATE_VARS], int state_vars_num,
+	    const double incr);
+
 	void print_jacobian(int iter);
 
 	Vec_Mat<9>& get_jacobian();
@@ -630,6 +645,9 @@ public:
 	Matrix<double, 2, 5>& get_hslope_sens();
 
 	void write_elem_info(HashTable* NodeTable, char* filename, int iter, double dt);
+
+	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
+	    int myid, double dt, int* order_flag, double *outflow, ResFlag lresflag, ResFlag rresflag);
 
 private:
 	//! myprocess is id of the process(or) that owns this element

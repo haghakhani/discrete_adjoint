@@ -107,7 +107,7 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx) {
 				if (Curr_El->get_adapted_flag() > 0) {
 					//if this element doesn't belong on this processor don't involve
 
-					if (Curr_El->get_ithelem() == 4
+					if (Curr_El->get_ithelem() == 41
 					//*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
 							/*&& timeprops_ptr->iter == ITER*/) {
 						int ddd, aa = 0;

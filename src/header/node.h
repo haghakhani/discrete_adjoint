@@ -66,6 +66,9 @@ class Node {
 	    double increment, double fluxold[4][NUM_STATE_VARS],
 	    double d_state_vars_old[DIMENSION * NUM_STATE_VARS]);
 
+	friend void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
+			MatProps* matprops_ptr, int myid, double fluxold[4][NUM_STATE_VARS]);
+
 	friend int checkElement(HashTable *El_Table, HashTable *NodeTable, double *max, unsigned *key);
 
 	/*

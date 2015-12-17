@@ -30,8 +30,8 @@ C***********************************************************************
       if (Uvec(1) .gt. tiny) then
 c     iverson and denlinger
          if(kactxy(1) .lt. 0.d0) then
-            kactxy(1) = -kactxy(1)
-            kactxy(2) = -kactxy(2)
+            kactxy(1) = 0
+            kactxy(2) = 0
          endif
          eigenvxmax=dabs(v_solid(1)) +
      +        dsqrt(kactxy(1)*gravity(3)*Uvec(1))
