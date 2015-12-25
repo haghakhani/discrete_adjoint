@@ -70,8 +70,6 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 	meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
 
-	cout << "test of adjoint: " << initial_dot(El_Table) << endl;
-
 	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
 
 	tecflag = 1;
@@ -84,19 +82,22 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 		setup_dual_flow(solrec, meshctx, propctx);
 
-		cout << "test of adjoint: " << simple_test(El_Table) << endl;
+//		cout << "test of adjoint: " << simple_test(El_Table) << endl;
 
 		timeprops_ptr->adjoint_time(iter - 1);
 
 //		compute_functional(El_Table, &functional, timeprops_ptr);
 
-		eleminfo->update_dual_func(functional);
+//		eleminfo->update_dual_func(functional);
 
 		calc_jacobian(meshctx, propctx, eleminfo);
 
-		cout<<" max jac is: "<<max_jac<<endl;
+//		cout<<" max jac is: "<<max_jac<<endl;
 
 		calc_adjoint(meshctx, propctx);
+
+//		if (iter - 1 == 1)
+		cout << "test of adjoint: " << simple_test(El_Table) << endl;
 
 //		map<int, Vec_Mat<9>> jac_code;
 //
@@ -119,18 +120,18 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 //		if (eleminfo->iter == iter - 1)
 //			fill_pertelem_info(El_Table, eleminfo);
 
-		//for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
-		//sensitivity w.r.t to parameters
+//for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
+//sensitivity w.r.t to parameters
 
 //		uinform_refine(meshctx, propctx);
 
 //		error_compute(meshctx, propctx, iter);
 
-		// in dual weighted error estimation if solver performs n step, we'll have n+1
-		// solution and n+1 adjoint solution, but we'll have just n residual and as a
-		// result n error estimate. The point is that at initial step (0'th step),
-		// we know the solution from initial condition  so the error of 0th step is zero,
-		// and we have to compute the error for other time steps.
+// in dual weighted error estimation if solver performs n step, we'll have n+1
+// solution and n+1 adjoint solution, but we'll have just n residual and as a
+// result n error estimate. The point is that at initial step (0'th step),
+// we know the solution from initial condition  so the error of 0th step is zero,
+// and we have to compute the error for other time steps.
 
 //		dual_unrefine(meshctx, propctx);
 
@@ -924,8 +925,40 @@ double simple_test(HashTable* El_Table) {
 			while (currentPtr) {
 				Curr_El = (Element*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) {
-					for (int i = 0; i < NUM_STATE_VARS; ++i)
-						dot += *(Curr_El->get_prev_adjoint() + i) * *(Curr_El->get_prev_state_vars() + i);
+
+					double* state_vars_prev = Curr_El->get_prev_state_vars();
+					double* adjoint = Curr_El->get_prev_adjoint();
+					double* gravity = Curr_El->get_gravity();
+					double* curve = Curr_El->get_curvature();
+					double vel[2];
+					double unitvx, unitvy;
+
+					if (state_vars_prev[0] > GEOFLOW_TINY) {
+
+						vel[0] = state_vars_prev[1] / state_vars_prev[0];
+						vel[1] = state_vars_prev[2] / state_vars_prev[0];
+
+					} else {
+
+						vel[0] = 0.;
+						vel[1] = 0.;
+						unitvx = unitvy = 0.;
+
+					}
+
+					double speed = sqrt(vel[0] * vel[0] + vel[1] * vel[1]);
+
+					if (speed > 0.) {
+
+						unitvx = vel[0] / speed;
+						unitvy = vel[1] / speed;
+					}
+
+					dot += adjoint[1] * unitvx * gravity[2]
+					    * (state_vars_prev[0] + vel[0] * vel[0] * curve[0])
+					    + adjoint[2] * unitvy * gravity[2]
+					        * (state_vars_prev[0] + vel[1] * vel[1] * curve[1]);
+
 				}
 
 				currentPtr = currentPtr->next;
@@ -1027,15 +1060,14 @@ void compare_jacobians(map<int, Vec_Mat<9>>& jac_code, map<int, Vec_Mat<9>>& jac
 		for (int i = 0; i < EFF_ELL; ++i)
 			for (int j = 0; j < NUM_STATE_VARS; ++j)
 				for (int k = 0; k < NUM_STATE_VARS; ++k)
-					if (fabs(jacdiff(i, j, k) - jaccode(i, j, k)) > 1e-5 && jacdiff(i, j, k) != 0.){
+					if (fabs(jacdiff(i, j, k) - jaccode(i, j, k)) > 1e-5 && jacdiff(i, j, k) != 0.) {
 						double denum;
-						if (jacdiff(i, j, k)!=0.)
-							denum= dabs(jacdiff(i, j, k));
+						if (jacdiff(i, j, k) != 0.)
+							denum = dabs(jacdiff(i, j, k));
 						cout << "in element  " << it->first << " in indices: " << i << " , " << j << " , " << k
 						    << "  there is a difference of  "
-						    << 100 * dabs(jacdiff(i, j, k) - jaccode(i, j, k)) /denum
-						    << "  jacobian diff= " << jacdiff(i, j, k) << "  jacobian code=" << jaccode(i, j, k)
-						    << endl;
+						    << 100 * dabs(jacdiff(i, j, k) - jaccode(i, j, k)) / denum << "  jacobian diff= "
+						    << jacdiff(i, j, k) << "  jacobian code=" << jaccode(i, j, k) << endl;
 					}
 
 	}

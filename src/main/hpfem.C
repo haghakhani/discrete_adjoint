@@ -265,7 +265,7 @@ int main(int argc, char *argv[]) {
 			step(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops, &pileprops, &fluxprops,
 			    &statprops, &order_flag, &outline, &discharge, adaptflag);
 
-			print_Elem_Table(BT_Elem_Ptr, BT_Node_Ptr, timeprops.iter, 0);
+//			print_Elem_Table(BT_Elem_Ptr, BT_Node_Ptr, timeprops.iter, 0);
 
 			solrec->record_solution(&meshctx, &propctx);
 

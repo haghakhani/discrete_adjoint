@@ -353,7 +353,7 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 				"time step length is %g [sec], volume is %g [m^3],\n"
 				"max height is %g [m],\n"
 				"max solid-velocity is %g [m/s], max fluid-velocity is %g\n"
-				"ave solid-velocity is %g [m/s], ave fluid-velocity is %g\n", timeprops->iter, hours,
+				"ave solid-velocity is %g [m/s], ave fluid-velocity is %g\n\n", timeprops->iter, hours,
 		    minutes, seconds, d_time, statprops->statvolume, statprops->hmax, statprops->vmax,
 		    statprops->umax, statprops->vmean, statprops->umean);
 	}
