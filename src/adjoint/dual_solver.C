@@ -97,7 +97,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		calc_adjoint(meshctx, propctx);
 
 //		if (iter - 1 == 1)
-		cout << "test of adjoint: " << simple_test(El_Table) << endl;
+		cout << "test of adjoint: " << simple_test(El_Table, timeprops_ptr) << endl;
 
 //		map<int, Vec_Mat<9>> jac_code;
 //
@@ -134,7 +134,9 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 // and we have to compute the error for other time steps.
 
 //		dual_unrefine(meshctx, propctx);
+		set_ithm(El_Table);
 
+		plot_ithm(El_Table);
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 		meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
 
@@ -911,13 +913,16 @@ void dual_unrefine(MeshCTX* meshctx, PropCTX* propctx) {
 
 }
 
-double simple_test(HashTable* El_Table) {
+double simple_test(HashTable* El_Table, TimeProps* timeprops) {
 
 	double dot = 0.;
+	vector<int> wrong_elem;
+	vector<double> wrong_value;
 
 	HashEntryPtr currentPtr;
 	Element *Curr_El;
 	HashEntryPtr *buck = El_Table->getbucketptr();
+	cout << "results:  \n";
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -954,16 +959,27 @@ double simple_test(HashTable* El_Table) {
 						unitvy = vel[1] / speed;
 					}
 
-					dot += adjoint[1] * unitvx * gravity[2]
+					double elem = adjoint[1] * unitvx * gravity[2]
 					    * (state_vars_prev[0] + vel[0] * vel[0] * curve[0])
 					    + adjoint[2] * unitvy * gravity[2]
 					        * (state_vars_prev[0] + vel[1] * vel[1] * curve[1]);
+					dot += elem;
+					if (fabs(elem) > 1e-10) {
+						wrong_elem.push_back(Curr_El->get_ithelem());
+						wrong_value.push_back(elem);
+					}
+					cout << elem << endl;
 
 				}
 
 				currentPtr = currentPtr->next;
 			}
 		}
+
+	ofstream f("wrong_elem.txt", ios::app);
+	f << "time step: " << timeprops->iter << " size of vector: " << wrong_elem.size() << endl;
+	for (int i = 0; i < wrong_elem.size(); ++i)
+		f << wrong_elem[i] << " , " << wrong_value[i] << '\n';
 
 	return dot;
 }

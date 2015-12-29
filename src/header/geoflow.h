@@ -205,7 +205,7 @@ bool must_write(MemUse* memuse_ptr);
 
 extern double max_jac;
 
-double simple_test(HashTable* El_Table);
+double simple_test(HashTable* El_Table,TimeProps* timeprops);
 
 void plot_ithm(HashTable* El_Table);
 

@@ -128,7 +128,7 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 #ifdef DEBUG
 							char filename[] = "jacobian";
 
-							if (Curr_El->get_ithelem() == 41 && iter == 5 && effelement == 0 /**(Curr_El->pass_key()) == KEY0
+							if (Curr_El->get_ithelem() == 96 && iter == 10 && effelement == 1 /**(Curr_El->pass_key()) == KEY0
 							 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER
 							 && effelement == EFFELL*/)
 								Curr_El->write_elem_info(NodeTable, filename, timeprops_ptr->iter, dt);

@@ -41,6 +41,7 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 	HashEntryPtr currentPtr;
 	Element* Curr_El = NULL;
 	int iter = propctx->timeprops->iter;
+	int aa = 0, bb = 1;
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
@@ -49,6 +50,10 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 				Curr_El = (Element*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0) {
+
+					if (Curr_El->get_ithelem() == 89)
+						aa = bb;
+
 					int boundary = 0;
 					//this part handles if the Curr_El is a boundary element
 					for (int neighnum = 0; neighnum < 4; neighnum++)

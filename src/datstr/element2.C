@@ -3713,15 +3713,21 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 
 			}
 
-			// here the element elm1 must be a ghost element
 			(elm1->get_flx_jac_cont()).set(side, 0, 0, jac_neigh1, jac_res);
-			(elm1->get_flx_jac_cont()).set(side, 0, 1, jac, jac_zero);
-			(elm1->get_flx_jac_cont()).set(side, 0, 2, jac_neigh2, jac_zero);
 
-			// here the element elm1 must be a ghost element
-			(elm2->get_flx_jac_cont()).set(side, 1, 0, jac_neigh2);
-			(elm2->get_flx_jac_cont()).set(side, 1, 1, jac_res);
-			(elm2->get_flx_jac_cont()).set(side, 1, 2, jac_zero);
+			if (elm1->which_neighbor(key) < 4) {
+				(elm1->get_flx_jac_cont()).set(side, 0, 1, jac, jac_zero);
+				(elm1->get_flx_jac_cont()).set(side, 0, 2, jac_neigh2, jac_zero);
+			} else {
+				(elm1->get_flx_jac_cont()).set(side, 0, 1, jac_neigh2, jac_zero);
+				(elm1->get_flx_jac_cont()).set(side, 0, 2, jac, jac_zero);
+			}
+
+			//we do not need o update the flux jac for the second neighbor because it will be updated
+			// when we compute the fluxes for it
+//			(elm2->get_flx_jac_cont()).set(side, 1, 0, jac_neigh2);
+//			(elm2->get_flx_jac_cont()).set(side, 1, 1, jac_res);
+//			(elm2->get_flx_jac_cont()).set(side, 1, 2, jac_zero);
 		}
 
 		/*  Case III
