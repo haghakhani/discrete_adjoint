@@ -112,12 +112,14 @@ c     the bed friction force for fast moving flow
      $        dmax1(g(3)*Uvec(1)+v_solid(1)*Uvec(2)*curv(1),0.0d0)
      $        *tanbed
 
-         if (abs(Ustore(2) + dt*forcegrav)
-     $    .gt.abs(dt*(forcebedx+forceintx))) then
-            Ustore(2) = Ustore(2) + dt*(forcegrav -forcebedx -forceintx)
-         else
-            Ustore(2)=0.d0
-         endif
+         Ustore(2) = Ustore(2) + dt*(forcegrav -forcebedx -forceintx)
+
+c         if (abs(Ustore(2) + dt*forcegrav)
+c     $    .gt.abs(dt*(forcebedx+forceintx))) then
+c           Ustore(2) = Ustore(2) + dt*(forcegrav -forcebedx -forceintx)
+c         else
+c            Ustore(2)=0.d0
+c         endif
 
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -138,12 +140,14 @@ c     the bed friction force for fast moving flow
      $        *dmax1(g(3)*Uvec(1)+v_solid(2)*Uvec(3)*curv(2),0.0d0)
      $        *tanbed
 
-         if (abs(Ustore(3) + dt*forcegrav)
-     $    .gt.abs(dt*(forcebedy+forceinty))) then
-            Ustore(3) = Ustore(3) + dt*(forcegrav -forcebedy -forceinty)
-         else
-            Ustore(3)=0.d0
-         endif
+         Ustore(3) = Ustore(3) + dt*(forcegrav -forcebedy -forceinty)
+
+c         if (abs(Ustore(3) + dt*forcegrav)
+c     $    .gt.abs(dt*(forcebedy+forceinty))) then
+c            Ustore(3) = Ustore(3) + dt*(forcegrav -forcebedy -forceinty)
+c         else
+c            Ustore(3)=0.d0
+c         endif
 
       endif
 

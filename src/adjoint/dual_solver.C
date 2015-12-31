@@ -970,10 +970,16 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops
 						unitvy = vel[1] / speed;
 					}
 
-					double test1 = adjoint[1] * unitvx
-					    * (state_vars_prev[0] * gravity[2] + state_vars_prev[1] * vel[0] * curve[0])
-					    + adjoint[2] * unitvy
-					        * (state_vars_prev[0] * gravity[2] + state_vars_prev[2] * vel[1] * curve[1]);
+					double test1 = 0.;
+
+					if (max(gravity[2] * state_vars_prev[0] + vel[0] * state_vars_prev[1] * curve[0], 0.))
+						test1 = adjoint[1] * unitvx
+						    * (state_vars_prev[0] * gravity[2] + state_vars_prev[1] * vel[0] * curve[0]);
+
+					if (max(gravity[2] * state_vars_prev[0] + vel[1] * state_vars_prev[2] * curve[1], 0.))
+						test1 += adjoint[2] * unitvy
+						    * (state_vars_prev[0] * gravity[2] + state_vars_prev[2] * vel[1] * curve[1]);
+
 					dot += test1;
 
 					double tmp = h_inv * (d_state_vars_y[1] - vel[0] * d_state_vars_y[0]);

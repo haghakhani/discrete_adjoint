@@ -2517,9 +2517,9 @@ void Element::xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 			for (i = 0; i < NUM_STATE_VARS; i++)
 				hfv[0][i] = prev_state_vars[i];
 
-		if ((0.0 < Awet) && (Awet < 1.0))
-			for (i = 0; i < NUM_STATE_VARS; i++)
-				hfv[0][i] *= wetnessfactor;
+//		if ((0.0 < Awet) && (Awet < 1.0))
+//			for (i = 0; i < NUM_STATE_VARS; i++)
+//				hfv[0][i] *= wetnessfactor;
 
 		// Solid-phase velocity in x-dir
 		Vel = hfv[0][1] / hfv[0][0];
@@ -2574,9 +2574,9 @@ void Element::ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 			for (i = 0; i < NUM_STATE_VARS; i++)
 				hfv[0][i] = prev_state_vars[i];
 
-		if ((0.0 < Awet) && (Awet < 1.0))
-			for (i = 0; i < NUM_STATE_VARS; i++)
-				hfv[0][i] *= wetnessfactor;
+//		if ((0.0 < Awet) && (Awet < 1.0))
+//			for (i = 0; i < NUM_STATE_VARS; i++)
+//				hfv[0][i] *= wetnessfactor;
 
 		// a = speed of sound through the medium
 		a = sqrt(kactxy[1] * hfv[0][0] * gravity[2]);

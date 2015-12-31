@@ -33,10 +33,9 @@
 
 #include "../header/hpfem.h"
 
-void correct(HashTable* NodeTable, HashTable* El_Table, double dt,
-		MatProps* matprops_ptr, FluxProps *fluxprops, TimeProps *timeprops,
-		Element *EmTemp, double *forceint, double *forcebed, double *eroded,
-		double *deposited) {
+void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* matprops_ptr,
+    FluxProps *fluxprops, TimeProps *timeprops, Element *EmTemp, double *forceint, double *forcebed,
+    double *eroded, double *deposited) {
 //	Element *EmTemp = (Element *) EmTemp_in;
 	double *dx = EmTemp->get_dx();
 	double dtdx = dt / dx[0];
@@ -115,25 +114,32 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt,
 	EmTemp->convect_dryline(V_avg, dt); //this is necessary
 
 	int debuging, ggg = 0;
-	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1
-			&& timeprops->iter == ITER)
+	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1 && timeprops->iter == ITER)
 //	if (dabs(*(EmTemp->get_coord()) - X) < INCREMENT&& dabs(*(EmTemp->get_coord()+1) - Y)<INCREMENT
 //	&& timeprops->iter == ITER)
 		debuging = ggg = 1;
 
 	double dragforce[2] = { 0., 0. };
-	correct_(state_vars, prev_state_vars, fluxxp, fluxyp, fluxxm, fluxym, &tiny,
-			&dtdx, &dtdy, &dt, d_state_vars, (d_state_vars + NUM_STATE_VARS),
-			&(zeta[0]), &(zeta[1]), curvature, &(matprops_ptr->intfrict), &bedfrict,
-			gravity, d_gravity, kactxy, &(matprops_ptr->frict_tiny), forceint,
-			forcebed, dragforce, &do_erosion, eroded, Vsolid, &terminal_vel,
-			&(matprops_ptr->epsilon), &IF_STOPPED, Influx);
+//	correct_(state_vars, prev_state_vars, fluxxp, fluxyp, fluxxm, fluxym, &tiny,
+//			&dtdx, &dtdy, &dt, d_state_vars, (d_state_vars + NUM_STATE_VARS),
+//			&(zeta[0]), &(zeta[1]), curvature, &(matprops_ptr->intfrict), &bedfrict,
+//			gravity, d_gravity, kactxy, &(matprops_ptr->frict_tiny), forceint,
+//			forcebed, dragforce, &do_erosion, eroded, Vsolid, &terminal_vel,
+//			&(matprops_ptr->epsilon), &IF_STOPPED, Influx);//31
+
+	int stop[2];
+	double orgSrcSgn[2];
+
+	update_states(state_vars, prev_state_vars, //2
+	    fluxxp, fluxyp, fluxxm, fluxym, dtdx, //5
+	    dtdy, dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), //4
+	    curvature, (matprops_ptr->intfrict), bedfrict, gravity, //4
+	    d_gravity, kactxy[0], matprops_ptr->frict_tiny, stop, orgSrcSgn);
 
 	char filename[] = "corrector";
 
 #ifdef DEBUG
-	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1
-			&& timeprops->iter == ITER) {
+	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1 && timeprops->iter == ITER) {
 		EmTemp->write_elem_info(NodeTable, filename, timeprops->iter, dt);
 	}
 #endif
@@ -152,12 +158,10 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt,
 		double tempU[NUM_STATE_VARS];
 		for (i = 0; i < NUM_STATE_VARS; i++)
 			tempU[i] = prev_state_vars[i] - dtdx * (fluxxp[i] - fluxxm[i])
-					- dtdy * (fluxyp[i] - fluxym[i]);
-		printf("ElemKey: %d   ElemKey2: %d\n ", *EmTemp->pass_key(),
-				*(EmTemp->pass_key() + 1));
+			    - dtdy * (fluxyp[i] - fluxym[i]);
+		printf("ElemKey: %d   ElemKey2: %d\n ", *EmTemp->pass_key(), *(EmTemp->pass_key() + 1));
 		printf("Kactxy = %10.5e, %10.5e\n", kactxy[0], kactxy[1]);
-		printf("BedFrict: %10.5e: IntFrict: %10.5e\n", bedfrict,
-				matprops_ptr->intfrict);
+		printf("BedFrict: %10.5e: IntFrict: %10.5e\n", bedfrict, matprops_ptr->intfrict);
 
 		printf("state_vars: \n");
 		for (i = 0; i < NUM_STATE_VARS; i++)
@@ -176,20 +180,11 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt,
 
 		printf("fluxes: \n");
 		for (i = 0; i < NUM_STATE_VARS; i++)
-			printf("fluxxp:%10.5e, fluxxm:%10.5e, fluxyp:%10.5e, fluxym:%10.5e \n ",
-					fluxxp[i], fluxxm[i], fluxyp[i], fluxym[i]);
+			printf("fluxxp:%10.5e, fluxxm:%10.5e, fluxyp:%10.5e, fluxym:%10.5e \n ", fluxxp[i], fluxxm[i],
+			    fluxyp[i], fluxym[i]);
 
 		exit(1);
 	}
 
-	if (EmTemp->get_stoppedflags() == 2)
-		*deposited = state_vars[0] * dx[0] * dx[1];
-	else
-		*deposited = 0.0;
-
-	if (EmTemp->get_stoppedflags())
-		*eroded = 0.0;
-
-	EmTemp->calc_shortspeed(1.0 / dt);
 	return;
 }

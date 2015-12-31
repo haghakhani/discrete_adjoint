@@ -221,12 +221,17 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 		    * max(gravity[2] * prev_state_vars[0] + velocity[0] * prev_state_vars[1] * curvature[0],
 		        0.0) * tan_bed_fric;
 
-		if (dabs(state_vars[1] + dt * s1) > dabs(dt * (s2 + s3)))
-			state_vars[1] += dt * (s1 - s2 - s3);
-		else {
-			state_vars[1] = 0.;
+		if (s3 == 0. && unitvx)
 			stop[0] = 1;
-		}
+
+		state_vars[1] += dt * (s1 - s2 - s3);
+
+//		if (dabs(state_vars[1] + dt * s1) > dabs(dt * (s2 + s3)))
+//			state_vars[1] += dt * (s1 - s2 - s3);
+//		else {
+//			state_vars[1] = 0.;
+//			stop[0] = 1;
+//		}
 
 		//y dir
 		s1 = gravity[1] * prev_state_vars[0];
@@ -238,16 +243,21 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 		    * max(gravity[2] * prev_state_vars[0] + velocity[1] * prev_state_vars[2] * curvature[1],
 		        0.0) * tan_bed_fric;
 
-		if (dabs(state_vars[2] + dt * s1) > dabs(dt * (s2 + s3)))
-			state_vars[2] += dt * (s1 - s2 - s3);
-		else {
-			state_vars[2] = 0.;
+		if (s3 == 0. && unitvy)
 			stop[1] = 1;
-		}
+
+		state_vars[2] += dt * (s1 - s2 - s3);
+
+//		if (dabs(state_vars[2] + dt * s1) > dabs(dt * (s2 + s3)))
+//			state_vars[2] += dt * (s1 - s2 - s3);
+//		else {
+//			state_vars[2] = 0.;
+//			stop[1] = 1;
+//		}
 
 	}
 
-	for (int i=0;i<NUM_STATE_VARS;++i)
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		assert(!isnan(state_vars[i]) && !isinf(state_vars[i]));
 
 }

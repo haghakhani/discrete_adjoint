@@ -62,45 +62,41 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 			}
 
 			//effect of prev_state_vars on residual vector
-			if (!stop[0]) {
+//			if (!stop[0]) {
 
-				jacobian(1, 0) -= dt
-				    * (gravity[0]
-				        - alpha * prev_state_vars[0] * (2 * d_gravity[1] + gravity[2] * dh_sens[1])
-				        - alpha * gravity[2] * d_state_vars_y[0]
-				        - unitvx * tan_bed_frict * (gravity[2] - vx_sq * curvature[0]));
+			jacobian(1, 0) -= dt
+			    * (gravity[0] - alpha * prev_state_vars[0] * (2 * d_gravity[1] + gravity[2] * dh_sens[1])
+			        - alpha * gravity[2] * d_state_vars_y[0]);
 
-				if (speed > 0. && unitvx != 0.) {
+			if (speed > 0. && !stop[0] /*&& unitvx != 0.*/) {
 
-					jacobian(1, 1) -=
-					    dt * speed_inv * tan_bed_frict
-					        * ((unitvx * unitvx - 3.) * curvature[0] * vx_sq
-					            + (unitvx * unitvx - 1.) * gravity[2]);
+				jacobian(1, 0) -= -dt * unitvx * tan_bed_frict * (gravity[2] - vx_sq * curvature[0]);
 
-					jacobian(1, 2) -= dt * speed_inv * tan_bed_frict * unitvx * unitvy
-					    * (gravity[2] + vx_sq * curvature[0]);
-				}
+				jacobian(1, 1) -= dt * speed_inv * tan_bed_frict
+				    * ((unitvx * unitvx - 3.) * curvature[0] * vx_sq + (unitvx * unitvx - 1.) * gravity[2]);
+
+				jacobian(1, 2) -= dt * speed_inv * tan_bed_frict * unitvx * unitvy
+				    * (gravity[2] + vx_sq * curvature[0]);
 			}
+//			}
 
-			if (!stop[1]) {
+//			if (!stop[1]) {
 
-				jacobian(2, 0) -= dt
-				    * (gravity[1]
-				        - betta * prev_state_vars[0] * (2 * d_gravity[0] + gravity[2] * dh_sens[0])
-				        - betta * gravity[2] * d_state_vars_x[0]
-				        - unitvy * tan_bed_frict * (gravity[2] - vy_sq * curvature[1]));
+			jacobian(2, 0) -= dt
+			    * (gravity[1] - betta * prev_state_vars[0] * (2 * d_gravity[0] + gravity[2] * dh_sens[0])
+			        - betta * gravity[2] * d_state_vars_x[0]);
 
-				if (speed > 0. && unitvy != 0.) {
-					jacobian(2, 1) -= dt * speed_inv * tan_bed_frict * unitvx * unitvy
-					    * (gravity[2] + vy_sq * curvature[1]);
+			if (speed > 0. && !stop[1] /*&& unitvy != 0.*/) {
+				jacobian(2, 0) -= -dt * unitvy * tan_bed_frict * (gravity[2] - vy_sq * curvature[1]);
 
-					jacobian(2, 2) -=
-					    dt * speed_inv * tan_bed_frict
-					        * ((unitvy * unitvy - 3.) * curvature[1] * vy_sq
-					            + (unitvy * unitvy - 1.) * gravity[2]);
+				jacobian(2, 1) -= dt * speed_inv * tan_bed_frict * unitvx * unitvy
+				    * (gravity[2] + vy_sq * curvature[1]);
 
-				}
+				jacobian(2, 2) -= dt * speed_inv * tan_bed_frict
+				    * ((unitvy * unitvy - 3.) * curvature[1] * vy_sq + (unitvy * unitvy - 1.) * gravity[2]);
+
 			}
+//			}
 		}
 	}
 
