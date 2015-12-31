@@ -2124,7 +2124,7 @@ void Element::dual_xdirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac) {
 		flux_jac(0, 1) = 1.;
 		flux_jac(0, 2) = 0.;
 
-		flux_jac(1, 0) = kactxy[0] * gravity[2] * hfv(0, 0) - Vel * Vel;
+		flux_jac(1, 0) =  a * a - Vel * Vel;
 		flux_jac(1, 1) = 2 * Vel;
 		flux_jac(1, 2) = 0.;
 
@@ -2242,13 +2242,13 @@ void Element::dual_ydirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac) {
 		// jacobian of flux
 		flux_jac(0, 0) = 0.;
 		flux_jac(0, 1) = 0.;
-		flux_jac(0, 2) = 1;
+		flux_jac(0, 2) = 1.;
 
 		flux_jac(1, 0) = -Vel * hfv(0, 1) * h_inv;
 		flux_jac(1, 1) = Vel;
 		flux_jac(1, 2) = hfv(0, 1) * h_inv;
 
-		flux_jac(2, 0) = kactxy[0] * gravity[2] * hfv(0, 0) - Vel * Vel;
+		flux_jac(2, 0) =  a * a - Vel * Vel;
 		flux_jac(2, 1) = 0.;
 		flux_jac(2, 2) = 2 * Vel;
 
@@ -5100,8 +5100,7 @@ int Element::check_state(HashTable* solrec, HashTable* El_Table, int iter) {
 
 void Element::set_jacobianMat_zero(int jacmatind) {
 
-	Mat3x3 zero_mat;
-	jacobianMat(jacmatind) = zero_mat;
+	jacobianMat(jacmatind) = ZERO_MATRIX;
 
 }
 

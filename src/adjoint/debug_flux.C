@@ -10,9 +10,8 @@
 #endif
 #include "../header/hpfem.h"
 
-
-void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
-		MatProps* matprops_ptr, int myid, double flux[4][NUM_STATE_VARS]) {
+void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
+    int myid, double flux[4][NUM_STATE_VARS]) {
 
 	Element* Curr_El = (Element*) (El_Table->lookup(key));
 
@@ -40,7 +39,8 @@ void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* 
     int effelement, int j, int iter, double dt) {
 
 	double diff1[NUM_STATE_VARS], diff2[NUM_STATE_VARS], diff3[NUM_STATE_VARS], diff4[NUM_STATE_VARS];
-	double fluxxold[NUM_STATE_VARS], fluxxnew[NUM_STATE_VARS], fluxyold[NUM_STATE_VARS], fluxynew[NUM_STATE_VARS];
+	double fluxxold[NUM_STATE_VARS], fluxxnew[NUM_STATE_VARS], fluxyold[NUM_STATE_VARS],
+	    fluxynew[NUM_STATE_VARS];
 	double abs_fluxx_diff[NUM_STATE_VARS], abs_fluxy_diff[NUM_STATE_VARS];
 
 	double *state_vars = Curr_El->get_state_vars();
@@ -85,12 +85,18 @@ void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* 
 
 	fclose(fp);
 
+	cout << "for element " << Curr_El->get_ithelem() << endl;
 	for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
 
-		diff1[ivar] = dabs(fluxxpold[ivar] - fluxxp[ivar]);
-		diff2[ivar] = dabs(fluxxmold[ivar] - fluxxm[ivar]);
-		diff3[ivar] = dabs(fluxypold[ivar] - fluxyp[ivar]);
-		diff4[ivar] = dabs(fluxymold[ivar] - fluxym[ivar]);
+		diff1[ivar] = (fluxxpold[ivar] - fluxxp[ivar]);
+		diff2[ivar] = (fluxxmold[ivar] - fluxxm[ivar]);
+		diff3[ivar] = (fluxypold[ivar] - fluxyp[ivar]);
+		diff4[ivar] = (fluxymold[ivar] - fluxym[ivar]);
+		cout << "jacobian of flux of " << ivar << " for neighbor " << effelement << " for state " << j
+		    << "  xp: " << (fluxxpold[ivar] - fluxxp[ivar]) / INCREMENT << " xm: "
+		    << (fluxxmold[ivar] - fluxxm[ivar]) / INCREMENT << " yp: "
+		    << (fluxypold[ivar] - fluxyp[ivar]) / INCREMENT << " ym: "
+		    << (fluxymold[ivar] - fluxym[ivar]) / INCREMENT << endl;
 	}
 
 	for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
@@ -101,25 +107,25 @@ void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* 
 		fluxynew[ivar] = fluxyp[ivar] - fluxym[ivar];
 	}
 
-	for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
-
-		abs_fluxx_diff[ivar] = dabs(fluxxold[ivar] - fluxxnew[ivar]);
-		if (abs_fluxx_diff[ivar] > 0. )
-			cout << setw(10) << setprecision(8) << "change effects the flux_x for var  " << ivar
-			    << " eff_elem   " << effelement << "  j  " << j << "  value  " << abs_fluxx_diff[ivar]
-			    << endl;
-
-		abs_fluxy_diff[ivar] = dabs(fluxyold[ivar] - fluxynew[ivar]);
-		if (abs_fluxy_diff[ivar] > 0. )
-			cout << "change effects the flux_y for var  " << ivar << " eff_elem   " << effelement
-			    << "  j  " << j << "  value  " << abs_fluxy_diff[ivar] << endl;
-	}
+//	for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
+//
+//		abs_fluxx_diff[ivar] = dabs(fluxxold[ivar] - fluxxnew[ivar]);
+//		if (abs_fluxx_diff[ivar] > 0.)
+//			cout << setw(10) << setprecision(8) << "change effects the flux_x for var  " << ivar
+//			    << " eff_elem   " << effelement << "  j  " << j << "  value  " << abs_fluxx_diff[ivar]
+//			    << endl;
+//
+//		abs_fluxy_diff[ivar] = dabs(fluxyold[ivar] - fluxynew[ivar]);
+//		if (abs_fluxy_diff[ivar] > 0.)
+//			cout << "change effects the flux_y for var  " << ivar << " eff_elem   " << effelement
+//			    << "  j  " << j << "  value  " << abs_fluxy_diff[ivar] << endl;
+//	}
 
 	return;
 }
 
-void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
-		MatProps* matprops_ptr, int myid, double fluxold[4][NUM_STATE_VARS]) {
+void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
+    int myid, double fluxold[4][NUM_STATE_VARS]) {
 
 	Element* Curr_El = (Element*) (El_Table->lookup(key));
 
@@ -141,5 +147,4 @@ void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
 		fluxold[3][ivar] = nym->flux[ivar];
 	}
 }
-
 

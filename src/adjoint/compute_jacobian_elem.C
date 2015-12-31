@@ -32,15 +32,17 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 
 		double sin_int_fric = sin(int_fric);
 
+		double alpha = sin_int_fric * OrgSgn[0] * kact;
+
+		double betta = sin_int_fric * OrgSgn[1] * kact;
+
 		if (effelem > 0) {
 
 			if (!stop[0])
-				jacobian(1, 0) -= -dt * prev_state_vars[0] * kact * OrgSgn[0] * sin_int_fric * gravity[2]
-				    * dh_sens[1];
+				jacobian(1, 0) -= -dt * prev_state_vars[0] * alpha * gravity[2] * dh_sens[1];
 
 			if (!stop[1])
-				jacobian(2, 0) -= -dt * prev_state_vars[0] * kact * OrgSgn[1] * sin_int_fric * gravity[2]
-				    * dh_sens[0];
+				jacobian(2, 0) -= -dt * prev_state_vars[0] * betta * gravity[2] * dh_sens[0];
 
 		} else {
 
@@ -62,8 +64,6 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 			//effect of prev_state_vars on residual vector
 			if (!stop[0]) {
 
-				double alpha = sin_int_fric * OrgSgn[0] * kact;
-
 				jacobian(1, 0) -= dt
 				    * (gravity[0]
 				        - alpha * prev_state_vars[0] * (2 * d_gravity[1] + gravity[2] * dh_sens[1])
@@ -84,11 +84,10 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 
 			if (!stop[1]) {
 
-				double beta = sin_int_fric * OrgSgn[1] * kact;
-
 				jacobian(2, 0) -= dt
-				    * (gravity[1] - beta * prev_state_vars[0] * (2 * d_gravity[0] + gravity[2] * dh_sens[0])
-				        - beta * gravity[2] * d_state_vars_x[0]
+				    * (gravity[1]
+				        - betta * prev_state_vars[0] * (2 * d_gravity[0] + gravity[2] * dh_sens[0])
+				        - betta * gravity[2] * d_state_vars_x[0]
 				        - unitvy * tan_bed_frict * (gravity[2] - vy_sq * curvature[1]));
 
 				if (speed > 0. && unitvy != 0.) {
@@ -117,7 +116,7 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 				cout << "WARNING for Jacobian \n";
 				if (dabs(jacobian(i, j)) > max_jac)
 					max_jac = dabs(jacobian(i, j));
-				jacobian(i, j)=sign(jacobian(i, j))*5;
+				jacobian(i, j) = sign(jacobian(i, j)) * 5;
 			}
 #endif
 }

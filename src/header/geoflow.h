@@ -93,19 +93,19 @@ void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, MatPro
 void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, MatProps* matprops_ptr,
     int effelement, int j, int myid, double increment, double* d_state_vars_old);
 
-void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
-		MatProps* matprops_ptr, int myid, double fluxold[4][NUM_STATE_VARS]);
+void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
+    int myid, double fluxold[4][NUM_STATE_VARS]);
 
 void increment_state(HashTable* El_Table, Element* Curr_El, double increment, int effelement, int j,
     int* updateflux, int* srcflag, ResFlag resflag[EFF_ELL]);
 
 void calc_flux_slope_kact(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El,
     MatProps* matprops_ptr, int myid, int effelement, int updateflux, int srcflag,
-    ResFlag resflag[5]) ;
+    ResFlag resflag[5]);
 
-void zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
-    int order_flag, int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS],
-    Element *EmNeigh, double dt, ResFlag resflag);
+void zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int order_flag,
+    int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], Element *EmNeigh,
+    double dt, ResFlag resflag);
 
 void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo);
 
@@ -171,7 +171,6 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 
 int void_neigh_elem(HashTable* El_Table, Element* Curr_El, int effelement);
 
-
 void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
     int myid, double fluxold[4][NUM_STATE_VARS]);
 
@@ -205,11 +204,13 @@ bool must_write(MemUse* memuse_ptr);
 
 extern double max_jac;
 
-double simple_test(HashTable* El_Table,TimeProps* timeprops);
+double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops_ptr);
 
 void plot_ithm(HashTable* El_Table);
 
 void set_ithm(HashTable* El_Table);
+
+const Mat3x3 ZERO_MATRIX;
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);

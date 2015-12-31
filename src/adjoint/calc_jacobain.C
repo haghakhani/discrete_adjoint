@@ -35,7 +35,7 @@ void set_fluxes_hsens(Element* Curr_El, const Mat3x3*& jac_flux_n_x, const Mat3x
     const Mat3x3*& jac_flux_n_y, const Mat3x3*& jac_flux_p_y, double* dh_sens,
     const int& effelement);
 
-const Mat3x3 ZERO_MATRIX;
+//const Mat3x3 ZERO_MATRIX;
 
 double max_jac = 0.;
 
@@ -128,7 +128,7 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 #ifdef DEBUG
 							char filename[] = "jacobian";
 
-							if (Curr_El->get_ithelem() == 96 && iter == 10 && effelement == 1 /**(Curr_El->pass_key()) == KEY0
+							if (Curr_El->get_ithelem() == 722 /*&& iter == 10*/&& effelement == 0 /**(Curr_El->pass_key()) == KEY0
 							 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER
 							 && effelement == EFFELL*/)
 								Curr_El->write_elem_info(NodeTable, filename, timeprops_ptr->iter, dt);
@@ -355,7 +355,13 @@ void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx) {
 			while (currentPtr) {
 				Curr_El = (Element*) (currentPtr->value);
 
-				if (Curr_El->get_adapted_flag() > 0) {
+				if (Curr_El->get_adapted_flag() > 0
+				    && (Curr_El->get_ithelem() == 722 || Curr_El->get_ithelem() == 730
+				        || Curr_El->get_ithelem() == 723 || Curr_El->get_ithelem() == 725
+				        || Curr_El->get_ithelem() == 724 || Curr_El->get_ithelem() == 726
+				        || Curr_El->get_ithelem() == 749 || Curr_El->get_ithelem() == 880
+				        || Curr_El->get_ithelem() == 884 || Curr_El->get_ithelem() == 1329
+				        || Curr_El->get_ithelem() == 1333)) {
 
 					int boundary = 0;
 
@@ -495,8 +501,8 @@ void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx) {
 										record_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
 
 #ifdef DEBUG
-										if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
-										    && effelement == EFFELL && iter == ITER && j == J)
+//										if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
+//										    && effelement == EFFELL && iter == ITER && j == J)
 											flux_debug(Curr_El, fluxold[0], fluxold[2], fluxold[1], fluxold[3], flux[0],
 											    flux[2], flux[1], flux[3], effelement, j, iter, dt);
 #endif

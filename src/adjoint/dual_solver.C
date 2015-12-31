@@ -34,6 +34,8 @@ void copy_jacobian(HashTable* El_Table, map<int, Vec_Mat<9>>& jac_code);
 
 void compare_jacobians(map<int, Vec_Mat<9>>& jac_code, map<int, Vec_Mat<9>>& jac_diff);
 
+void clean_jacobian(HashTable* El_Table);
+
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 
 	HashTable* El_Table = meshctx->el_table;
@@ -97,19 +99,21 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		calc_adjoint(meshctx, propctx);
 
 //		if (iter - 1 == 1)
-		cout << "test of adjoint: " << simple_test(El_Table, timeprops_ptr) << endl;
+		cout << "test of adjoint: " << simple_test(El_Table, timeprops_ptr, matprops_ptr) << endl;
 
-//		map<int, Vec_Mat<9>> jac_code;
-//
-//		copy_jacobian(El_Table, jac_code);
-//
-//		calc_jacobian_old(meshctx, propctx);
-//
-//		map<int, Vec_Mat<9>> jac_diff;
-//
-//		copy_jacobian(El_Table, jac_diff);
-//
-//		compare_jacobians(jac_code, jac_diff);
+		map<int, Vec_Mat<9>> jac_code;
+
+		copy_jacobian(El_Table, jac_code);
+
+		calc_jacobian_old(meshctx, propctx);
+
+		map<int, Vec_Mat<9>> jac_diff;
+
+		copy_jacobian(El_Table, jac_diff);
+
+		compare_jacobians(jac_code, jac_diff);
+
+//		clean_jacobian(El_Table);
 
 //		print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 1);
 
@@ -751,9 +755,9 @@ void print_Elem_Table(HashTable* El_Table, HashTable* NodeTable, int iter, int p
 						for (int i = 0; i < 8; ++i)
 							myfile << *(Curr_El->get_neigh_proc() + i) << " ";
 
-//					myfile << "state_vars: ";
-//					for (int i = 0; i < NUM_STATE_VARS; ++i)
-//						myfile << *(Curr_El->get_state_vars() + i) << " ";
+						myfile << "state_vars: ";
+						for (int i = 0; i < NUM_STATE_VARS; ++i)
+							myfile << *(Curr_El->get_state_vars() + i) << " ";
 
 						myfile << "prev_state_vars: ";
 						for (int i = 0; i < NUM_STATE_VARS; ++i)
@@ -786,6 +790,8 @@ void print_Elem_Table(HashTable* El_Table, HashTable* NodeTable, int iter, int p
 						myfile << "flux_ym: ";
 						for (int i = 0; i < NUM_STATE_VARS; ++i)
 							myfile << flux[3][i] << " ";
+
+						myfile << "elem_id: " << Curr_El->get_ithelem() << " ";
 
 //				myfile <<"gravity: ";
 //				for (int i = 0; i < NUM_STATE_VARS; ++i)
@@ -913,11 +919,11 @@ void dual_unrefine(MeshCTX* meshctx, PropCTX* propctx) {
 
 }
 
-double simple_test(HashTable* El_Table, TimeProps* timeprops) {
+double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops_ptr) {
 
 	double dot = 0.;
 	vector<int> wrong_elem;
-	vector<double> wrong_value;
+	vector<double> wrong_value, wrong_value1;
 
 	HashEntryPtr currentPtr;
 	Element *Curr_El;
@@ -935,16 +941,21 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops) {
 					double* adjoint = Curr_El->get_prev_adjoint();
 					double* gravity = Curr_El->get_gravity();
 					double* curve = Curr_El->get_curvature();
-					double vel[2];
+					double vel[2], h_inv, orgSrcSgn[2];
 					double unitvx, unitvy;
+					double* d_state_vars_x = Curr_El->get_d_state_vars();
+					double* d_state_vars_y = (Curr_El->get_d_state_vars() + 3);
+					double fric_tiny = matprops_ptr->frict_tiny;
+					double kact = *(Curr_El->get_kactxy());
+					double* d_grav = Curr_El->get_d_gravity();
 
 					if (state_vars_prev[0] > GEOFLOW_TINY) {
-
+						h_inv = 1. / state_vars_prev[0];
 						vel[0] = state_vars_prev[1] / state_vars_prev[0];
 						vel[1] = state_vars_prev[2] / state_vars_prev[0];
 
 					} else {
-
+						h_inv = 0.;
 						vel[0] = 0.;
 						vel[1] = 0.;
 						unitvx = unitvy = 0.;
@@ -959,16 +970,30 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops) {
 						unitvy = vel[1] / speed;
 					}
 
-					double elem = adjoint[1] * unitvx * gravity[2]
-					    * (state_vars_prev[0] + vel[0] * vel[0] * curve[0])
-					    + adjoint[2] * unitvy * gravity[2]
-					        * (state_vars_prev[0] + vel[1] * vel[1] * curve[1]);
-					dot += elem;
-					if (fabs(elem) > 1e-10) {
+					double test1 = adjoint[1] * unitvx
+					    * (state_vars_prev[0] * gravity[2] + state_vars_prev[1] * vel[0] * curve[0])
+					    + adjoint[2] * unitvy
+					        * (state_vars_prev[0] * gravity[2] + state_vars_prev[2] * vel[1] * curve[1]);
+					dot += test1;
+
+					double tmp = h_inv * (d_state_vars_y[1] - vel[0] * d_state_vars_y[0]);
+					orgSrcSgn[0] = tiny_sgn(tmp, fric_tiny);
+
+					tmp = h_inv * (d_state_vars_x[2] - vel[1] * d_state_vars_x[0]);
+					orgSrcSgn[1] = tiny_sgn(tmp, fric_tiny);
+
+					double test2 = state_vars_prev[0] * kact
+					    * (adjoint[1] * orgSrcSgn[0]
+					        * (gravity[2] * d_state_vars_y[0] + d_grav[1] * state_vars_prev[0])
+					        + adjoint[2] * orgSrcSgn[1]
+					            * (gravity[2] * d_state_vars_x[0] + d_grav[0] * state_vars_prev[0]));
+
+					if (fabs(test1) > 1e-10 || fabs(test2) > 1e-10) {
 						wrong_elem.push_back(Curr_El->get_ithelem());
-						wrong_value.push_back(elem);
+						wrong_value.push_back(test1);
+						wrong_value1.push_back(test2);
 					}
-					cout << elem << endl;
+					cout << test1 << " , " << test2 << endl;
 
 				}
 
@@ -979,7 +1004,7 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops) {
 	ofstream f("wrong_elem.txt", ios::app);
 	f << "time step: " << timeprops->iter << " size of vector: " << wrong_elem.size() << endl;
 	for (int i = 0; i < wrong_elem.size(); ++i)
-		f << wrong_elem[i] << " , " << wrong_value[i] << '\n';
+		f << wrong_elem[i] << " , " << wrong_value[i] << " , " << wrong_value1[i] << '\n';
 
 	return dot;
 }
@@ -1076,7 +1101,7 @@ void compare_jacobians(map<int, Vec_Mat<9>>& jac_code, map<int, Vec_Mat<9>>& jac
 		for (int i = 0; i < EFF_ELL; ++i)
 			for (int j = 0; j < NUM_STATE_VARS; ++j)
 				for (int k = 0; k < NUM_STATE_VARS; ++k)
-					if (fabs(jacdiff(i, j, k) - jaccode(i, j, k)) > 1e-5 && jacdiff(i, j, k) != 0.) {
+					if (fabs(jacdiff(i, j, k) - jaccode(i, j, k)) > 1e-11 && jacdiff(i, j, k) != 0.) {
 						double denum;
 						if (jacdiff(i, j, k) != 0.)
 							denum = dabs(jacdiff(i, j, k));
@@ -1087,5 +1112,26 @@ void compare_jacobians(map<int, Vec_Mat<9>>& jac_code, map<int, Vec_Mat<9>>& jac
 					}
 
 	}
+
+}
+
+void clean_jacobian(HashTable* El_Table) {
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+				currentPtr = currentPtr->next;
+				if (Curr_El->get_adapted_flag() > 0) {
+					Vec_Mat<9>& jacobian = Curr_El->get_jacobian();
+					for (int i = 0; i < EFF_ELL; ++i)
+						jacobian(i) = ZERO_MATRIX;
+				}
+			}
+		}
 
 }
