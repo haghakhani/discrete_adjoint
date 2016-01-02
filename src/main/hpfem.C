@@ -32,6 +32,8 @@
 
 int REFINE_LEVEL = 3;
 
+Mat3x3 ZERO_MATRIX;
+
 int main(int argc, char *argv[]) {
 
 	//give the information of the element that you want to check, and also the time step

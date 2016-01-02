@@ -126,20 +126,21 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 #ifdef DEBUG
 							char filename[] = "jacobian";
 
-							if (Curr_El->get_ithelem() == 722 /*&& iter == 10*/&& effelement == 0 /**(Curr_El->pass_key()) == KEY0
+							if (Curr_El->get_ithelem() == 1439 && effelement == 0) {/**(Curr_El->pass_key()) == KEY0
 							 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER
-							 && effelement == EFFELL*/)
+							 && effelement == EFFELL*/
 								Curr_El->write_elem_info(NodeTable, filename, timeprops_ptr->iter, dt);
+							}
 #endif
 
 							if ((effelement == 0 && prev_state_vars[0] == 0.) || //this is a void element so the residual vector does not change by changing it's values
 							    (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == -2) || //one neighbor in this side
 							    (effelement != 0 && void_neigh_elem(El_Table, Curr_El, effelement)) || //this is a void neighbor element so the residual of the curr_el does not depend on this neighbor
-							    (effelement > 0 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == INIT))
+							    (effelement > 0 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == INIT)) {
 
 								Curr_El->set_jacobianMat_zero(effelement);
 
-							else {
+							} else {
 								const Mat3x3 *jac_flux_n_x, *jac_flux_p_x, *jac_flux_n_y, *jac_flux_p_y;
 								double dh_sens[2];
 
@@ -501,8 +502,8 @@ void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx) {
 #ifdef DEBUG
 //										if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
 //										    && effelement == EFFELL && iter == ITER && j == J)
-											flux_debug(Curr_El, fluxold[0], fluxold[2], fluxold[1], fluxold[3], flux[0],
-											    flux[2], flux[1], flux[3], effelement, j, iter, dt);
+										flux_debug(Curr_El, fluxold[0], fluxold[2], fluxold[1], fluxold[3], flux[0],
+										    flux[2], flux[1], flux[3], effelement, j, iter, dt);
 #endif
 
 										double *d_state_vars = Curr_El->get_d_state_vars();

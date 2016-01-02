@@ -51,7 +51,7 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 
 				if (Curr_El->get_adapted_flag() > 0) {
 
-					if (Curr_El->get_ithelem() == 89)
+					if (Curr_El->get_ithelem() == 1439)
 						aa = bb;
 
 					int boundary = 0;
@@ -176,7 +176,7 @@ void Element::calc_func_sens(const void * ctx) {
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		func_sens[i] = 0.;
 
-	if (prev_state_vars[0] > 0.)
+	if (state_vars[0] > 0.)
 		func_sens[0] = dx[0] * dx[1];
 
 //	if (contx->adjiter == 0) {

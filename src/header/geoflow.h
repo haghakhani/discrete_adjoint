@@ -210,7 +210,7 @@ void plot_ithm(HashTable* El_Table);
 
 void set_ithm(HashTable* El_Table);
 
-const Mat3x3 ZERO_MATRIX;
+extern Mat3x3 ZERO_MATRIX;
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);

@@ -2124,7 +2124,7 @@ void Element::dual_xdirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac) {
 		flux_jac(0, 1) = 1.;
 		flux_jac(0, 2) = 0.;
 
-		flux_jac(1, 0) =  a * a - Vel * Vel;
+		flux_jac(1, 0) = a * a - Vel * Vel;
 		flux_jac(1, 1) = 2 * Vel;
 		flux_jac(1, 2) = 0.;
 
@@ -2248,7 +2248,7 @@ void Element::dual_ydirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac) {
 		flux_jac(1, 1) = Vel;
 		flux_jac(1, 2) = hfv(0, 1) * h_inv;
 
-		flux_jac(2, 0) =  a * a - Vel * Vel;
+		flux_jac(2, 0) = a * a - Vel * Vel;
 		flux_jac(2, 1) = 0.;
 		flux_jac(2, 2) = 2 * Vel;
 
@@ -3313,15 +3313,17 @@ void dual_riemannflux(Mat3x3& hfvl, Mat3x3& hfvr, double flux[NUM_STATE_VARS], M
 
 		if (hfvl(0, 0) == 0.) {
 
+			for (int i = 0; i < NUM_STATE_VARS; ++i)
+				d_sr_l[i] = d_sl_l[i] = 0.;
+
 			sl = fmin(0., 2. * hfvr(2, 0) - hfvr(2, 1));
 
 			if (sl == 0) {
 				for (int i = 0; i < NUM_STATE_VARS; ++i)
-					d_sl_l[i] = d_sl_r[i] = 0.;
+					d_sl_r[i] = 0.;
 
 			} else {
-				for (int i = 0; i < NUM_STATE_VARS; ++i)
-					d_sl_l[i] = 0.;
+
 				// now we have to implement chain rule
 				// \frac{\partial s_l}{\partial h}=
 				// 2.0*\frac{\partial hfvr[2][0]}{\partial h_r}-\frac{\partial hfvr[2][1]}{\partial h_r}
@@ -3336,12 +3338,9 @@ void dual_riemannflux(Mat3x3& hfvl, Mat3x3& hfvr, double flux[NUM_STATE_VARS], M
 
 			if (sr == 0) {
 				for (int i = 0; i < NUM_STATE_VARS; ++i)
-					d_sr_l[i] = d_sr_r[i] = 0.;
+					d_sr_r[i] = 0.;
 
 			} else {
-
-				for (int i = 0; i < NUM_STATE_VARS; ++i)
-					d_sr_l[i] = 0.;
 
 				// now we have to implement chain rule
 				d_sr_r[0] = 2 * s_jac_r(2, 0) - s_jac_r(1, 0);
@@ -3351,15 +3350,17 @@ void dual_riemannflux(Mat3x3& hfvl, Mat3x3& hfvr, double flux[NUM_STATE_VARS], M
 			}
 
 		} else if (hfvr(0, 0) == 0.) {
+
+			for (int i = 0; i < NUM_STATE_VARS; ++i)
+				d_sr_r[i] = d_sl_r[i] = 0.;
+
 			sl = fmin(0., 2. * hfvl(2, 0) - hfvl(2, 1));
 
 			if (sl == 0) {
 				for (int i = 0; i < NUM_STATE_VARS; ++i)
-					d_sl_l[i] = d_sl_r[i] = 0.;
+					d_sl_l[i] = 0.;
 
 			} else {
-				for (int i = 0; i < NUM_STATE_VARS; ++i)
-					d_sl_r[i] = 0.;
 
 				// now we have to implement chain rule
 				d_sl_l[0] = 2 * s_jac_l(0, 0) - s_jac_l(1, 0);
@@ -3372,11 +3373,10 @@ void dual_riemannflux(Mat3x3& hfvl, Mat3x3& hfvr, double flux[NUM_STATE_VARS], M
 
 			if (sr == 0) {
 				for (int i = 0; i < NUM_STATE_VARS; ++i)
-					d_sr_l[i] = d_sr_r[i] = 0.;
+					d_sr_l[i] = 0.;
 
 			} else {
-				for (int i = 0; i < NUM_STATE_VARS; ++i)
-					d_sr_r[i] = 0.;
+
 				// now we have to implement chain rule
 				d_sr_l[0] = 2 * s_jac_l(2, 0) - s_jac_l(1, 0);
 				d_sr_l[1] = 2 * s_jac_l(2, 1) - s_jac_l(1, 1);
@@ -3536,7 +3536,7 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 	Mat3x3 hfv, hfv1, hfv2;
 	Mat3x3 flux_jac, flux_jac1, flux_jac2;
 	Mat3x3 s_jac, s_jac1, s_jac2;
-	Mat3x3 jac, jac_neigh1, jac_neigh2, jac_zero, jac_res; // the latest one is for times we need to evaluate riemannflux for the current element twice
+	Mat3x3 jac, jac_neigh1, jac_neigh2, jac_res; // the latest one is for times we need to evaluate riemannflux for the current element twice
 
 //ghost elements don't have nodes so you have to make temp storage for flux
 	double ghostflux[NUM_STATE_VARS]; //, (*fluxptr)[NUM_STATE_VARS];
@@ -3557,7 +3557,7 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 
 		//by default fluxes_jac has been initialized to zero, but to be on the safe side
 		for (int i = 0; i < NUM_STATE_VARS; ++i)
-			flx_jac_cont.set(side, 1, i, jac_zero);
+			flx_jac_cont.set(side, 1, i, ZERO_MATRIX);
 
 	} else if (neigh_proc[zp] != myid) {
 
@@ -3573,12 +3573,12 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 		//now we can store jacobians in elements
 		flx_jac_cont.set(side, 1, 0, jac);
 		flx_jac_cont.set(side, 1, 1, jac_neigh1);
-		flx_jac_cont.set(side, 1, 2, jac_zero);
+		flx_jac_cont.set(side, 1, 2, ZERO_MATRIX);
 
 		// here the element elm1 must be a ghost element
 		(elm1->get_flx_jac_cont()).set(side, 0, 0, jac_neigh1);
 		(elm1->get_flx_jac_cont()).set(side, 0, 1, jac);
-		(elm1->get_flx_jac_cont()).set(side, 0, 2, jac_zero);
+		(elm1->get_flx_jac_cont()).set(side, 0, 2, ZERO_MATRIX);
 
 		// why element elm2 which must be a ghost element always exists?????(Hossein asking)
 		elm2 = (Element*) El_Table->lookup(&neighbor[zp + 4][0]);
@@ -3599,13 +3599,13 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 				np->flux[ivar] = 0.5 * (np->flux[ivar] + nm2->flux[ivar]);
 
 			flx_jac_cont.set(side, 1, 0, jac, jac_res);
-			flx_jac_cont.set(side, 1, 1, jac_neigh1, jac_zero);
-			flx_jac_cont.set(side, 1, 2, jac_neigh2, jac_zero);
+			flx_jac_cont.set(side, 1, 1, jac_neigh1, ZERO_MATRIX);
+			flx_jac_cont.set(side, 1, 2, jac_neigh2, ZERO_MATRIX);
 
 			// here the element elm1 must be a ghost element
 			(elm2->get_flx_jac_cont()).set(side, 0, 0, jac_neigh2);
 			(elm2->get_flx_jac_cont()).set(side, 0, 1, jac_res);
-			(elm2->get_flx_jac_cont()).set(side, 0, 2, jac_zero);
+			(elm2->get_flx_jac_cont()).set(side, 0, 2, ZERO_MATRIX);
 
 		} else {
 
@@ -3615,13 +3615,13 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 				np->flux[ivar] = 0.5 * (np->flux[ivar] + ghostflux[ivar]);
 
 			flx_jac_cont.set(side, 1, 0, jac, jac_res);
-			flx_jac_cont.set(side, 1, 1, jac_neigh1, jac_zero);
+			flx_jac_cont.set(side, 1, 1, jac_neigh1, ZERO_MATRIX);
 			flx_jac_cont.set(side, 1, 2, jac_neigh2);
 
 			// here the element elm1 must be a ghost element
 			(elm2->get_flx_jac_cont()).set(side, 0, 0, jac_neigh2);
 			(elm2->get_flx_jac_cont()).set(side, 0, 1, jac_res);
-			(elm2->get_flx_jac_cont()).set(side, 0, 2, jac_zero);
+			(elm2->get_flx_jac_cont()).set(side, 0, 2, ZERO_MATRIX);
 
 		}
 
@@ -3639,12 +3639,12 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 		//now we can store jacobians in elements
 		flx_jac_cont.set(side, 1, 0, jac);
 		flx_jac_cont.set(side, 1, 1, jac_neigh1);
-		flx_jac_cont.set(side, 1, 2, jac_zero);
+		flx_jac_cont.set(side, 1, 2, ZERO_MATRIX);
 
 		// here the element elm1 must be a ghost element
 		(elm1->get_flx_jac_cont()).set(side, 0, 0, jac_neigh1);
 		(elm1->get_flx_jac_cont()).set(side, 0, 1, jac);
-		(elm1->get_flx_jac_cont()).set(side, 0, 2, jac_zero);
+		(elm1->get_flx_jac_cont()).set(side, 0, 2, ZERO_MATRIX);
 
 		/* CASE I
 		 ------------------- -------------------
@@ -3716,11 +3716,11 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 			(elm1->get_flx_jac_cont()).set(side, 0, 0, jac_neigh1, jac_res);
 
 			if (elm1->which_neighbor(key) < 4) {
-				(elm1->get_flx_jac_cont()).set(side, 0, 1, jac, jac_zero);
-				(elm1->get_flx_jac_cont()).set(side, 0, 2, jac_neigh2, jac_zero);
+				(elm1->get_flx_jac_cont()).set(side, 0, 1, jac, ZERO_MATRIX);
+				(elm1->get_flx_jac_cont()).set(side, 0, 2, jac_neigh2, ZERO_MATRIX);
 			} else {
-				(elm1->get_flx_jac_cont()).set(side, 0, 1, jac_neigh2, jac_zero);
-				(elm1->get_flx_jac_cont()).set(side, 0, 2, jac, jac_zero);
+				(elm1->get_flx_jac_cont()).set(side, 0, 1, jac_neigh2, ZERO_MATRIX);
+				(elm1->get_flx_jac_cont()).set(side, 0, 2, jac, ZERO_MATRIX);
 			}
 
 			//we do not need o update the flux jac for the second neighbor because it will be updated
@@ -3785,18 +3785,18 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 
 			//now we can store jacobians in elements
 			flx_jac_cont.set(side, 1, 0, jac, jac_res);
-			flx_jac_cont.set(side, 1, 1, jac_neigh1, jac_zero); // to have the effect of this element
-			flx_jac_cont.set(side, 1, 2, jac_neigh2, jac_zero); // to have the effect of this element
+			flx_jac_cont.set(side, 1, 1, jac_neigh1, ZERO_MATRIX); // to have the effect of this element
+			flx_jac_cont.set(side, 1, 2, jac_neigh2, ZERO_MATRIX); // to have the effect of this element
 
 			// here the element elm1 must be a ghost element
 			(elm1->get_flx_jac_cont()).set(side, 0, 0, jac_neigh1);
 			(elm1->get_flx_jac_cont()).set(side, 0, 1, jac);
-			(elm1->get_flx_jac_cont()).set(side, 0, 2, jac_zero);
+			(elm1->get_flx_jac_cont()).set(side, 0, 2, ZERO_MATRIX);
 
 			// here the element elm1 must be a ghost element
 			(elm2->get_flx_jac_cont()).set(side, 0, 0, jac_neigh2);
 			(elm2->get_flx_jac_cont()).set(side, 0, 1, jac_res);
-			(elm2->get_flx_jac_cont()).set(side, 0, 2, jac_zero);
+			(elm2->get_flx_jac_cont()).set(side, 0, 2, ZERO_MATRIX);
 
 		}
 
@@ -3816,12 +3816,12 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 			// set it to positive flux which means outlet=inlet
 			//by default fluxes_jac has been initialized to zero, but to be on the safe side
 			for (int i = 0; i < NUM_STATE_VARS; ++i)
-				flx_jac_cont.set(side, 0, i, jac_zero);
+				flx_jac_cont.set(side, 0, i, ZERO_MATRIX);
 
 			// there is no need to do it here, because we do not compute the adjoint
 			// and jacobian on the boundary, but just to be on safe side
 			for (int i = 0; i < NUM_STATE_VARS; ++i)
-				flx_jac_cont.set(side, 1, i, jac_zero);
+				flx_jac_cont.set(side, 1, i, ZERO_MATRIX);
 
 		} else {
 			/* if an interface is on the x-minus or y-minus side, need to
@@ -3877,7 +3877,7 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 			//now we can store jacobians in elements
 			flx_jac_cont.set(side, 0, 0, jac);
 			flx_jac_cont.set(side, 0, 1, jac_neigh1);
-			flx_jac_cont.set(side, 0, 2, jac_zero);
+			flx_jac_cont.set(side, 0, 2, ZERO_MATRIX);
 
 			//*** in this section elem1 & elem2 are ghost element, and we do not need to update them here
 			// here the element elm1 must be a ghost element

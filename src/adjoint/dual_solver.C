@@ -994,6 +994,10 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops
 					        + adjoint[2] * orgSrcSgn[1]
 					            * (gravity[2] * d_state_vars_x[0] + d_grav[0] * state_vars_prev[0]));
 
+					// this is for simple test
+//					double test1, test2 = 0.;
+//					test1 = adjoint[1] + adjoint[2] ;
+
 					if (fabs(test1) > 1e-10 || fabs(test2) > 1e-10) {
 						wrong_elem.push_back(Curr_El->get_ithelem());
 						wrong_value.push_back(test1);

@@ -190,6 +190,12 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 		state_vars[i] = prev_state_vars[i] - dtdx * (fluxxp[i] - fluxxm[i])
 		    - dtdy * (fluxyp[i] - fluxym[i]);
 
+	/// I have added this part
+//	double cte=1.,bte=1.;
+//
+//	state_vars[1] += dt * cte;
+//	state_vars[2] += dt * bte;
+
 	if (prev_state_vars[0] > GEOFLOW_TINY) {
 
 		double unitvx = 0., unitvy = 0., h_inv = 0., speed = 0.;
