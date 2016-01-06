@@ -347,9 +347,9 @@ public:
 	    int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], Element *EmNeigh,
 	    double dt);
 
-	void zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
-	    int order_flag, int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS],
-	    Element *EmNeigh, double dt, ResFlag resflag);
+	void zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int order_flag,
+	    int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], Element *EmNeigh,
+	    double dt, ResFlag resflag);
 
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) x direction fluxes. Keith wrote this
 	void xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
@@ -367,18 +367,21 @@ public:
 	void ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
 
-	void calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int side);
-	void calc_yflux(HashTable* El_Table, HashTable* NodeTable, int myid);
-	void calc_xflux(HashTable* El_Table, HashTable* NodeTable, int myid);
-	void calc_fluxes(HashTable* El_Table, HashTable* NodeTable, int myid);
+	void calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<Element*>* elem_list, int myid,
+	    int side);
+	void calc_fluxes(HashTable* El_Table, HashTable* NodeTable, vector<Element*>* x_elem_list,
+	    vector<Element*>* y_elem_list, int myid);
+	void boundary_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int side,
+	    const int problem);
 
 	void dual_zdirflux(int dir, Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac);
 	void dual_ydirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac);
 	void dual_xdirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac);
 
 	//! this function (indirectly) calculates the fluxes that will be used to perform the finite volume corrector step and stores them in element edge nodes, indirectly because it calls other functions to calculate the analytical fluxes and then calls another function to compute the riemann fluxes from the analytical fluxes. Talk to me (Keith) before you modify this, as I am fairly certain that it is now completely bug free and parts of it can be slightly confusing.
-	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int myid,
-	    double dt, int* order_flag, double *outflow);
+	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, vector<Element*>* x_elem_list,
+	    vector<Element*>* y_elem_list, MatProps* matprops_ptr, int myid, double dt, int* order_flag,
+	    double *outflow);
 
 	/*! this function calculates the maximum x and y direction wavespeeds
 	 *  which are the eigenvalues of the flux jacobian
@@ -526,7 +529,7 @@ public:
 	void put_counted(int countedvalue);
 
 	//! when sorted by keys this element is the ithelem element on this processor, ithelem is just storage for a value you have to assign before using, if you do not compute it before you use it will be wrong.
-	int get_ithelem();
+	int get_ithelem() const;
 
 	//! when sorted by keys this element is the ithelem element on this processor, ithelem is just storage for a value you have to assign before using, if you do not compute it before you use it will be wrong.
 	void put_ithelem(int i);
@@ -646,8 +649,8 @@ public:
 
 	void write_elem_info(HashTable* NodeTable, char* filename, int iter, double dt);
 
-	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
-	    int myid, double dt, int* order_flag, double *outflow, ResFlag lresflag, ResFlag rresflag);
+	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int myid,
+	    double dt, int* order_flag, double *outflow, ResFlag lresflag, ResFlag rresflag);
 
 private:
 	//! myprocess is id of the process(or) that owns this element
@@ -847,7 +850,7 @@ private:
 
 };
 
-inline int Element::get_ithelem() {
+inline int Element::get_ithelem() const {
 	return ithelem;
 }
 ;
@@ -942,9 +945,9 @@ inline double* Element::get_prev_adjoint() {
 }
 ;
 
-inline void Element::update_adjoint(){
-	for (int i=0;i<NUM_STATE_VARS;++i)
-		prev_adjoint[i]=adjoint[i];
+inline void Element::update_adjoint() {
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		prev_adjoint[i] = adjoint[i];
 }
 ;
 

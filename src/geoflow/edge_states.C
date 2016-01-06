@@ -33,20 +33,10 @@
  *  GIS map's cummulative outflow (defined as the mass flow off of the
  *  GIS map).  Also, the elements are checked for multiple pile-height values 
  */
-void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
-		MatProps* matprops_ptr, TimeProps* timeprops_ptr, int myid, int* order_flag,
-		double *outflow) {
-	int i, j, k, counter, iter, keys1, keys2;
-	double tiny = GEOFLOW_TINY;
-	int el_counter = 0;
-	double evalue = 1;
+void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
+    TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow) {
 
-	MapNames mapnames;
-	char *b, *c, *d;
-	char a[5] = "abs"; // ,b[5],c[5],d[5];
-	b = c = d = a;
-	int ce = 0;
-	mapnames.assign(a, b, c, d, ce);
+	vector<Element*> x_elem_list, y_elem_list;
 
 	//-------------------go through all the elements of the subdomain and
 	//-------------------find the edge states
@@ -58,8 +48,9 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 	double localoutflow_sum = 0.0;
 	HashEntryPtr currentPtr;
 	Element* Curr_El;
+
 #pragma omp parallel for private(currentPtr,Curr_El) reduction(+:localoutflow_sum)
-	for (i = 0; i < El_Table->get_no_of_buckets(); i++)
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
 			HashEntryPtr currentPtr = *(buck + i);
 			while (currentPtr) {
@@ -74,13 +65,20 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 						int gg = ddd;
 					}
 
-					Curr_El->calc_edge_states(El_Table, NodeTable, matprops_ptr, myid,
-							timeprops_ptr->dtime, order_flag, &localoutflow);
+					Curr_El->calc_edge_states(El_Table, NodeTable, &x_elem_list, &y_elem_list, matprops_ptr,
+					    myid, timeprops_ptr->dtime, order_flag, &localoutflow);
 					localoutflow_sum += localoutflow;
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
+
+	for (int i = 0; i < x_elem_list.size(); ++i)
+		x_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 0, FORWARD);
+
+	for (int i = 0; i < y_elem_list.size(); ++i)
+		y_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 1, FORWARD);
+
 	*outflow = localoutflow_sum;
 	return;
 }
@@ -99,6 +97,8 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx) {
 	HashEntryPtr currentPtr;
 	Element* Curr_El;
 
+	vector<Element*> x_elem_list, y_elem_list;
+
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
 			HashEntryPtr currentPtr = *(buck + i);
@@ -107,19 +107,25 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx) {
 				if (Curr_El->get_adapted_flag() > 0) {
 					//if this element doesn't belong on this processor don't involve
 
-					if (Curr_El->get_ithelem() == 1439
+					if (Curr_El->get_ithelem() == 8255
 					//*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
-							/*&& timeprops_ptr->iter == ITER*/) {
+					    /*&& timeprops_ptr->iter == ITER*/) {
 						int ddd, aa = 0;
 						int gg = ddd;
 					}
 
-					Curr_El->calc_fluxes(El_Table, NodeTable, myid);
+					Curr_El->calc_fluxes(El_Table, NodeTable, &x_elem_list, &y_elem_list, myid);
 
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
+
+	for (int i = 0; i < x_elem_list.size(); ++i)
+		x_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 0, DUAL);
+
+	for (int i = 0; i < y_elem_list.size(); ++i)
+		y_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 1, DUAL);
 
 	return;
 }

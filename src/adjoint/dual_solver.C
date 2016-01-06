@@ -56,6 +56,10 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 	cout << "computing ADJOINT time step " << maxiter << endl;
 
+	set_ithm(El_Table);
+
+	plot_ithm(El_Table);
+
 	calc_adjoint(meshctx, propctx);
 
 	int tecflag = 2;
@@ -65,10 +69,6 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 //	error_compute(meshctx, propctx, maxiter);
 
 //	dual_unrefine(meshctx, propctx);
-
-	set_ithm(El_Table);
-
-	plot_ithm(El_Table);
 
 	meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
 
@@ -101,17 +101,17 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 //		if (iter - 1 == 1)
 		cout << "test of adjoint: " << simple_test(El_Table, timeprops_ptr, matprops_ptr) << endl;
 
-		map<int, Vec_Mat<9>> jac_code;
+//		map<int, Vec_Mat<9>> jac_code;
 
-		copy_jacobian(El_Table, jac_code);
+//		copy_jacobian(El_Table, jac_code);
 
-		calc_jacobian_old(meshctx, propctx);
+//		calc_jacobian_old(meshctx, propctx);
 
-		map<int, Vec_Mat<9>> jac_diff;
+//		map<int, Vec_Mat<9>> jac_diff;
 
-		copy_jacobian(El_Table, jac_diff);
+//		copy_jacobian(El_Table, jac_diff);
 
-		compare_jacobians(jac_code, jac_diff);
+//		compare_jacobians(jac_code, jac_diff);
 
 //		clean_jacobian(El_Table);
 
@@ -138,9 +138,9 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 // and we have to compute the error for other time steps.
 
 //		dual_unrefine(meshctx, propctx);
-		set_ithm(El_Table);
-
-		plot_ithm(El_Table);
+//		set_ithm(El_Table);
+//
+//		plot_ithm(El_Table);
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 		meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
 
@@ -604,7 +604,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		solrec->load_new_set_of_solution();
 	}
 
-	if (iter % 5 == 4) {
+	if (iter % 5 == 4 && propctx->adapt_flag != 0) {
 
 		for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 			if (*(buck + i)) {
@@ -998,7 +998,7 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops
 //					double test1, test2 = 0.;
 //					test1 = adjoint[1] + adjoint[2] ;
 
-					if (fabs(test1) > 1e-10 || fabs(test2) > 1e-10) {
+					if (fabs(test1) > 1e-16 || fabs(test2) > 1e-16) {
 						wrong_elem.push_back(Curr_El->get_ithelem());
 						wrong_value.push_back(test1);
 						wrong_value1.push_back(test2);
@@ -1058,7 +1058,7 @@ void set_ithm(HashTable* El_Table) {
 				currentPtr = currentPtr->next;
 				if (Curr_El->get_adapted_flag() > 0) {
 					Curr_El->put_ithelem(count);
-					++count;
+					count++;
 				}
 			}
 		}

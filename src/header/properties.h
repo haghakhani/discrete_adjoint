@@ -1352,6 +1352,7 @@ struct PropCTX {
 	MapNames* mapnames;
 	int numproc;
 	int myid;
+	int adapt_flag;
 
 };
 

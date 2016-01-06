@@ -163,6 +163,7 @@ int main(int argc, char *argv[]) {
 		propctx.mapnames = &mapnames;
 		propctx.numproc = numprocs;
 		propctx.myid = myid;
+		propctx.adapt_flag=adaptflag;
 
 		if (myid == 0)
 			output_summary(&timeprops, &statprops, savefileflag);

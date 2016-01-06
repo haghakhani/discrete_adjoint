@@ -71,89 +71,69 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 
 				if (Curr_El->get_adapted_flag() > 0) {
 
-					int boundary = 0;
+					double *prev_state_vars = Curr_El->get_prev_state_vars();
+					double *state_vars = Curr_El->get_state_vars();
+					double *d_state_vars = Curr_El->get_d_state_vars();
+					double *gravity = Curr_El->get_gravity();
+					double *d_gravity = Curr_El->get_d_gravity();
+					double *curvature = Curr_El->get_curvature();
+					Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
+					double bedfrict = Curr_El->get_effect_bedfrict();
+					double *dx = Curr_El->get_dx();
 
-					//this part handles if the Curr_El is a boundary element
-					//cout<<"I am running do not worry"<<endl;
-					for (int neighnum = 0; neighnum < 4; neighnum++)
-						if (*(Curr_El->get_neigh_proc() + neighnum) == INIT) {
-							boundary = 1;
-							// this for the element that are on the boundary
-							Curr_El->set_jacobian();
-							break;
-						}
-					if (!boundary) {
+					if (timeprops_ptr->iter < 51)
+						matprops_ptr->frict_tiny = 0.1;
+					else
+						matprops_ptr->frict_tiny = 0.000000001;
 
-						double *prev_state_vars = Curr_El->get_prev_state_vars();
-						double *state_vars = Curr_El->get_state_vars();
-						double *d_state_vars = Curr_El->get_d_state_vars();
-						double *gravity = Curr_El->get_gravity();
-						double *d_gravity = Curr_El->get_d_gravity();
-						double *curvature = Curr_El->get_curvature();
-						Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
-						double bedfrict = Curr_El->get_effect_bedfrict();
-						double *dx = Curr_El->get_dx();
+					double flux[4][NUM_STATE_VARS];
+					get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
 
-						if (timeprops_ptr->iter < 51)
-							matprops_ptr->frict_tiny = 0.1;
-						else
-							matprops_ptr->frict_tiny = 0.000000001;
+					double dt = timeprops_ptr->dt.at(iter - 1);	//at final time step we do not need the computation of adjoint and we always compute it for the previouse time so we need iter.
+					double dtdx = dt / dx[0];
+					double dtdy = dt / dx[1];
 
-						double flux[4][NUM_STATE_VARS];
-						get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
+					int stop[DIMENSION] = { 0, 0 };
+					double orgSrcSgn[DIMENSION] = { 0., 0. };
 
-						double dt = timeprops_ptr->dt.at(iter - 1);	//at final time step we do not need the computation of adjoint and we always compute it for the previouse time so we need iter.
-						double dtdx = dt / dx[0];
-						double dtdy = dt / dx[1];
+					update_states(state_vars, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy,
+					    dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, matprops_ptr->intfrict,
+					    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), matprops_ptr->frict_tiny,
+					    stop, orgSrcSgn);
 
-						int stop[DIMENSION] = { 0, 0 };
-						double orgSrcSgn[DIMENSION] = { 0., 0. };
+					Vec_Mat<9>& jacobian = Curr_El->get_jacobian();
 
-						update_states(state_vars, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx,
-						    dtdy, dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature,
-						    matprops_ptr->intfrict, bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()),
-						    matprops_ptr->frict_tiny, stop, orgSrcSgn);
-
-						Vec_Mat<9>& jacobian = Curr_El->get_jacobian();
-
-						for (int side = 0; side < 4; side++)
-							if (*(Curr_El->get_neigh_proc() + side) == INIT) // this is a boundary!
-								for (int ind = 0; ind < NUM_STATE_VARS; ind++)
-									state_vars[ind] = 0.;
-
-						for (int effelement = 0; effelement < EFF_ELL; effelement++) { //0 for the element itself, and the rest id for neighbour elements
+					for (int effelement = 0; effelement < EFF_ELL; effelement++) { //0 for the element itself, and the rest id for neighbour elements
 
 #ifdef DEBUG
-							char filename[] = "jacobian";
+						char filename[] = "jacobian";
 
-							if (Curr_El->get_ithelem() == 1439 && effelement == 0) {/**(Curr_El->pass_key()) == KEY0
-							 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER
-							 && effelement == EFFELL*/
-								Curr_El->write_elem_info(NodeTable, filename, timeprops_ptr->iter, dt);
-							}
+						if (Curr_El->get_ithelem() == 8255 /*&& effelement == 0*/) {/**(Curr_El->pass_key()) == KEY0
+						 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER
+						 && effelement == EFFELL*/
+							Curr_El->write_elem_info(NodeTable, filename, timeprops_ptr->iter, dt);
+						}
 #endif
 
-							if ((effelement == 0 && prev_state_vars[0] == 0.) || //this is a void element so the residual vector does not change by changing it's values
-							    (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == -2) || //one neighbor in this side
-							    (effelement != 0 && void_neigh_elem(El_Table, Curr_El, effelement)) || //this is a void neighbor element so the residual of the curr_el does not depend on this neighbor
-							    (effelement > 0 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == INIT)) {
+						if ((effelement == 0 && prev_state_vars[0] == 0.) || //this is a void element so the residual vector does not change by changing it's values
+						    (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == -2) || //one neighbor in this side
+						    (effelement != 0 && void_neigh_elem(El_Table, Curr_El, effelement)) || //this is a void neighbor element so the residual of the curr_el does not depend on this neighbor
+						    (effelement > 0 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == INIT)) {
 
-								Curr_El->set_jacobianMat_zero(effelement);
+							Curr_El->set_jacobianMat_zero(effelement);
 
-							} else {
-								const Mat3x3 *jac_flux_n_x, *jac_flux_p_x, *jac_flux_n_y, *jac_flux_p_y;
-								double dh_sens[2];
+						} else {
+							const Mat3x3 *jac_flux_n_x, *jac_flux_p_x, *jac_flux_n_y, *jac_flux_p_y;
+							double dh_sens[2];
 
-								set_fluxes_hsens(Curr_El, jac_flux_n_x, jac_flux_p_x, jac_flux_n_y, jac_flux_p_y,
-								    dh_sens, effelement);
+							set_fluxes_hsens(Curr_El, jac_flux_n_x, jac_flux_p_x, jac_flux_n_y, jac_flux_p_y,
+							    dh_sens, effelement);
 
-								calc_jacobian_elem(jacobian(effelement), *jac_flux_n_x, *jac_flux_p_x,
-								    *jac_flux_n_y, *jac_flux_p_y, prev_state_vars, d_state_vars,
-								    (d_state_vars + NUM_STATE_VARS), curvature, gravity, d_gravity, dh_sens,
-								    matprops_ptr->intfrict, bedfrict, *(Curr_El->get_kactxy()), effelement, dtdx,
-								    dtdy, dt, stop, orgSrcSgn);
+							calc_jacobian_elem(jacobian(effelement), *jac_flux_n_x, *jac_flux_p_x, *jac_flux_n_y,
+							    *jac_flux_p_y, prev_state_vars, d_state_vars, (d_state_vars + NUM_STATE_VARS),
+							    curvature, gravity, d_gravity, dh_sens, matprops_ptr->intfrict, bedfrict,
+							    *(Curr_El->get_kactxy()), effelement, dtdx, dtdy, dt, stop, orgSrcSgn);
 
-							}
 						}
 					}
 				}
@@ -175,9 +155,9 @@ int void_neigh_elem(HashTable* El_Table, Element* Curr_El, int effelement) {
 	Element* neigh_elem = (Element*) (El_Table->lookup(
 	    Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
 
-	assert(neigh_elem);
+//	assert(neigh_elem);
 
-	if (*(neigh_elem->get_prev_state_vars()) == 0.)
+	if (!neigh_elem || *(neigh_elem->get_prev_state_vars()) == 0.)
 		return 1;
 
 	return 0;
@@ -213,6 +193,11 @@ void set_fluxes_hsens(Element* Curr_El, const Mat3x3 *&jac_flux_n_x, const Mat3x
 	int xp = Curr_El->get_positive_x_side(); //finding the direction of element
 	int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
 
+	const int direction = (effelement - 1) % 4;
+	const int opos_dirc = (direction + 2) % 4;
+
+	bool boundary = (*(Curr_El->get_neigh_proc() + opos_dirc) == INIT) ? true : false;
+
 	if (effelement == 0) {
 		int index = 0;
 
@@ -228,7 +213,7 @@ void set_fluxes_hsens(Element* Curr_El, const Mat3x3 *&jac_flux_n_x, const Mat3x
 
 		int index = 1;
 
-		if ((effelement - 1) % 4 == xp) {
+		if (direction == xp) {
 
 			dh_sens[0] = h_slope_sens(0, 2);
 			dh_sens[1] = 0.;
@@ -238,7 +223,10 @@ void set_fluxes_hsens(Element* Curr_El, const Mat3x3 *&jac_flux_n_x, const Mat3x
 			jac_flux_n_y = &ZERO_MATRIX;
 			jac_flux_p_y = &ZERO_MATRIX;
 
-		} else if ((effelement - 1) % 4 == xm) {
+			if (boundary)
+				jac_flux_n_x = &flux_jac(0, 0, index);
+
+		} else if (direction == xm) {
 
 			dh_sens[0] = h_slope_sens(0, 1);
 			dh_sens[1] = 0.;
@@ -248,7 +236,10 @@ void set_fluxes_hsens(Element* Curr_El, const Mat3x3 *&jac_flux_n_x, const Mat3x
 			jac_flux_n_y = &ZERO_MATRIX;
 			jac_flux_p_y = &ZERO_MATRIX;
 
-		} else if ((effelement - 1) % 4 == yp) {
+			if (boundary)
+				jac_flux_p_x = &flux_jac(0, 1, index);
+
+		} else if (direction == yp) {
 
 			dh_sens[0] = 0.;
 			dh_sens[1] = h_slope_sens(1, 2);
@@ -257,6 +248,9 @@ void set_fluxes_hsens(Element* Curr_El, const Mat3x3 *&jac_flux_n_x, const Mat3x
 			jac_flux_p_x = &ZERO_MATRIX;
 			jac_flux_n_y = &ZERO_MATRIX;
 			jac_flux_p_y = &flux_jac(1, 1, index);
+
+			if (boundary)
+				jac_flux_n_y = &flux_jac(1, 0, index);
 
 		} else {
 
@@ -267,13 +261,16 @@ void set_fluxes_hsens(Element* Curr_El, const Mat3x3 *&jac_flux_n_x, const Mat3x
 			jac_flux_p_x = &ZERO_MATRIX;
 			jac_flux_n_y = &flux_jac(1, 0, index);
 			jac_flux_p_y = &ZERO_MATRIX;
+
+			if (boundary)
+				jac_flux_p_y = &flux_jac(1, 1, index);
 		}
 
 	} else {
 
 		int index = 2;
 
-		if ((effelement - 1) % 4 == xp) {
+		if (direction == xp) {
 
 			dh_sens[0] = h_slope_sens(0, 4);
 			dh_sens[1] = 0.;
@@ -283,7 +280,10 @@ void set_fluxes_hsens(Element* Curr_El, const Mat3x3 *&jac_flux_n_x, const Mat3x
 			jac_flux_n_y = &ZERO_MATRIX;
 			jac_flux_p_y = &ZERO_MATRIX;
 
-		} else if ((effelement - 1) % 4 == xm) {
+			if (boundary)
+				jac_flux_n_x = &flux_jac(0, 0, index);
+
+		} else if (direction == xm) {
 
 			dh_sens[0] = h_slope_sens(0, 3);
 			dh_sens[1] = 0.;
@@ -293,7 +293,10 @@ void set_fluxes_hsens(Element* Curr_El, const Mat3x3 *&jac_flux_n_x, const Mat3x
 			jac_flux_n_y = &ZERO_MATRIX;
 			jac_flux_p_y = &ZERO_MATRIX;
 
-		} else if ((effelement - 1) % 4 == yp) {
+			if (boundary)
+				jac_flux_p_x = &flux_jac(0, 1, index);
+
+		} else if (direction == yp) {
 
 			dh_sens[0] = 0.;
 			dh_sens[1] = h_slope_sens(1, 4);
@@ -302,6 +305,9 @@ void set_fluxes_hsens(Element* Curr_El, const Mat3x3 *&jac_flux_n_x, const Mat3x
 			jac_flux_p_x = &ZERO_MATRIX;
 			jac_flux_n_y = &ZERO_MATRIX;
 			jac_flux_p_y = &flux_jac(1, 1, index);
+
+			if (boundary)
+				jac_flux_n_y = &flux_jac(1, 0, index);
 
 		} else {
 
@@ -312,6 +318,9 @@ void set_fluxes_hsens(Element* Curr_El, const Mat3x3 *&jac_flux_n_x, const Mat3x
 			jac_flux_p_x = &ZERO_MATRIX;
 			jac_flux_n_y = &flux_jac(1, 0, index);
 			jac_flux_p_y = &ZERO_MATRIX;
+
+			if (boundary)
+				jac_flux_p_y = &flux_jac(1, 1, index);
 		}
 
 	}
@@ -339,7 +348,7 @@ void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx) {
 	int iter = timeprops_ptr->iter;
 	double tiny = GEOFLOW_TINY;
 
-	//this array holds ResFlag for element itself and its neighbors
+//this array holds ResFlag for element itself and its neighbors
 	ResFlag resflag[EFF_ELL];
 	reset_resflag(resflag);
 

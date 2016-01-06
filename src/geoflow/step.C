@@ -217,12 +217,12 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump,
 							coord[1] - 0.5 * dxy[1], coord[1] + 0.5 * dxy[1], hheight, pfheight);
 #endif
 
-#ifdef APPLY_BC
-					for (j = 0; j < 4; j++)
-						if (*(Curr_El->get_neigh_proc() + j) == INIT) // this is a boundary!
-							for (k = 0; k < NUM_STATE_VARS; k++)
-								*(Curr_El->get_state_vars() + k) = 0;
-#endif
+//#ifdef APPLY_BC
+//					for (j = 0; j < 4; j++)
+//						if (*(Curr_El->get_neigh_proc() + j) == INIT) // this is a boundary!
+//							for (k = 0; k < NUM_STATE_VARS; k++)
+//								*(Curr_El->get_state_vars() + k) = 0;
+//#endif
 
 				}
 				currentPtr = currentPtr->next;

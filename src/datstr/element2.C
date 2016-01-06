@@ -2975,8 +2975,9 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 
 }
 
-void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
-    int myid, double dt, int* order_flag, double *outflow) {
+void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
+    vector<Element*>* x_elem_list, vector<Element*>* y_elem_list, MatProps* matprops_ptr, int myid,
+    double dt, int* order_flag, double *outflow) {
 	Node *np, *np1, *np2, *nm, *nm1, *nm2;
 	Element *elm1, *elm2;
 	int side, zp, zm;
@@ -2995,19 +2996,27 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 //    cout<<"this element is being checked"<<endl;
 
 	for (side = 0; side < 2; side++) {
+
+		vector<Element*>* elem_list;
+		if (side)
+			elem_list = y_elem_list;
+		else
+			elem_list = x_elem_list;
+
 		zp = (positive_x_side + side) % 4;
 		zm = (zp + 2) % 4;
 		np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
 
 		if (neigh_proc[zp] == -1) {
-			nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
-			*outflow += (nm->flux[0]) * dx[!side];
-
-			//outflow boundary conditions
-			for (ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
-				np->flux[ivar] = nm->flux[ivar];
-				np->refinementflux[ivar] = nm->refinementflux[ivar];
-			}
+			elem_list->push_back(this);
+//			nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
+//			*outflow += (nm->flux[0]) * dx[!side];
+//
+//			//outflow boundary conditions
+//			for (ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
+//				np->flux[ivar] = nm->flux[ivar];
+//				np->refinementflux[ivar] = nm->refinementflux[ivar];
+//			}
 		} else if (neigh_proc[zp] != myid) {
 			np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
 			elm1 = (Element*) El_Table->lookup(&neighbor[zp][0]);
@@ -3197,14 +3206,16 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 		if (neigh_proc[zm] != myid) {
 
 			if (neigh_proc[zm] == -1) {
-				np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
-				nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
-				*outflow -= (np->flux[0]) * dx[!side];
-				//outflow boundary conditions
-				for (ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
-					nm->flux[ivar] = np->flux[ivar];
-					nm->refinementflux[ivar] = np->refinementflux[ivar];
-				}
+
+				elem_list->push_back(this);
+//				np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
+//				nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
+//				*outflow -= (np->flux[0]) * dx[!side];
+//				//outflow boundary conditions
+//				for (ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
+//					nm->flux[ivar] = np->flux[ivar];
+//					nm->refinementflux[ivar] = np->refinementflux[ivar];
+//				}
 			} else {
 				/* if an interface is on the x-minus or y-minus side, need to
 				 calculate those edgestates in this element */
@@ -3510,22 +3521,16 @@ void dual_riemannflux(Mat3x3& hfvl, Mat3x3& hfvr, double flux[NUM_STATE_VARS], M
 
 }
 
-void Element::calc_fluxes(HashTable* El_Table, HashTable* NodeTable, int myid) {
+void Element::calc_fluxes(HashTable* El_Table, HashTable* NodeTable, vector<Element*>* x_elem_list,
+    vector<Element*>* y_elem_list, int myid) {
 
-	for (int side = 0; side < 2; ++side)
-		calc_flux(El_Table, NodeTable, myid, side);
+	calc_flux(El_Table, NodeTable, x_elem_list, myid, 0);
+	calc_flux(El_Table, NodeTable, y_elem_list, myid, 1);
 
 }
 
-void Element::calc_xflux(HashTable* El_Table, HashTable* NodeTable, int myid) {
-	calc_flux(El_Table, NodeTable, myid, 0);
-}
-
-void Element::calc_yflux(HashTable* El_Table, HashTable* NodeTable, int myid) {
-	calc_flux(El_Table, NodeTable, myid, 1);
-}
-
-void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int side) {
+void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<Element*>* elem_list,
+    int myid, int side) {
 
 	Node *np, *np1, *np2, *nm, *nm1, *nm2;
 	Element *elm1, *elm2;
@@ -3549,15 +3554,19 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 	np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
 
 	if (neigh_proc[zp] == -1) {
-		nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
 
-//outflow boundary conditions
-		for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
-			np->flux[ivar] = nm->flux[ivar];
+		elem_list->push_back(this);
 
-		//by default fluxes_jac has been initialized to zero, but to be on the safe side
-		for (int i = 0; i < NUM_STATE_VARS; ++i)
-			flx_jac_cont.set(side, 1, i, ZERO_MATRIX);
+//		//this is not right because the right node may have not been updated
+//		nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
+//
+//		//outflow boundary conditions
+//		for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+//			np->flux[ivar] = nm->flux[ivar];
+//
+//		//by default fluxes_jac has been initialized to zero, but to be on the safe side
+//		for (int i = 0; i < NUM_STATE_VARS; ++i)
+//			flx_jac_cont.set(side, 1, i, ZERO_MATRIX);
 
 	} else if (neigh_proc[zp] != myid) {
 
@@ -3722,12 +3731,6 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 				(elm1->get_flx_jac_cont()).set(side, 0, 1, jac_neigh2, ZERO_MATRIX);
 				(elm1->get_flx_jac_cont()).set(side, 0, 2, jac, ZERO_MATRIX);
 			}
-
-			//we do not need o update the flux jac for the second neighbor because it will be updated
-			// when we compute the fluxes for it
-//			(elm2->get_flx_jac_cont()).set(side, 1, 0, jac_neigh2);
-//			(elm2->get_flx_jac_cont()).set(side, 1, 1, jac_res);
-//			(elm2->get_flx_jac_cont()).set(side, 1, 2, jac_zero);
 		}
 
 		/*  Case III
@@ -3805,23 +3808,22 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 	if (neigh_proc[zm] != myid) {
 
 		if (neigh_proc[zm] == -1) {
-			np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
-			nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
 
-			//outflow boundary conditions
-			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
-				nm->flux[ivar] = np->flux[ivar];
+			elem_list->push_back(this);
+			// we have to remove them in another function
 
-			//in above line we do not compute the fluc on negative side and just
-			// set it to positive flux which means outlet=inlet
-			//by default fluxes_jac has been initialized to zero, but to be on the safe side
-			for (int i = 0; i < NUM_STATE_VARS; ++i)
-				flx_jac_cont.set(side, 0, i, ZERO_MATRIX);
-
-			// there is no need to do it here, because we do not compute the adjoint
-			// and jacobian on the boundary, but just to be on safe side
-			for (int i = 0; i < NUM_STATE_VARS; ++i)
-				flx_jac_cont.set(side, 1, i, ZERO_MATRIX);
+//			np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
+//			nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
+//
+//			//outflow boundary conditions
+//			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+//				nm->flux[ivar] = np->flux[ivar];
+//
+//			//in above line we do not compute the flux on negative side and just
+//			// set it to positive flux which means outlet=inlet
+//			//by default fluxes_jac has been initialized to zero, but to be on the safe side
+//			for (int i = 0; i < NUM_STATE_VARS; ++i)
+//				flx_jac_cont.set(side, 0, i, ZERO_MATRIX);
 
 		} else {
 			/* if an interface is on the x-minus or y-minus side, need to
@@ -3920,6 +3922,64 @@ void Element::calc_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int
 				flx_jac_cont.set(side, 0, 2, jac_neigh2);
 
 			}
+
+		}
+	}
+
+}
+
+void Element::boundary_flux(HashTable* El_Table, HashTable* NodeTable, const int myid,
+    const int side, const int problem) {
+
+	int zp = (positive_x_side + side) % 4;
+	int zm = (zp + 2) % 4;
+	Node* np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
+	Node* nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
+
+	if (neigh_proc[zp] == -1) {
+
+		// note the this may causes a bug if there is 2 level of refinement
+		// for three layers of the cells adjacent to the boundary
+
+		//in the boundary is in the right side of the cell
+
+		//outflow boundary conditions
+		for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+			np->flux[ivar] = nm->flux[ivar];
+
+		if (problem) {
+
+			//by default fluxes_jac has been initialized to zero, but to be on the safe side
+			for (int i = 0; i < NUM_STATE_VARS; ++i)
+				flx_jac_cont.set(side, 1, i, flx_jac_cont(side, 0, i));
+
+		} else {
+
+			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+				np->refinementflux[ivar] = nm->refinementflux[ivar];
+
+		}
+	}
+	if (neigh_proc[zm] == -1) {
+
+		//outflow boundary conditions
+		for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+			nm->flux[ivar] = np->flux[ivar];
+
+		//in above line we do not compute the flux on negative side and just
+		// set it to positive flux which means outlet=inlet
+		//by default fluxes_jac has been initialized to zero, but to be on the safe side
+
+		if (problem) {
+
+			//by default fluxes_jac has been initialized to zero, but to be on the safe side
+			for (int i = 0; i < NUM_STATE_VARS; ++i)
+				flx_jac_cont.set(side, 0, i, flx_jac_cont(side, 1, i));
+
+		} else {
+
+			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
+				nm->refinementflux[ivar] = np->refinementflux[ivar];
 
 		}
 	}
@@ -4875,7 +4935,7 @@ void Element::set_jacobian() {
 
 }
 
-Vec_Mat<9>& Element::get_jacobian() {
+Vec_Mat<9> &Element::get_jacobian() {
 	return jacobianMat;
 }
 

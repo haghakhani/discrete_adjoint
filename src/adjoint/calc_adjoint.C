@@ -22,19 +22,18 @@
 #define ITER   11
 
 struct Func_CTX {
-
-	double dx;
-	double dy;
-	TimeProps* timeprops;
-	int iter;
-	int adjiter;
+	MeshCTX* meshctx;
+	PropCTX* propctx;
 
 };
 
-void calc_func_sens(HashTable *El_Table);
+void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx);
 int get_jacind(int effelement);
+void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, Element* eff_el, int side);
 
 void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
+
+	calc_func_sens(meshctx, propctx);
 
 	HashTable* El_Table = meshctx->el_table;
 	HashEntryPtr* buck = El_Table->getbucketptr();
@@ -51,21 +50,10 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 
 				if (Curr_El->get_adapted_flag() > 0) {
 
-					if (Curr_El->get_ithelem() == 1439)
+					if (Curr_El->get_ithelem() == 8251)
 						aa = bb;
 
-					int boundary = 0;
-					//this part handles if the Curr_El is a boundary element
-					for (int neighnum = 0; neighnum < 4; neighnum++)
-						if (*(Curr_El->get_neigh_proc() + neighnum) == INIT) {
-							boundary = 1;
-							for (int j = 0; j < NUM_STATE_VARS; ++j)
-								*(Curr_El->get_adjoint() + j) = 0.;
-
-							break;
-						}
-					if (!boundary)
-						calc_adjoint_elem(meshctx, propctx, Curr_El);
+					calc_adjoint_elem(meshctx, propctx, Curr_El);
 
 				}
 				currentPtr = currentPtr->next;
@@ -78,16 +66,11 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 
 	Func_CTX ctx;
-	ctx.dx = *(Curr_El->get_dx());
-	ctx.dy = *(Curr_El->get_dx() + 1);
-	ctx.timeprops = propctx->timeprops;
-	ctx.iter = propctx->timeprops->iter;
-	ctx.adjiter = propctx->timeprops->adjiter;
+	ctx.meshctx = meshctx;
+	ctx.propctx = propctx;
 
 	double* adjoint = Curr_El->get_adjoint();
 	double adjcontr[NUM_STATE_VARS] = { 0., 0., 0. };
-
-//	Curr_El->calc_func_sens((const void *) &ctx);
 
 	HashTable* El_Table = meshctx->el_table;
 
@@ -104,7 +87,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 
 	if (propctx->timeprops->adjiter == 0) {
 
-		Curr_El->calc_func_sens((void*) propctx);
+//		Curr_El->calc_func_sens((void*) propctx);
 
 		for (int i = 0; i < NUM_STATE_VARS; ++i)
 			adjoint[i] = *(Curr_El->get_func_sens() + i);
@@ -124,7 +107,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 						adjcontr[k] += adjoint_prev[l] * jacobianmat(effelement, l, k);
 
 			} else if (effelement <= 4
-			    || (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) >= 0)) {
+			    || (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) > -2)) {
 
 				//basically we are checking all neighbor elements, and start from xp neighbor
 				Element * neigh_elem = (Element*) (El_Table->lookup(
@@ -148,7 +131,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 		}
 
 		for (int j = 0; j < NUM_STATE_VARS; j++)
-			adjoint[j] = /**(Curr_El->get_func_sens() + j)*/-adjcontr[j];
+			adjoint[j] = *(Curr_El->get_func_sens() + j) - adjcontr[j];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
@@ -173,11 +156,8 @@ void Element::calc_func_sens(const void * ctx) {
 
 	Func_CTX* contx = (Func_CTX *) ctx;
 
-	for (int i = 0; i < NUM_STATE_VARS; ++i)
-		func_sens[i] = 0.;
-
 	if (state_vars[0] > 0.)
-		func_sens[0] = dx[0] * dx[1];
+		func_sens[0] += dx[0] * dx[1];
 
 //	if (contx->adjiter == 0) {
 //
@@ -198,59 +178,81 @@ void Element::calc_func_sens(const void * ctx) {
 //	}
 }
 
-void calc_func_sens(HashTable *El_Table) {
+void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 
+	HashTable* El_Table = meshctx->el_table;
+	TimeProps* timeprops = propctx->timeprops;
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
-	Element* Curr_El = NULL;
-	double max = 0.;
-
-//	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
-//		if (*(buck + i)) {
-//			currentPtr = *(buck + i);
-//			while (currentPtr) {
-//				Curr_El = (Element*) (currentPtr->value);
-//
-//				if (Curr_El->get_adapted_flag() > 0 )
-//					Curr_El->calc_func_sens((void *) &max);
-//
-//				currentPtr = currentPtr->next;
-//			}
-//		}
-
-//	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
-//		if (*(buck + i)) {
-//			currentPtr = *(buck + i);
-//			while (currentPtr) {
-//				Curr_El = (Element*) (currentPtr->value);
-//
-//				if (Curr_El->get_adapted_flag() > 0 && *(Curr_El->get_state_vars()) > max)
-//					max = *(Curr_El->get_state_vars());
-//
-//				currentPtr = currentPtr->next;
-//			}
-//		}
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
 			while (currentPtr) {
-				Curr_El = (Element*) (currentPtr->value);
+				Element* Curr_El = (Element*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0) {
 
-					if (*(Curr_El->get_state_vars()) > 0.) {
-						*(Curr_El->get_func_sens()) = -*(Curr_El->get_dx()) + *(Curr_El->get_dx() + 1);
-						*(Curr_El->get_func_sens() + 1) = *(Curr_El->get_func_sens() + 2) = 0.;
-					} else {
-						*(Curr_El->get_func_sens()) = *(Curr_El->get_func_sens() + 1) =
-						    *(Curr_El->get_func_sens() + 2) = 0.;
-					}
+					for (int j = 0; j < NUM_STATE_VARS; ++j)
+						*(Curr_El->get_func_sens() + j) = 0.;
 
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Element* Curr_El = (Element*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0) {
+
+					int* neigh_proc = Curr_El->get_neigh_proc();
+					for (int j = 0; j < 4; j++)
+						if (neigh_proc[j] == INIT) { // this is a boundary!
+
+							int aa = 1, bb = 0;
+							if (Curr_El->get_ithelem() == 8255)
+								aa = bb;
+
+							unsigned* neigh_key = Curr_El->get_neighbors();
+
+							int opos_dirc = (j + 2) % 4;
+
+							Element* eff_el = (Element*) El_Table->lookup(neigh_key + opos_dirc * KEYLENGTH);
+							sens_on_boundary(meshctx, propctx, eff_el, j);
+
+							// if the adjacent cell to the boundary has two neighbors on the opposite side
+							if (neigh_proc[opos_dirc] > 0) {
+								Element* eff_el = (Element*) El_Table->lookup(
+								    neigh_key + (opos_dirc + 4) * KEYLENGTH);
+
+								sens_on_boundary(meshctx, propctx, eff_el, j);
+							}
+
+						}
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	void* dummy;
+
+	if (timeprops->adjiter == 0)
+		for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+			if (*(buck + i)) {
+				currentPtr = *(buck + i);
+				while (currentPtr) {
+					Element* Curr_El = (Element*) (currentPtr->value);
+
+					if (Curr_El->get_adapted_flag() > 0)
+						Curr_El->calc_func_sens(dummy);
+
+					currentPtr = currentPtr->next;
+				}
+			}
 
 }
 
@@ -274,5 +276,36 @@ int get_jacind(int effelement) {
 			cout << "invalid neighbor position" << endl;
 	}
 	return jacind;
+}
+
+void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, Element* eff_el, int side) {
+
+	double* dx = eff_el->get_dx();
+
+	TimeProps* timeprops = propctx->timeprops;
+	int iter = timeprops->iter;
+	double dt = timeprops->dt.at(iter - 1);	//at final time step we do not need the computation of adjoint and we always compute it for the previouse time so we need iter.
+	double dtdx = dt / dx[0];
+	double dtdy = dt / dx[1];
+	FluxJac& flux_jac = eff_el->get_flx_jac_cont();
+	double* func_sens = eff_el->get_func_sens();
+
+	const int xp = eff_el->get_positive_x_side(); //finding the direction of element
+	const int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+
+	if (side == xm) {
+		for (int k = 0; k < NUM_STATE_VARS; ++k)
+			func_sens[k] += -dt * dx[1] * flux_jac(0, 0, 0)(0, k);
+	} else if (side == xp) {
+		for (int k = 0; k < NUM_STATE_VARS; ++k)
+			func_sens[k] += -dt * dx[1] * flux_jac(0, 1, 0)(0, k);
+	} else if (side == ym) {
+		for (int k = 0; k < NUM_STATE_VARS; ++k)
+			func_sens[k] += -dt * dx[0] * flux_jac(1, 0, 0)(0, k);
+	} else {
+		for (int k = 0; k < NUM_STATE_VARS; ++k)
+			func_sens[k] += -dt * dx[0] * flux_jac(1, 1, 0)(0, k);
+	}
+
 }
 

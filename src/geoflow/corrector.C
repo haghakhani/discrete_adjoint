@@ -114,7 +114,8 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	EmTemp->convect_dryline(V_avg, dt); //this is necessary
 
 	int debuging, ggg = 0;
-	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1 && timeprops->iter == ITER)
+	if (EmTemp->get_ithelem() == 8251 /*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1 */
+	&& timeprops->iter > 13)
 //	if (dabs(*(EmTemp->get_coord()) - X) < INCREMENT&& dabs(*(EmTemp->get_coord()+1) - Y)<INCREMENT
 //	&& timeprops->iter == ITER)
 		debuging = ggg = 1;
