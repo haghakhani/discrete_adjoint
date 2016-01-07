@@ -250,8 +250,6 @@ int main(int argc, char *argv[]) {
 				unrefine(BT_Elem_Ptr, BT_Node_Ptr, UNREFINE_TARGET, myid, numprocs, &timeprops, &matprops,
 				    rescomp);
 
-				MPI_Barrier(MPI_COMM_WORLD);      //for debug
-
 				move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
 
 				if ((numprocs > 1) && (timeprops.iter % 10 == 9)) {

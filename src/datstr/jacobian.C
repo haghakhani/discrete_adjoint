@@ -30,14 +30,6 @@ Solution::Solution(double* curr_sol, double kactxy) {
 
 }
 
-double* Solution::get_solution() {
-	return states;
-}
-
-double Solution::get_kact() {
-	return kact;
-}
-
 Solution::~Solution() {
 
 }
@@ -46,7 +38,7 @@ Jacobian::Jacobian(unsigned* key, double* position) {
 
 	for (int i = 0; i < KEYLENGTH; ++i) {
 		Jacobian::key[i] = key[i];
-		Jacobian::position[i] = position[i];
+//		Jacobian::position[i] = position[i];
 	}
 
 }
@@ -55,45 +47,6 @@ Jacobian::Jacobian(unsigned* key) {
 
 	for (int i = 0; i < KEYLENGTH; ++i)
 		Jacobian::key[i] = key[i];
-
-}
-
-double* Jacobian::get_position() {
-	return position;
-}
-
-void Jacobian::put_solution(Solution* solution, int iter) {
-
-	//because insert is faster than emplace
-	solContainer[iter] = solution;
-
-	return;
-}
-
-Solution* Jacobian::get_solution(int iter) {
-
-	return solContainer[iter];
-}
-
-unsigned* Jacobian::get_key() {
-	return key;
-}
-
-void Jacobian::erase_solution(int iter) {
-Solution* sol=get_solution(iter);
-delete sol;
-	// this function should call destructor of solution, so there is no need to call them explicitly
-	solContainer.erase(iter);
-}
-
-void Jacobian::clear_container() {
-
-	solContainer.clear();
-}
-
-bool Jacobian::is_container_empty() {
-
-	return solContainer.empty();
 
 }
 

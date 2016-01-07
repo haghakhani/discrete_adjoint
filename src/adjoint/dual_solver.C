@@ -99,7 +99,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		calc_adjoint(meshctx, propctx);
 
 //		if (iter - 1 == 1)
-		cout << "test of adjoint: " << simple_test(El_Table, timeprops_ptr, matprops_ptr) << endl;
+//		cout << "test of adjoint: " << simple_test(El_Table, timeprops_ptr, matprops_ptr) << endl;
 
 //		map<int, Vec_Mat<9>> jac_code;
 
@@ -138,9 +138,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 // and we have to compute the error for other time steps.
 
 //		dual_unrefine(meshctx, propctx);
-//		set_ithm(El_Table);
-//
-//		plot_ithm(El_Table);
+
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 		meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
 
@@ -478,24 +476,25 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 
 	if (unrefinelist->get_num_elem()) {
 
-		Element* brothers[4];
-
 //		cout << "6 \n";
 //		refinement_report(El_Table);
 
 		int unrefined = 0;
 
+
 		do {
 
 			NewFatherList.trashlist();
+			int check=0;
 
 			for (int i = 0; i < unrefinelist->get_num_elem(); ++i) {
 				Element* Curr_El = (unrefinelist->get(i));
-				if ((Curr_El->get_which_son() == 0) && (Curr_El->get_adapted_flag() != OLDSON))
+				if ((Curr_El->get_which_son() == 0) && (Curr_El->get_adapted_flag() != OLDSON)){
 
 					Curr_El->find_brothers(El_Table, NodeTable, target, myid, matprops_ptr, &NewFatherList,
 					    &OtherProcUpdate, rescomp);
-
+					check++;
+				}
 			}
 
 			unrefined += NewFatherList.get_num_elem();
@@ -621,7 +620,9 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 		dual_refine_unrefine(meshctx, propctx, &refinelist, &unrefinelist);
 
-//			setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
+		set_ithm(El_Table);
+
+		plot_ithm(El_Table);
 
 		calc_d_gravity(El_Table);
 
@@ -831,7 +832,7 @@ bool must_write(MemUse* memuse_ptr) {
 //		cout << "ratio of last time use over free mem " << ratio << "  and ratio od used mem" << endl;
 	printf(" ratio of used mem over total mem is %4f \n", ratio1);
 
-	if (ratio2 < .05)
+	if (ratio1 < .05)
 		return true;
 //	} else
 //		memuse_ptr->usedmem = current_physMemUsed;
@@ -938,7 +939,7 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops
 				if (Curr_El->get_adapted_flag() > 0) {
 
 					double* state_vars_prev = Curr_El->get_prev_state_vars();
-					double* adjoint = Curr_El->get_prev_adjoint();
+					double* adjoint = Curr_El->get_adjoint();
 					double* gravity = Curr_El->get_gravity();
 					double* curve = Curr_El->get_curvature();
 					double vel[2], h_inv, orgSrcSgn[2];

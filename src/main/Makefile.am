@@ -10,8 +10,8 @@ titan_SOURCES = compare_key.C delete_tab.C hpfem.C datread.C hilbert.C init_pile
 
 titan_CXXFLAGS = -I../gisapi/
 
-titan_LDADD = ../gisapi/libgisapi.a ../adapt/libadapt.a @FLIBS@ \
+titan_LDADD = ../adjoint/libadjoint.a ../gisapi/libgisapi.a ../adapt/libadapt.a @FLIBS@ \
   ../geoflow/libgeoflow.a ../datstr/libdatstr.a  ../useful/libuseful.a \
-  ../repartition/librepartition.a ../tecplot/libtecplot.a ../adjoint/libadjoint.a
+  ../repartition/librepartition.a ../tecplot/libtecplot.a 
 
 

@@ -138,6 +138,11 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 		if (isnan(adjoint[i]) || isinf(adjoint[i]))
 			cout << "it is incorrect  " << endl;
 
+	// this is for round off error
+	for (int i = 0; i < NUM_STATE_VARS; i++)
+		if (fabs(adjoint[i]) < 1e-16)
+			adjoint[i] = 0.;
+
 #ifdef DEBUGFILE
 	ofstream adjdebug;
 	adjdebug.open("adjdebug.txt", ios::app);
@@ -285,8 +290,6 @@ void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, Element* eff_el, int s
 	TimeProps* timeprops = propctx->timeprops;
 	int iter = timeprops->iter;
 	double dt = timeprops->dt.at(iter - 1);	//at final time step we do not need the computation of adjoint and we always compute it for the previouse time so we need iter.
-	double dtdx = dt / dx[0];
-	double dtdy = dt / dx[1];
 	FluxJac& flux_jac = eff_el->get_flx_jac_cont();
 	double* func_sens = eff_el->get_func_sens();
 
@@ -298,13 +301,13 @@ void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, Element* eff_el, int s
 			func_sens[k] += -dt * dx[1] * flux_jac(0, 0, 0)(0, k);
 	} else if (side == xp) {
 		for (int k = 0; k < NUM_STATE_VARS; ++k)
-			func_sens[k] += -dt * dx[1] * flux_jac(0, 1, 0)(0, k);
+			func_sens[k] += dt * dx[1] * flux_jac(0, 1, 0)(0, k);
 	} else if (side == ym) {
 		for (int k = 0; k < NUM_STATE_VARS; ++k)
 			func_sens[k] += -dt * dx[0] * flux_jac(1, 0, 0)(0, k);
 	} else {
 		for (int k = 0; k < NUM_STATE_VARS; ++k)
-			func_sens[k] += -dt * dx[0] * flux_jac(1, 1, 0)(0, k);
+			func_sens[k] += dt * dx[0] * flux_jac(1, 1, 0)(0, k);
 	}
 
 }

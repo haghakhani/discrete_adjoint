@@ -41,6 +41,14 @@ protected:
 
 };
 
+inline double* Solution::get_solution() {
+	return states;
+}
+
+inline double Solution::get_kact() {
+	return kact;
+}
+
 class Jacobian {
 	//friend functions and classes
 
@@ -65,6 +73,10 @@ public:
 
 	void clear_container();
 
+//	unsigned get_create_time(){
+//		return create_time;
+//	}
+
 	//destructor
 	virtual ~Jacobian();
 
@@ -73,10 +85,50 @@ protected:
 
 	unordered_map<int,Solution*> solContainer;
 	unsigned key[DIMENSION];
-	double position[DIMENSION];
+//	unsigned create_time;
+//	double position[DIMENSION];
 
 
 };
+
+//inline double* Jacobian::get_position() {
+//	return position;
+//}
+
+inline void Jacobian::put_solution(Solution* solution, int iter) {
+
+	//because insert is faster than emplace
+	solContainer[iter] = solution;
+
+	return;
+}
+
+inline Solution* Jacobian::get_solution(int iter) {
+
+	return solContainer[iter];
+}
+
+inline unsigned* Jacobian::get_key() {
+	return key;
+}
+
+inline void Jacobian::erase_solution(int iter) {
+Solution* sol=get_solution(iter);
+delete sol;
+	// this function should call destructor of solution, so there is no need to call them explicitly
+	solContainer.erase(iter);
+}
+
+inline void Jacobian::clear_container() {
+
+	solContainer.clear();
+}
+
+inline bool Jacobian::is_container_empty() {
+
+	return solContainer.empty();
+
+}
 
 //class DualCell: public Jacobian {
 //

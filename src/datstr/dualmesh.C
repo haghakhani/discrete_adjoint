@@ -9,7 +9,7 @@
 
 SolRec::SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[],
 		int ifrestart) :
-		HashTable(doublekeyrangein, size, prime, XR, YR, ifrestart) , range(100){
+		HashTable(doublekeyrangein, size, prime, XR, YR, ifrestart) , range(500){
 
 	double zero_sol[3] = { 0., 0., 0. };
 	double kact_z = 0.;
