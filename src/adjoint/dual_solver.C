@@ -19,6 +19,7 @@
 # include <config.h>
 #endif
 #include "../header/hpfem.h"
+#include <algorithm>
 #include <map>
 
 #define DEBUG1
@@ -35,6 +36,10 @@ void copy_jacobian(HashTable* El_Table, map<int, Vec_Mat<9>>& jac_code);
 void compare_jacobians(map<int, Vec_Mat<9>>& jac_code, map<int, Vec_Mat<9>>& jac_diff);
 
 void clean_jacobian(HashTable* El_Table);
+
+bool is_old_son(Element* elem) {
+	return (elem->get_adapted_flag() == OLDSON);
+}
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
 
@@ -99,7 +104,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 		calc_adjoint(meshctx, propctx);
 
 //		if (iter - 1 == 1)
-//		cout << "test of adjoint: " << simple_test(El_Table, timeprops_ptr, matprops_ptr) << endl;
+		cout << "test of adjoint: " << simple_test(El_Table, timeprops_ptr, matprops_ptr) << endl;
 
 //		map<int, Vec_Mat<9>> jac_code;
 
@@ -476,54 +481,36 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 
 	if (unrefinelist->get_num_elem()) {
 
-//		cout << "6 \n";
-//		refinement_report(El_Table);
+		vector<Element*> first_son;
 
-		int unrefined = 0;
+		for (int i = 0; i < unrefinelist->get_num_elem(); ++i)
+			if (unrefinelist->get(i)->get_which_son() == 0)
+				first_son.push_back(unrefinelist->get(i));
 
+		//		cout << "6 \n";
+		//		refinement_report(El_Table);
 
-		do {
+		while (first_son.size() > 0) {
 
-			NewFatherList.trashlist();
-			int check=0;
-
-			for (int i = 0; i < unrefinelist->get_num_elem(); ++i) {
-				Element* Curr_El = (unrefinelist->get(i));
-				if ((Curr_El->get_which_son() == 0) && (Curr_El->get_adapted_flag() != OLDSON)){
-
-					Curr_El->find_brothers(El_Table, NodeTable, target, myid, matprops_ptr, &NewFatherList,
-					    &OtherProcUpdate, rescomp);
-					check++;
-				}
-			}
-
-			unrefined += NewFatherList.get_num_elem();
-
-//			cout << "7 \n";
-//			refinement_report(El_Table);
+			for (int i = 0; i < first_son.size(); ++i)
+				first_son[i]->find_brothers(El_Table, NodeTable, target, myid, matprops_ptr, &NewFatherList,
+				    &OtherProcUpdate, rescomp);
 
 			unrefine_neigh_update(El_Table, NodeTable, myid, (void*) &NewFatherList);
 
-//			cout << "8 \n";
-//			refinement_report(El_Table);
 
 			unrefine_interp_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &OtherProcUpdate);
+
+			first_son.erase(remove_if(first_son.begin(), first_son.end(), is_old_son), first_son.end());
 
 			for (int k = 0; k < NewFatherList.get_num_elem(); k++)
 				delete_oldsons(El_Table, NodeTable, myid, NewFatherList.get(k));
 
 			reset_adaption_flag(El_Table);
-//			reset_newson_adaption_flag(El_Table);
 
-//			cout<<"this is the counter  "<<counter++<<endl;
+			NewFatherList.trashlist();
 
-		} while (unrefined != (unrefinelist->get_num_elem() / 4));
-
-//		cout << "9 \n";
-//		refinement_report(El_Table);
-//
-//		cout << "number of created elem after unref " << unrefined << "  number of unref list  "
-//		    << unrefinelist->get_num_elem() << endl;
+		}
 
 		move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
 	}
@@ -656,12 +643,12 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			}
 		}
 
-	// this function computes fluxes based on prev_state_vars (we need for dual problem),
-	// and jacobian of fluxes and store the in elements
+// this function computes fluxes based on prev_state_vars (we need for dual problem),
+// and jacobian of fluxes and store the in elements
 	calc_flux(meshctx, propctx);
 
-	//this function computes slopes based on prev_state_vars and dh/dh_e where h_e is pile height in neighbor element
-	// we need this term to compute jacobian of elements
+//this function computes slopes based on prev_state_vars and dh/dh_e where h_e is pile height in neighbor element
+// we need this term to compute jacobian of elements
 	slopes(El_Table, NodeTable, matprops_ptr, 1);
 
 }
@@ -999,12 +986,13 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops
 //					double test1, test2 = 0.;
 //					test1 = adjoint[1] + adjoint[2] ;
 
-					if (fabs(test1) > 1e-16 || fabs(test2) > 1e-16) {
+					if (fabs(test1) > 1e-5 || fabs(test2) > 1e-5) {
 						wrong_elem.push_back(Curr_El->get_ithelem());
 						wrong_value.push_back(test1);
 						wrong_value1.push_back(test2);
+						cout << test1 << " , " << test2 << endl;
 					}
-					cout << test1 << " , " << test2 << endl;
+
 
 				}
 

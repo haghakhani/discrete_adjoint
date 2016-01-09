@@ -10,7 +10,7 @@
 #endif
 #include "../header/hpfem.h"
 
-#define DEBUG
+//#define DEBUG
 
 void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3x3& jac_flux_p_x,
     const Mat3x3& jac_flux_n_y, const Mat3x3& jac_flux_p_y, double* prev_state_vars,
@@ -107,20 +107,22 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 		}
 	}
 
+#ifdef DEBUG
+
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		for (int j = 0; j < NUM_STATE_VARS; ++j)
 			if (isnan(jacobian(i, j)) || isinf(jacobian(i, j)))
 				cout << "hello, I found you \n";
-#ifdef DEBUG
 
-//	for (int i = 0; i < NUM_STATE_VARS; ++i)
-//		for (int j = 0; j < NUM_STATE_VARS; ++j)
-//			if (dabs(jacobian(i, j)) > 5.) {
-//				cout << "WARNING for Jacobian \n";
-//				if (dabs(jacobian(i, j)) > max_jac)
-//					max_jac = dabs(jacobian(i, j));
-//				jacobian(i, j) = sign(jacobian(i, j)) * 5;
-//			}
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		for (int j = 0; j < NUM_STATE_VARS; ++j)
+			if (dabs(jacobian(i, j)) > 5.) {
+				cout << "WARNING for Jacobian \n";
+				if (dabs(jacobian(i, j)) > max_jac)
+					max_jac = dabs(jacobian(i, j));
+				jacobian(i, j) = sign(jacobian(i, j)) * 5;
+			}
 #endif
 }
 

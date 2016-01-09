@@ -464,7 +464,7 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 			neigh_proc[ineigh] = *(sons[ison]->get_neigh_proc() + isonneigh);
 	}
 
-	/* brother information -- requires that atleast one of this
+	/* brother information -- requires that at least one of this
 	 element's neighboring brothers is on this process in
 	 order to get information on the brother that is not a neighbor */
 	Element* EmTemp;
