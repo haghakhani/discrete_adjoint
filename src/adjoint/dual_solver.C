@@ -426,7 +426,7 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 
 	ElemPtrList NewFatherList, OtherProcUpdate;
 
-	int rescomp = 0;
+	int rescomp = 1;
 
 //	unsigned keyy[2] = { 3410598297, 2576980374 };
 
@@ -986,7 +986,7 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops
 //					double test1, test2 = 0.;
 //					test1 = adjoint[1] + adjoint[2] ;
 
-					if (fabs(test1) > 1e-5 || fabs(test2) > 1e-5) {
+					if (fabs(test1) > 1e-16 || fabs(test2) > 1e-16) {
 						wrong_elem.push_back(Curr_El->get_ithelem());
 						wrong_value.push_back(test1);
 						wrong_value1.push_back(test2);
