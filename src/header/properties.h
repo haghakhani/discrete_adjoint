@@ -1340,6 +1340,10 @@ class HashTable;
 
 struct MeshCTX {
 
+	MeshCTX() {
+		el_table = nd_table = NULL;
+	}
+
 	HashTable* el_table;
 	HashTable* nd_table;
 
@@ -1366,10 +1370,10 @@ struct RefUnref {
 	unsigned key[2];
 	int done;
 
-	RefUnref(unsigned* key_in){
-		key[0]=key_in[0];
-		key[1]=key_in[1];
-		done=0;
+	RefUnref(unsigned* key_in) {
+		key[0] = key_in[0];
+		key[1] = key_in[1];
+		done = 0;
 	}
 
 };

@@ -116,6 +116,9 @@ public:
 	//! constructor that creates/restores a saved element during restart
 	Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
 
+	//! copy constructor
+	Element(Element* element);
+
 	//! destructor that does nothing except delete boundary condition pointer
 	~Element();
 

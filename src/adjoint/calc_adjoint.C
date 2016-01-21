@@ -50,9 +50,6 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 
 				if (Curr_El->get_adapted_flag() > 0) {
 
-					if (Curr_El->get_ithelem() == 1610)
-						aa = bb;
-
 					calc_adjoint_elem(meshctx, propctx, Curr_El);
 
 				}

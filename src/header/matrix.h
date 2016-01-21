@@ -21,6 +21,8 @@ public:
 		mat = new T[Row * Col];
 		rows = Row;
 		cols = Col;
+
+		//this line initialize the matrix to zero depending upon the type of T
 		for (unsigned i = 0; i < rows * cols; ++i)
 			mat[i] = T();
 

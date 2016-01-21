@@ -36,9 +36,6 @@ Mat3x3 ZERO_MATRIX;
 
 int main(int argc, char *argv[]) {
 
-	//give the information of the element that you want to check, and also the time step
-	PertElemInfo* eleminfo;
-
 	MPI_Init(&argc, &argv);
 
 	int i; //-- counters
@@ -348,7 +345,7 @@ int main(int argc, char *argv[]) {
 	output_discharge(&matprops, &timeprops, &discharge, myid);
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	dual_solver(solrec, &meshctx, &propctx, eleminfo);
+	dual_solver(solrec, &meshctx, &propctx);
 
 	MPI_Barrier(MPI_COMM_WORLD);
 	if (myid == 0)
@@ -427,10 +424,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 	Delete_Table(BT_Elem_Ptr, BT_Node_Ptr, solrec);
-//		if (!test)
-//			delete dualmesh;
 
-	delete eleminfo;
 	MPI_Finalize();
 	return (0);
 

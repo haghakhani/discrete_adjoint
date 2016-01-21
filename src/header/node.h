@@ -38,8 +38,7 @@ class Node {
 	friend void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter, int myid,
 			int numprocs);
 
-	friend void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo,
-	    double const increment);
+	friend void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx);
 
 	friend void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
 			MatProps* matprops_ptr, int myid,  double fluxold[4][NUM_STATE_VARS]);
@@ -107,6 +106,9 @@ public:
 
 	//! constructor that creates a node without setting any of its values
 	Node();
+
+	//! copy constructor
+	Node(Node* node);
 
 	~Node();
 

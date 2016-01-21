@@ -177,7 +177,7 @@ extern void smooth_II(HashTable*, HashTable*);
 
 //! this function is legacy, it is not defined in the finite difference/volume version of titan
 // Hossein wants to use this function for discrete adjoint
-extern void Delete_Table(HashTable*, HashTable*, HashTable*);
+extern void Delete_Table(HashTable*, HashTable*, HashTable* solrec=NULL);
 
 extern void delete_sol(vector<Jacobian*> solHyst);
 
