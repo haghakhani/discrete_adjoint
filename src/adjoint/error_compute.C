@@ -21,7 +21,7 @@
 #define KEY1   2863311530
 #define ITER   5
 
-void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter) {
+void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
@@ -34,8 +34,8 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter) {
 
 	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
 
-	double outflow=0.;
-	int order_flag=1;
+	double outflow = 0.;
+	int order_flag = 1;
 
 	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, &outflow);
 
@@ -45,73 +45,72 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter) {
 
 	double max_Res = 0.;
 
-	if (iter != 0) {
-		for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
-			if (*(buck + i)) {
-				currentPtr = *(buck + i);
-				while (currentPtr) {
-					Curr_El = (Element*) (currentPtr->value);
-					if (Curr_El->get_adapted_flag() == NEWSON) {
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() == NEWSON) {
 
 //						int dbgflag;
 //						if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
 //							dbgflag = 1;
 
-						double *state_vars = Curr_El->get_state_vars();
-						double *prev_state_vars = Curr_El->get_prev_state_vars();
-						double *gravity = Curr_El->get_gravity();
-						double *d_gravity = Curr_El->get_d_gravity();
-						double *curvature = Curr_El->get_curvature();
-						Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
-						double bedfrict = Curr_El->get_effect_bedfrict();
-						double *dx = Curr_El->get_dx();
-						double orgSrcSgn[2];
-						double *vec_res = Curr_El->get_residual();
-						double *el_error = Curr_El->get_el_error();
-						double *constAdj = Curr_El->get_const_adj();
-						double* adjoint = Curr_El->get_adjoint();
-						double *correction = Curr_El->get_correction();
-						int dummy_stop[DIMENSION] = { 0, 0 };
-						double dt = timeprops_ptr->dt.at(iter - 1); // if we have n iter size of dt vector is n-1
-						double dtdx = dt / dx[0];
-						double dtdy = dt / dx[1];
+					double *state_vars = Curr_El->get_state_vars();
+					double *prev_state_vars = Curr_El->get_prev_state_vars();
+					double *gravity = Curr_El->get_gravity();
+					double *d_gravity = Curr_El->get_d_gravity();
+					double *curvature = Curr_El->get_curvature();
+					Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
+					double bedfrict = Curr_El->get_effect_bedfrict();
+					double *dx = Curr_El->get_dx();
+					double orgSrcSgn[2];
+					double *vec_res = Curr_El->get_residual();
+					double *el_error = Curr_El->get_el_error();
+					double *constAdj = Curr_El->get_const_adj();
+					double* adjoint = Curr_El->get_adjoint();
+					double *correction = Curr_El->get_correction();
+					int dummy_stop[DIMENSION] = { 0, 0 };
+					int iter=timeprops_ptr->iter;
+					double dt = timeprops_ptr->dt.at(iter - 1); // if we have n iter size of dt vector is n-1
+					double dtdx = dt / dx[0];
+					double dtdy = dt / dx[1];
 
-						Curr_El->get_slopes_prev(El_Table, NodeTable, matprops_ptr->gamma);
-						double *d_state_vars = Curr_El->get_d_state_vars();
+					Curr_El->get_slopes_prev(El_Table, NodeTable, matprops_ptr->gamma);
+					double *d_state_vars = Curr_El->get_d_state_vars();
 
-						if (timeprops_ptr->iter < 50)
-							matprops_ptr->frict_tiny = 0.1;
-						else
-							matprops_ptr->frict_tiny = 0.000000001;
+					if (timeprops_ptr->iter < 50)
+						matprops_ptr->frict_tiny = 0.1;
+					else
+						matprops_ptr->frict_tiny = 0.000000001;
 
-						orgSourceSgn(Curr_El, matprops_ptr->frict_tiny, orgSrcSgn);
+					orgSourceSgn(Curr_El, matprops_ptr->frict_tiny, orgSrcSgn);
 
-						double flux[4][NUM_STATE_VARS];
-						get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
+					double flux[4][NUM_STATE_VARS];
+					get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
 
 //						if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
 //							dbgflag = 1;
 
-						residual(vec_res, state_vars, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx,
-						    dtdy, dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature,
-						    matprops_ptr->intfrict, bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()),
-						    matprops_ptr->frict_tiny, orgSrcSgn, 0./*here increment is zero*/,
-						    matprops_ptr->epsilon, dummy_stop,1,0);
+					residual(vec_res, state_vars, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx,
+					    dtdy, dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature,
+					    matprops_ptr->intfrict, bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()),
+					    matprops_ptr->frict_tiny, orgSrcSgn, 0./*here increment is zero*/,
+					    matprops_ptr->epsilon, dummy_stop, 1, 0);
 
-						el_error[0]=el_error[1] = 0.0;
-						*correction = 0.0;
+					el_error[0] = el_error[1] = 0.0;
+					*correction = 0.0;
 
-						for (int j = 0; j < NUM_STATE_VARS; j++) {
-							el_error[1] += vec_res[j] * (adjoint[j] - constAdj[j]);
+					for (int j = 0; j < NUM_STATE_VARS; j++) {
+						el_error[1] += vec_res[j] * (adjoint[j] - constAdj[j]);
 
-							*correction += vec_res[j] * adjoint[j];
-						}
-
+						*correction += vec_res[j] * adjoint[j];
 					}
-					currentPtr = currentPtr->next;
+
 				}
+				currentPtr = currentPtr->next;
 			}
-	}
+		}
 
 #ifdef DEBUG
 	if (checkElement(El_Table))

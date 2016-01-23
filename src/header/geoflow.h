@@ -85,7 +85,7 @@ void delete_ghost_elms(HashTable* El_Table, int myid);
 void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
     TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow);
 
-void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo);
+void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
 
 void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, MatProps* matprops_ptr,
     int effelement, int j, int myid, double increment);
@@ -107,7 +107,7 @@ void zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
     int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], Element *EmNeigh,
     double dt, ResFlag resflag);
 
-void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo);
+void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx);
 
 void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx);
 
@@ -164,10 +164,9 @@ int checkElement(HashTable *El_Table, HashTable* NodeTable, double *max, unsigne
 
 int num_nonzero_elem(HashTable *El_Table, int type);
 
-void bilinear_interp(HashTable* El_Table);
+void bilinear_interp(HashTable* El_Table, HashTable* cp_El_Table);
 
-void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Element *elem22,
-    Element *Curr_El);
+void bilinear_interp_elem(vector<Element*>& interpolant, Element *Curr_El);
 
 int void_neigh_elem(HashTable* El_Table, Element* Curr_El, int effelement);
 

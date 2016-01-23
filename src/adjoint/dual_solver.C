@@ -29,6 +29,8 @@
 #define ITER   10
 #define J      0
 
+void neigh_side_test(HashTable* El_Table);
+
 double initial_dot(HashTable* El_Table);
 
 void copy_jacobian(HashTable* El_Table, map<int, Vec_Mat<9>>& jac_code);
@@ -41,7 +43,10 @@ bool is_old_son(Element* elem) {
 	return (elem->get_adapted_flag() == OLDSON);
 }
 
-void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInfo* eleminfo) {
+void copy_hashtables(HashTable* El_Table, HashTable* NodeTable, HashTable* cp_El_Table,
+    HashTable* cp_NodeTable);
+
+void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
@@ -52,12 +57,22 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
 	const int rescomp = 1;
-	const double increment = INCREMENT;
 	const int maxiter = timeprops_ptr->iter;
 
 	reset_adaption_flag(El_Table);
 
-	double functional = 0.0, dt;
+	HashTable *cp_El_Table = new HashTable(El_Table);
+	HashTable *cp_NodeTable = new HashTable(NodeTable);
+
+	MeshCTX cp_meshctx;
+	cp_meshctx.el_table = cp_El_Table;
+	cp_meshctx.nd_table = cp_NodeTable;
+
+	copy_hashtables(El_Table, NodeTable, cp_El_Table, cp_NodeTable);
+
+//	print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 0);
+//
+//	print_Elem_Table(cp_El_Table, cp_NodeTable, timeprops_ptr->iter, 1);
 
 	cout << "computing ADJOINT time step " << maxiter << endl;
 
@@ -69,17 +84,45 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 	int tecflag = 2;
 
-//	uinform_refine(meshctx, propctx);
-
 //	error_compute(meshctx, propctx, maxiter);
 
-//	dual_unrefine(meshctx, propctx);
+//	set_ithm(El_Table);
+//	plot_ithm(El_Table);
 
 	meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
+
+	// this function refines and do constant reconstruction
+	uinform_refine(&cp_meshctx, propctx);
+
+//	neigh_side_test(El_Table);
+
+//	refinement_report(El_Table);
+//
+//	refinement_report(cp_El_Table);
+
+//	this function reconstruct bilinear interpolation
+//	set_ithm(cp_El_Table);
+//	plot_ithm(cp_El_Table);
+
+//	calc_flux(&cp_meshctx, propctx);
+//
+//	slopes(cp_El_Table, cp_NodeTable, matprops_ptr, 1);
+
+	bilinear_interp(El_Table, cp_El_Table);
+
+//	error_compute(&cp_meshctx, propctx);
+
+//	cout<<num_nonzero_elem(El_Table)<<endl;
+//	cout<<num_nonzero_elem(cp_El_Table)<<endl;
+//
+	timeprops_ptr->iter--;
+	meshplotter(cp_El_Table, cp_NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
 
 	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
 
 	tecflag = 1;
+	double dt;
+
 	for (int iter = maxiter; iter > 0; --iter) {
 
 		timeprops_ptr->iter = iter;
@@ -97,7 +140,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 //		eleminfo->update_dual_func(functional);
 
-		calc_jacobian(meshctx, propctx, eleminfo);
+		calc_jacobian(meshctx, propctx);
 
 //		cout<<" max jac is: "<<max_jac<<endl;
 
@@ -149,7 +192,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx, PertElemInf
 
 	}
 
-	return;
+	Delete_Table(cp_El_Table, cp_NodeTable);
+
 }
 
 int num_nonzero_elem(HashTable *El_Table) {
@@ -498,7 +542,6 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 
 			unrefine_neigh_update(El_Table, NodeTable, myid, (void*) &NewFatherList);
 
-
 			unrefine_interp_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &OtherProcUpdate);
 
 			first_son.erase(remove_if(first_son.begin(), first_son.end(), is_old_son), first_son.end());
@@ -607,9 +650,9 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 		dual_refine_unrefine(meshctx, propctx, &refinelist, &unrefinelist);
 
-		set_ithm(El_Table);
-
-		plot_ithm(El_Table);
+//		set_ithm(El_Table);
+//
+//		plot_ithm(El_Table);
 
 		calc_d_gravity(El_Table);
 
@@ -993,7 +1036,6 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops
 						cout << test1 << " , " << test2 << endl;
 					}
 
-
 				}
 
 				currentPtr = currentPtr->next;
@@ -1134,3 +1176,81 @@ void clean_jacobian(HashTable* El_Table) {
 		}
 
 }
+
+void copy_hashtables(HashTable* El_Table, HashTable* NodeTable, HashTable* cp_El_Table,
+    HashTable* cp_NodeTable) {
+
+	Node *Curr_node;
+	HashEntryPtr *buck = NodeTable->getbucketptr();
+
+	for (int i = 0; i < NodeTable->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_node = (Node*) (currentPtr->value);
+				Node *cp_node = new Node(Curr_node);
+				cp_NodeTable->add(cp_node->pass_key(), cp_node);
+				currentPtr = currentPtr->next;
+
+			}
+		}
+
+	Element *Curr_El;
+	buck = El_Table->getbucketptr();
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+				Element *cp_elem = new Element(Curr_El);
+				cp_El_Table->add(cp_elem->pass_key(), cp_elem);
+				currentPtr = currentPtr->next;
+
+			}
+		}
+
+}
+
+void neigh_side_test(HashTable* El_Table) {
+	HashEntryPtr currentPtr;
+	Element *father;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				father = (Element*) (currentPtr->value);
+				currentPtr = currentPtr->next;
+				if (father->get_adapted_flag() > 0) {
+					int xp = father->get_positive_x_side();
+
+					Element *el0, *el1, *el2, *el3, *el4, *el5, *el6, *el7;
+
+					if (*(father->get_neigh_proc() + 4) == 0) {
+						el4 = (Element*) El_Table->lookup((father->get_neighbors() + 4 * KEYLENGTH));
+						el0 = (Element*) El_Table->lookup((father->get_neighbors() + 0 * KEYLENGTH));
+					}
+					if (*(father->get_neigh_proc() + 5) == 0) {
+						el5 = (Element*) El_Table->lookup((father->get_neighbors() + 5 * KEYLENGTH));
+						el1 = (Element*) El_Table->lookup((father->get_neighbors() + 1 * KEYLENGTH));
+					}
+					if (*(father->get_neigh_proc() + 6) == 0) {
+						el6 = (Element*) El_Table->lookup((father->get_neighbors() + 6 * KEYLENGTH));
+						el2 = (Element*) El_Table->lookup((father->get_neighbors() + 2 * KEYLENGTH));
+					}
+					if (*(father->get_neigh_proc() + 7) == 0) {
+						el7 = (Element*) El_Table->lookup((father->get_neighbors() + 7 * KEYLENGTH));
+						el3 = (Element*) El_Table->lookup((father->get_neighbors() + 3 * KEYLENGTH));
+					}
+
+					int gg=11,bb=00;
+					bb=gg;
+
+
+				}
+			}
+		}
+
+}
+

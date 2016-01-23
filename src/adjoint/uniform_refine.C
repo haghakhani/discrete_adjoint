@@ -35,7 +35,9 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx) {
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
 	Element* Curr_El = NULL;
-	int rescomp = 1;
+
+	// because here we just use refinement to have 1 higher generation of elements
+	int rescomp = 0;
 
 	//for debugging perpose
 	unsigned key[2] = { KEY0, KEY1 };
@@ -106,9 +108,6 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx) {
 	<< "number of elements  5   " << num_nonzero_elem(El_Table, 5) << endl;
 #endif
 
-	//this function reconstruct linear interpolation
-	bilinear_interp(El_Table);
-
 	//this function delete old father elements
 	refine_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &RefinedList, timeprops_ptr);
 
@@ -118,12 +117,11 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx) {
 
 	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
 
-	double outflow=0.;
-	int order_flag=1;
+//	double outflow=0.;
+//	int order_flag=1;
+//
+//	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, &outflow);
+//
+//	slopes(El_Table, NodeTable, matprops_ptr, 1);
 
-	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, &outflow);
-
-	slopes(El_Table, NodeTable, matprops_ptr, 1);
-
-	return;
 }

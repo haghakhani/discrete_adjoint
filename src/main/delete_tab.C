@@ -21,15 +21,14 @@
 
 #include "../header/hpfem.h"
 
-void Delete_Table(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
-		HashTable* Sol_rec) {
+void Delete_Table(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, HashTable* Sol_rec) {
 
 	int i, j, k;
 	HashEntryPtr entryp;
 
 	int elements = HT_Elem_Ptr->get_no_of_buckets();
 	int nodes = HT_Node_Ptr->get_no_of_buckets();
-	int records = Sol_rec->get_no_of_buckets();
+
 	for (i = 0; i < elements; i++) {
 		entryp = *(HT_Elem_Ptr->getbucketptr() + i);
 		while (entryp) {
@@ -48,19 +47,22 @@ void Delete_Table(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 		}
 	}
 
-	for (i = 0; i < records; i++) {
-		entryp = *(Sol_rec->getbucketptr() + i);
-		while (entryp) {
-			Jacobian *jacobian = (Jacobian *) (entryp->value);
-			if (jacobian!=NULL)
-				delete jacobian;
-			entryp = entryp->next;
+	if (Sol_rec) {
+		int records = Sol_rec->get_no_of_buckets();
+		for (i = 0; i < records; i++) {
+			entryp = *(Sol_rec->getbucketptr() + i);
+			while (entryp) {
+				Jacobian *jacobian = (Jacobian *) (entryp->value);
+				if (jacobian != NULL)
+					delete jacobian;
+				entryp = entryp->next;
+			}
 		}
+		delete Sol_rec;
 	}
 
 	delete HT_Elem_Ptr;
 	delete HT_Node_Ptr;
-	delete Sol_rec;
 
 }
 

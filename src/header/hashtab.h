@@ -99,6 +99,7 @@ class HashTable
   public:
     HashTable(unsigned*, unsigned*, int, int);
     HashTable(double *doublekeyrangein, int, int, double* XR, double* YR, int ifrestart);
+    HashTable(HashTable* hashtable);
     ~HashTable();
     
     int hash(unsigned* key);
