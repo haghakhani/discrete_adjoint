@@ -86,8 +86,9 @@ extern void fhsfc2d_(double*, unsigned*, unsigned*);
 const int NUM_STATE_VARS = 3;
 const int NUM_ADJ_EQS = 3;
 const int EFF_ELL = 9;
-const int FORWARD=0;
-const int DUAL=1;
+const int FORWARD = 0;
+const int DUAL = 1;
+const int ERROR = 2;
 
 const double GEOFLOW_TINY = 1.e-04;
 const double GEOFLOW_SHORT = 3.0e-03;

@@ -268,3 +268,94 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 
 }
 
+void residual(double* residual, double *state_vars, double *prev_state_vars, //2
+    double *fluxxp, double *fluxyp, double *fluxxm, double *fluxym, double dtdx, //5
+    double dtdy, double dt, double *d_state_vars_x, double *d_state_vars_y, //4
+    double *curvature, double intfrictang, double bedfrict, double *gravity, //4
+    double *dgdx, double kactxyelem, double fric_tiny, int* stop, double* orgSrcSgn) { //5
+
+	double velocity[DIMENSION];
+	double kactxy[DIMENSION];
+	double tmp;
+
+	if (prev_state_vars[0] > GEOFLOW_TINY) {
+		for (int k = 0; k < DIMENSION; k++)
+			kactxy[k] = kactxyelem;
+
+		// velocities
+		velocity[0] = prev_state_vars[1] / prev_state_vars[0];
+		velocity[1] = prev_state_vars[2] / prev_state_vars[0];
+
+	} else {
+
+		for (int k = 0; k < DIMENSION; k++) {
+			kactxy[k] = 0.;
+			velocity[k] = 0.;
+		}
+
+	}
+
+	for (int i = 0; i < NUM_STATE_VARS; i++)
+		residual[i] = prev_state_vars[i] - dtdx * (fluxxp[i] - fluxxm[i])
+		    - dtdy * (fluxyp[i] - fluxym[i]);
+
+	if (prev_state_vars[0] > GEOFLOW_TINY) {
+
+		double unitvx = 0., unitvy = 0., h_inv = 0., speed = 0.;
+
+		h_inv = 1. / prev_state_vars[0];
+
+		tmp = h_inv * (d_state_vars_y[1] - velocity[0] * d_state_vars_y[0]);
+		orgSrcSgn[0] = tiny_sgn(tmp, fric_tiny);
+
+		tmp = h_inv * (d_state_vars_x[2] - velocity[1] * d_state_vars_x[0]);
+		orgSrcSgn[1] = tiny_sgn(tmp, fric_tiny);
+
+		speed = sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
+
+		if (speed > 0.) {
+			unitvx = velocity[0] / speed;
+			unitvy = velocity[1] / speed;
+		}
+
+		//x dir
+		double s1 = gravity[0] * prev_state_vars[0];
+
+		double sin_int_fric = sin(intfrictang);
+		double s2 = orgSrcSgn[0] * prev_state_vars[0] * kactxy[0]
+		    * (gravity[2] * d_state_vars_y[0] + dgdx[1] * prev_state_vars[0]) * sin_int_fric;
+
+		double tan_bed_fric = tan(bedfrict);
+		double s3 = unitvx
+		    * max(gravity[2] * prev_state_vars[0] + velocity[0] * prev_state_vars[1] * curvature[0],
+		        0.0) * tan_bed_fric;
+
+		if (s3 == 0. && unitvx)
+			stop[0] = 1;
+
+		residual[1] += dt * (s1 - s2 - s3);
+
+		//y dir
+		s1 = gravity[1] * prev_state_vars[0];
+
+		s2 = orgSrcSgn[1] * prev_state_vars[0] * kactxy[0]
+		    * (gravity[2] * d_state_vars_x[0] + dgdx[0] * prev_state_vars[0]) * sin_int_fric;
+
+		s3 = unitvy
+		    * max(gravity[2] * prev_state_vars[0] + velocity[1] * prev_state_vars[2] * curvature[1],
+		        0.0) * tan_bed_fric;
+
+		if (s3 == 0. && unitvy)
+			stop[1] = 1;
+
+		residual[2] += dt * (s1 - s2 - s3);
+
+	}
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		residual[i] = state_vars[i] - residual[i];
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		assert(!isnan(state_vars[i]) && !isinf(state_vars[i]));
+
+}

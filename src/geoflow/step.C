@@ -157,7 +157,7 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump,
 	double outflow = 0.0; //shouldn't need the =0.0 assignment but just being cautious.
 	//printf("step: before calc_edge_states\n"); fflush(stdout);
 
-	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, order_flag, &outflow);
+	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, order_flag, &outflow, FORWARD);
 	outflow *= dt;
 
 	/*

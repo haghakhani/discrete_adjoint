@@ -821,14 +821,16 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	double velocity_scale = sqrt(lscale * gsacel); // scaling factor for the velocities
 	double momentum_scale = hscale * velocity_scale; // scaling factor for the momentums
 
-	double adjoint_scale[3] = { 1.0, 1.0, 1.0 };
+	double adjoint_scale[3] = { hscale * hscale / tscale, hscale * hscale * hscale * tscale
+	    / momentum_scale, hscale * hscale * hscale * tscale / momentum_scale };
 	adjoint_scale[0] = 1.; //hscale * hscale * lscale * lscale * tscale * tscale;
 	// scale of adjoint is different for first and two other component, and depend on the functional
 	adjoint_scale[1] = adjoint_scale[2] = tscale * hscale / lscale; //hscale * hscale * lscale * tscale * tscale * tscale;
 
 	double residual_scale[3]; //= { hscale, momentum_scale, momentum_scale };
-	residual_scale[0] = 1;//hscale / tscale;
-	residual_scale[1] = 1;//residual_scale[2] = momentum_scale / tscale;
+	residual_scale[0] = hscale / tscale;
+	residual_scale[1] = momentum_scale / tscale;
+	residual_scale[2] = momentum_scale / tscale;
 
 	double error_scale, functional_scale;
 

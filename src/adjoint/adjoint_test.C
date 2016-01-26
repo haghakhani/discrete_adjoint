@@ -95,8 +95,8 @@ void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo) {
 
 								for (int k = 0; k < 3; ++k)
 									for (int l = 0; l < 3; ++l)
-										eleminfo->neigh_jac[effelement].jacobianMat[k][l] =
-										    jacobianmat(effelement,k,l);
+										eleminfo->neigh_jac[effelement].jacobianMat[k][l] = jacobianmat(effelement, k,
+										    l);
 
 							} else {
 
@@ -134,7 +134,8 @@ void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo) {
 
 									for (int k = 0; k < 3; ++k)
 										for (int l = 0; l < 3; ++l)
-											eleminfo->neigh_jac[effelement].jacobianMat[k][l] = jacobianmat(effelement,k,l);
+											eleminfo->neigh_jac[effelement].jacobianMat[k][l] = jacobianmat(effelement, k,
+											    l);
 
 								}
 							}
@@ -260,7 +261,7 @@ int checkElement(HashTable *El_Table, HashTable *NodeTable, double *max, unsigne
 //							fluxold[2][ivar] = nxm->flux[ivar];
 //							fluxold[3][ivar] = nym->flux[ivar];
 //						}
-						cout<<"flux yp  "<<nyp->flux[0]<<endl;
+						cout << "flux yp  " << nyp->flux[0] << endl;
 						gg = 1;
 					}
 				}

@@ -32,8 +32,7 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 //	jacobian(1, 0) -=0.;
 //	jacobian(2, 0) -=0.;
 
-
-	//I have added this part
+//I have added this part
 
 	if (prev_state_vars[0] > GEOFLOW_TINY) {
 
@@ -110,19 +109,18 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 #ifdef DEBUG
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
-		for (int j = 0; j < NUM_STATE_VARS; ++j)
-			if (isnan(jacobian(i, j)) || isinf(jacobian(i, j)))
-				cout << "hello, I found you \n";
-
+	for (int j = 0; j < NUM_STATE_VARS; ++j)
+	if (isnan(jacobian(i, j)) || isinf(jacobian(i, j)))
+	cout << "hello, I found you \n";
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
-		for (int j = 0; j < NUM_STATE_VARS; ++j)
-			if (dabs(jacobian(i, j)) > 5.) {
-				cout << "WARNING for Jacobian \n";
-				if (dabs(jacobian(i, j)) > max_jac)
-					max_jac = dabs(jacobian(i, j));
-				jacobian(i, j) = sign(jacobian(i, j)) * 5;
-			}
+	for (int j = 0; j < NUM_STATE_VARS; ++j)
+	if (dabs(jacobian(i, j)) > 5.) {
+		cout << "WARNING for Jacobian \n";
+		if (dabs(jacobian(i, j)) > max_jac)
+		max_jac = dabs(jacobian(i, j));
+		jacobian(i, j) = sign(jacobian(i, j)) * 5;
+	}
 #endif
 }
 

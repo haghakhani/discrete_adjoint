@@ -54,8 +54,15 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	MatProps* matprops_ptr = propctx->matprops;
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
-	const int rescomp = 1;
 	const int maxiter = timeprops_ptr->iter;
+
+	cout << "computing ADJOINT time step " << maxiter << endl;
+
+//	set_ithm(El_Table);
+//
+//	plot_ithm(El_Table);
+
+	calc_adjoint(meshctx, propctx);
 
 	reset_adaption_flag(El_Table);
 
@@ -68,21 +75,13 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	copy_hashtables(El_Table, NodeTable, cp_El_Table, cp_NodeTable);
 
-	print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 0);
+	reset_adaption_flag(cp_El_Table);
 
-	print_Elem_Table(cp_El_Table, cp_NodeTable, timeprops_ptr->iter, 1);
-
-	cout << "computing ADJOINT time step " << maxiter << endl;
-
-//	set_ithm(El_Table);
+//	print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 0);
 //
-//	plot_ithm(El_Table);
-
-	calc_adjoint(meshctx, propctx);
+//	print_Elem_Table(cp_El_Table, cp_NodeTable, timeprops_ptr->iter, 1);
 
 	int tecflag = 2;
-
-//	error_compute(meshctx, propctx, maxiter);
 
 //	set_ithm(El_Table);
 //	plot_ithm(El_Table);
@@ -96,19 +95,23 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //
 //	refinement_report(cp_El_Table);
 
-	//	this function reconstruct bilinear interpolation
-//	set_ithm(cp_El_Table);
-//	plot_ithm(cp_El_Table);
+//	this function reconstruct bilinear interpolation
+	set_ithm(cp_El_Table);
+	plot_ithm(cp_El_Table);
 
 	bilinear_interp(El_Table, cp_El_Table);
+
+	init_error_grid(&cp_meshctx, propctx);
+
+	error_compute(&cp_meshctx, propctx);
 
 //	cout<<num_nonzero_elem(El_Table)<<endl;
 //	cout<<num_nonzero_elem(cp_El_Table)<<endl;
 //
-	timeprops_ptr->iter--;
-	meshplotter(cp_El_Table, cp_NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
+//	timeprops_ptr->iter--;
+//	meshplotter(cp_El_Table, cp_NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
 
-	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
+//	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
 
 	tecflag = 1;
 	double dt;
@@ -137,7 +140,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		calc_adjoint(meshctx, propctx);
 
 //		if (iter - 1 == 1)
-		cout << "test of adjoint: " << simple_test(El_Table, timeprops_ptr, matprops_ptr) << endl;
+//		cout << "test of adjoint: " << simple_test(El_Table, timeprops_ptr, matprops_ptr) << endl;
 
 //		map<int, Vec_Mat<9>> jac_code;
 

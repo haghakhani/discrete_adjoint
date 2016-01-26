@@ -21,7 +21,7 @@
 #define KEY1   2863311530
 #define ITER   5
 
-void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter) {
+void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
@@ -32,18 +32,11 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter) {
 
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
-	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
-
-	double outflow=0.;
-	int order_flag=1;
-
-	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, &outflow);
-
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
 	Element* Curr_El = NULL;
 
-	double max_Res = 0.;
+	int iter = propctx->timeprops->iter;
 
 	if (iter != 0) {
 		for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
@@ -51,7 +44,7 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter) {
 				currentPtr = *(buck + i);
 				while (currentPtr) {
 					Curr_El = (Element*) (currentPtr->value);
-					if (Curr_El->get_adapted_flag() == NEWSON) {
+					if (Curr_El->get_adapted_flag() > 0) {
 
 //						int dbgflag;
 //						if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
@@ -71,7 +64,6 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter) {
 						double *constAdj = Curr_El->get_const_adj();
 						double* adjoint = Curr_El->get_adjoint();
 						double *correction = Curr_El->get_correction();
-						int dummy_stop[DIMENSION] = { 0, 0 };
 						double dt = timeprops_ptr->dt.at(iter - 1); // if we have n iter size of dt vector is n-1
 						double dtdx = dt / dx[0];
 						double dtdy = dt / dx[1];
@@ -89,17 +81,15 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter) {
 						double flux[4][NUM_STATE_VARS];
 						get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
 
-//						if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
-//							dbgflag = 1;
+						int stop[2];
 
 						residual(vec_res, state_vars, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx,
 						    dtdy, dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature,
 						    matprops_ptr->intfrict, bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()),
-						    matprops_ptr->frict_tiny, orgSrcSgn, 0./*here increment is zero*/,
-						    matprops_ptr->epsilon, dummy_stop,1,0);
+						    matprops_ptr->frict_tiny, stop, orgSrcSgn);
 
-						el_error[0]=el_error[1] = 0.0;
-						*correction = 0.0;
+						el_error[0] = el_error[1] = 0.;
+						*correction = 0.;
 
 						for (int j = 0; j < NUM_STATE_VARS; j++) {
 							el_error[1] += vec_res[j] * (adjoint[j] - constAdj[j]);
@@ -112,7 +102,7 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter) {
 				}
 			}
 	}
-
+//	meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., 2);
 #ifdef DEBUG
 	if (checkElement(El_Table))
 	exit(22);
@@ -162,5 +152,27 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter) {
 		}
 	}
 #endif
-	return;
+
+}
+
+void init_error_grid(MeshCTX* meshctx, PropCTX* propctx) {
+
+	HashTable* El_Table = meshctx->el_table;
+	HashTable* NodeTable = meshctx->nd_table;
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
+
+	int myid = propctx->myid, numprocs = propctx->numproc;
+
+	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
+
+	double outflow = 0.;
+	int order_flag = 1;
+
+	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, &outflow,
+	    ERROR);
+
+	slopes(El_Table, NodeTable, matprops_ptr, 1);
 }

@@ -22,9 +22,9 @@
 #ifndef __GMFG_HDF5API__
 #define __GMFG_HDF5API__
 
-const int XDMF_NEW=0;
-const int XDMF_OLD=1;
-const int XDMF_CLOSE=2;
+const int XDMF_NEW = 0;
+const int XDMF_OLD = 1;
+const int XDMF_CLOSE = 2;
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -51,9 +51,8 @@ hid_t GH5_openfile(const char *filename, char mode);
  * after data writing is finished, or system will
  * run out of file descriptors
  */
-inline void GH5_closefile(hid_t fp)
-{
-   herr_t status=H5Fclose(fp);
+inline void GH5_closefile(hid_t fp) {
+	herr_t status = H5Fclose(fp);
 }
 
 /*! Writes the mesh to hdf file. 
@@ -64,7 +63,7 @@ inline void GH5_closefile(hid_t fp)
  * conndata is 2D array of INTEGERS ("Num_Elems x 4") 
  * ptsdata is 2D array of doubles ("Num_Nodes x 3")
  */
-void GH5_write_mesh_data(hid_t fp,int conns,int points,int *conndata,double *ptsdata);
+void GH5_write_mesh_data(hid_t fp, int conns, int points, int *conndata, double *ptsdata);
 
 /*! Writes state variables to hdf file.
  * GH5_openfile must be called before this fucntion
@@ -73,8 +72,7 @@ void GH5_write_mesh_data(hid_t fp,int conns,int points,int *conndata,double *pts
  * state_vars is array of doubles of size (size=Num_Elems)
  * var_name is a strings, it contains names of the variables
  */
-void GH5_write_state_vars(hid_t fp,int num_elms,double *state_var,const char *var_names);
-
+void GH5_write_state_vars(hid_t fp, int num_elms, double *state_var, const char *var_names);
 
 #ifdef __cplusplus
 }
@@ -92,7 +90,6 @@ void GH5_write_state_vars(hid_t fp,int num_elms,double *state_var,const char *va
  * can be used
  */
 hid_t GH5_open_group(hid_t fp, const char *name);
-
 
 /*! Creates a dataset to which actual data is to be written 
  *  gid is intended to be group id, to which data is to be written.

@@ -30,43 +30,38 @@ class Node {
 
 	friend class Element;
 
-	friend void correct(HashTable* NodeTable, HashTable* El_Table, double dt,
-			MatProps* matprops_ptr, FluxProps *fluxprops, TimeProps *timeprops,
-			Element *EmTemp, double *forceint, double *forcebed, double *eroded,
-			double *deposited);
-
-	friend void error_compute(MeshCTX* meshctx, PropCTX* propctx, int iter, int myid,
-			int numprocs);
+	friend void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* matprops_ptr,
+	    FluxProps *fluxprops, TimeProps *timeprops, Element *EmTemp, double *forceint,
+	    double *forcebed, double *eroded, double *deposited);
 
 	friend void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx);
 
 	friend void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
-			MatProps* matprops_ptr, int myid,  double fluxold[4][NUM_STATE_VARS]);
+	    MatProps* matprops_ptr, int myid, double fluxold[4][NUM_STATE_VARS]);
 
-	friend void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable,
-			int numprocs, int myid, double loc);
+	friend void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable, int numprocs, int myid,
+	    double loc);
 
-	friend void ElemBackgroundCheck(HashTable* El_Table, HashTable* NodeTable,
-			unsigned *debugkey, FILE *fp);
+	friend void ElemBackgroundCheck(HashTable* El_Table, HashTable* NodeTable, unsigned *debugkey,
+	    FILE *fp);
 
-	friend void ElemBackgroundCheck2(HashTable* El_Table, HashTable* NodeTable,
-			void *EmDebug, FILE *fp);
+	friend void ElemBackgroundCheck2(HashTable* El_Table, HashTable* NodeTable, void *EmDebug,
+	    FILE *fp);
 
-	friend void NodeBackgroundCheck(HashTable* El_Table, HashTable* NodeTable,
-			unsigned *debugkey, FILE *fp);
+	friend void NodeBackgroundCheck(HashTable* El_Table, HashTable* NodeTable, unsigned *debugkey,
+	    FILE *fp);
 
-	friend void delete_oldsons(HashTable* El_Table, HashTable* NodeTable,
-			int myid, void *EmFather);
+	friend void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *EmFather);
 
-	friend void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable,
-			int numprocs, int myid, void* RefinedList, TimeProps* timeprops_ptr);
+	friend void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int numprocs, int myid,
+	    void* RefinedList, TimeProps* timeprops_ptr);
 
-	friend void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, int effelement, int j,
-	    double increment, double fluxold[4][NUM_STATE_VARS],
+	friend void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, int effelement,
+	    int j, double increment, double fluxold[4][NUM_STATE_VARS],
 	    double d_state_vars_old[DIMENSION * NUM_STATE_VARS]);
 
 	friend void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
-			MatProps* matprops_ptr, int myid, double fluxold[4][NUM_STATE_VARS]);
+	    MatProps* matprops_ptr, int myid, double fluxold[4][NUM_STATE_VARS]);
 
 	friend int checkElement(HashTable *El_Table, HashTable *NodeTable, double *max, unsigned *key);
 
@@ -76,27 +71,24 @@ class Node {
 	 int myid, int NumOtherProcUpdate,
 	 Element **OtherProcUpdate);
 	 */
-	friend void unrefine_interp_neigh_update(HashTable* El_Table,
-			HashTable* NodeTable, int nump, int myid, void* OtherProcUpdate);
+	friend void unrefine_interp_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump,
+	    int myid, void* OtherProcUpdate);
 
 	//friend void Pack_element(Element* sendel, ElemPack** elemptr, HashTable* HT_Node_Ptr, int);
 
-	friend void Pack_element(void *sendel, ElemPack* elem, HashTable* HT_Node_Ptr,
-			int);
+	friend void Pack_element(void *sendel, ElemPack* elem, HashTable* HT_Node_Ptr, int);
 
-	friend void destroy_element(void *r_element, HashTable* HT_Elem_Ptr,
-			HashTable* HT_Node_Ptr);
+	friend void destroy_element(void *r_element, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr);
 
-	friend void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr,
-			HashTable* HT_Node_Ptr, double* e_error);
+	friend void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
+	    double* e_error);
 
 public:
 	//! this is the constructor that creates a node when the initial grid is read in
 	Node(unsigned *keyi, double *coordi, MatProps *matprops_ptr);
 
 	//! this is the constructor that creates bubble and edge nodes for son Elements when the father Element is refined
-	Node(unsigned *keyi, double *coordi, int inf, int ord,
-			MatProps *matprops_ptr);/*for refined*/
+	Node(unsigned *keyi, double *coordi, int inf, int ord, MatProps *matprops_ptr);/*for refined*/
 
 	//! this is the node constructor that is called in construct_el() in update_element_info.C
 	Node(unsigned* keyi, double* coordi, int inf, int ord, double elev, int yada);

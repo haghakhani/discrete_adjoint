@@ -51,12 +51,12 @@ void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, i
 						while (currentPtr) {
 							Curr_El = (Element*) (currentPtr->value);
 							if (Curr_El->get_adapted_flag() > 0) { //if this element does not belong on this processor don't involve!!!
-								if (Curr_El->get_ithelem() == 4
-								/**(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
-								 /*&& timeprops_ptr->iter == ITER*/) {
-									int ddd, aa = 0;
-									int gg = ddd;
-								}
+//								if (Curr_El->get_ithelem() == 4
+//								/**(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
+//								 /*&& timeprops_ptr->iter == ITER*/) {
+//									int ddd, aa = 0;
+//									int gg = ddd;
+//								}
 								Curr_El->get_slopes_prev(El_Table, NodeTable, matprops_ptr->gamma);
 							}
 							currentPtr = currentPtr->next;

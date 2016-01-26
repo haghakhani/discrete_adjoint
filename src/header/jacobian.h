@@ -63,7 +63,7 @@ public:
 
 	unsigned* get_key();
 
-	void put_solution(Solution* sol,int iter);
+	void put_solution(Solution* sol, int iter);
 
 	Solution* get_solution(int iter);
 
@@ -83,11 +83,10 @@ public:
 	//members
 protected:
 
-	unordered_map<int,Solution*> solContainer;
+	unordered_map<int, Solution*> solContainer;
 	unsigned key[DIMENSION];
 //	unsigned create_time;
 //	double position[DIMENSION];
-
 
 };
 
@@ -113,8 +112,8 @@ inline unsigned* Jacobian::get_key() {
 }
 
 inline void Jacobian::erase_solution(int iter) {
-Solution* sol=get_solution(iter);
-delete sol;
+	Solution* sol = get_solution(iter);
+	delete sol;
 	// this function should call destructor of solution, so there is no need to call them explicitly
 	solContainer.erase(iter);
 }

@@ -33,8 +33,9 @@
  *  GIS map's cummulative outflow (defined as the mass flow off of the
  *  GIS map).  Also, the elements are checked for multiple pile-height values 
  */
-void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
-    TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow) {
+void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
+		MatProps* matprops_ptr, TimeProps* timeprops_ptr, int myid, int* order_flag,
+		double *outflow,int STATE) {
 
 	vector<Element*> x_elem_list, y_elem_list;
 
@@ -58,15 +59,16 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matpr
 				if (Curr_El->get_adapted_flag() > 0) {
 					//if this element doesn't belong on this processor don't involve
 
-					if (Curr_El->get_ithelem() == 4
-					/**(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
-					 /*&& timeprops_ptr->iter == ITER*/) {
-						int ddd, aa = 0;
-						int gg = ddd;
-					}
+//					if (Curr_El->get_ithelem() == 4
+//					/**(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
+//					 /*&& timeprops_ptr->iter == ITER*/) {
+//						int ddd, aa = 0;
+//						int gg = ddd;
+//					}
 
-					Curr_El->calc_edge_states(El_Table, NodeTable, &x_elem_list, &y_elem_list, matprops_ptr,
-					    myid, timeprops_ptr->dtime, order_flag, &localoutflow);
+					Curr_El->calc_edge_states(El_Table, NodeTable, &x_elem_list,
+							&y_elem_list, matprops_ptr, myid, timeprops_ptr->dtime,
+							order_flag, &localoutflow,STATE);
 					localoutflow_sum += localoutflow;
 				}
 				currentPtr = currentPtr->next;
@@ -74,10 +76,10 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matpr
 		}
 
 	for (int i = 0; i < x_elem_list.size(); ++i)
-		x_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 0, FORWARD);
+		x_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 0, STATE);
 
 	for (int i = 0; i < y_elem_list.size(); ++i)
-		y_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 1, FORWARD);
+		y_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 1, STATE);
 
 	*outflow = localoutflow_sum;
 	return;
@@ -107,14 +109,15 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx) {
 				if (Curr_El->get_adapted_flag() > 0) {
 					//if this element doesn't belong on this processor don't involve
 
-					if (Curr_El->get_ithelem() == 8255
-					//*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
-					    /*&& timeprops_ptr->iter == ITER*/) {
-						int ddd, aa = 0;
-						int gg = ddd;
-					}
+//					if (Curr_El->get_ithelem() == 8255
+//					//*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
+//					    /*&& timeprops_ptr->iter == ITER*/) {
+//						int ddd, aa = 0;
+//						int gg = ddd;
+//					}
 
-					Curr_El->calc_fluxes(El_Table, NodeTable, &x_elem_list, &y_elem_list, myid);
+					Curr_El->calc_fluxes(El_Table, NodeTable, &x_elem_list, &y_elem_list,
+							myid);
 
 				}
 				currentPtr = currentPtr->next;
@@ -129,3 +132,4 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx) {
 
 	return;
 }
+

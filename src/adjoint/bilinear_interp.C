@@ -24,6 +24,24 @@
 extern "C" void dgesv_(int *n, int *nrhs, double *a, int *lda, int *ipiv, double *b, int *ldb,
     int *info);
 
+#define barycentric_interpolation_wrapeper(interpolant,data,i,x,y) barycentric_interpolation(*(interpolant[0]->get_coord()),\
+	    *(interpolant[1]->get_coord()), *(interpolant[2]->get_coord()),\
+	    *(interpolant[0]->get_coord() + 1), *(interpolant[1]->get_coord() + 1),\
+	    *(interpolant[2]->get_coord() + 1), *(interpolant[0]->data() + i),\
+	    *(interpolant[1]->data() + i), *(interpolant[2]->data() + i), x, y)
+
+#define bilinear_interpolation_wrapper(interpolant,data,i,x,y)  bilinear_interpolation(*(interpolant[0]->get_coord()),\
+				    *(interpolant[1]->get_coord()), *(interpolant[2]->get_coord()),\
+				    *(interpolant[3]->get_coord()), *(interpolant[0]->get_coord() + 1),\
+				    *(interpolant[1]->get_coord() + 1), *(interpolant[2]->get_coord() + 1),\
+				    *(interpolant[3]->get_coord() + 1), *(interpolant[0]->data() + i),\
+				    *(interpolant[1]->data() + i), *(interpolant[2]->data() + i),\
+				    *(interpolant[3]->data() + i), x,y)
+
+#define linear_interp_wrapper(interpolant,dir,data,i,x) linear_interp(*(interpolant[0]->get_coord() + dir),\
+					    *(interpolant[1]->get_coord() + dir), *(interpolant[0]->data() + i),\
+					    *(interpolant[1]->data() + i),x)
+
 struct ElLess {
 	bool operator()(Element* a, Element* b) {
 
@@ -35,6 +53,8 @@ struct ElLess {
 		return false;
 	}
 };
+
+//int three=0,four=0,two=0;
 
 void bilinear_interp(HashTable* El_Table, HashTable* cp_El_Table) {
 
@@ -175,6 +195,8 @@ void bilinear_interp(HashTable* El_Table, HashTable* cp_El_Table) {
 				currentPtr = currentPtr->next;
 			}
 		}
+
+//	cout<<"four: "<< four<<" three: "<< three<<" two: "<<two<<endl;
 }
 
 double bilinear_interp_value(double x1, double x2, double y1, double y2, double f11, double f21,
@@ -222,8 +244,8 @@ double bilinear_interp_value(double x1, double x2, double y1, double y2, double 
 		default:
 			cout << "not a valid type in interp_value function " << endl;
 	}
-	if (isnan(interp) || isinf(interp))
-		cout << "it is so sad that I found you" << endl;
+//	if (isnan(interp) || isinf(interp))
+//		cout << "it is so sad that I found you" << endl;
 	return (interp);
 }
 
@@ -246,13 +268,16 @@ double bilinear_interpolation(double x1, double x2, double x3, double x4, double
 
 	double A[dim * dim], x[] = { x1, x2, x3, x4 }, y[] = { y1, y2, y3, y4 }, coef[] =
 	    { f1, f2, f3, f4 };
+	if (f1 == 0. && f2 == 0. && f3 == 0. && f4 == 0.)
+		return 0.;
+	else {
 
-	for (int i = 0; i < dim; ++i) {
-		A[i] = 1;
-		A[i + 4] = x[i];
-		A[i + 8] = y[i];
-		A[i + 12] = x[i] * y[i];
-	}
+		for (int i = 0; i < dim; ++i) {
+			A[i] = 1;
+			A[i + 4] = x[i];
+			A[i + 8] = y[i];
+			A[i + 12] = x[i] * y[i];
+		}
 
 //	cout << "Matrix A and vector phi" << endl;
 //	for (int i = 0; i < dim; ++i) {
@@ -260,9 +285,13 @@ double bilinear_interpolation(double x1, double x2, double x3, double x4, double
 //		cout << "[ " << phi[i] << " ]" << endl;
 //	}
 
-	dgesv_(&dim, &one, A, &dim, ipiv, coef, &dim, &info);
+		dgesv_(&dim, &one, A, &dim, ipiv, coef, &dim, &info);
 
-	return coef[0] + coef[1] * xin + coef[2] * yin + coef[3] * xin * yin;
+		if (info != 0)
+			cout << "solution is not correct " << info << endl;
+
+		return coef[0] + coef[1] * xin + coef[2] * yin + coef[3] * xin * yin;
+	}
 
 //	cout << "Solution" << endl;
 //	for (int i = 0; i < dim; ++i)
@@ -338,30 +367,26 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 
 			break;
 		case 2: {
+//			two++;
 
 			ElLess customLess;
 
 			sort(interpolant.begin(), interpolant.end(), customLess);
 
+			int xdir = 0, ydir = 1;
+
 			if (*(interpolant[1]->get_coord()) - *(interpolant[0]->get_coord()) < 1e-12)
 				//interpolation in y
 				for (int i = 0; i < NUM_STATE_VARS; ++i) {
 
-					state_vars[i] = linear_interp(*(interpolant[0]->get_coord() + 1),
-					    *(interpolant[1]->get_coord() + 1), *(interpolant[0]->get_state_vars() + i),
-					    *(interpolant[1]->get_state_vars() + i), x[1]);
+					state_vars[i] = linear_interp_wrapper(interpolant, ydir, get_state_vars, i, x[1]);
 
-					prev_state_vars[i] = linear_interp(*(interpolant[0]->get_coord() + 1),
-					    *(interpolant[1]->get_coord() + 1), *(interpolant[0]->get_prev_state_vars() + i),
-					    *(interpolant[1]->get_prev_state_vars() + i), x[1]);
+					prev_state_vars[i] = linear_interp_wrapper(interpolant, ydir, get_prev_state_vars, i,
+					    x[1]);
 
-					adjoint[i] = linear_interp(*(interpolant[0]->get_coord() + 1),
-					    *(interpolant[1]->get_coord() + 1), *(interpolant[0]->get_adjoint() + i),
-					    *(interpolant[1]->get_adjoint() + i), x[1]);
+					adjoint[i] = linear_interp_wrapper(interpolant, ydir, get_adjoint, i, x[1]);
 
-					prev_adjoint[i] = linear_interp(*(interpolant[0]->get_coord() + 1),
-					    *(interpolant[1]->get_coord() + 1), *(interpolant[0]->get_prev_adjoint() + i),
-					    *(interpolant[1]->get_prev_adjoint() + i), x[1]);
+					prev_adjoint[i] = linear_interp_wrapper(interpolant, ydir, get_prev_adjoint, i, x[1]);
 
 				}
 
@@ -369,20 +394,14 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 
 				for (int i = 0; i < NUM_STATE_VARS; ++i) {
 
-					state_vars[i] = linear_interp(*(interpolant[0]->get_coord()),
-					    *(interpolant[1]->get_coord()), *(interpolant[0]->get_state_vars() + i),
-					    *(interpolant[1]->get_state_vars() + i), x[0]);
+					state_vars[i] = linear_interp_wrapper(interpolant, xdir, get_state_vars, i, x[0]);
 
-					prev_state_vars[i] = linear_interp(*(interpolant[0]->get_coord()),
-					    *(interpolant[1]->get_coord()), *(interpolant[0]->get_prev_state_vars() + i),
-					    *(interpolant[1]->get_prev_state_vars() + i), x[0]);
+					prev_state_vars[i] = linear_interp_wrapper(interpolant, xdir, get_prev_state_vars, i,
+					    x[0]);
 
-					adjoint[i] = linear_interp(*(interpolant[0]->get_coord()), *(interpolant[1]->get_coord()),
-					    *(interpolant[0]->get_adjoint() + i), *(interpolant[1]->get_adjoint() + i), x[0]);
+					adjoint[i] = linear_interp_wrapper(interpolant, xdir, get_adjoint, i, x[0]);
 
-					prev_adjoint[i] = linear_interp(*(interpolant[0]->get_coord()),
-					    *(interpolant[1]->get_coord()), *(interpolant[0]->get_prev_adjoint() + i),
-					    *(interpolant[1]->get_prev_adjoint() + i), x[0]);
+					prev_adjoint[i] = linear_interp_wrapper(interpolant, xdir, get_prev_adjoint, i, x[0]);
 				}
 
 			break;
@@ -390,73 +409,37 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 		case 3: {
 			// this comes out of refinement near the boundary, and it's not possible to find all of the neighbors
 			// we do “barycentric interpolation” a.k.a. “convex combination”	a.k.a. “affine linear extension
+//			three++;
 
 			for (int i = 0; i < NUM_STATE_VARS; ++i) {
-				state_vars[i] = barycentric_interpolation(*(interpolant[0]->get_coord()),
-				    *(interpolant[1]->get_coord()), *(interpolant[2]->get_coord()),
-				    *(interpolant[0]->get_coord() + 1), *(interpolant[1]->get_coord() + 1),
-				    *(interpolant[2]->get_coord() + 1), *(interpolant[0]->get_state_vars() + i),
-				    *(interpolant[1]->get_state_vars() + i), *(interpolant[2]->get_state_vars() + i), x[0],
+
+				state_vars[i] = barycentric_interpolation_wrapeper(interpolant, get_state_vars, i, x[0],
 				    x[1]);
 
-				prev_state_vars[i] = barycentric_interpolation(*(interpolant[0]->get_coord()),
-				    *(interpolant[1]->get_coord()), *(interpolant[2]->get_coord()),
-				    *(interpolant[0]->get_coord() + 1), *(interpolant[1]->get_coord() + 1),
-				    *(interpolant[2]->get_coord() + 1), *(interpolant[0]->get_prev_state_vars() + i),
-				    *(interpolant[1]->get_prev_state_vars() + i),
-				    *(interpolant[2]->get_prev_state_vars() + i), x[0], x[1]);
+				prev_state_vars[i] = barycentric_interpolation_wrapeper(interpolant, get_prev_state_vars, i,
+				    x[0], x[1]);
 
-				adjoint[i] = barycentric_interpolation(*(interpolant[0]->get_coord()),
-				    *(interpolant[1]->get_coord()), *(interpolant[2]->get_coord()),
-				    *(interpolant[0]->get_coord() + 1), *(interpolant[1]->get_coord() + 1),
-				    *(interpolant[2]->get_coord() + 1), *(interpolant[0]->get_adjoint() + i),
-				    *(interpolant[1]->get_adjoint() + i), *(interpolant[2]->get_adjoint() + i), x[0], x[1]);
+				adjoint[i] = barycentric_interpolation_wrapeper(interpolant, get_adjoint, i, x[0], x[1]);
 
-				prev_adjoint[i] = barycentric_interpolation(*(interpolant[0]->get_coord()),
-				    *(interpolant[1]->get_coord()), *(interpolant[2]->get_coord()),
-				    *(interpolant[0]->get_coord() + 1), *(interpolant[1]->get_coord() + 1),
-				    *(interpolant[2]->get_coord() + 1), *(interpolant[0]->get_prev_adjoint() + i),
-				    *(interpolant[1]->get_prev_adjoint() + i), *(interpolant[2]->get_prev_adjoint() + i),
+				prev_adjoint[i] = barycentric_interpolation_wrapeper(interpolant, get_prev_state_vars, i,
 				    x[0], x[1]);
 			}
 			break;
 		}
 		case 4: {
+//			four++;
 			// bilinear interpolation
 			for (int i = 0; i < NUM_STATE_VARS; ++i) {
 
-				state_vars[i] = bilinear_interpolation(*(interpolant[0]->get_coord()),
-				    *(interpolant[1]->get_coord()), *(interpolant[2]->get_coord()),
-				    *(interpolant[3]->get_coord()), *(interpolant[0]->get_coord() + 1),
-				    *(interpolant[1]->get_coord() + 1), *(interpolant[2]->get_coord() + 1),
-				    *(interpolant[3]->get_coord() + 1), *(interpolant[0]->get_state_vars() + i),
-				    *(interpolant[1]->get_state_vars() + i), *(interpolant[2]->get_state_vars() + i),
-				    *(interpolant[3]->get_state_vars() + i), x[0], x[1]);
+				state_vars[i] = bilinear_interpolation_wrapper(interpolant, get_state_vars, i, x[0], x[1]);
 
-				prev_state_vars[i] = bilinear_interpolation(*(interpolant[0]->get_coord()),
-				    *(interpolant[1]->get_coord()), *(interpolant[2]->get_coord()),
-				    *(interpolant[3]->get_coord()), *(interpolant[0]->get_coord() + 1),
-				    *(interpolant[1]->get_coord() + 1), *(interpolant[2]->get_coord() + 1),
-				    *(interpolant[3]->get_coord() + 1), *(interpolant[0]->get_prev_state_vars() + i),
-				    *(interpolant[1]->get_prev_state_vars() + i),
-				    *(interpolant[2]->get_prev_state_vars() + i),
-				    *(interpolant[3]->get_prev_state_vars() + i), x[0], x[1]);
+				prev_state_vars[i] = bilinear_interpolation_wrapper(interpolant, get_prev_state_vars, i,
+				    x[0], x[1]);
 
-				adjoint[i] = bilinear_interpolation(*(interpolant[0]->get_coord()),
-				    *(interpolant[1]->get_coord()), *(interpolant[2]->get_coord()),
-				    *(interpolant[3]->get_coord()), *(interpolant[0]->get_coord() + 1),
-				    *(interpolant[1]->get_coord() + 1), *(interpolant[2]->get_coord() + 1),
-				    *(interpolant[3]->get_coord() + 1), *(interpolant[0]->get_adjoint() + i),
-				    *(interpolant[1]->get_adjoint() + i), *(interpolant[2]->get_adjoint() + i),
-				    *(interpolant[3]->get_adjoint() + i), x[0], x[1]);
+				adjoint[i] = bilinear_interpolation_wrapper(interpolant, get_adjoint, i, x[0], x[1]);
 
-				prev_adjoint[i] = bilinear_interpolation(*(interpolant[0]->get_coord()),
-				    *(interpolant[1]->get_coord()), *(interpolant[2]->get_coord()),
-				    *(interpolant[3]->get_coord()), *(interpolant[0]->get_coord() + 1),
-				    *(interpolant[1]->get_coord() + 1), *(interpolant[2]->get_coord() + 1),
-				    *(interpolant[3]->get_coord() + 1), *(interpolant[0]->get_prev_adjoint() + i),
-				    *(interpolant[1]->get_prev_adjoint() + i), *(interpolant[2]->get_prev_adjoint() + i),
-				    *(interpolant[3]->get_prev_adjoint() + i), x[0], x[1]);
+				prev_adjoint[i] = bilinear_interpolation_wrapper(interpolant, get_prev_adjoint, i, x[0],
+				    x[1]);
 			}
 			break;
 		}
@@ -465,138 +448,4 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 			break;
 
 	}
-
-//	double *state_vars, *elem_state[4], *prev_state_vars, *elem_prev_state[4], *adjoint,
-//	    *elem_adjoint[4], *coord, *elem_coord[4];
-//
-//	int type = 0;			//this is just a flag that indicates the type of element
-//
-//	state_vars = Curr_El->get_state_vars();
-//	prev_state_vars = Curr_El->get_prev_state_vars();
-//	coord = Curr_El->get_coord();
-//	adjoint = Curr_El->get_adjoint();
-//
-//	for (int i = 0; i < 4; ++i) {
-//		elem_state[i] = elem[i]->get_state_vars();
-//		elem_prev_state[i] = elem[i]->get_prev_state_vars();
-//		elem_adjoint[i] = elem[i]->get_adjoint();
-//		elem_coord[i] = elem[i]->get_coord();
-//	}
-//
-//	for (int i = 0; i < 4; ++i) {
-//		if (elem[i])
-//			for (int j = 0; j < NUM_STATE_VARS; j++)
-//				if ( isnan(elem_state[i][j]) || isinf(elem_state[i][j]))
-//					cout << "input to interpolation is not NAN or INF" << endl;
-//	}
-//
-//
-//
-//	if (elem11 && elem12 && elem21 && elem22) {
-//		//this is an ordinary case for an element inside the domain
-//		//type = 0; we initialized type=0
-//
-//		for (int j = 0; j < NUM_STATE_VARS; j++) {
-//
-//			state_vars[j] = bilinear_interp_value(elem_coord[0][0], elem21_coord[0], elem21_coord[1],
-//			    elem22_coord[1], elem11_state[j], elem21_state[j], elem12_state[j], elem22_state[j],
-//			    coord[0], coord[1], type);
-//
-//			prev_state_vars[j] = bilinear_interp_value(elem11_coord[0], elem21_coord[0], elem21_coord[1],
-//			    elem22_coord[1], elem11_prev_state[j], elem21_prev_state[j], elem12_prev_state[j],
-//			    elem22_prev_state[j], coord[0], coord[1], type);
-//
-//			adjoint[j] = bilinear_interp_value(elem11_coord[0], elem21_coord[0], elem21_coord[1],
-//			    elem22_coord[1], elem11_adjoint[j], elem21_adjoint[j], elem12_adjoint[j],
-//			    elem22_adjoint[j], coord[0], coord[1], type);
-//		}
-//	} else if ((!elem11 && !elem12 && elem21 && elem22)	//interpolation only in y
-//	|| (elem11 && elem12 && !elem21 && !elem22)	//left or right side of father is boundary
-//	    ) {
-//		type = 1;
-//		if (elem11) {	// in this case elem21 & elem22 do not exist, so we replace their value with zero
-//			for (int j = 0; j < NUM_STATE_VARS; j++) {
-//				state_vars[j] = bilinear_interp_value(0,
-//				    0,	//interpolation is in y, so x position is not important
-//				    elem11_coord[1], elem12_coord[1], elem11_state[j], 0, elem12_state[j], 0, coord[0],
-//				    coord[1], type);
-//
-//				prev_state_vars[j] = bilinear_interp_value(0,
-//				    0,	//interpolation is in y, so x position is not important
-//				    elem11_coord[1], elem12_coord[1], elem11_prev_state[j], 0, elem12_prev_state[j], 0,
-//				    coord[0], coord[1], type);
-//
-//				adjoint[j] = bilinear_interp_value(0,
-//				    0,	//interpolation is in y, so x position is not important
-//				    elem11_coord[1], elem12_coord[1], elem11_adjoint[j], 0, elem12_adjoint[j], 0, coord[0],
-//				    coord[1], type);
-//			}
-//
-//		} else {	// in this case elem11 & elem12 do not exist, so we replace their values with zero
-//
-//			for (int j = 0; j < NUM_STATE_VARS; j++) {
-//				state_vars[j] = bilinear_interp_value(0,
-//				    0,	//interpolation is in y, so x position is not important
-//				    elem21_coord[1], elem22_coord[1], 0, elem21_state[j], 0, elem22_state[j], coord[0],
-//				    coord[1], type);
-//
-//				prev_state_vars[j] = bilinear_interp_value(0,
-//				    0,	//interpolation is in y, so x position is not important
-//				    elem21_coord[1], elem22_coord[1], 0, elem21_prev_state[j], 0, elem22_prev_state[j],
-//				    coord[0], coord[1], type);
-//
-//				adjoint[j] = bilinear_interp_value(0,
-//				    0,	//interpolation is in y, so x position is not important
-//				    elem21_coord[1], elem22_coord[1], 0, elem21_adjoint[j], 0, elem22_adjoint[j], coord[0],
-//				    coord[1], type);
-//			}
-//		}
-//	} else if ((!elem11 && elem12 && !elem21 && elem22)	//interpolation only in x
-//	|| (elem11 && !elem12 && elem21 && !elem22)	//top or bottom side of father is boundary
-//	    ) {
-//		type = 2;
-//
-//		if (elem11) {	// in this case elem12 & elem22 do not exist, so we replace their value with zero
-//			for (int j = 0; j < NUM_STATE_VARS; j++) {
-//				state_vars[j] = bilinear_interp_value(elem11_coord[0], elem21_coord[0], 0, 0,	//interpolation is in x, so y position is not important
-//				    elem11_state[j], elem21_state[j], 0, 0, coord[0], coord[1], type);
-//
-//				prev_state_vars[j] = bilinear_interp_value(elem11_coord[0], elem21_coord[0], 0, 0,//interpolation is in x, so y position is not important
-//				    elem11_prev_state[j], elem21_prev_state[j], 0, 0, coord[0], coord[1], type);
-//
-//				adjoint[j] = bilinear_interp_value(elem11_coord[0], elem21_coord[0], 0, 0,//interpolation is in x, so y position is not important
-//				    elem11_adjoint[j], elem21_adjoint[j], 0, 0, coord[0], coord[1], type);
-//			}
-//
-//		} else {	// in this case elem11 & elem21 do not exist, so we replace their value with zero
-//
-//			for (int j = 0; j < NUM_STATE_VARS; j++) {
-//				state_vars[j] = bilinear_interp_value(elem12_coord[0], elem22_coord[0], 0, 0,	//interpolation is in x, so y position is not important
-//				    0, 0, elem12_state[j], elem22_state[j], coord[0], coord[1], type);
-//
-//				prev_state_vars[j] = bilinear_interp_value(elem12_coord[0], elem22_coord[0], 0, 0,//interpolation is in x, so y position is not important
-//				    0, 0, elem12_prev_state[j], elem22_prev_state[j], coord[0], coord[1], type);
-//
-//				adjoint[j] = bilinear_interp_value(elem12_coord[0], elem22_coord[0], 0, 0,//interpolation is in x, so y position is not important
-//				    0, 0, elem12_adjoint[j], elem22_adjoint[j], coord[0], coord[1], type);
-//			}
-//		}
-//
-//	} else if ((elem11 && !elem12 && !elem21 && !elem22)//father is in corner so there is no element for interp
-//	|| (!elem11 && elem12 && !elem21 && !elem22)	      //we do not do any extrapolation and leave as it is,
-//	    || (!elem11 && !elem12 && elem21 && !elem22)    //which in refinement constructor should be the value of father element
-//	    || (!elem11 && !elem12 && !elem21 && elem22)) {
-//
-//		//do not do anything
-//
-//	} else {
-//		// this comes out of refinement near the boundary, and it's not possible to find all of the neighbors
-//		// we do “barycentric interpolation” a.k.a. “convex combination”	a.k.a. “affine linear extension
-//
-//		*(Curr_El->get_residual() + 1) = 200;
-////		cout << "something is wrong in this configuration" << endl;
-////		*(Curr_El->get_state_vars()) = 50;
-//
-//	}
-
 }
