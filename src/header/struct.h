@@ -20,27 +20,21 @@
 
 //! ElemPack is a smaller (memory spacewise) version of Element that can be sent from one processor to another via MPI calls
 struct ElemPack {
-	//see ../repartition/new_datatype.C blockcounts[3]={58,25*KEYLENGTH,85}
+	//see ../repartition/new_datatype.C blockcounts[3]={37,25*KEYLENGTH,66}
 	int myprocess;                                              //  1
 	int generation;                                             //  2
 	int material;/*flag added by andrew*/                       //  3
 	int neigh_proc[8];                                          // 11
-	int order[5];                                               // 16
-	int neigh_gen[8];                                           // 24
-	int ndof;                                                   // 25
-	int no_of_eqns;                                             // 26
-	int refined;                                                // 27
-	int adapted;                                                // 28
-	int which_son;                                              // 29
-	int new_old;                                                // 30
-	int n_order[9];                                             // 39
-	int n_info[9];                                              // 48
-	int bc; /*flag indicating if there is or there is no bc*/   // 49
-	int bc_type[4];                                             // 53
-	int positive_x_side;                                        // 54
-	int elm_loc[2];                                             // 56
-	int opposite_brother_flag;                                  // 57
-	int iwetnode;                                               // 58
+	int neigh_gen[8];                                           // 19
+	int refined;                                                // 20
+	int adapted;                                                // 21
+	int which_son;                                              // 22
+	int new_old;                                                // 23
+	int positive_x_side;                                        // 24
+	int elm_loc[2];                                             // 26
+	int opposite_brother_flag;                                  // 27
+	int iwetnode;                                               // 28
+	int n_info[9];                                              // 37
 
 	unsigned key[KEYLENGTH];/*contains the 9th node key*/   //  1
 	unsigned node_key[8][KEYLENGTH];                        //  9
@@ -52,28 +46,23 @@ struct ElemPack {
 	double elevation;                                   //  1
 	double n_coord[9][2];                               // 19 
 	double el_error[EQUATIONS];                         // 21
-	double el_solution[EQUATIONS];                      // 23  
-	double bc_value[4][2][2];                           // 39
-	double state_vars[NUM_STATE_VARS];                  // 42
-	double prev_state_vars[NUM_STATE_VARS];             // 45 
-	double d_state_vars[NUM_STATE_VARS * DIMENSION];      // 51
-	double shortspeed;                                  // 52
-	double dx[DIMENSION];                               // 54 
-	double eigenvxymax[DIMENSION];                      // 56
-	double kactxy[DIMENSION];                           // 58
-	double zeta[DIMENSION];                             // 60
-	double curvature[DIMENSION];                        // 62
-	double gravity[3];                                  // 65
-	double d_gravity[DIMENSION];                        // 67
-	double lam;                                         // 68
-	double lb_weight;                                   // 69
-	double node_elevation[9];                           // 78
-	double Influx[NUM_STATE_VARS];                      // 81
-	double Awet;                                        // 82
-	double Swet;                                        // 83
-	double drypoint[DIMENSION];                         // 85
-
-	/*BC DEF*/
+	double state_vars[NUM_STATE_VARS];                  // 24
+	double prev_state_vars[NUM_STATE_VARS];             // 27
+	double d_state_vars[NUM_STATE_VARS * DIMENSION];    // 33
+	double shortspeed;                                  // 34
+	double dx[DIMENSION];                               // 36
+	double eigenvxymax[DIMENSION];                      // 38
+	double kactxy[DIMENSION];                           // 40
+	double zeta[DIMENSION];                             // 42
+	double curvature[DIMENSION];                        // 44
+	double gravity[3];                                  // 47
+	double d_gravity[DIMENSION];                        // 49
+	double lb_weight;                                   // 50
+	double node_elevation[9];                           // 59
+	double Influx[NUM_STATE_VARS];                      // 62
+	double Awet;                                        // 63
+	double Swet;                                        // 64
+	double drypoint[DIMENSION];                         // 66
 
 };
 

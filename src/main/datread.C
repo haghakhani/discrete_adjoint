@@ -338,7 +338,7 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 	} else {
 		inD2 >> chargarb1 >> chargarb2;
 		statprops_ptr->heightifreach = statprops_ptr->xyifreach[0] = statprops_ptr->xyifreach[1] =
-		    HUGE_VAL;
+		HUGE_VAL;
 	}
 
 	//to get rid on uninitiallized memory error in saverun() (restart.C)
@@ -447,7 +447,6 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 
 	/*************************************************************************/
 	//to read in outline parameters here when it has been added
-
 	return;
 }
 
@@ -564,7 +563,6 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 
 	Element *Quad9P;
 	float* value = new float[2];
-	BC* baddress[4];
 	void* p;
 	int* assocp;/*--*/
 	unsigned* keyP;

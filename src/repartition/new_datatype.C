@@ -42,7 +42,7 @@ void MPI_New_Datatype()
   MPI_Datatype NSOLTYPE;
   MPI_Datatype LB_VERT_TYPE;*/
 
-  int           blockcounts[3]={58, 25*KEYLENGTH, 100};
+  int           blockcounts[3]={37, 25*KEYLENGTH, 66};
   MPI_Datatype  types[3];
   MPI_Aint      displs[3];
   int d;
@@ -70,8 +70,6 @@ void MPI_New_Datatype()
   MPI_Aint      displs2[2];
 
   NeighborPack* neigh=new NeighborPack;
-
-
 
   MPI_Address(&(neigh->target_proc), &displs2[0]);
   MPI_Address(&(neigh->elkey), &displs2[1]);

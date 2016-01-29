@@ -307,12 +307,11 @@ void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *E
 			stdout);
 		}
 		assert(NdTemp);
-		nodeorder[inode] = NdTemp->order;
+
 	}
 	inode = 8;
 	NdTemp = (Node *) NodeTable->lookup(EmFather->key);
 	assert(NdTemp);
-	nodeorder[inode] = NdTemp->order;
 
 	for (ison = 0; ison < 4; ison++) {
 		EmSon = (Element *) El_Table->lookup(EmFather->son[ison]);
@@ -329,8 +328,7 @@ void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *E
 		//delete son's bubble nodes
 		NdTemp = (Node *) NodeTable->lookup(EmFather->son[ison]);
 		assert(NdTemp);
-		if (NdTemp->order > nodeorder[8])
-			nodeorder[8] = NdTemp->order;
+
 		NodeTable->remove(NdTemp->key, 0, stdout, myid, 7);
 		delete NdTemp;
 
@@ -352,8 +350,7 @@ void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *E
 		    || (EmFather->neigh_proc[ineigh] == -1)) {
 			NdTemp = (Node *) NodeTable->lookup(EmSon->node_key[inode]);
 			if (NdTemp) {
-				if (NdTemp->order > nodeorder[inode])
-					nodeorder[inode] = NdTemp->order;
+
 				NodeTable->remove(NdTemp->key, 0, stdout, myid, 9);
 				delete NdTemp;
 			}
@@ -374,8 +371,6 @@ void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *E
 		    || (EmFather->neigh_proc[ineigh % 4] == -1)) {
 			NdTemp = (Node *) NodeTable->lookup(EmSon->node_key[inode]);
 			if (NdTemp) {
-				if (NdTemp->order > nodeorder[inode])
-					nodeorder[inode] = NdTemp->order;
 
 				NodeTable->remove(NdTemp->key, 0, stdout, myid, 10);
 				delete NdTemp;
@@ -392,7 +387,7 @@ void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *E
 			NdTemp = (Node *) NodeTable->lookup(EmFather->node_key[inode]);
 			assert(NdTemp);
 			NdTemp->info = S_C_CON;
-			nodeorder[inode] = NdTemp->order;
+
 		}
 
 		//Now delete this oldson Element
@@ -403,12 +398,10 @@ void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *E
 
 	for (inode = 4; inode < 8; inode++) {
 		NdTemp = (Node *) NodeTable->lookup(EmFather->node_key[inode]);
-		NdTemp->order = nodeorder[inode];
 	}
 	inode = 8;
 
 	NdTemp = (Node *) NodeTable->lookup(EmFather->key);
-	NdTemp->order = nodeorder[inode];
 	NdTemp->info = BUBBLE;
 
 	return;
@@ -782,13 +775,10 @@ void unrefine_interp_neigh_update(HashTable* El_Table, HashTable* NodeTable, int
 								//just done previous or will be deleted next
 								NdTemp = (Node *) NodeTable->lookup(EmTemp->node_key[ineighmod4 + 4]);
 								if (NdTemp) {
-									if (NdTemp->order > nodeorder)
-										nodeorder = NdTemp->order;
 									NodeTable->remove(NdTemp->key, 0, stdout, myid, 12);
 									delete NdTemp;
 								}
 								NdTemp = (Node *) NodeTable->lookup(EmFather->node_key[ineighmod4 + 4]);
-								NdTemp->order = nodeorder;
 								NdTemp->info = SIDE;
 
 							} else if (EmTemp->adapted >= NOTRECADAPTED) {

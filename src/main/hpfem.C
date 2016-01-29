@@ -40,8 +40,6 @@ int main(int argc, char *argv[]) {
 
 	int i; //-- counters
 
-	double functional = 0.;
-
 	HashTable* BT_Node_Ptr;
 	HashTable* BT_Elem_Ptr;
 

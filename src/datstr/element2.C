@@ -160,7 +160,7 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 
 //used for refinement
 Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
-    int elm_loc_in[], int *ord, int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
+    int elm_loc_in[], int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
     HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr, int iwetnodefather,
     double Awetfather, double *drypoint_in, int resComp) {
 	counted = 0; //for debugging only

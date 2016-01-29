@@ -88,10 +88,10 @@ public:
 	Node(unsigned *keyi, double *coordi, MatProps *matprops_ptr);
 
 	//! this is the constructor that creates bubble and edge nodes for son Elements when the father Element is refined
-	Node(unsigned *keyi, double *coordi, int inf, int ord, MatProps *matprops_ptr);/*for refined*/
+	Node(unsigned *keyi, double *coordi, int inf, MatProps *matprops_ptr);/*for refined*/
 
 	//! this is the node constructor that is called in construct_el() in update_element_info.C
-	Node(unsigned* keyi, double* coordi, int inf, int ord, double elev, int yada);
+	Node(unsigned* keyi, double* coordi, int inf, double elev, int yada);
 
 	//! this is the constructor that recreates/restores a node that was saved in a restart file.
 	Node(FILE* fp, MatProps* matprops_ptr); //for restart
@@ -147,7 +147,7 @@ public:
 	void increase_order();
 
 	//! this function sets the node information and order, node order is legacy afeapi but node information is currently used, this function is called in update_element_info.C, another distict function with a similar name refined_neighbor::set_parameters also existis and is used in updatenei.C, these should not be confused
-	void set_parameters(int inf, int ord);
+	void set_parameters(int inf);
 
 	//! this is legacy afeapi and is not used
 	int get_reconstructed();
@@ -195,9 +195,6 @@ protected:
 
 	//! says what type of node this is see the comments of Node::get_info()
 	int info;
-
-	//! this is legacy afeapi and is not important though it would involve quite a bit of work to remove because it occurs frequently in Titan
-	int order;
 
 	//! the global x and y coordinates of the node
 	double coord[DIMENSION];
@@ -247,18 +244,6 @@ inline double Node::get_elevation() {
 
 inline unsigned* Node::pass_key() {
 	return key;
-}
-
-inline int Node::get_order() {
-	return order;
-}
-
-inline void Node::put_order(int i) {
-	order = i;
-}
-
-inline void Node::increase_order() {
-	order++;
 }
 
 inline void Node::put_num_assoc_elem(int numin) {
