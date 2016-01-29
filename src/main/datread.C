@@ -563,6 +563,7 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 
 	Element *Quad9P;
 	float* value = new float[2];
+	BC* dummy=new BC;
 	void* p;
 	int* assocp;/*--*/
 	unsigned* keyP;
@@ -602,6 +603,54 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 				//--there is no neighbor
 				for (k = 0; k < KEYLENGTH; k++)
 					neigh[j][k] = 0;
+		}
+
+//		BC* bcptr = 0;
+		int bcf = 0;
+
+		//.....the essential boundary conditions....
+
+		for (j = 0; j < 4; j++) {
+			freadI(fp, &temp2);
+
+			if (temp2 != -1) { //--there is bound constraint
+
+//				if (!bcf)
+//					dummy = new BC();
+				dummy->type[j] = 1; //--intialize type
+
+				/* "value" is a FLOAT so DON'T use freadD when DoublesFromFloats
+				 is false (and obviously don't use freadD when it's true
+				 either) */
+				for (k = 0; k < 2; k++)
+					freadF(fp, &(dummy->value[j][0][k])); //--j: edge number
+
+				bcf = 1;
+			}
+		}
+
+		//.....the natural boundary conditions.....
+		for (j = 0; j < 4; j++) {
+
+			freadI(fp, &temp2);
+
+			if (temp2 != -1) { //--there is bound constraint
+
+//				if (!bcf)
+//					bcptr = new BC();
+				if (dummy->type[j] == 0)
+					dummy->type[j] = 2; //--intialize type
+				else
+					dummy->type[j] = 3; //--intialize type
+
+				/* "value" is a FLOAT so DON'T use freadD when DoublesFromFloats
+				 is false (and obviously don't use freadD when it's true
+				 either) */
+				for (k = 0; k < 2; k++)
+					freadF(fp, &(dummy->value[j][1][k])); //--j: edge number
+
+				bcf = 1;
+			}
 		}
 
 		freadI(fp, &(elm_loc[0]));
@@ -689,6 +738,7 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 	*solrec = new SolRec(doublekeyrange, EL_TABLE_SIZE, 503, XRange, YRange, 0);
 
 	delete[] value;
+	delete dummy;
 
 	//assert(0);
 
