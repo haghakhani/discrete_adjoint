@@ -117,6 +117,8 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx) {
 
 	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
 
+	reset_adaption_flag(El_Table);
+
 //	double outflow=0.;
 //	int order_flag=1;
 //

@@ -132,6 +132,7 @@ inline double* HashTable::get_doublekeyrange() {
 inline HashEntryPtr* HashTable::getbucketptr() {
 	return bucket;
 }
+;
 
 inline int HashTable::get_no_of_buckets() {
 	return NBUCKETS;

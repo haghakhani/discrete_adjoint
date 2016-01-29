@@ -48,6 +48,9 @@ void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int numprocs
 void unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int myid,
     void* NewFatherList);
 
+void dual_unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int myid,
+    void* NewFatherList ,vector <Element*>& dbglist);
+
 //void unrefine_neigh_update(HashTable* El_Table, int myid, int NumNewFathers, Element** NewFatherList);
 
 void unrefine_interp_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump, int myid,

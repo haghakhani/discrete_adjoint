@@ -828,9 +828,9 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	adjoint_scale[1] = adjoint_scale[2] = tscale * hscale / lscale; //hscale * hscale * lscale * tscale * tscale * tscale;
 
 	double residual_scale[3]; //= { hscale, momentum_scale, momentum_scale };
-	residual_scale[0] = hscale / tscale;
-	residual_scale[1] = momentum_scale / tscale;
-	residual_scale[2] = momentum_scale / tscale;
+	residual_scale[0] = 1;//hscale / tscale;
+	residual_scale[1] = 1;//momentum_scale / tscale;
+	residual_scale[2] = 1;//momentum_scale / tscale;
 
 	double error_scale, functional_scale;
 

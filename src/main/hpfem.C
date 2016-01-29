@@ -238,7 +238,8 @@ int main(int argc, char *argv[]) {
 //				unsigned keyy[2] = { 635356396, 1321528399 };
 //				if (checkElement(BT_Elem_Ptr, NULL, keyy))
 //					cout << "I found the suspecious element \n";
-//				refinement_report(BT_Elem_Ptr);
+
+//			refinement_report(BT_Elem_Ptr);
 
 			H_adapt(BT_Elem_Ptr, BT_Node_Ptr, h_count, TARGET, &matprops, &fluxprops,
 					&timeprops, 5);
@@ -264,6 +265,8 @@ int main(int argc, char *argv[]) {
 		step(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops,
 				&pileprops, &fluxprops, &statprops, &order_flag, &outline, &discharge,
 				adaptflag);
+
+//		cout<<"elements number: "<<num_nonzero_elem(BT_Elem_Ptr)<<endl;
 
 //			set_ithm(BT_Elem_Ptr);
 

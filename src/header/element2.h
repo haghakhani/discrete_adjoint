@@ -58,6 +58,9 @@ class Element {
 	friend void unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int myid,
 	    void* NewFatherList);
 
+	friend void dual_unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int myid,
+	    void* NewFatherList, vector <Element*>& dbglist);
+
 	friend void unrefine_interp_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump,
 	    int myid, void* OtherProcUpdate);
 
@@ -462,6 +465,9 @@ public:
 	//! this function is defined in unrefine.C, it is also called in that file, it finds this element's brothers
 	int find_brothers(HashTable* El_Table, HashTable* NodeTable, double target, int myid,
 	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int rescomp);
+
+	void dual_find_brothers(HashTable* El_Table, HashTable* NodeTable, int myid,
+	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int rescomp);
 	/*
 	 //! this function is defined in unrefine.C, it is also called in that file, it finds this element's brothers
 	 int find_brothers(HashTable* El_Table, HashTable* NodeTable,
@@ -642,7 +648,12 @@ public:
 	void check_refine_unrefine(HashTable* solrec, HashTable* El_Table, int iter,
 	    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
 
+	void cp_check_refine_unrefine(HashTable* solrec, HashTable* El_Table, int iter,
+	    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
+
 	void update_state(HashTable* solrec, HashTable* El_Table, int iter);
+
+	void error_update_state(HashTable* solrec, int iter);
 
 	int check_state(HashTable* solrec, HashTable* El_Table, int iter);
 

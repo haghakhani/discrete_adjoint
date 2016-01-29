@@ -198,11 +198,30 @@ void refinement_report(HashTable* El_Table);
 void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refinelist,
     ElemPtrList* unrefinelist);
 
+void error_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refinelist,
+    ElemPtrList* unrefinelist);
+
+void force_unrefine(HashTable* El_Table, HashTable* NodeTable, Element* Curr_el, int myid,
+    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int rescomp);
+
+void update_error_grid(SolRec* solrec, MeshCTX* cp_meshctx, PropCTX* propctx);
+
+void correct_neighbor_information(Element* newfth, Element* newfth2, Element* bros[4],
+    Element* bros_2[4], int neigh);
+
 void reset_adaption_flag(HashTable* El_Table);
 
 void reset_newson_adaption_flag(HashTable* El_Table);
 
-void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
+void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, MeshCTX* cp_meshctx, PropCTX* propctx,
+    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
+
+double initial_dot(HashTable* El_Table);
+
+void clean_jacobian(HashTable* El_Table);
+
+void copy_hashtables(HashTable* El_Table, HashTable* NodeTable, HashTable* cp_El_Table,
+    HashTable* cp_NodeTable);
 
 void check_state_vars_with_record(HashTable* El_Table, HashTable* solrec, int iter);
 
