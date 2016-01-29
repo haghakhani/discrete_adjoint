@@ -92,6 +92,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	// this function refines and do constant reconstruction
 	uinform_refine(&cp_meshctx, propctx);
 
+	HashTable* media_Table = new HashTable(cp_El_Table);
+
 	reset_adaption_flag(cp_El_Table);
 
 //	refinement_report(El_Table);
@@ -99,10 +101,10 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //	refinement_report(cp_El_Table);
 
 //	this function reconstruct bilinear interpolation
-	set_ithm(cp_El_Table);
-	plot_ithm(cp_El_Table);
+//	set_ithm(cp_El_Table);
+//	plot_ithm(cp_El_Table);
 
-	bilinear_interp(El_Table, cp_El_Table);
+//	bilinear_interp(El_Table, cp_El_Table);
 
 	init_error_grid(&cp_meshctx, propctx);
 
@@ -468,11 +470,14 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 
 	ElemPtrList NewFatherList, OtherProcUpdate;
 
-	vector<Element*> dbglist;
+	vector<Element*> first_son;
+	vector<pair<unsigned, unsigned> > new_father;
 
 	int rescomp = 1;
 
 //	unsigned keyy[2] = { 3410598297, 2576980374 };
+
+	reset_adaption_flag(El_Table);
 
 	delete_unused_elements_nodes(El_Table, NodeTable, myid);
 
@@ -525,11 +530,15 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 
 	if (unrefinelist->get_num_elem()) {
 
-		vector<Element*> first_son;
-
 		for (int i = 0; i < unrefinelist->get_num_elem(); ++i)
-			if (unrefinelist->get(i)->get_which_son() == 0)
+			if (unrefinelist->get(i)->get_which_son() == 0) {
 				first_son.push_back(unrefinelist->get(i));
+
+				//we need the the new fathers for future
+				new_father.push_back(
+				    make_pair(*(unrefinelist->get(i)->getfather()),
+				        *(unrefinelist->get(i)->getfather() + 1)));
+			}
 
 		//		cout << "6 \n";
 		//		refinement_report(El_Table);
@@ -549,7 +558,7 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 			for (int k = 0; k < NewFatherList.get_num_elem(); k++)
 				delete_oldsons(El_Table, NodeTable, myid, NewFatherList.get(k));
 
-			reset_adaption_flag(El_Table);
+			reset_newfather_adaption_flag(El_Table);
 
 			NewFatherList.trashlist();
 
@@ -560,11 +569,12 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refin
 
 //	calc_d_gravity(El_Table);
 //	cout << "8 \n";
+	set_new_fathers(El_Table, new_father);
 //	refinement_report(El_Table);
 
 	refinelist->trashlist();
 	unrefinelist->trashlist();
-	reset_adaption_flag(El_Table);
+//	reset_adaption_flag(El_Table);
 
 }
 
@@ -581,6 +591,29 @@ void reset_adaption_flag(HashTable* El_Table) {
 				Curr_El = (Element*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0) {
+					Curr_El->put_adapted_flag(NOTRECADAPTED);
+					Curr_El->put_refined_flag(0);
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+}
+
+void reset_newfather_adaption_flag(HashTable* El_Table) {
+
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() == NEWFATHER) {
 					Curr_El->put_adapted_flag(NOTRECADAPTED);
 					Curr_El->put_refined_flag(0);
 				}
@@ -738,7 +771,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, MeshCTX* cp_meshctx, Prop
 
 }
 
-void check_state_vars_with_record(HashTable* El_Table, HashTable* solrec, int iter) {
+void check_state_vars_with_record(HashTable* El_Table, SolRec* solrec, int iter) {
 
 	HashEntryPtr currentPtr;
 	Element *Curr_El;
@@ -1291,3 +1324,27 @@ void update_error_grid(SolRec* solrec, MeshCTX* cp_meshctx, PropCTX* propctx) {
 	slopes(cp_El_Table, cp_NodeTable, matprops_ptr, 1);
 }
 
+void set_new_fathers(HashTable* El_Table, vector<pair<unsigned, unsigned> >& new_father) {
+
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+
+	HashEntryPtr *buck = El_Table->getbucketptr();
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() == NOTRECADAPTED) {
+
+					for (int j = 0; j < new_father.size(); ++j) {
+						unsigned key[] = { new_father[j].first, new_father[j].second };
+						if (compare_key(Curr_El->pass_key(), key))
+							Curr_El->put_adapted_flag(NEWFATHER);
+					}
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+}

@@ -58,9 +58,6 @@ class Element {
 	friend void unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int myid,
 	    void* NewFatherList);
 
-	friend void dual_unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int myid,
-	    void* NewFatherList, vector <Element*>& dbglist);
-
 	friend void unrefine_interp_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump,
 	    int myid, void* OtherProcUpdate);
 
@@ -645,17 +642,17 @@ public:
 
 	void gen_my_sons_key(HashTable* El_Table, unsigned son_key[4][KEYLENGTH]);
 
-	void check_refine_unrefine(HashTable* solrec, HashTable* El_Table, int iter,
+	void check_refine_unrefine(SolRec* solrec, HashTable* El_Table, int iter,
 	    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
 
-	void cp_check_refine_unrefine(HashTable* solrec, HashTable* El_Table, int iter,
+	void cp_check_refine_unrefine(SolRec* solrec, HashTable* El_Table, int iter,
 	    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
 
-	void update_state(HashTable* solrec, HashTable* El_Table, int iter);
+	void update_state(SolRec* solrec, HashTable* El_Table, int iter);
 
-	void error_update_state(HashTable* solrec, int iter);
+	void error_update_state(SolRec* solrec, int iter);
 
-	int check_state(HashTable* solrec, HashTable* El_Table, int iter);
+	int check_state(SolRec* solrec, HashTable* El_Table, int iter);
 
 	FluxJac& get_flx_jac_cont();
 

@@ -172,7 +172,7 @@ int checkElement(HashTable *El_Table, HashTable* NodeTable, double *max, unsigne
 
 int num_nonzero_elem(HashTable *El_Table, int type);
 
-void bilinear_interp(HashTable* El_Table, HashTable* cp_El_Table);
+void bilinear_interp(HashTable* El_Table);
 
 void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Element *elem22,
     Element *Curr_El);
@@ -209,9 +209,13 @@ void update_error_grid(SolRec* solrec, MeshCTX* cp_meshctx, PropCTX* propctx);
 void correct_neighbor_information(Element* newfth, Element* newfth2, Element* bros[4],
     Element* bros_2[4], int neigh);
 
+void set_new_fathers(HashTable* El_Table, vector<pair<unsigned, unsigned> >& new_father);
+
 void reset_adaption_flag(HashTable* El_Table);
 
 void reset_newson_adaption_flag(HashTable* El_Table);
+
+void reset_newfather_adaption_flag(HashTable* El_Table);
 
 void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, MeshCTX* cp_meshctx, PropCTX* propctx,
     ElemPtrList* refinelist, ElemPtrList* unrefinelist);
@@ -223,7 +227,7 @@ void clean_jacobian(HashTable* El_Table);
 void copy_hashtables(HashTable* El_Table, HashTable* NodeTable, HashTable* cp_El_Table,
     HashTable* cp_NodeTable);
 
-void check_state_vars_with_record(HashTable* El_Table, HashTable* solrec, int iter);
+void check_state_vars_with_record(HashTable* El_Table, SolRec* solrec, int iter);
 
 void print_Elem_Table(HashTable* El_Table, HashTable* NodeTable, int iter, int place);
 

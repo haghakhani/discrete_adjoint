@@ -5277,41 +5277,14 @@ void Element::rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, i
 
 }
 
-void Element::cp_check_refine_unrefine(HashTable* solrec, HashTable* El_Table, int iter,
+void Element::cp_check_refine_unrefine(SolRec* solrec, HashTable* El_Table, int iter,
     ElemPtrList* refinelist, ElemPtrList* unrefinelist) {
 
-//	Solution* prev_sol;
-//
-//	Jacobian* jacobian = (Jacobian *) solrec->lookup(pass_key());
-//
-//	if (jacobian) {
-//		prev_sol = jacobian->get_solution(iter - 2);
-//
-//		if (prev_sol)
-//			refinelist->add(this);
-//
-//	} else {
-//
-//		jacobian = (Jacobian *) solrec->lookup(getfather());
-//		if (jacobian)
-//			Solution* prev_sol = jacobian->get_solution(iter - 2);
-//
-//		if (!prev_sol)
-//			unrefinelist->add(this);
-//	}
-
-	Jacobian* jacobian = (Jacobian *) solrec->lookup(getfather());
-
-	Solution* prev_sol = NULL;
-
-	if (jacobian)
-		prev_sol = jacobian->get_solution(iter - 2);
+	Solution* prev_sol = solrec->lookup(getfather(), iter - 2);
 
 	if (!prev_sol) {
 
-		jacobian = (Jacobian *) solrec->lookup(pass_key());
-		if (jacobian)
-			prev_sol = jacobian->get_solution(iter - 2);
+		prev_sol = solrec->lookup(key, iter - 2);
 
 		if (prev_sol)
 			refinelist->add(this);
@@ -5319,12 +5292,10 @@ void Element::cp_check_refine_unrefine(HashTable* solrec, HashTable* El_Table, i
 		else
 			// the only remaining case is that it has been unrefined so, we have to read from its sons
 			unrefinelist->add(this);
-
 	}
-
 }
 
-void Element::check_refine_unrefine(HashTable* solrec, HashTable* El_Table, int iter,
+void Element::check_refine_unrefine(SolRec* solrec, HashTable* El_Table, int iter,
     ElemPtrList* refinelist, ElemPtrList* unrefinelist) {
 
 //	int aa = 0, bb = 1;
@@ -5332,35 +5303,24 @@ void Element::check_refine_unrefine(HashTable* solrec, HashTable* El_Table, int 
 //	if (key[0] == keyy[0] && key[1] == keyy[1])
 //		bb = aa;
 
-	Jacobian* jacobian = (Jacobian *) solrec->lookup(key);
-
-	Solution* prev_sol = jacobian->get_solution(iter - 1);
+	Solution* prev_sol = solrec->lookup(key, iter - 1);
 
 	if (!prev_sol) {
-
 // first we check to see whether the element has been refined, so we have to read from its father
-		jacobian = (Jacobian *) solrec->lookup(getfather());
-		if (jacobian)
-			prev_sol = jacobian->get_solution(iter - 1);
+			prev_sol = solrec->lookup(getfather(), iter - 1);
 
 		if (prev_sol)
-
 			unrefinelist->add(this);
 
 		else
-
 			// the only remaining case is that it has been unrefined so, we have to read from its sons
 			refinelist->add(this);
-
 	}
-
 }
 
-void Element::error_update_state(HashTable* solrec, int iter) {
+void Element::error_update_state(SolRec* solrec, int iter) {
 
-	Jacobian *jacobian = (Jacobian *) solrec->lookup(this->getfather());
-
-	Solution* prev_sol = jacobian->get_solution(iter - 2);
+	Solution* prev_sol = solrec->lookup(this->getfather(), iter - 2);
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		prev_state_vars[i] = *(prev_sol->get_solution() + i);
@@ -5373,16 +5333,14 @@ void Element::error_update_state(HashTable* solrec, int iter) {
 
 }
 
-void Element::update_state(HashTable* solrec, HashTable* El_Table, int iter) {
+void Element::update_state(SolRec* solrec, HashTable* El_Table, int iter) {
 
 //	int aa = 0, bb = 1;
 //	unsigned keyy[2] = { 3781669179, 330382100 };
 //	if (key[0] == keyy[0] && key[1] == keyy[1])
 //		bb = aa;
 
-	Jacobian *jacobian = (Jacobian *) solrec->lookup(key);
-
-	Solution* prev_sol = jacobian->get_solution(iter - 1);
+	Solution* prev_sol = solrec->lookup(key, iter - 1);
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		prev_state_vars[i] = *(prev_sol->get_solution() + i);
@@ -5395,11 +5353,9 @@ void Element::update_state(HashTable* solrec, HashTable* El_Table, int iter) {
 
 }
 
-int Element::check_state(HashTable* solrec, HashTable* El_Table, int iter) {
+int Element::check_state(SolRec* solrec, HashTable* El_Table, int iter) {
 
-	Jacobian *jacobian = (Jacobian *) solrec->lookup(key);
-
-	Solution* curr_sol = jacobian->get_solution(iter);
+	Solution* curr_sol = solrec->lookup(key, iter);
 
 	if (curr_sol)
 		for (int i = 0; i < NUM_STATE_VARS; i++)

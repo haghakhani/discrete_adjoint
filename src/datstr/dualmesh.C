@@ -8,8 +8,8 @@
 #include "../header/hpfem.h"
 
 SolRec::SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[],
-		int ifrestart) :
-		HashTable(doublekeyrangein, size, prime, XR, YR, ifrestart) , range(500){
+    int ifrestart) :
+		HashTable(doublekeyrangein, size, prime, XR, YR, ifrestart), range(500) {
 
 	double zero_sol[3] = { 0., 0., 0. };
 	double kact_z = 0.;
@@ -42,17 +42,17 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 				Curr_El = (Element*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) {
 
-					int aa = 0, bb = 1;
-					unsigned keyy[2] = { 4041453883, 330382100 };
-					if (*(Curr_El->pass_key()) == keyy[0] && *(Curr_El->pass_key() + 1) == keyy[1]
-							&& timeptr->iter == 140)
-						bb = aa;
+//					int aa = 0, bb = 1;
+//					unsigned keyy[2] = { 4041453883, 330382100 };
+//					if (*(Curr_El->pass_key()) == keyy[0] && *(Curr_El->pass_key() + 1) == keyy[1]
+//							&& timeptr->iter == 140)
+//						bb = aa;
 
 					Jacobian *jacobian = (Jacobian *) lookup(Curr_El->pass_key());
 					if (jacobian) {
 						if (*(Curr_El->get_prev_state_vars()) > 0.) {
 							Solution *solution = new Solution(Curr_El->get_prev_state_vars(),
-									*(Curr_El->get_kactxy()));
+							    *(Curr_El->get_kactxy()));
 							jacobian->put_solution(solution, timeptr->iter - 1);
 
 						} else
@@ -64,7 +64,7 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 
 						if (*(Curr_El->get_prev_state_vars()) > 0.) {
 							Solution *solution = new Solution(Curr_El->get_prev_state_vars(),
-									*(Curr_El->get_kactxy()));
+							    *(Curr_El->get_kactxy()));
 							jacobian->put_solution(solution, timeptr->iter - 1);
 
 						} else
@@ -114,7 +114,7 @@ void SolRec::wrtie_sol_to_disk() {
 						kact = sol->get_kact();
 
 						fprintf(myfile, "%u %u %.8e %.8e %.8e %.8e\n", *(jacobian->get_key()),
-								*(jacobian->get_key() + 1), solution[0], solution[1], solution[2], sol->get_kact());
+						    *(jacobian->get_key() + 1), solution[0], solution[1], solution[2], sol->get_kact());
 
 						fflush(myfile);
 						//fsync(fileno(myfile));
@@ -189,7 +189,7 @@ void SolRec::read_sol_from_disk(int iter) {
 		count++;
 
 		dbg = fscanf(myfile, "%u %u %le %le %le %le\n", key, key + 1, state_vars, state_vars + 1,
-				state_vars + 2, &kact);
+		    state_vars + 2, &kact);
 
 		Jacobian *jacobian = (Jacobian *) lookup(key);
 
@@ -281,5 +281,15 @@ void SolRec::load_new_set_of_solution() {
 		ratio = (((long double) freeram) / ((long double) totalPhysMem));
 
 	}
+
+}
+
+Solution* SolRec::lookup(unsigned* key, int iter) {
+
+	Jacobian *jacobian = (Jacobian *) lookup(key);
+	if (jacobian)
+		return jacobian->get_solution(iter);
+	else
+		return NULL;
 
 }

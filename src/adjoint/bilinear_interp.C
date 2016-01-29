@@ -20,27 +20,27 @@
 #define KEY0 3777862041
 #define KEY1 2576980374
 //#define DEBUG
+/*
 #include <algorithm>
 extern "C" void dgesv_(int *n, int *nrhs, double *a, int *lda, int *ipiv, double *b, int *ldb,
     int *info);
 
-#define barycentric_interpolation_wrapeper(interpolant,data,i,x,y) barycentric_interpolation(*(interpolant[0]->get_coord()),\
-	    *(interpolant[1]->get_coord()), *(interpolant[2]->get_coord()),\
-	    *(interpolant[0]->get_coord() + 1), *(interpolant[1]->get_coord() + 1),\
-	    *(interpolant[2]->get_coord() + 1), *(interpolant[0]->data() + i),\
-	    *(interpolant[1]->data() + i), *(interpolant[2]->data() + i), x, y)
+#define barycentric_interpolation_wrapeper(interpolant,data,i,x,y) barycentric_interpolation(interpolant[0]->x,\
+	    interpolant[1]->x, interpolant[2]->x,interpolant[0]->y, interpolant[1]->y,interpolant[2]->y,\
+	    *(interpolant[0]->data() + i), *(interpolant[1]->data() + i), *(interpolant[2]->data() + i), x, y)
 
-#define bilinear_interpolation_wrapper(interpolant,data,i,x,y)  bilinear_interpolation(*(interpolant[0]->get_coord()),\
-				    *(interpolant[1]->get_coord()), *(interpolant[2]->get_coord()),\
-				    *(interpolant[3]->get_coord()), *(interpolant[0]->get_coord() + 1),\
-				    *(interpolant[1]->get_coord() + 1), *(interpolant[2]->get_coord() + 1),\
-				    *(interpolant[3]->get_coord() + 1), *(interpolant[0]->data() + i),\
+#define bilinear_interpolation_wrapper(interpolant,data,i,x,y)  bilinear_interpolation(interpolant[0]->x,\
+				    interpolant[1]->x, interpolant[2]->x,interpolant[3]->x, interpolant[0]->y ,\
+				    interpolant[1]-> y, *(interpolant[2]->get_coord() + 1),\
+				    interpolant[3]-> + 1), *(interpolant[0]->data() + i),\
 				    *(interpolant[1]->data() + i), *(interpolant[2]->data() + i),\
 				    *(interpolant[3]->data() + i), x,y)
 
-#define linear_interp_wrapper(interpolant,dir,data,i,x) linear_interp(*(interpolant[0]->get_coord() + dir),\
-					    *(interpolant[1]->get_coord() + dir), *(interpolant[0]->data() + i),\
-					    *(interpolant[1]->data() + i),x)
+#define linearx_interp_wrapper(interpolant,data,i,x) linear_interp(interpolant[0]->x,\
+					    interpolant[1]->x, *(interpolant[0]->data() + i), *(interpolant[1]->data() + i),x)
+
+#define lineary_interp_wrapper(interpolant,data,i,x) linear_interp(interpolant[0]->y,\
+					    interpolant[1]->y, *(interpolant[0]->data() + i), *(interpolant[1]->data() + i),x)
 
 struct ElLess {
 	bool operator()(Element* a, Element* b) {
@@ -56,145 +56,251 @@ struct ElLess {
 
 //int three=0,four=0,two=0;
 
-void bilinear_interp(HashTable* El_Table, HashTable* cp_El_Table) {
+struct Neighbor {
+
+	Neighbor(double* X, double* s, double* ps, double *ad) {
+
+		for (int i = 0; i < NUM_STATE_VARS; ++i) {
+
+			state_vars[i] = s[i];
+			prev_state_vars[i] = ps[i];
+			adjoint[i] = ad[i];
+		}
+
+		x = X[0];
+		y = X[1];
+
+	}
+	;
+
+	double x , y;
+	double state_vars[3], prev_state_vars[3], adjoint[3];
+
+	bool operator <(const Neighbor& a) {
+		if ((x < a.x && (fabs(x - a.x) > 1e-12)) || ((fabs(x - a.x) < 1e-12) && a < a.y))
+			return true;
+		return false;
+	}
+
+	bool operator ==(const Neighbor& a) {
+		if ((fabs(x - a.x) < 1e-12) && (fabs(y - a.y) < 1e-12))
+			return true;
+		return false;
+	}
+};
+
+void bilinear_interp(HashTable* cp_El_Table) {
 
 	HashEntryPtr currentPtr;
 	Element *father;
 	HashEntryPtr *buck = cp_El_Table->getbucketptr();
 	int which_son;
-	Element* son[4];
-	Element* neighbors[12];
+	Element *son[4], *tmp;
+	Neighbor *neighbors[12], ntemp;
+	/*
+	 for (int i = 0; i < cp_El_Table->get_no_of_buckets(); i++)
+	 if (*(buck + i)) {
+	 currentPtr = *(buck + i);
+	 while (currentPtr) {
 
-	for (int i = 0; i < cp_El_Table->get_no_of_buckets(); i++)
-		if (*(buck + i)) {
-			currentPtr = *(buck + i);
-			while (currentPtr) {
+	 son[0] = (Element*) (currentPtr->value);
 
-				son[0] = (Element*) (currentPtr->value);
+	 if (son[0]->get_adapted_flag() > 0 && son[0]->get_which_son() == 0) {
 
-				if (son[0]->get_adapted_flag() > 0 && son[0]->get_which_son() == 0) {
+	 // orientation for the father and sons are same
+	 int xp = son[0]->get_positive_x_side();
+	 int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
 
-					father = (Element*) El_Table->lookup(son[0]->getfather());
+	 int father_neigh_num[4];
 
-					assert(father);
+	 // all sons have are in a same generation
+	 int gen = son[0]->get_gen();
 
-					for (int j = 0; j < 12; ++j)
-						neighbors[j] = father->get_side_neighbor(El_Table, j);
+	 for (int j = 1; j < 4; ++j)
+	 son[j] = (Element*) cp_El_Table->lookup(son[0]->get_brothers() + j * KEYLENGTH);
 
-					int xp = father->get_positive_x_side();
-					int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+	 for (int j = 0; j < 4; ++j) {
 
-					// this condition means that 10 and 6 are same elements
-					if (neighbors[6] && neighbors[10]
-					    && *(neighbors[6]->get_coord() + 1) == *(neighbors[10]->get_coord() + 1))
+	 switch (j) {
 
-						// this condition means that 2 and 6 are same elements
-						if (*(father->get_neigh_proc() + xm + 4) < 0)
-							bilinear_interp_elem(neighbors[10], neighbors[3], neighbors[9], father, son[0]);
-						else
-							bilinear_interp_elem(neighbors[10], neighbors[3], neighbors[2], father, son[0]);
+	 case (0): {
+	 tmp = son[j]->get_side_neighbor(cp_El_Table, 3);
+	 neighbors[3] = new Neighbor(tmp->get_coord(), tmp->get_state_vars(),
+	 tmp->get_prev_state_vars(), tmp->get_adjoint());
 
-					// this condition means that 10 and 3 are same elements
-					else if (neighbors[3] && neighbors[10]
-					    && *(neighbors[3]->get_coord()) == *(neighbors[10]->get_coord()))
-						// this condition means that 3 and 7 are same elements
-						if (*(father->get_neigh_proc() + ym + 4) < 0)
-							bilinear_interp_elem(neighbors[10], neighbors[11], neighbors[6], father, son[0]);
-						else
-							bilinear_interp_elem(neighbors[10], neighbors[7], neighbors[6], father, son[0]);
+	 tmp = son[j]->get_side_neighbor(cp_El_Table, 6);
+	 neighbors[6] = new Neighbor(tmp->get_coord(), tmp->get_state_vars(),
+	 tmp->get_prev_state_vars(), tmp->get_adjoint());
 
-					else
-						bilinear_interp_elem(neighbors[10], neighbors[3], neighbors[6], father, son[0]);
+	 tmp = son[j]->get_side_neighbor(cp_El_Table, 10);
+	 neighbors[10] = new Neighbor(tmp->get_coord(), tmp->get_state_vars(),
+	 tmp->get_prev_state_vars(), tmp->get_adjoint());
+	 }
+	 break;
 
-					for (int j = 1; j < 4; ++j) {
-						son[j] = (Element*) cp_El_Table->lookup(son[0]->get_brothers() + j * KEYLENGTH);
+	 case (1): {
+	 tmp = son[j]->get_side_neighbor(cp_El_Table, 0);
+	 neighbors[0] = new Neighbor(tmp->get_coord(), tmp->get_state_vars(),
+	 tmp->get_prev_state_vars(), tmp->get_adjoint());
 
-						switch (j) {
+	 tmp = son[j]->get_side_neighbor(cp_El_Table, 7);
+	 neighbors[7] = new Neighbor(tmp->get_coord(), tmp->get_state_vars(),
+	 tmp->get_prev_state_vars(), tmp->get_adjoint());
 
-							case 1: {
+	 tmp = son[j]->get_side_neighbor(cp_El_Table, 11);
+	 neighbors[11] = new Neighbor(tmp->get_coord(), tmp->get_state_vars(),
+	 tmp->get_prev_state_vars(), tmp->get_adjoint());
+	 }
+	 break;
 
-								// this condition means that 0 and 11 are same elements
-								if (neighbors[11] && neighbors[0]
-								    && *(neighbors[11]->get_coord() + 1) == *(neighbors[0]->get_coord() + 1))
+	 case (2): {
+	 tmp = son[j]->get_side_neighbor(cp_El_Table, 8);
+	 neighbors[8] = new Neighbor(tmp->get_coord(), tmp->get_state_vars(),
+	 tmp->get_prev_state_vars(), tmp->get_adjoint());
 
-									//0 , 4 are same
-									if (*(father->get_neigh_proc() + xp + 4) < 0)
-										bilinear_interp_elem(neighbors[7], neighbors[11], father, neighbors[8], son[j]);
-									else
-										bilinear_interp_elem(neighbors[7], neighbors[11], father, neighbors[4], son[j]);
+	 tmp = son[j]->get_side_neighbor(cp_El_Table, 4);
+	 neighbors[4] = new Neighbor(tmp->get_coord(), tmp->get_state_vars(),
+	 tmp->get_prev_state_vars(), tmp->get_adjoint());
 
-								// this condition means that 7 and 11 are same elements
-								else if (neighbors[7] && neighbors[11]
-								    && *(neighbors[7]->get_coord()) == *(neighbors[11]->get_coord()))
+	 tmp = son[j]->get_side_neighbor(cp_El_Table, 1);
+	 neighbors[1] = new Neighbor(tmp->get_coord(), tmp->get_state_vars(),
+	 tmp->get_prev_state_vars(), tmp->get_adjoint());
+	 }
+	 break;
 
-									if (*(father->get_neigh_proc() + ym + 4) < 0)
-										bilinear_interp_elem(neighbors[10], neighbors[11], father, neighbors[0],
-										    son[j]);
-									else
-										bilinear_interp_elem(neighbors[3], neighbors[11], father, neighbors[0], son[j]);
+	 case (3): {
+	 tmp = son[j]->get_side_neighbor(cp_El_Table, 5);
+	 neighbors[5] = new Neighbor(tmp->get_coord(), tmp->get_state_vars(),
+	 tmp->get_prev_state_vars(), tmp->get_adjoint());
 
-								else
-									bilinear_interp_elem(neighbors[7], neighbors[11], father, neighbors[0], son[j]);
+	 tmp = son[j]->get_side_neighbor(cp_El_Table, 9);
+	 neighbors[9] = new Neighbor(tmp->get_coord(), tmp->get_state_vars(),
+	 tmp->get_prev_state_vars(), tmp->get_adjoint());
 
-							}
-								break;
-							case 2: {
+	 tmp = son[j]->get_side_neighbor(cp_El_Table, 2);
+	 neighbors[2] = new Neighbor(tmp->get_coord(), tmp->get_state_vars(),
+	 tmp->get_prev_state_vars(), tmp->get_adjoint());
+	 }
+	 break;
 
-								// this condition means that 4 and 8 are same elements
-								if (neighbors[4] && neighbors[8]
-								    && *(neighbors[4]->get_coord() + 1) == *(neighbors[8]->get_coord() + 1))
-									//0 , 4 are same
-									if (*(father->get_neigh_proc() + xp + 4) < 0)
-										bilinear_interp_elem(father, neighbors[11], neighbors[1], neighbors[8], son[j]);
-									else
-										bilinear_interp_elem(father, neighbors[0], neighbors[1], neighbors[8], son[j]);
+	 default:
+	 cout<<"this is an error"<<endl;
 
-								// this condition means that 8 and 1 are same elements
-								else if (neighbors[8] && neighbors[1]
-								    && *(neighbors[8]->get_coord()) == *(neighbors[1]->get_coord()))
+	 }
+	 }
 
-									if (*(father->get_neigh_proc() + yp + 4) < 0)
-										bilinear_interp_elem(father, neighbors[4], neighbors[9], neighbors[8], son[j]);
-									else
-										bilinear_interp_elem(father, neighbors[4], neighbors[5], neighbors[8], son[j]);
-								else
-									bilinear_interp_elem(father, neighbors[4], neighbors[1], neighbors[8], son[j]);
+	 assert(father);
 
-							}
-								break;
-							case 3: {
-								// this condition means that 9 and 2 are same elements
-								if (neighbors[9] && neighbors[2]
-								    && *(neighbors[9]->get_coord() + 1) == *(neighbors[2]->get_coord() + 1))
+	 // this condition means that 10 and 6 are same elements
+	 if (neighbors[6] && neighbors[10] && neighbors[6]->y == neighbors[10]->y)
 
-									if (*(father->get_neigh_proc() + xm + 4) < 0)
-										bilinear_interp_elem(neighbors[10], father, neighbors[9], neighbors[5], son[j]);
-									else
-										bilinear_interp_elem(neighbors[6], father, neighbors[9], neighbors[5], son[j]);
+	 // this condition means that 2 and 6 are same elements
+	 if (*(son[0]->get_neigh_proc() + xm + 4) < 0)
+	 bilinear_interp_elem(neighbors[10], neighbors[3], neighbors[9], father, son[0]);
+	 else
+	 bilinear_interp_elem(neighbors[10], neighbors[3], neighbors[2], father, son[0]);
 
-								// this condition means that 10 and 3 are same elements
-								else if (neighbors[9] && neighbors[5]
-								    && *(neighbors[9]->get_coord()) == *(neighbors[5]->get_coord()))
+	 // this condition means that 10 and 3 are same elements
+	 else if (neighbors[3] && neighbors[10]
+	 && *(neighbors[3]->get_coord()) == *(neighbors[10]->get_coord()))
+	 // this condition means that 3 and 7 are same elements
+	 if (*(father->get_neigh_proc() + ym + 4) < 0)
+	 bilinear_interp_elem(neighbors[10], neighbors[11], neighbors[6], father, son[0]);
+	 else
+	 bilinear_interp_elem(neighbors[10], neighbors[7], neighbors[6], father, son[0]);
 
-									if (*(father->get_neigh_proc() + yp + 4) < 0)
-										bilinear_interp_elem(neighbors[2], father, neighbors[9], neighbors[8], son[j]);
-									else
-										bilinear_interp_elem(neighbors[2], father, neighbors[9], neighbors[1], son[j]);
-								else
-									bilinear_interp_elem(neighbors[2], father, neighbors[9], neighbors[5], son[j]);
+	 else
+	 bilinear_interp_elem(neighbors[10], neighbors[3], neighbors[6], father, son[0]);
 
-							}
-								break;
-							default:
-								cout << "incorrect son please check me" << endl;
+	 for (int j = 1; j < 4; ++j) {
+	 son[j] = (Element*) cp_El_Table->lookup(son[0]->get_brothers() + j * KEYLENGTH);
 
-						}
-					}
+	 switch (j) {
 
-				}
-				currentPtr = currentPtr->next;
-			}
-		}
+	 case 1: {
+
+	 // this condition means that 0 and 11 are same elements
+	 if (neighbors[11] && neighbors[0]
+	 && *(neighbors[11]->get_coord() + 1) == *(neighbors[0]->get_coord() + 1))
+
+	 //0 , 4 are same
+	 if (*(father->get_neigh_proc() + xp + 4) < 0)
+	 bilinear_interp_elem(neighbors[7], neighbors[11], father, neighbors[8], son[j]);
+	 else
+	 bilinear_interp_elem(neighbors[7], neighbors[11], father, neighbors[4], son[j]);
+
+	 // this condition means that 7 and 11 are same elements
+	 else if (neighbors[7] && neighbors[11]
+	 && *(neighbors[7]->get_coord()) == *(neighbors[11]->get_coord()))
+
+	 if (*(father->get_neigh_proc() + ym + 4) < 0)
+	 bilinear_interp_elem(neighbors[10], neighbors[11], father, neighbors[0],
+	 son[j]);
+	 else
+	 bilinear_interp_elem(neighbors[3], neighbors[11], father, neighbors[0], son[j]);
+
+	 else
+	 bilinear_interp_elem(neighbors[7], neighbors[11], father, neighbors[0], son[j]);
+
+	 }
+	 break;
+	 case 2: {
+
+	 // this condition means that 4 and 8 are same elements
+	 if (neighbors[4] && neighbors[8]
+	 && *(neighbors[4]->get_coord() + 1) == *(neighbors[8]->get_coord() + 1))
+	 //0 , 4 are same
+	 if (*(father->get_neigh_proc() + xp + 4) < 0)
+	 bilinear_interp_elem(father, neighbors[11], neighbors[1], neighbors[8], son[j]);
+	 else
+	 bilinear_interp_elem(father, neighbors[0], neighbors[1], neighbors[8], son[j]);
+
+	 // this condition means that 8 and 1 are same elements
+	 else if (neighbors[8] && neighbors[1]
+	 && *(neighbors[8]->get_coord()) == *(neighbors[1]->get_coord()))
+
+	 if (*(father->get_neigh_proc() + yp + 4) < 0)
+	 bilinear_interp_elem(father, neighbors[4], neighbors[9], neighbors[8], son[j]);
+	 else
+	 bilinear_interp_elem(father, neighbors[4], neighbors[5], neighbors[8], son[j]);
+	 else
+	 bilinear_interp_elem(father, neighbors[4], neighbors[1], neighbors[8], son[j]);
+
+	 }
+	 break;
+	 case 3: {
+	 // this condition means that 9 and 2 are same elements
+	 if (neighbors[9] && neighbors[2]
+	 && *(neighbors[9]->get_coord() + 1) == *(neighbors[2]->get_coord() + 1))
+
+	 if (*(father->get_neigh_proc() + xm + 4) < 0)
+	 bilinear_interp_elem(neighbors[10], father, neighbors[9], neighbors[5], son[j]);
+	 else
+	 bilinear_interp_elem(neighbors[6], father, neighbors[9], neighbors[5], son[j]);
+
+	 // this condition means that 10 and 3 are same elements
+	 else if (neighbors[9] && neighbors[5]
+	 && *(neighbors[9]->get_coord()) == *(neighbors[5]->get_coord()))
+
+	 if (*(father->get_neigh_proc() + yp + 4) < 0)
+	 bilinear_interp_elem(neighbors[2], father, neighbors[9], neighbors[8], son[j]);
+	 else
+	 bilinear_interp_elem(neighbors[2], father, neighbors[9], neighbors[1], son[j]);
+	 else
+	 bilinear_interp_elem(neighbors[2], father, neighbors[9], neighbors[5], son[j]);
+
+	 }
+	 break;
+	 default:
+	 cout << "incorrect son please check me" << endl;
+
+	 }
+	 }
+
+	 }
+	 currentPtr = currentPtr->next;
+	 }
+	 }
 
 //	cout<<"four: "<< four<<" three: "<< three<<" two: "<<two<<endl;
 }
@@ -331,7 +437,7 @@ inline double barycentric_interpolation(double x1, double x2, double x3, double 
 
 }
 
-void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Element *elem22,
+void bilinear_interp_elem(Neighbor *elem11, Neighbor *elem21, Neighbor *elem12, Neighbor *elem22,
     Element *Curr_El) {
 
 	double *state_vars = Curr_El->get_state_vars();
@@ -339,8 +445,8 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 	double *adjoint = Curr_El->get_adjoint();
 	double *prev_adjoint = Curr_El->get_prev_adjoint();
 	double *x = Curr_El->get_coord();
-	Element* temp[4] = { elem11, elem21, elem12, elem22 };
-	vector<Element*> interpolant;
+	Neighbor* temp[4] = { elem11, elem21, elem12, elem22 };
+	vector<Neighbor*> interpolant;
 	int add = 0;
 
 	for (int i = 0; i < 4; ++i)
@@ -386,8 +492,6 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 
 					adjoint[i] = linear_interp_wrapper(interpolant, ydir, get_adjoint, i, x[1]);
 
-					prev_adjoint[i] = linear_interp_wrapper(interpolant, ydir, get_prev_adjoint, i, x[1]);
-
 				}
 
 			else
@@ -401,7 +505,6 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 
 					adjoint[i] = linear_interp_wrapper(interpolant, xdir, get_adjoint, i, x[0]);
 
-					prev_adjoint[i] = linear_interp_wrapper(interpolant, xdir, get_prev_adjoint, i, x[0]);
 				}
 
 			break;
@@ -421,8 +524,6 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 
 				adjoint[i] = barycentric_interpolation_wrapeper(interpolant, get_adjoint, i, x[0], x[1]);
 
-				prev_adjoint[i] = barycentric_interpolation_wrapeper(interpolant, get_prev_state_vars, i,
-				    x[0], x[1]);
 			}
 			break;
 		}
@@ -431,21 +532,21 @@ void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Ele
 			// bilinear interpolation
 			for (int i = 0; i < NUM_STATE_VARS; ++i) {
 
-				state_vars[i] = bilinear_interpolation_wrapper(interpolant, get_state_vars, i, x[0], x[1]);
+			state_vars[i] = bilinear_interpolation_wrapper(interpolant, get_state_vars, i, x[0], x[1]);
 
-				prev_state_vars[i] = bilinear_interpolation_wrapper(interpolant, get_prev_state_vars, i,
-				    x[0], x[1]);
+			prev_state_vars[i] = bilinear_interpolation_wrapper(interpolant, get_prev_state_vars, i,
+					x[0], x[1]);
 
-				adjoint[i] = bilinear_interpolation_wrapper(interpolant, get_adjoint, i, x[0], x[1]);
+			adjoint[i] = bilinear_interpolation_wrapper(interpolant, get_adjoint, i, x[0], x[1]);
 
-				prev_adjoint[i] = bilinear_interpolation_wrapper(interpolant, get_prev_adjoint, i, x[0],
-				    x[1]);
-			}
-			break;
 		}
-		default:
-			cout << "ERROR IN BILINEAR INTERPOLATION " << endl;
-			break;
+		break;
+	}
+	default:
+		cout << "ERROR IN BILINEAR INTERPOLATION " << endl;
+		break;
 
 	}
 }
+*/
+void bilinear_interp(HashTable* cp_El_Table) {}

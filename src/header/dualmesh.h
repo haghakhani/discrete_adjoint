@@ -70,6 +70,10 @@ public:
 
 	int read_sol();
 
+	using HashTable::lookup;
+
+	Solution* lookup(unsigned* key,int iter);
+
 };
 
 #endif /* DUALMESH_H */
