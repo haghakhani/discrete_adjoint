@@ -23,11 +23,7 @@ void Pack_element(void *sendel_in, ElemPack* elem, HashTable* HT_Node_Ptr, int d
       elem->neigh_proc[i]=sendel->neigh_proc[i];
       elem->neigh_gen[i]=sendel->neigh_gen[i];
     }
-  for(i=0; i<5; i++)
-    elem->order[i] = sendel->order[i];
-  
-  elem->ndof = sendel->ndof;
-  elem->no_of_eqns = sendel->no_of_eqns;
+
   elem->refined = sendel->refined;
   elem->adapted = sendel->adapted;
   elem->which_son = sendel->which_son;
@@ -50,7 +46,7 @@ void Pack_element(void *sendel_in, ElemPack* elem, HashTable* HT_Node_Ptr, int d
   for(i=0; i<EQUATIONS; i++)
     {
       elem->el_error[i] = sendel->el_error[i];
-      elem->el_solution[i] = sendel->el_solution[i];
+
     }
   
   //and the node info:
@@ -72,21 +68,6 @@ void Pack_element(void *sendel_in, ElemPack* elem, HashTable* HT_Node_Ptr, int d
   for(j=0; j<2; j++)
     elem->n_coord[8][j] = node->coord[j];
   elem->node_elevation[8] = node->elevation;
-  
-  if((sendel->bcptr)!=0)
-    {
-      elem->bc = 1;
-      for(i=0; i<4; i++)
-	{
-	  elem->bc_type[i]=(sendel->bcptr)->type[i];
-	  for(j=0; j<2; j++)
-	    for(int k=0; k<2; k++)
-	      elem->bc_value[i][j][k] = (sendel->bcptr)->value[i][j][k];
-	  
-	}
-    }
-  
-  else elem->bc = 0;
   
   //geoflow stuff
   elem->positive_x_side = sendel->positive_x_side;
@@ -110,7 +91,6 @@ void Pack_element(void *sendel_in, ElemPack* elem, HashTable* HT_Node_Ptr, int d
     elem->d_state_vars[i] = sendel->d_state_vars[i];
 
   elem->shortspeed = sendel->shortspeed;
-  elem->lam        = sendel->lam;
   elem->lb_weight  = sendel->lb_weight;
   elem->elm_loc[0] = sendel->elm_loc[0];
   elem->elm_loc[1] = sendel->elm_loc[1];

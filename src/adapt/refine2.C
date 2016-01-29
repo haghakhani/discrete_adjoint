@@ -81,9 +81,6 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 		assert(NodeTemp[i]);
 	}
 
-	for (i = 0; i < 5; i++)
-		order[i] = *(EmTemp->get_order() + i);
-
 	/*filling up the new order array
 	 str: side orders remain;
 	 newsides get the higher order of the already existing sides
@@ -632,8 +629,6 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 	unsigned* orig_neighbors = EmTemp->get_neighbors();
 	int* orig_neigh_proc = EmTemp->get_neigh_proc();
 	int neigh_proc[8];
-	BC* bcptr = NULL;
-	BC* orig_bcptr = EmTemp->get_bcptr();
 	int generation = EmTemp->get_gen() + 1;
 	int* orig_neigh_gen = EmTemp->get_neigh_gen();
 	int neigh_gen[4];
@@ -701,14 +696,14 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 //	}
 
 	double err = (*(EmTemp->get_el_error())) * .5; //added by jp oct11
-	double sol = (*(EmTemp->get_el_solution())) * .5; //added by jp oct11
+
 	// son 0 can use elm_loc
 	int iwetnodefather = EmTemp->get_iwetnode();
 	double Awetfather = EmTemp->get_Awet();
 	double dpson[2];
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 + 0.5;
 	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 + 0.5;
-	Quad9P = new Element(nodes, neigh, neigh_proc, bcptr, generation, elm_loc,
+	Quad9P = new Element(nodes, neigh, neigh_proc, generation, elm_loc,
 			&NewOrder[0][0], neigh_gen, material, EmTemp, coord, HT_Elem_Ptr,
 			HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson,
 			rescomp);
@@ -716,11 +711,9 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 
 	Quad9P->put_which_son(0);  //--by jp, 0 means son 0
 
-	Quad9P->putel_sq(sol, err);  //added by jp oct11
 	Element* old_elm = (Element*) HT_Elem_Ptr->lookup(Quad9P->pass_key());
 	if (old_elm != NULL) {
 		old_elm->put_adapted_flag(TOBEDELETED); //this line shouldn't be necessary just being redundantly careful
-		old_elm->void_bcptr();
 		HT_Elem_Ptr->remove(old_elm->pass_key(), 1, stdout, myid, 16);
 		delete old_elm;
 	}
@@ -775,25 +768,11 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 	neigh_gen[2] = generation;
 	neigh_gen[3] = generation;
 
-	bcptr = NULL;
-//	//boundary conditions
-//	if (orig_bcptr && (orig_bcptr->type[0] || orig_bcptr->type[1])) //else bcptr is a NULL pointer by default
-//			{
-//		bcptr = new BC;
-//		bcptr->type[0] = orig_bcptr->type[0];
-//		bcptr->type[1] = orig_bcptr->type[1];
-//		for (i = 0; i < 2; i++)
-//			for (int j = 0; j < 2; j++) {
-//				bcptr->value[0][i][j] = orig_bcptr->value[0][i][j];
-//				bcptr->value[1][i][j] = orig_bcptr->value[1][i][j];
-//			}
-//
-//	}
 	my_elm_loc[0] = elm_loc[0] + 1;
 	my_elm_loc[1] = elm_loc[1];
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 - 0.5;
 	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 + 0.5;
-	Quad9P = new Element(nodes, neigh, neigh_proc, bcptr, generation, my_elm_loc,
+	Quad9P = new Element(nodes, neigh, neigh_proc, generation, my_elm_loc,
 			&NewOrder[1][0], neigh_gen, material, EmTemp, coord, HT_Elem_Ptr,
 			HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson,
 			rescomp);
@@ -801,11 +780,10 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 
 	Quad9P->put_which_son(1); //--by jp
 
-	Quad9P->putel_sq(sol, err); //added by jp oct11
 	old_elm = (Element*) HT_Elem_Ptr->lookup(Quad9P->pass_key());
 	if (old_elm != NULL) {
 		old_elm->put_adapted_flag(TOBEDELETED); //this line shouldn't be necessary just being redundantly careful
-		old_elm->void_bcptr();
+
 		HT_Elem_Ptr->remove(old_elm->pass_key(), 1, stdout, myid, 17);
 		delete old_elm;
 	}
@@ -860,25 +838,11 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 	neigh_gen[2] = *(orig_neigh_gen + 2);
 	neigh_gen[3] = generation;
 
-	bcptr = NULL;
-	//boundary conditions
-//	if (orig_bcptr && (orig_bcptr->type[1] || orig_bcptr->type[2])) //else bcptr is a NULL pointer by default
-//			{
-//		bcptr = new BC;
-//		bcptr->type[1] = orig_bcptr->type[1];
-//		bcptr->type[2] = orig_bcptr->type[2];
-//		for (i = 0; i < 2; i++)
-//			for (int j = 0; j < 2; j++) {
-//				bcptr->value[1][i][j] = orig_bcptr->value[1][i][j];
-//				bcptr->value[2][i][j] = orig_bcptr->value[2][i][j];
-//			}
-//
-//	}
 	my_elm_loc[0] = elm_loc[0] + 1;
 	my_elm_loc[1] = elm_loc[1] + 1;
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 - 0.5;
 	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 - 0.5;
-	Quad9P = new Element(nodes, neigh, neigh_proc, bcptr, generation, my_elm_loc,
+	Quad9P = new Element(nodes, neigh, neigh_proc, generation, my_elm_loc,
 			&NewOrder[2][0], neigh_gen, material, EmTemp, coord, HT_Elem_Ptr,
 			HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson,
 			rescomp);
@@ -886,11 +850,10 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 
 	Quad9P->put_which_son(2); //--by jp
 
-	Quad9P->putel_sq(sol, err); //added by jp oct11
 	old_elm = (Element*) HT_Elem_Ptr->lookup(Quad9P->pass_key());
 	if (old_elm != NULL) {
 		old_elm->put_adapted_flag(TOBEDELETED); //this line shouldn't be necessary just being redundantly careful
-		old_elm->void_bcptr();
+
 		HT_Elem_Ptr->remove(old_elm->pass_key(), 1, stdout, myid, 18);
 		delete old_elm;
 	}
@@ -945,38 +908,21 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 	neigh_gen[2] = *(orig_neigh_gen + 2);
 	neigh_gen[3] = *(orig_neigh_gen + 3);
 
-	bcptr = NULL;
-	//boundary conditions
-//	if (orig_bcptr && (orig_bcptr->type[2] || orig_bcptr->type[3])) //else bcptr is a NULL pointer by default
-//			{
-//		bcptr = new BC;
-//		bcptr->type[2] = orig_bcptr->type[2];
-//		bcptr->type[3] = orig_bcptr->type[3];
-//		for (i = 0; i < 2; i++)
-//			for (int j = 0; j < 2; j++) {
-//				bcptr->value[2][i][j] = orig_bcptr->value[2][i][j];
-//				bcptr->value[3][i][j] = orig_bcptr->value[3][i][j];
-//			}
-//
-//	}
-
 	my_elm_loc[0] = elm_loc[0];
 	my_elm_loc[1] = elm_loc[1] + 1;
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 + 0.5;
 	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 - 0.5;
-	Quad9P = new Element(nodes, neigh, neigh_proc, bcptr, generation, my_elm_loc,
+	Quad9P = new Element(nodes, neigh, neigh_proc, generation, my_elm_loc,
 			&NewOrder[3][0], neigh_gen, material, EmTemp, coord, HT_Elem_Ptr,
 			HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson,
 			rescomp);
 	state_vars = Quad9P->get_state_vars();
 
 	Quad9P->put_which_son(3); //--by jp
-
-	Quad9P->putel_sq(sol, err); //added by jp oct11
 	old_elm = (Element*) HT_Elem_Ptr->lookup(Quad9P->pass_key());
 	if (old_elm != NULL) {
 		old_elm->put_adapted_flag(TOBEDELETED); //this line shouldn't be necessary just being redundantly careful
-		old_elm->void_bcptr();
+
 		HT_Elem_Ptr->remove(old_elm->pass_key(), 1, stdout, myid, 19);
 		delete old_elm;
 	}

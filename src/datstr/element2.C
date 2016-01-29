@@ -29,8 +29,8 @@
 //#define PRINT_GIS_ERRORS
 
 /*  original element   */
-Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], BC* b,
-    int mat, int* elm_loc_in, double pile_height, int myid, unsigned* opposite_brother) {
+Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int mat,
+    int* elm_loc_in, double pile_height, int myid, unsigned* opposite_brother) {
 
 	counted = 0; //for debugging only
 	adapted = NOTRECADAPTED;
@@ -80,28 +80,10 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 				neighbor[i][j] = neighbor[i + 4][j] = NULL;
 	}
 
-	bcptr = b;
-
-	for (i = 0; i < 5; i++)
-		order[i] = POWER;   //--used in initial uniform mesh
-
 	for (i = 0; i < 8; i++)
 		neigh_gen[i] = 0;
 
-	no_of_eqns = EQUATIONS;
-
-	int help = 0;
-	for (i = 0; i < 4; i++)
-		help += order[i] * (no_of_eqns);
-	help += pow((float) (order[4] - 1), 2) * (no_of_eqns);
-	ndof = help;
-
 	refined = 0;
-
-	for (i = 0; i < 8; i++) {
-		recv[i] = 0;
-		send[i] = 0;
-	}
 
 	myprocess = myid;
 	elm_loc[0] = elm_loc_in[0];
@@ -177,10 +159,10 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 }
 
 //used for refinement
-Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], BC *b,
-    int gen, int elm_loc_in[], int *ord, int gen_neigh[], int mat, Element *fthTemp,
-    double *coord_in, HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
-    int iwetnodefather, double Awetfather, double *drypoint_in, int resComp) {
+Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
+    int elm_loc_in[], int *ord, int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
+    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr, int iwetnodefather,
+    double Awetfather, double *drypoint_in, int resComp) {
 	counted = 0; //for debugging only
 
 	adapted = NEWSON;
@@ -246,27 +228,7 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 		neigh_gen[i] = neigh_gen[i + 4] = gen_neigh[i];
 	}
 
-	bcptr = b;
-
-	for (i = 0; i < 5; i++) {
-		order[i] = *(ord + i);   //--used in initial uniform mesh
-		//cout<<"In the constructor the order"<<order[i]<<"\n\n"<<flush;
-	}
-
-	no_of_eqns = EQUATIONS;
-
-	int help = 0;
-	for (i = 0; i < 4; i++)
-		help += order[i] * (no_of_eqns);
-	help += pow((float) (order[4] - 1), 2) * (no_of_eqns);
-	ndof = help;
-
 	refined = 0;
-
-	for (i = 0; i < 8; i++) {
-		recv[i] = 0;
-		send[i] = 0;
-	}
 
 	new_old = NEW;
 	//geoflow stuff
@@ -409,36 +371,8 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 	myprocess = sons[0]->get_myprocess();
 	generation = sons[0]->get_gen() - 1;
 	material = sons[0]->get_material();
-	no_of_eqns = EQUATIONS;
 
-	for (i = 0; i < 8; i++) {
-		recv[i] = 0;
-		send[i] = 0;
-	}
 	calc_which_son();
-	bcptr = sons[0]->get_bcptr();
-	//order information -- keep the highest order
-	order[0] = *(sons[0]->get_order());
-	if (order[0] < *(sons[1]->get_order()))
-		order[0] = *(sons[1]->get_order());
-	order[1] = *(sons[1]->get_order() + 1);
-	if (order[1] < *(sons[2]->get_order() + 1))
-		order[1] = *(sons[2]->get_order() + 1);
-	order[2] = *(sons[2]->get_order() + 2);
-	if (order[2] < *(sons[3]->get_order() + 2))
-		order[2] = *(sons[3]->get_order() + 2);
-	order[3] = *(sons[3]->get_order() + 3);
-	if (order[3] < *(sons[0]->get_order() + 3))
-		order[3] = *(sons[0]->get_order() + 3);
-	order[4] = *(sons[0]->get_order() + 4);
-	for (i = 1; i < 4; i++)
-		if (order[4] < *(sons[i]->get_order() + 4))
-			order[4] = *(sons[i]->get_order() + 4);
-
-	ndof = 0;
-	for (i = 0; i < 4; i++)
-		ndof += order[i] * (no_of_eqns);
-	ndof += pow((float) (order[4] - 1), 2) * (no_of_eqns);
 
 	refined = 1; // not an active element yet!!!
 
@@ -736,8 +670,6 @@ Element::Element(Element* element) {
 
 	elevation = element->elevation;
 
-	lam = element->lam;
-
 	stoppedflags = element->stoppedflags;
 
 	effect_bedfrict = element->effect_bedfrict;
@@ -812,9 +744,6 @@ Element::Element(Element* element) {
 		father[i] = element->father[i];
 
 		el_error[i] = element->el_error[i];
-
-		el_solution[i] = element->el_solution[i];
-
 	}
 
 	for (int i = 0; i < 8; ++i) {
@@ -836,8 +765,6 @@ Element::Element(Element* element) {
 			son[i][j] = element->son[i][j];
 		}
 	}
-
-	bcptr = NULL;
 
 }
 
@@ -876,6 +803,7 @@ void Element::change_neighbor(unsigned* newneighbs, int which_side, int proc, in
 	switch (reg) {
 		case 1:
 			j = 0;
+			break;
 		case 3:
 			assert(which_side < 4);
 			for (j = 0; j < KEYLENGTH; j++) {
@@ -887,8 +815,10 @@ void Element::change_neighbor(unsigned* newneighbs, int which_side, int proc, in
 			break;
 		case 4:
 			j = 0;
+			break;
 		case 2:
 			j = 0;
+			break;
 		case 5:
 			for (j = 0; j < KEYLENGTH; j++)
 				neighbor[which_side][j] = *(newneighbs + j);
@@ -922,15 +852,6 @@ void Element::change_neighbor(unsigned* newneighbs, int which_side, int proc, in
 	}
 }
 
-void Element::update_ndof() {
-	int help = 0;
-	for (int i = 0; i < 4; i++)
-		help += order[i] * (no_of_eqns);
-
-	help += pow((float) (order[4] - 1), 2) * (no_of_eqns);
-	ndof = help;
-}
-
 void Element::get_nelb_icon(HashTable* NodeTable, HashTable* HT_Elem_Ptr, int* Nelb, int* icon)
 
 //for ONE step H-refinement (icon)
@@ -938,7 +859,6 @@ void Element::get_nelb_icon(HashTable* NodeTable, HashTable* HT_Elem_Ptr, int* N
     {
 	int i;
 	int ifg = 2;
-	int Nc = ndof;
 	double bc_value[4]; //--for poisson equ
 	Node* NodePtr;
 	Element* ElemPtr;
@@ -948,34 +868,6 @@ void Element::get_nelb_icon(HashTable* NodeTable, HashTable* HT_Elem_Ptr, int* N
 		icon[i] = 0;
 		//bc_value[i] = .0;
 	} //-- -1 may be better
-
-	/*modifid for elasticity 03.08*/
-
-	for (i = 0; i < 4; i++) {
-		if (neigh_proc[i] == -1) {
-
-			if (bcptr == NULL)
-				Nelb[i] = 2; //the element has no bc at all
-			else {
-				if (bcptr->type[i] == 0)
-					Nelb[i] = 2; //no bc at that side
-
-				else if (bcptr->type[i] == 2)
-					Nelb[i] = 1; //stress applied
-
-				else if (bcptr->type[i] == 1 && bcptr->value[i][0][0] == UN_CONSTRAINED)
-					Nelb[i] = 4; //y constrined
-
-				else if (bcptr->type[i] == 1 && bcptr->value[i][0][1] == UN_CONSTRAINED)
-					Nelb[i] = 3; //x constrined
-
-				else if (bcptr->type[i] == 1)
-					Nelb[i] = 5; //x, y constrained
-			}
-		}
-
-		bc_value[i] = 0;
-	}
 
 	if (generation) //filling up icon array
 	{
@@ -1012,21 +904,6 @@ void Element::get_nelb_icon(HashTable* NodeTable, HashTable* HT_Elem_Ptr, int* N
 
 		}
 	}
-}
-
-Element::~Element() {
-	if (bcptr)
-		delete bcptr;
-
-	/*  if(key[0] == (unsigned) 2501998986) {
-	 int mmmyid;
-	 MPI_Comm_rank(MPI_COMM_WORLD, &mmmyid);
-	 printf("?????????????????????????????????????????????????????? \n");
-	 printf("?????????????????????????????????????????????????????? \n");
-	 printf("deleting element %u %u on %d $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n",key[0], key[1], mmmyid);
-	 printf("?????????????????????????????????????????????????????? \n");
-	 printf("?????????????????????????????????????????????????????? \n");
-	 }*/
 }
 
 /* routine also puts in the coords of the center node in the elm */
@@ -5307,7 +5184,7 @@ void Element::check_refine_unrefine(SolRec* solrec, HashTable* El_Table, int ite
 
 	if (!prev_sol) {
 // first we check to see whether the element has been refined, so we have to read from its father
-			prev_sol = solrec->lookup(getfather(), iter - 1);
+		prev_sol = solrec->lookup(getfather(), iter - 1);
 
 		if (prev_sol)
 			unrefinelist->add(this);
@@ -5461,13 +5338,7 @@ void Element::save_elem(FILE* fp, FILE *fptxt) {
 #ifdef DEBUG_SAVE_ELEM
 	fprintf(fpdb,"order={ ");
 #endif
-	for (itemp = 0; itemp < 5; itemp++) {
-		temp4.i = order[itemp];
-		writespace[Itemp++] = temp4.u;
-#ifdef DEBUG_SAVE_ELEM
-		fprintf(fpdb,"%d ",order[itemp]);
-#endif
-	}
+
 #ifdef DEBUG_SAVE_ELEM
 	fprintf(fpdb,"}\n");
 #endif
@@ -5494,7 +5365,6 @@ void Element::save_elem(FILE* fp, FILE *fptxt) {
 	fprintf(fpdb,"material=%d\n",material);
 #endif
 
-	temp4.i = ndof;
 	writespace[Itemp++] = temp4.u;
 	assert(Itemp == 12);
 #ifdef DEBUG_SAVE_ELEM
@@ -5652,47 +5522,6 @@ void Element::save_elem(FILE* fp, FILE *fptxt) {
 	writespace[Itemp++] = temp8.u[1];
 	assert(Itemp == 107);
 
-//boundary conditions start here
-	if (bcptr == NULL) {
-		writespace[Itemp++] = 0;
-		assert(Itemp == 108);
-#ifdef DEBUG_SAVE_ELEM
-		fprintf(fpdb,"num_extra=0\n");
-#endif
-	} else {
-		writespace[Itemp++] = 20;
-#ifdef DEBUG_SAVE_ELEM
-		fprintf(fpdb,"num_extra=20\nbcptr->type={ ");
-#endif
-		for (itemp = 0; itemp < 4; itemp++) {
-			temp4.i = bcptr->type[itemp];
-			writespace[Itemp++] = temp4.u;
-#ifdef DEBUG_SAVE_ELEM
-			fprintf(fpdb,"%d ",bcptr->type[itemp]);
-#endif
-		}
-//assert(Itemp==122);
-		assert(Itemp == 112);
-#ifdef DEBUG_SAVE_ELEM
-		fprintf(fpdb,"}\n");
-#endif
-		for (itemp = 0; itemp < 4; itemp++) {
-			temp4.f = bcptr->value[itemp][0][0];
-			writespace[Itemp++] = temp4.u;
-			temp4.f = bcptr->value[itemp][0][1];
-			writespace[Itemp++] = temp4.u;
-			temp4.f = bcptr->value[itemp][1][0];
-			writespace[Itemp++] = temp4.u;
-			temp4.f = bcptr->value[itemp][1][1];
-			writespace[Itemp++] = temp4.u;
-#ifdef DEBUG_SAVE_ELEM
-			fprintf(fpdb,"bcptr->value={ %f %f %f %f }\n",
-					bcptr->value[itemp][0][0],bcptr->value[itemp][0][1],
-					bcptr->value[itemp][1][0],bcptr->value[itemp][1][1]);
-#endif      
-		}
-		assert(Itemp == 128);
-	}
 #ifdef DEBUG_SAVE_ELEM
 //fclose(fpdb);
 #endif
@@ -5712,7 +5541,6 @@ Element::Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myi
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		Influx[i] = 0.0;
 	myprocess = myid;
-	no_of_eqns = EQUATIONS;
 //refined=0;
 
 	FourBytes temp4;
@@ -5735,7 +5563,6 @@ Element::Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myi
 
 	for (itemp = 0; itemp < 5; itemp++) {
 		temp4.u = readspace[Itemp++];
-		order[itemp] = temp4.i;
 	}
 	assert(Itemp == 8);
 
@@ -5752,7 +5579,6 @@ Element::Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myi
 	assert(Itemp == 11);
 
 	temp4.u = readspace[Itemp++];
-	ndof = temp4.i;
 	assert(Itemp == 12);
 
 	temp4.u = readspace[Itemp++];
@@ -5856,37 +5682,6 @@ Element::Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myi
 	temp8.u[1] = readspace[Itemp++];
 	drypoint[1] = temp8.d;
 	assert(Itemp == 101);
-
-	if (readspace[Itemp] > 0) {
-		int num_extra = readspace[Itemp];
-		fread(readspace, sizeof(unsigned), num_extra, fp);
-		Itemp = 0;
-
-		bcptr = new BC;
-
-//boundary conditions start here
-		for (itemp = 0; itemp < 4; itemp++) {
-			temp4.u = readspace[Itemp++];
-			bcptr->type[itemp] = temp4.i;
-		}
-		assert(Itemp == 4);
-
-		for (itemp = 0; itemp < 4; itemp++) {
-			temp4.u = readspace[Itemp++];
-			bcptr->value[itemp][0][0] = temp4.f;
-
-			temp4.u = readspace[Itemp++];
-			bcptr->value[itemp][0][1] = temp4.f;
-
-			temp4.u = readspace[Itemp++];
-			bcptr->value[itemp][1][0] = temp4.f;
-
-			temp4.u = readspace[Itemp++];
-			bcptr->value[itemp][1][1] = temp4.f;
-		}
-		assert(Itemp == 20);
-	} else
-		bcptr = NULL;
 
 	find_positive_x_side(NodeTable);
 	calculate_dx(NodeTable);

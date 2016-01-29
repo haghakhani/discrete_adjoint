@@ -304,7 +304,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count,
 				break;
 			case TOBEDELETED:
 				//deleting the refined father elements but not ghost element so don't need to call move_data() again
-				EmTemp->void_bcptr();
+
 				HT_Elem_Ptr->remove(EmTemp->pass_key(), 1, stdout, myid, 20);
 				delete EmTemp;
 				break;
@@ -1230,7 +1230,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 				break;
 			case TOBEDELETED:
 				//deleting the refined father elements but ghost element so don't need to call move_data() again before AssertMeshErrorFree
-				EmTemp->void_bcptr();
+
 				HT_Elem_Ptr->remove(EmTemp->pass_key(), 1, stdout, myid, 22);
 				delete EmTemp;
 				break;
@@ -1386,7 +1386,7 @@ void H_adapt_to_level(HashTable* El_Table, HashTable* NodeTable,
 							elliptical_pile_height(NodeTable, EmTemp, matprops_ptr,
 									pileprops_ptr);
 						} else {
-							EmTemp->void_bcptr();
+
 							El_Table->remove(EmTemp->pass_key(), 1, stdout, myid, 24);
 							delete EmTemp;
 						}
@@ -1407,7 +1407,7 @@ void H_adapt_to_level(HashTable* El_Table, HashTable* NodeTable,
 							EmTemp->put_adapted_flag(NOTRECADAPTED);
 							EmTemp->put_height(0.0);
 						} else {
-							EmTemp->void_bcptr();
+
 							El_Table->remove(EmTemp->pass_key(), 1, stdout, myid, 25);
 							delete EmTemp;
 						}

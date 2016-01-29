@@ -100,11 +100,11 @@ public:
 	;
 
 	//! constructor that creates an original element when funky is read in
-	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], BC *b, int mat,
+	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int mat,
 	    int *elm_loc_in, double pile_height, int myid, unsigned *opposite_brother);
 
 	//! constructor that creates a son element from its father during refinement
-	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], BC *b, int gen,
+	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
 	    int elm_loc_in[], int *ord, int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
 	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
 	    int iwetnodefather, double Awetfather, double *drypoint_in, int resComp);
@@ -120,7 +120,7 @@ public:
 	Element(Element* element);
 
 	//! destructor that does nothing except delete boundary condition pointer
-	~Element();
+	~Element(){};
 
 	//! this member function saves a single element to a file with a single fwrite call, this allows the element to be recreated/restored upon restart of a simulation
 	void save_elem(FILE* fp, FILE* fptxt); //for restart
@@ -417,12 +417,6 @@ public:
 	 */
 	void eval_velocity(double xoffset, double yoffset, double Vel[]);
 
-	//! this function is legacy afeapi code, it is never called in the finite difference/volume version of titan
-	double* get_coefABCD() {
-		return coefABCD;
-	}
-	;
-
 	//! this function returns the already calculated value(s) of k active passive, which comes from using th Coulomb friction model of granular flows (this is problem specific to titan and thus does not appear in the standard afeapi code)
 	double* get_kactxy();
 
@@ -587,17 +581,6 @@ public:
 		return (a < 0 ? -1. : 1.);
 	}
 
-	//! get drag-force
-	const double * get_drag() const {
-		return drag;
-	}
-
-	//! update drag force
-	void put_drag(double df[]) {
-		for (int i = 0; i < DIMENSION; i++)
-			drag[i] = df[i];
-	}
-
 	//! this function returns the index of jacobian for this element
 	int get_sol_rec_ind();
 
@@ -700,26 +683,11 @@ private:
 	//! this array holds the process(or) id of this element's 8 neighbors, there can be 8 neighbors because of the 1 irregularity rule.  neigh_proc[4:7] != -2 only if it has 2 neighbors on that side, a value of -1 for neigh_proc means that this edge is a boundary of the computational domain.
 	int neigh_proc[8];
 
-	//! this is legacy afeapi, all finite volume "elements"/cells are piece wise constant, but I believe this is actually used in the DG (Discontinuous Galerkin) version of titan
-	int order[5];
-
 	//! neigh_gen is an array that holds the "generation" (how refined it is) of this element's 8 neighbors, there can-be/are 2 neighbors to a side because of the 1 irregularity rule
 	int neigh_gen[8];
 
-	//! pointer to the boundary condition class, if this element is not a boundary element the pointer holds the NULL value
-	BC* bcptr;
-
-	//! the number of degrees of freedom, since Titan is a finite difference/volume code, ndof is afeapi legacy, but the DG (Discontinuous Galerkin) version of Titan actually uses this
-	int ndof;
-
-	//! this is legacy afeapi, it is not used, but do not remove it, it could cause problems if you do
-	int no_of_eqns;
-
 	//! this holds the "error" in the element's solution, which is useful in determining refinement, this may actually be afeapi legacy
 	double el_error[EQUATIONS];
-
-	//! this holds the element solution, I believe this is legacy afeapi
-	double el_solution[EQUATIONS];
 
 	//! refined is a flag that usually has the value 0, but will be 1 if the element has been refined this iteration (used to enforce the 1 irregularity rule), or have the value "GHOST" if it is a ghost cell, refined and ghost cells are not updated, see constant.h for the value of GHOST
 	int refined;
@@ -741,12 +709,6 @@ private:
 
 	//! elm_loc is used in unrefining beyond the original coarse mesh
 	int elm_loc[2];
-
-	//! this is afeapi legacy
-	int send[8];
-
-	//! this is afeapi legacy
-	int recv[8];
 
 	/* variables for hyperbolic geoflow problem */
 
@@ -777,9 +739,6 @@ private:
 	//! maximum x and y direction wavespeeds for this element, wavespeeds are eigenvalues of the flux jacobians
 	double eigenvxymax[DIMENSION];
 
-	//! this is legacy afeapi not used in titan
-	double coefABCD[4];
-
 	//! k active/passive in the x and y directions, k active/passive is part of the coulomb friction model for Granular Flows
 	double kactxy[DIMENSION];
 
@@ -797,9 +756,6 @@ private:
 
 	//! the spatial (x and y) derivatives of the local z component of the gravity vector
 	double d_gravity[DIMENSION];
-
-	//! legacy titan not really used, lam :=p_{bed}/(rho*g_z*h)
-	double lam;
 
 	//! part of the new stopping criteria under development, has a 0 if flow is not stopped, has the value 1 if it should not be sliding but should be slumping, has the value 2 if it should neither be sliding or slumping (it should be completely stopped), I (Keith) am rather confident in the criteria used to set this the problem is determining what to do about it after you know the flow SHOULD be stopped
 	int stoppedflags;
@@ -883,11 +839,6 @@ inline int Element::get_material() {
 
 inline unsigned* Element::get_brothers() {
 	return &brothers[0][0];
-}
-;
-
-inline void Element::void_bcptr() {
-	bcptr = NULL;
 }
 ;
 
@@ -1028,16 +979,6 @@ inline double* Element::get_curvature() {
 }
 ;
 
-inline void Element::put_lam(double lam_in) {
-	lam = lam_in;
-}
-;
-
-inline double Element::get_lam() {
-	return lam;
-}
-;
-
 inline int* Element::get_elm_loc() {
 	return elm_loc;
 }
@@ -1079,9 +1020,6 @@ inline unsigned* Element::getNode() {
 	return &(node_key[0][0]);
 }
 
-inline int Element::get_no_of_dof() {
-	return ndof;
-}
 
 inline void Element::put_gen(int g) {
 	generation = g;
@@ -1091,16 +1029,9 @@ inline void Element::put_neigh_proc(int i, int proc) {
 	neigh_proc[i] = proc;
 }
 
-inline void Element::put_order(int i, int ord) {
-	order[i] = ord;
-}
 
 inline unsigned* Element::getson() {
 	return &(son[0][0]);
-}
-
-inline int* Element::get_order() {
-	return order;
 }
 
 inline void Element::putson(unsigned* s) {
@@ -1133,12 +1064,7 @@ inline void Element::putassoc(int a, int i) {
 }
 
 inline void Element::putel_sq(double solsq, double errsq) {
-	el_solution[0] = solsq;
 	el_error[0] = errsq;
-}
-
-inline double* Element::get_el_solution() {
-	return el_solution;
 }
 
 inline double* Element::get_el_error() {
@@ -1151,10 +1077,6 @@ inline unsigned* Element::get_neighbors() {
 
 inline int* Element::get_neigh_proc() {
 	return neigh_proc;
-}
-
-inline BC* Element::get_bcptr() {
-	return bcptr;
 }
 
 inline int Element::get_gen() {
@@ -1175,22 +1097,6 @@ inline int Element::get_adapted_flag() {
 
 inline void Element::put_adapted_flag(int new_adapted_status) {
 	adapted = new_adapted_status;
-}
-
-inline void Element::put_send_flag(int i, int j) {
-	send[i] = j;
-}
-
-inline int Element::get_send_flag(int i) {
-	return send[i];
-}
-
-inline void Element::put_recv_flag(int i, int j) {
-	recv[i] = j;
-}
-
-inline int Element::get_recv_flag(int i) {
-	return recv[i];
 }
 
 inline int* Element::get_neigh_gen() {

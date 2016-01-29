@@ -47,11 +47,6 @@ Node::Node(unsigned* keyi, double* coordi, MatProps* matprops_ptr) {
 	 assigning it zero gets rid of what looks like a "self
 	 contained" memory error
 	 */
-	nextptr = 0;
-	preptr = 0;
-	sol = 0;
-	sol_deleted = 0;
-
 	info = INIT;
 
 	for (i = 0; i < DIMENSION; i++)
@@ -59,8 +54,7 @@ Node::Node(unsigned* keyi, double* coordi, MatProps* matprops_ptr) {
 
 	for (i = 0; i < KEYLENGTH; i++)
 		key[i] = *(keyi + i);
-	dof[0] = INIT;
-	dof[1] = INIT;
+
 	zero_flux();
 	// find the max resolution of the GIS info and then get the elevation at this node
 	double resolution = 0;
@@ -96,11 +90,6 @@ Node::Node(unsigned* keyi, double* coordi, int inf, int ord, MatProps* matprops_
 	 variable and valgrind wouldn't flag an error.  id is used in
 	 ../repartition/BSFC_update_and_send_elements.C */
 
-	nextptr = 0;
-	preptr = 0;
-	sol = 0;
-	sol_deleted = 0;
-
 	info = INIT;
 
 	for (i = 0; i < DIMENSION; i++)
@@ -108,8 +97,6 @@ Node::Node(unsigned* keyi, double* coordi, int inf, int ord, MatProps* matprops_
 
 	for (i = 0; i < KEYLENGTH; i++)
 		key[i] = *(keyi + i);
-	dof[0] = INIT;
-	dof[1] = INIT;
 
 	info = inf;
 	order = ord;
@@ -148,11 +135,6 @@ Node::Node(unsigned* keyi, double* coordi, int inf, int ord, double elev, int ya
 	 variable and valgrind wouldn't flag an error.  id is used in
 	 ../repartition/BSFC_update_and_send_elements.C */
 
-	nextptr = 0;
-	preptr = 0;
-	sol = 0;
-	sol_deleted = 0;
-
 	info = INIT;
 
 	for (i = 0; i < DIMENSION; i++)
@@ -160,8 +142,6 @@ Node::Node(unsigned* keyi, double* coordi, int inf, int ord, double elev, int ya
 
 	for (i = 0; i < KEYLENGTH; i++)
 		key[i] = *(keyi + i);
-	dof[0] = INIT;
-	dof[1] = INIT;
 
 	info = inf;
 	order = ord;
@@ -187,18 +167,6 @@ Node::Node(Node* node) {
 
 	order = node->order;
 
-	nextptr = node->nextptr;
-
-	preptr = node->preptr;
-
-	glnum = node->glnum;
-
-	sol = node->sol;
-
-	reconstructed = node->reconstructed;
-
-	sol_deleted = node->sol_deleted;
-
 	elevation = node->elevation;
 
 	for (int i = 0; i < DIMENSION; ++i) {
@@ -207,7 +175,6 @@ Node::Node(Node* node) {
 
 		key[i] = node->key[i];
 
-		dof[i] = node->dof[i];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i) {
@@ -244,11 +211,6 @@ void Node::putinfo(int in) {
 	 printf("?????????????????????????????????????????????????????? \n");
 
 	 }*/
-}
-
-Node::~Node() {
-	if (sol != NULL)
-		delete[] sol;
 }
 
 void Node::zero_flux() {
@@ -356,10 +318,6 @@ void Node::save_node(FILE* fp) {
 }
 
 Node::Node(FILE* fp, MatProps* matprops_ptr) {
-
-	sol = 0;           //never USED anywhere in TITAN except when initialized
-	sol_deleted = 0;   //never USED anywhere in TITAN except when initialized
-	nextptr = preptr = 0;   //never USED anywhere in TITAN except when initialized
 
 	FourBytes temp4;
 	EightBytes temp8;

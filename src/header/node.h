@@ -102,7 +102,7 @@ public:
 	//! copy constructor
 	Node(Node* node);
 
-	~Node();
+	~Node(){};
 
 	//! this function writes all of one Node's data necessary for restart to a file in a single fwrite statement
 	void save_node(FILE* fp); //for restart
@@ -205,27 +205,6 @@ protected:
 	//! this is the node key, a key is a single number that is 2 unsigned variables long and is used to access the pointer to a Node or Element through the HashTable
 	unsigned key[KEYLENGTH];
 
-	//! points to the next node
-	void* nextptr;
-
-	//! points to the previous node
-	void* preptr;
-
-	//! nodal degrees of freedom are legacy afeapi but came with the comment "dof[1]-dof[0]+1 = dof of the node"
-	int dof[2];
-
-	//! glnum is legacy afeapit but came with the comment "the node occupies the position from glnum to glnum+dof"
-	int glnum;
-
-	//! sol is legacy afeapi and pointed to the nodal solution array
-	double* sol;
-
-	//! reconstructed is legacy afeapi
-	int reconstructed;
-
-	//! sol_deleted is legacy afeapi, it appears in node.C and htflush.C
-	int sol_deleted;
-
 	//! this elevation should currently be the GIS elevation at the finest "scale"
 	double elevation;
 
@@ -236,11 +215,6 @@ protected:
 	double refinementflux[NUM_STATE_VARS];
 };
 
-inline void Node::putsol(double* s) {
-	sol = s;
-}
-;
-
 inline int Node::getinfo() {
 	return info;
 }
@@ -248,21 +222,6 @@ inline int Node::getinfo() {
 
 inline double* Node::get_coord() {
 	return coord;
-}
-;
-
-inline double* Node::getsol() {
-	return sol;
-}
-;
-
-inline int Node::get_sol_deleted() {
-	return sol_deleted;
-}
-;
-
-inline void Node::put_sol_deleted(int flag) {
-	sol_deleted = flag;
 }
 ;
 
@@ -286,25 +245,6 @@ inline double Node::get_elevation() {
 }
 ;
 
-//above this line Keith made inline on 20061128
-
-inline void Node::putdof(int lower, int up) {
-	dof[0] = lower;
-	dof[1] = up;
-}
-
-inline int* Node::getdof() {
-	return dof;
-}
-
-inline void Node::putglnum(int numbering) {
-	glnum = numbering;
-}
-
-inline int Node::getglnum() {
-	return glnum;
-}
-
 inline unsigned* Node::pass_key() {
 	return key;
 }
@@ -319,14 +259,6 @@ inline void Node::put_order(int i) {
 
 inline void Node::increase_order() {
 	order++;
-}
-
-inline void Node::put_reconstructed(int i) {
-	reconstructed = i;
-}
-
-inline int Node::get_reconstructed() {
-	return reconstructed;
 }
 
 inline void Node::put_num_assoc_elem(int numin) {

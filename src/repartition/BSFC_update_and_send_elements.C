@@ -305,7 +305,7 @@ void delete_unused_elements_nodes(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr
 	  EmTemp = (Element*)(entryp->value);
 	  entryp = entryp->next;
 	  if(EmTemp->get_refined_flag() != 0) {  // not an active element
-	    EmTemp->void_bcptr();  // don't remove bc's
+
 	    HT_Elem_Ptr->remove(EmTemp->pass_key());
 	    delete EmTemp;
 	  }

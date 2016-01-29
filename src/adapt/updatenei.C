@@ -1962,7 +1962,7 @@ void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump,
 								}
 
 								El_Table->remove(EmNeigh->key, 1, stdout, myid, 13);
-								EmNeigh->void_bcptr();
+
 								delete EmNeigh;
 							}
 
@@ -2321,7 +2321,6 @@ void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump,
 		assert(EmFather->adapted==OLDFATHER); //sanity check
 		assert(EmFather->refined == 1);
 		EmFather->adapted = TOBEDELETED; //I've lived a good life, it's my time to die
-		EmFather->void_bcptr();
 		El_Table->remove(EmFather->key, 1, stdout, myid, 15);
 		delete EmFather;
 	}
@@ -2626,7 +2625,7 @@ void update_neighbor_info(HashTable* HT_Elem_Ptr, ElemPtrList* RefinedList,
 							NdTemp = (Node*) HT_Node_Ptr->lookup(
 									EmTemp->getNode() + (j + 4) * KEYLENGTH);
 							NdTemp->putinfo(S_C_CON);
-							NdTemp->put_order(*(EmTemp->get_order() + j));
+
 							for (int k = 0; k < 2; k++) {
 								SonTemp = (Element*) HT_Elem_Ptr->lookup(
 										EmTemp->getson() + KEYLENGTH * SIDE_SONS[j][k]);
@@ -2649,7 +2648,7 @@ void update_neighbor_info(HashTable* HT_Elem_Ptr, ElemPtrList* RefinedList,
 										SonTemp->getNode() + (j + 4) * KEYLENGTH);
 								assert(NdTemp);
 								NdTemp->putinfo(SIDE);
-								NdTemp->put_order(*(SonTemp->get_order() + j));
+
 							}
 
 						}

@@ -145,10 +145,10 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	}
 #endif
 
-	EmTemp->put_drag(dragforce);
-	*forceint *= dx[0] * dx[1];
-	*forcebed *= dx[0] * dx[1];
-	*eroded *= dx[0] * dx[1];
+//	EmTemp->put_drag(dragforce);
+//	*forceint *= dx[0] * dx[1];
+//	*forcebed *= dx[0] * dx[1];
+//	*eroded *= dx[0] * dx[1];
 
 	bool print_vars = false;
 	for (i = 0; i < NUM_STATE_VARS; i++)

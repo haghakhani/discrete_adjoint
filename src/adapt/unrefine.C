@@ -397,7 +397,7 @@ void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *E
 
 		//Now delete this oldson Element
 		El_Table->remove(EmSon->key, 1, stdout, myid, 11);
-		EmSon->void_bcptr();
+
 		delete EmSon;
 	}
 
@@ -444,7 +444,6 @@ void Element::change_neigh_info(unsigned* fth_key, unsigned* ng_key, int neworde
 	}
 
 	assert(which_side >= 0);
-	order[which_side] = neworder;
 
 	for (i = 0; i < KEYLENGTH; i++) {
 		neighbor[which_side][i] = fth_key[i];

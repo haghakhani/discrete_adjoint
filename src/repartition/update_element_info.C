@@ -191,11 +191,7 @@ void construct_el(Element* newelement, ElemPack* elem2,
       newelement->neigh_proc[i]=elem2->neigh_proc[i];
       newelement->neigh_gen[i]=elem2->neigh_gen[i];
     }
-  for(i=0; i<5; i++)
-    newelement->order[i] = elem2->order[i];
 
-  newelement->ndof = elem2->ndof;
-  newelement->no_of_eqns = elem2->no_of_eqns;
   newelement->refined = elem2->refined;
   newelement->adapted = elem2->adapted;
   newelement->which_son = elem2->which_son;
@@ -218,7 +214,6 @@ void construct_el(Element* newelement, ElemPack* elem2,
   for(i=0; i<EQUATIONS; i++)
     {
       newelement->el_error[i] = elem2->el_error[i];
-      newelement->el_solution[i] = elem2->el_solution[i];
     }
 
   //and the node info -- ignore some info if this is just getting a parent from another processor...
@@ -271,11 +266,8 @@ void construct_el(Element* newelement, ElemPack* elem2,
 	   for(int k=0; k<2; k++)
 	    newbc->value[i][j][k] = elem2->bc_value[i][j][k];
 	}
-       newelement->bcptr = newbc;
+
     }
-
-  else newelement->bcptr = 0;
-
   *e_error = newelement->el_error[0];
 
   //geoflow stuff
@@ -299,7 +291,6 @@ void construct_el(Element* newelement, ElemPack* elem2,
   for(i=0;i<DIMENSION*NUM_STATE_VARS;i++)
     newelement->d_state_vars[i] = elem2->d_state_vars[i];
   newelement->shortspeed = elem2->shortspeed;
-  newelement->lam        = elem2->lam;
   newelement->lb_weight  = elem2->lb_weight;
   newelement->elm_loc[0] = elem2->elm_loc[0];
   newelement->elm_loc[1] = elem2->elm_loc[1];

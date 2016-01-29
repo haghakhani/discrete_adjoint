@@ -319,7 +319,7 @@ void delete_ghost_elms(HashTable* El_Table, int myid) {
 			//((EmTemp->get_adapted_flag()<0)&&
 			//(EmTemp->get_adapted_flag()>=-BUFFER))
 			) { //this is a GHOST element
-				EmTemp->void_bcptr();
+
 				El_Table->remove(EmTemp->pass_key(), 1, stdout, myid, 26);
 				delete EmTemp;
 				delete_counter++;

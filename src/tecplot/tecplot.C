@@ -884,12 +884,6 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 			EmTemp = (Element*) entryp->value;
 			assert(EmTemp);
 			if (EmTemp->get_adapted_flag() > 0) {
-				order = 1;
-				for (int k = 0; k < 5; k++) {
-					int help_order = *(EmTemp->get_order() + k);
-					if (help_order > order)
-						order = help_order;
-				}
 
 //				unsigned keyy[2] = { 3910790222, 3303820997 };
 //				if (keyy[0] == *(EmTemp->pass_key()) && keyy[1] == *(EmTemp->pass_key() + 1))
@@ -1041,12 +1035,6 @@ void vizplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 			EmTemp = (Element*) entryp->value;
 			assert(EmTemp);
 			if (EmTemp->get_adapted_flag() > 0) {
-				order = 1;
-				for (int k = 0; k < 5; k++) {
-					int help_order = *(EmTemp->get_order() + k);
-					if (help_order > order)
-						order = help_order;
-				}
 				nodes = EmTemp->getNode();
 				double* state_vars = EmTemp->get_state_vars();
 				double err = sqrt(*(EmTemp->get_el_error()));
