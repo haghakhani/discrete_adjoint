@@ -34,10 +34,7 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx) {
 
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
-	Element* Curr_El = NULL;
-
-	// because here we just use refinement to have 1 higher generation of elements
-	int rescomp = 0;
+	ErrorElem* Curr_El = NULL;
 
 	//for debugging perpose
 	unsigned key[2] = { KEY0, KEY1 };
@@ -63,31 +60,30 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx) {
 
 	htflush(El_Table, NodeTable, 1);
 	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
+	ElemPtrList<ErrorElem> RefinedList(num_nonzero_elem(El_Table));
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
 			while (currentPtr) {
-				Curr_El = (Element*) (currentPtr->value);
+				Curr_El = (ErrorElem*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() >= NOTRECADAPTED) {
 					Curr_El->put_adapted_flag(NOTRECADAPTED);
+					RefinedList.add(Curr_El);
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 	}
 
-	ElemPtrList RefinedList(num_nonzero_elem(El_Table));
-
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
 			while (currentPtr) {
-				Curr_El = (Element*) (currentPtr->value);
+				Curr_El = (ErrorElem*) (currentPtr->value);
 				currentPtr = currentPtr->next;
 				if (Curr_El->get_adapted_flag() == NOTRECADAPTED) {
-
-					refinewrapper(El_Table, NodeTable, matprops_ptr, &RefinedList, Curr_El, rescomp);
+					refine(Curr_El, El_Table, NodeTable, matprops_ptr);
 				}
 
 			}

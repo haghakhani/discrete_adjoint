@@ -123,7 +123,7 @@ void init_error_grid(MeshCTX* meshctx, PropCTX* propctx);
 
 void dual_unrefine(MeshCTX* meshctx, PropCTX* propctx);
 
-void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El);
+void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El);
 
 void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx);
 
@@ -186,20 +186,15 @@ void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* 
     double* fluxymold, double* fluxxp, double* fluxxm, double* fluxyp, double* fluxym,
     int effelement, int j, int iter, double dt);
 
-void reverse_states(HashTable* El_Table, HashTable* solrec, int iter, ElemPtrList* refinelist,
-    ElemPtrList* unrefinelist);
-
 void print_jacobian(HashTable* El_Table, int iter);
 
 void calc_flux(MeshCTX* meshctx, PropCTX* propctx);
 
 void refinement_report(HashTable* El_Table);
 
-void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refinelist,
-    ElemPtrList* unrefinelist);
-
-void error_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList* refinelist,
-    ElemPtrList* unrefinelist);
+template<typename T>
+void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* refinelist,
+    ElemPtrList<T>* unrefinelist);
 
 void force_unrefine(HashTable* El_Table, HashTable* NodeTable, Element* Curr_el, int myid,
     MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int rescomp);
@@ -217,8 +212,7 @@ void reset_newson_adaption_flag(HashTable* El_Table);
 
 void reset_newfather_adaption_flag(HashTable* El_Table);
 
-void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, MeshCTX* cp_meshctx, PropCTX* propctx,
-    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
+void setup_dual_flow(SolRec* solrec, MeshCTX* meshctx, MeshCTX* cp_meshctx, PropCTX* propctx);
 
 double initial_dot(HashTable* El_Table);
 

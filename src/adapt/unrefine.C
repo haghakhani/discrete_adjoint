@@ -60,7 +60,7 @@ void unrefine(HashTable* El_Table, HashTable* NodeTable, double target, int myid
 
 	int i, j, k;
 	Element* Curr_El;
-	ElemPtrList NewFatherList, OtherProcUpdate;
+	ElemPtrList<Element> NewFatherList, OtherProcUpdate;
 
 	//-------------------go through all the elements of the subdomain------------------------
 	HashEntryPtr* buck = El_Table->getbucketptr();
@@ -103,8 +103,8 @@ void unrefine(HashTable* El_Table, HashTable* NodeTable, double target, int myid
 									currentPtr = currentPtr->next;
 							}
 						}
-						Curr_El->find_brothers(El_Table, NodeTable, target, myid, matprops_ptr, &NewFatherList,
-						    &OtherProcUpdate, rescomp);
+						Curr_El->find_brothers<Element>(El_Table, NodeTable, target, myid, matprops_ptr, &NewFatherList,
+						    &OtherProcUpdate);
 
 					}
 				}
@@ -207,21 +207,22 @@ void unrefine(HashTable* El_Table, HashTable* NodeTable, double target, int myid
 	return;
 }
 
+template<class T>
 int Element::find_brothers(HashTable* El_Table, HashTable* NodeTable, double target, int myid,
-    MatProps* matprops_ptr, void *NFL, void *OPU, int rescomp) {
-	ElemPtrList* NewFatherList = (ElemPtrList*) NFL;
-	ElemPtrList* OtherProcUpdate = (ElemPtrList*) OPU;
+    MatProps* matprops_ptr, void *NFL, void *OPU) {
+	ElemPtrList<Element>* NewFatherList = (ElemPtrList<Element>*) NFL;
+	ElemPtrList<Element>* OtherProcUpdate = (ElemPtrList<Element>*) OPU;
 
 	int i = 0, j;
 	int unrefine_flag = 1;
-	Element* bros[5];
+	T* bros[5];
 	if (opposite_brother_flag == 0) {
 		find_opposite_brother(El_Table);
 		if (opposite_brother_flag == 0)
 			return 0;
 	}
 	while (i < 4 && unrefine_flag == 1) {
-		Element* EmTemp = (Element*) El_Table->lookup(&brothers[i][0]);
+		T* EmTemp = (T*) El_Table->lookup(&brothers[i][0]);
 		if (EmTemp == NULL) //|| EmTemp->refined != 0)
 			return 0;
 		else if (EmTemp->adapted != NOTRECADAPTED) //this should be sufficient
@@ -234,13 +235,9 @@ int Element::find_brothers(HashTable* El_Table, HashTable* NodeTable, double tar
 		i++;
 	}
 
-	if (unrefine_flag ) { // we want to unrefine this element...
-		//first we create the father element
-		//printf("==============================\n unrefining an element \n===============================\n");
-		if (*(bros[1]->getfather()) == (unsigned) 1529353130)
-			printf("creating father %u %u from %u %u\n", *(bros[1]->getfather()),
-			    *(bros[1]->getfather() + 1), *(bros[1]->pass_key()), *(bros[1]->pass_key() + 1));
-		bros[0] = new Element((bros + 1), NodeTable, El_Table, matprops_ptr, rescomp);
+	if (unrefine_flag) { // we want to unrefine this element...
+
+		bros[0] = new T((bros + 1), NodeTable, El_Table, matprops_ptr);
 		El_Table->add(bros[0]->pass_key(), bros[0]);
 		assert(bros[0]); // a copy of the parent should always be on the same process as the sons
 		NewFatherList->add(bros[0]);
@@ -253,6 +250,20 @@ int Element::find_brothers(HashTable* El_Table, HashTable* NodeTable, double tar
 	}
 
 	return unrefine_flag;
+}
+
+void Element::for_link_temp() {
+	HashTable *El_Table, *NodeTable;
+	void* voidi;
+	MatProps* matprops;
+	Element* elem;
+	DualElem* dualelem;
+	ErrorElem* errelem;
+
+	elem->find_brothers<Element>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi);
+	dualelem->find_brothers<DualElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi);
+	errelem->find_brothers<ErrorElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi);
+
 }
 
 int Element::check_unrefinement(HashTable* El_Table, double target) {
@@ -454,12 +465,12 @@ void Element::change_neigh_info(unsigned* fth_key, unsigned* ng_key, int neworde
 //make this an element friend function
 void unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int myid, void* NFL) {
 
-	ElemPtrList* NewFatherList = (ElemPtrList*) NFL;
+	ElemPtrList<Element>* NewFatherList = (ElemPtrList<Element>*) NFL;
 
 	int iupdate, ineigh, isonA, isonB, ineighme, ikey;
 	Element *EmNeigh, *EmFather;
 
-	//loop through the NEWFATHER elements
+//loop through the NEWFATHER elements
 	for (iupdate = 0; iupdate < NewFatherList->get_num_elem(); iupdate++) {
 
 		//I'm a NEWFATHER I'm going to update my neighbors with
@@ -550,7 +561,7 @@ void unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int myid, 
 //make this a Node and Element friend fucntion
 void unrefine_interp_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump, int myid,
     void* OPU) {
-	ElemPtrList* OtherProcUpdate = (ElemPtrList*) OPU;
+	ElemPtrList<Element>* OtherProcUpdate = (ElemPtrList<Element>*) OPU;
 
 	if (nump < 2)
 		return;
@@ -581,8 +592,8 @@ void unrefine_interp_neigh_update(HashTable* El_Table, HashTable* NodeTable, int
 	}
 	num_send[myid] = 0; //better paranoid then dead;
 
-	//send to each processor the number of his elements he has to update because of me
-	//receive from each processor the number of elements I have to update because of him
+//send to each processor the number of his elements he has to update because of me
+//receive from each processor the number of elements I have to update because of him
 	MPI_Alltoall(num_send, 1, MPI_INT, num_recv, 1, MPI_INT, MPI_COMM_WORLD);
 
 	if (myid == TARGET_PROC)
@@ -822,7 +833,8 @@ void unrefine_interp_neigh_update(HashTable* El_Table, HashTable* NodeTable, int
 									NdTemp = (Node*) NodeTable->lookup(recv[iproc] + (4 * iopu + 3) * KEYLENGTH);
 									if (!NdTemp) {
 										ElemBackgroundCheck(El_Table, NodeTable,
-										    recv[iproc] + (4 * iopu + 3) * KEYLENGTH, stdout);
+										    recv[iproc] + (4 * iopu + 3) * KEYLENGTH,
+										    stdout);
 										assert(NdTemp);
 									}
 									NdTemp->info = S_C_CON;

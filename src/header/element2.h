@@ -27,6 +27,7 @@
 
 using namespace std;
 
+template<typename T>
 class ElemPtrList;
 #include "../header/matrix.h"
 
@@ -37,6 +38,10 @@ class ElemPtrList;
 class Element {
 
 	friend class HashTable;
+
+	friend class DualElem;
+
+	friend class ErrorElem;
 
 	friend void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable, int numprocs, int myid,
 	    double loc);
@@ -107,20 +112,18 @@ public:
 	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
 	    int elm_loc_in[], int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
 	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
-	    int iwetnodefather, double Awetfather, double *drypoint_in, int resComp);
+	    int iwetnodefather, double Awetfather, double *drypoint_in);
 
 	//! constructor that creates a father element from its four sons during unrefinement
-	Element(Element *sons[], HashTable *NodeTable, HashTable *El_Table, MatProps *matprops_ptr,
-	    int resComp);
+	Element(Element *sons[], HashTable *NodeTable, HashTable *El_Table, MatProps *matprops_ptr);
 
 	//! constructor that creates/restores a saved element during restart
 	Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
 
-	//! copy constructor
-	Element(Element* element);
-
 	//! destructor that does nothing except delete boundary condition pointer
-	~Element(){};
+	virtual ~Element() {
+	}
+	;
 
 	//! this member function saves a single element to a file with a single fwrite call, this allows the element to be recreated/restored upon restart of a simulation
 	void save_elem(FILE* fp, FILE* fptxt); //for restart
@@ -372,10 +375,11 @@ public:
 
 	void calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<Element*>* elem_list, int myid,
 	    int side);
+
 	void calc_fluxes(HashTable* El_Table, HashTable* NodeTable, vector<Element*>* x_elem_list,
 	    vector<Element*>* y_elem_list, int myid);
-	void boundary_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int side,
-	    const int problem);
+
+	virtual void boundary_flux(HashTable* El_Table, HashTable* NodeTable, int myid, int side);
 
 	void dual_zdirflux(int dir, Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac);
 	void dual_ydirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac);
@@ -454,8 +458,11 @@ public:
 	void calc_gravity_vector(MatProps *matprops_ptr);
 
 	//! this function is defined in unrefine.C, it is also called in that file, it finds this element's brothers
+	template<class T>
 	int find_brothers(HashTable* El_Table, HashTable* NodeTable, double target, int myid,
-	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int rescomp);
+	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate);
+
+	void for_link_temp();
 
 	void dual_find_brothers(HashTable* El_Table, HashTable* NodeTable, int myid,
 	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int rescomp);
@@ -610,9 +617,6 @@ public:
 
 	void alloc_jacobianMat();
 
-	void rev_state_vars(HashTable* solrec, HashTable* El_Table, int iter, int*, int*, int*,
-	    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
-
 	void set_jacobianMat_zero(int jacmatind);
 
 	void add_state_func_sens(double* func_sens_prev, int iter);
@@ -625,11 +629,11 @@ public:
 
 	void gen_my_sons_key(HashTable* El_Table, unsigned son_key[4][KEYLENGTH]);
 
-	void check_refine_unrefine(SolRec* solrec, HashTable* El_Table, int iter,
-	    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
+	void check_refine_unrefine(SolRec* solrec, HashTable* El_Table, int iter, ElemPtrList<Element>* refinelist,
+	    ElemPtrList<Element>* unrefinelist);
 
 	void cp_check_refine_unrefine(SolRec* solrec, HashTable* El_Table, int iter,
-	    ElemPtrList* refinelist, ElemPtrList* unrefinelist);
+	    ElemPtrList<Element>* refinelist, ElemPtrList<Element>* unrefinelist);
 
 	void update_state(SolRec* solrec, HashTable* El_Table, int iter);
 
@@ -646,7 +650,7 @@ public:
 	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int myid,
 	    double dt, int* order_flag, double *outflow, ResFlag lresflag, ResFlag rresflag);
 
-private:
+protected:
 	//! myprocess is id of the process(or) that owns this element
 	int myprocess;
 
@@ -718,12 +722,6 @@ private:
 	//! these are the values of the state variables from before the predictor step
 	double prev_state_vars[NUM_STATE_VARS];
 
-	//! adjoint vector
-	double adjoint[NUM_STATE_VARS];
-
-	//! prev. time step adjoint vector
-	double prev_adjoint[NUM_STATE_VARS];
-
 	//! these are the spatial (x and y) derivatives of the state variables: (dh/dx, dhVx/dx, dhVy/dx, dh/dy, dhVx/dy, dhVy/dy)
 	double d_state_vars[NUM_STATE_VARS * DIMENSION];
 
@@ -789,32 +787,8 @@ private:
 	//! when an element edge is partially wet and partially dry... Swet is the fraction of a cell edge that is partially wet, because it can only be horizontal, vertical, or parallel to either diagonal, all of one element's partially wet sides are have the same fraction of wetness.  The state variables (used to compute the physical fluxes) at the element/cell edge are adjusted to be the weighted by wetness average over an element/cell edge.  As such physical fluxes through completely dry edges of partially wet elements/cells are zeroed, while physical fluxes through completely wet edges are left unchanged.  Because of the definition as "wetness weighted average" physical fluxes through a partially wet edge shared with a neighbor of the same generation is also left left unchanged but, when a partially wet edge is shared with two more refined neighbors the total mass and momentum at the edge is split between the two neighbors in proportion to how much of their boundary shared with this element is wet.  This "scaling" of the physical fluxes is the "adjustment of fluxes in partially wetted cells" facet of our multifaceted thin-layer problem mitigation approach.  And it has been shown to significantly reduce the area covered by a thin layer of material.  Keith wrote this May 2007.
 	double Swet;
 
-	//! Drag-force
-	double drag[DIMENSION];
-
-	//! this array just keep the constant reconstruction of adjoints in refinement
-	double consAdj[3];
-
-	//! residual vector from error compute
-	double residual[3];
-
-	//! this term holds the correction term computed from inner product of linear construction of residual and linear construction of adjoint
-	double correction;
-
-	//! double jacobianMat [8][3][3],self[3][3],neigh1[3][3],neigh2[3][3],neigh3[3][3],neigh4[3][3]
-	Vec_Mat<9> jacobianMat;
-
-	double func_sens[NUM_STATE_VARS];
-
-	// this array holds the jacobian of fluxes,and its indexing is [side:x=0,y=1][direction:neg=0,pos=1]
-	//Matrix<Matrix> FluxJac (2,2);
-	FluxJac flx_jac_cont;
-
-	//2: 0->for x direction, 1-> for y direction
-	//5: 0-> element itself, 1->first neighbor in left(down), 2->first neighbor in right(up),
-	//3->second neighbor in left(down), 4->second neighbor in right(up),
-	Matrix<double, 2, 5> hslope_sens;
-
+//	//! Drag-force
+//	double drag[DIMENSION];
 };
 
 inline int Element::get_ithelem() const {
@@ -894,22 +868,6 @@ inline void Element::put_height(double pile_height) {
 
 inline double* Element::get_state_vars() {
 	return state_vars;
-}
-;
-
-inline double* Element::get_adjoint() {
-	return adjoint;
-}
-;
-
-inline double* Element::get_prev_adjoint() {
-	return prev_adjoint;
-}
-;
-
-inline void Element::update_adjoint() {
-	for (int i = 0; i < NUM_STATE_VARS; ++i)
-		prev_adjoint[i] = adjoint[i];
 }
 ;
 
@@ -1020,7 +978,6 @@ inline unsigned* Element::getNode() {
 	return &(node_key[0][0]);
 }
 
-
 inline void Element::put_gen(int g) {
 	generation = g;
 }
@@ -1028,7 +985,6 @@ inline void Element::put_gen(int g) {
 inline void Element::put_neigh_proc(int i, int proc) {
 	neigh_proc[i] = proc;
 }
-
 
 inline unsigned* Element::getson() {
 	return &(son[0][0]);
@@ -1194,30 +1150,6 @@ inline void Element::put_drypoint(double *drypoint_in) {
 	return;
 }
 
-inline double* Element::get_const_adj() {
-	return consAdj;
-}
-
-inline double* Element::get_correction() {
-	return &correction;
-}
-
-inline double* Element::get_residual() {
-	return residual;
-}
-
-inline double* Element::get_func_sens() {
-	return func_sens;
-}
-
-inline FluxJac& Element::get_flx_jac_cont() {
-
-	return flx_jac_cont;
-}
-
-inline Matrix<double, 2, 5>& Element::get_hslope_sens() {
-	return hslope_sens;
-}
 /*************************************************************************/
 /*************************************************************************/
 /*************************************************************************/
@@ -1226,6 +1158,7 @@ inline Matrix<double, 2, 5>& Element::get_hslope_sens() {
 /*************************************************************************/
 
 //! The ElemPtrList class is basically just a "smart array" of pointers to Elements, by smart I mean it keeps track of its size and number of Elements in the list and expands/reallocates itself whenever you add an element ptr to the list when you've run out of space, it also keeps a record of the index of the first "new" element pointer you've added in the current series, which is useful for the intended purpose... ElemList was designed for use in refinement and unrefinement to replace fixed sized arrays (length=297200) of pointers to Elements.  The reason for this upgrade was it was causing valgrind to issue all kinds of warnings about the "client switching stacks" and "invalid write/read of size blah blah blah" because the stacksize was too large.  My 20061121 rewrite of hadapt.C and unrefine.C to make them "fast" caused this problem because I added a second (large) fixed sized array to both of them so I could reduce the number of hashtable scans by only revisiting the "new" additions to the array of pointers of Elements. --Keith wrote this on 20061124, i.e. the day after Thanksgiving, and I'm very thankful for having the inspiration to figure out the cause of valgrid warning
+template <typename T>
 class ElemPtrList {
 public:
 
@@ -1260,10 +1193,10 @@ public:
 	}
 
 //! add an element pointer to the list, it will increase the size of the list by the size_increment if necessary, the size_increment is the initial size.
-	void add(Element* EmTemp);
+	void add(T* EmTemp);
 
 //! returns the ith Element pointer stored in the list
-	Element* get(int i);
+	T* get(int i);
 
 //! returns the key of the ith Element whose pointer is stored in the list
 	unsigned* get_key(int i);
@@ -1286,7 +1219,7 @@ private:
 	void init(int initial_size) {
 		list_space = size_increment = initial_size;
 		num_elem = inewstart = 0;
-		list = (Element **) malloc(list_space * sizeof(Element*));
+		list = (T **) malloc(list_space * sizeof(T*));
 		for (int i = 0; i < list_space; i++)
 			list[i] = NULL;
 	}
@@ -1305,32 +1238,43 @@ private:
 	int inewstart;
 
 //! the "array" holding the list of element pointers, space is allocated by the constructor, increased automatically whenever needed, and freed automatically by the destructor
-	Element** list;
+	T** list;
 };
 
-inline Element* ElemPtrList::get(int i) {
+template <typename T>
+inline T* ElemPtrList<T>::get(int i) {
 	return (((i >= 0) && (i < num_elem)) ? list[i] : NULL);
 }
 ;
-inline unsigned* ElemPtrList::get_key(int i) {
+
+template <typename T>
+inline unsigned* ElemPtrList<T>::get_key(int i) {
 	return (((i >= 0) && (i < num_elem)) ? list[i]->pass_key() : NULL);
 }
 ;
-inline int ElemPtrList::get_inewstart() {
+
+template <typename T>
+inline int ElemPtrList<T>::get_inewstart() {
 	return inewstart;
 }
 ;
-inline void ElemPtrList::set_inewstart(int inewstart_in) {
+
+template <typename T>
+inline void ElemPtrList<T>::set_inewstart(int inewstart_in) {
 	inewstart = inewstart_in;
 	return;
 }
 ;
-inline int ElemPtrList::get_num_elem() {
+
+template <typename T>
+inline int ElemPtrList<T>::get_num_elem() {
 	return num_elem;
 }
 ;
 
-inline void ElemPtrList::trashlist() {
+
+template <typename T>
+inline void ElemPtrList<T>::trashlist() {
 	for (int i = 0; i < num_elem; i++)
 		list[i] = NULL;
 	num_elem = inewstart = 0;
@@ -1338,10 +1282,11 @@ inline void ElemPtrList::trashlist() {
 }
 ;
 
-inline void ElemPtrList::add(Element* EmTemp) {
+template <typename T>
+inline void ElemPtrList<T>::add(T* EmTemp) {
 	if (num_elem == list_space - 1) {
 		list_space += size_increment;
-		list = (Element **) realloc(list, list_space * sizeof(Element *));
+		list = (T **) realloc(list, list_space * sizeof(T *));
 	}
 
 	list[num_elem] = EmTemp;

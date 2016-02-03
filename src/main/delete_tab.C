@@ -75,10 +75,3 @@ void delete_sol(vector<Jacobian*> solHyst) {
 	solHyst.clear();
 
 }
-
-void delete_dualmesh(DualMesh* dualmesh) {
-
-	delete dualmesh;
-
-	return;
-}

@@ -31,7 +31,7 @@ void reset_resflag(ResFlag resflag[EFF_ELL]);
 int check_restore(double* prev_state_vars, double* d_state_vars, double* prev_state_vars_old,
     double* d_state_vars_old, double flux[][NUM_STATE_VARS], double fluxold[][NUM_STATE_VARS]);
 
-void set_fluxes_hsens(Element* Curr_El, const Mat3x3*& jac_flux_n_x, const Mat3x3*& jac_flux_p_x,
+void set_fluxes_hsens(DualElem* Curr_El, const Mat3x3*& jac_flux_n_x, const Mat3x3*& jac_flux_p_x,
     const Mat3x3*& jac_flux_n_y, const Mat3x3*& jac_flux_p_y, double* dh_sens,
     const int& effelement);
 
@@ -50,7 +50,7 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
-	Element* Curr_El = NULL;
+	DualElem* Curr_El = NULL;
 
 	int iter = timeprops_ptr->iter;
 	double tiny = GEOFLOW_TINY;
@@ -64,7 +64,7 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
 			while (currentPtr) {
-				Curr_El = (Element*) (currentPtr->value);
+				Curr_El = (DualElem*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0) {
 
@@ -179,7 +179,7 @@ int check_restore(double* prev_state_vars, double* d_state_vars, double* prev_st
 	return 0;
 }
 
-void set_fluxes_hsens(Element* Curr_El, const Mat3x3 *&jac_flux_n_x, const Mat3x3 *&jac_flux_p_x,
+void set_fluxes_hsens(DualElem* Curr_El, const Mat3x3 *&jac_flux_n_x, const Mat3x3 *&jac_flux_p_x,
     const Mat3x3 *&jac_flux_n_y, const Mat3x3 *&jac_flux_p_y, double* dh_sens,
     const int& effelement) {
 
@@ -340,7 +340,7 @@ void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx) {
 	int neigh_flag;
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
-	Element* Curr_El = NULL;
+	DualElem* Curr_El = NULL;
 
 	int iter = timeprops_ptr->iter;
 	double tiny = GEOFLOW_TINY;
@@ -358,7 +358,7 @@ void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx) {
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
 			while (currentPtr) {
-				Curr_El = (Element*) (currentPtr->value);
+				Curr_El = (DualElem*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0
 				    && (Curr_El->get_ithelem() == 722 || Curr_El->get_ithelem() == 730

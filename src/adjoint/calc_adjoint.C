@@ -29,7 +29,7 @@ struct Func_CTX {
 
 void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx);
 int get_jacind(int effelement);
-void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, Element* eff_el, int side);
+void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, DualElem* eff_el, int side);
 
 void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 
@@ -38,7 +38,7 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 	HashTable* El_Table = meshctx->el_table;
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
-	Element* Curr_El = NULL;
+	DualElem* Curr_El = NULL;
 	int iter = propctx->timeprops->iter;
 	int aa = 0, bb = 1;
 
@@ -46,7 +46,7 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
 			while (currentPtr) {
-				Curr_El = (Element*) (currentPtr->value);
+				Curr_El = (DualElem*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0) {
 
@@ -60,7 +60,7 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 
 }
 
-void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
+void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 
 	Func_CTX ctx;
 	ctx.meshctx = meshctx;
@@ -107,7 +107,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 			    || (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) > -2)) {
 
 				//basically we are checking all neighbor elements, and start from xp neighbor
-				Element * neigh_elem = (Element*) (El_Table->lookup(
+				DualElem * neigh_elem = (DualElem*) (El_Table->lookup(
 				    Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
 
 				if (neigh_elem) {
@@ -154,7 +154,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, Element *Curr_El) {
 	myfile.close();
 #endif
 }
-void Element::calc_func_sens(const void * ctx) {
+void DualElem::calc_func_sens(const void * ctx) {
 
 	Func_CTX* contx = (Func_CTX *) ctx;
 
@@ -191,7 +191,7 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
 			while (currentPtr) {
-				Element* Curr_El = (Element*) (currentPtr->value);
+				DualElem* Curr_El = (DualElem*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0) {
 
@@ -223,12 +223,12 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 
 							int opos_dirc = (j + 2) % 4;
 
-							Element* eff_el = (Element*) El_Table->lookup(neigh_key + opos_dirc * KEYLENGTH);
+							DualElem* eff_el = (DualElem*) El_Table->lookup(neigh_key + opos_dirc * KEYLENGTH);
 							sens_on_boundary(meshctx, propctx, eff_el, j);
 
 							// if the adjacent cell to the boundary has two neighbors on the opposite side
 							if (neigh_proc[opos_dirc] > 0) {
-								Element* eff_el = (Element*) El_Table->lookup(
+								DualElem* eff_el = (DualElem*) El_Table->lookup(
 								    neigh_key + (opos_dirc + 4) * KEYLENGTH);
 
 								sens_on_boundary(meshctx, propctx, eff_el, j);
@@ -247,7 +247,7 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 			if (*(buck + i)) {
 				currentPtr = *(buck + i);
 				while (currentPtr) {
-					Element* Curr_El = (Element*) (currentPtr->value);
+					DualElem* Curr_El = (DualElem*) (currentPtr->value);
 
 					if (Curr_El->get_adapted_flag() > 0)
 						Curr_El->calc_func_sens(dummy);
@@ -280,7 +280,7 @@ int get_jacind(int effelement) {
 	return jacind;
 }
 
-void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, Element* eff_el, int side) {
+void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, DualElem* eff_el, int side) {
 
 	double* dx = eff_el->get_dx();
 

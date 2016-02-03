@@ -28,9 +28,9 @@
 
 //extern void refine(Element*, HashTable*, HashTable*, MatProps* matprops_ptr);
 
-extern void depchk(Element*, HashTable*, HashTable*, int*, ElemPtrList*);
+extern void depchk(Element*, HashTable*, HashTable*, int*, ElemPtrList<Element>*);
 
-void update_neighbor_info(HashTable* HT_Elem_Ptr, ElemPtrList* RefinedList,
+void update_neighbor_info(HashTable* HT_Elem_Ptr, ElemPtrList<Element>* RefinedList,
 		int myid, int numprocs, HashTable* HT_Node_Ptr, int h_count);
 //extern void  update_neighbor_info(HashTable*, Element*[], int, int,int, HashTable*, int h_count);
 
@@ -91,7 +91,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count,
 	HashEntryPtr entryp;
 	Element* EmTemp;
 
-	ElemPtrList RefinedList, TempList;
+	ElemPtrList<Element> RefinedList, TempList;
 	int count = 0;
 	int ifg; //--
 	int refine_flag;
@@ -149,7 +149,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count,
 							|| (EmTemp->if_source_boundary(HT_Elem_Ptr) > 0)
 							|| (*(EmTemp->get_el_error()) > geo_target))) {
 				refinewrapper(HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr, &RefinedList,
-						EmTemp,rescomp);
+						EmTemp);
 				debug_ref_flag++;
 			}
 			entryp = entryp->next;
@@ -188,7 +188,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count,
 						|| (EmTemp->if_first_buffer_boundary(HT_Elem_Ptr, REFINE_THRESHOLD)
 								== 1)) {
 					refinewrapper(HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr, &RefinedList,
-							EmTemp,rescomp);
+							EmTemp);
 					debug_ref_flag++;
 				}
 				entryp = entryp->next;
@@ -231,7 +231,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count,
 					if (EmTemp->if_next_buffer_boundary(HT_Elem_Ptr, HT_Node_Ptr,
 					REFINE_THRESHOLD) == 1) {
 						refinewrapper(HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr, &RefinedList,
-								EmTemp,rescomp);
+								EmTemp);
 						debug_ref_flag++;
 					}
 					entryp = entryp->next;
@@ -376,7 +376,7 @@ void refinewrapper(HashTable*HT_Elem_Ptr, HashTable*HT_Node_Ptr, MatProps* matpr
 #endif
 //Keith wrote this because the code block was repeated so many times
 void refinewrapper(HashTable*HT_Elem_Ptr, HashTable*HT_Node_Ptr,
-		MatProps* matprops_ptr, ElemPtrList *RefinedList, Element *EmTemp,int rescomp) {
+		MatProps* matprops_ptr, ElemPtrList<Element> *RefinedList, Element *EmTemp) {
 
 	int sur = 0, ifg = 1, ielem;
 
@@ -392,7 +392,7 @@ void refinewrapper(HashTable*HT_Elem_Ptr, HashTable*HT_Node_Ptr,
 			for (ielem = 0; ielem < RefinedList->get_num_elem(); ielem++)
 				if (!((RefinedList->get(ielem))->get_refined_flag())) {
 					refine(RefinedList->get(ielem), HT_Elem_Ptr, HT_Node_Ptr,
-							matprops_ptr, rescomp);
+							matprops_ptr);
 					(RefinedList->get(ielem))->put_adapted_flag(OLDFATHER);
 					(RefinedList->get(ielem))->put_refined_flag(1);
 				}
@@ -412,7 +412,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 	HashEntryPtr entryp;
 	Element* EmTemp;
 
-	ElemPtrList RefinedList, TempList;
+	ElemPtrList<Element> RefinedList, TempList;
 	int count = 0;
 	int myid;
 	int numprocs;
@@ -587,7 +587,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 									&& (EmTemp->get_adapted_flag() > 0)
 									&& (EmTemp->get_adapted_flag() < NEWSON))
 								refinewrapper(HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr,
-										&RefinedList, EmTemp,rescomp);
+										&RefinedList, EmTemp);
 							Element *EmSon = EmTemp;
 							if (EmTemp->get_adapted_flag() == OLDFATHER)
 								for (int ison = 0; ison < 4; ison++) {
@@ -665,7 +665,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 
 							if (EmTemp->get_gen() < REFINE_LEVEL)
 								refinewrapper(HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr,
-										&RefinedList, EmTemp,rescomp);
+										&RefinedList, EmTemp);
 							if (EmTemp->get_adapted_flag() == OLDFATHER)
 								for (int ison = 0; ison < 4; ison++) {
 									Element *EmSon = (Element *) HT_Elem_Ptr->lookup(
@@ -836,7 +836,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 							(EmTemp->if_pile_boundary(HT_Elem_Ptr, REFINE_THRESHOLD) > 0)
 							|| (EmTemp->if_source_boundary(HT_Elem_Ptr) > 0))) {
 						refinewrapper(HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr, &RefinedList,
-								EmTemp,rescomp);
+								EmTemp);
 						debug_ref_flag++;
 					}
 				}
@@ -943,7 +943,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 
 							if (EmTemp->get_gen() < REFINE_LEVEL)
 								refinewrapper(HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr,
-										&RefinedList, EmTemp,rescomp);
+										&RefinedList, EmTemp);
 							if (EmTemp->get_adapted_flag() == OLDFATHER)
 								for (int ison = 0; ison < 4; ison++) {
 									Element *EmSon = (Element *) HT_Elem_Ptr->lookup(
@@ -1044,7 +1044,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 						|| (EmTemp->if_first_buffer_boundary(HT_Elem_Ptr, REFINE_THRESHOLD)
 								== 1)) {
 					refinewrapper(HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr, &RefinedList,
-							EmTemp,rescomp);
+							EmTemp);
 					debug_ref_flag++;
 				}
 				entryp = entryp->next;
@@ -1101,7 +1101,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 					if (EmTemp->if_next_buffer_boundary(HT_Elem_Ptr, HT_Node_Ptr,
 					REFINE_THRESHOLD) == 1) {
 						refinewrapper(HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr, &RefinedList,
-								EmTemp,rescomp);
+								EmTemp);
 						debug_ref_flag++;
 					}
 					entryp = entryp->next;
@@ -1311,7 +1311,7 @@ void H_adapt_to_level(HashTable* El_Table, HashTable* NodeTable,
 
 	int minrefinelevel;
 	Element* EmTemp;
-	ElemPtrList RefinedList(2048);
+	ElemPtrList<Element> RefinedList(2048);
 	int i, generation;
 	int num_buck = El_Table->get_no_of_buckets();
 	HashEntryPtr* buck = El_Table->getbucketptr();
@@ -1356,7 +1356,7 @@ void H_adapt_to_level(HashTable* El_Table, HashTable* NodeTable,
 					if ((EmTemp->get_adapted_flag() == NOTRECADAPTED)
 							&& (generation < refinelevel)) {
 						refinewrapper(El_Table, NodeTable, matprops_ptr, &RefinedList,
-								EmTemp,rescomp);
+								EmTemp);
 						if (generation < minrefinelevel)
 							minrefinelevel = generation;
 					}

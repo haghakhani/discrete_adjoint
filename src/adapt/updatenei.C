@@ -31,8 +31,8 @@ void ElemBackgroundCheck(HashTable* El_Table, HashTable* NodeTable,
 		unsigned *debugkey, FILE *fp) {
 	Element* EmDebug = (Element*) El_Table->lookup(debugkey);
 	Element* EmTemp;
-	ElemPtrList EmDebugNeigh(128);
-	ElemPtrList EmDebugFather(16);
+	ElemPtrList<Element> EmDebugNeigh(128);
+	ElemPtrList<Element> EmDebugFather(16);
 	Node* NdTemp;
 
 	int iFather, ison, ineigh, inode;
@@ -161,8 +161,8 @@ void ElemBackgroundCheck2(HashTable *El_Table, HashTable *NodeTable,
 
 	Element *EmDebug = (Element *) EmDebug_in;
 	Element* EmTemp;
-	ElemPtrList EmDebugNeigh(128);
-	ElemPtrList EmDebugFather(16);
+	ElemPtrList<Element> EmDebugNeigh(128);
+	ElemPtrList<Element> EmDebugFather(16);
 	Node* NdTemp;
 
 	int iFather, ison, ineigh, inode;
@@ -283,7 +283,7 @@ void NodeBackgroundCheck(HashTable *El_Table, HashTable* NodeTable,
 		unsigned *nodedbkey, FILE *fp) {
 	Node* NdDebug = (Node*) NodeTable->lookup(nodedbkey);
 	Element* EmTemp;
-	ElemPtrList ElemList(4);
+	ElemPtrList<Element> ElemList(4);
 
 	int inode;
 
@@ -899,7 +899,7 @@ int IfNeighProcChange(HashTable* El_Table, HashTable* NodeTable, int myid,
 	return 0;
 }
 
-void update_neighbor_info(HashTable* HT_Elem_Ptr, ElemPtrList* RefinedList,
+void update_neighbor_info(HashTable* HT_Elem_Ptr, ElemPtrList<Element>* RefinedList,
 		int myid, int numprocs, HashTable* HT_Node_Ptr, int h_count);
 
 //#define NEWCODEDOESNOTWORKYET
@@ -921,7 +921,7 @@ void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump,
 	Element* EmSon[4];
 	Element* EmNeighNew[4];
 	Element* EmNeighOld[2];
-	ElemPtrList* RefinedList = (ElemPtrList*) RL;
+	ElemPtrList<Element>* RefinedList = (ElemPtrList<Element>*) RL;
 	Node* NdTemp;
 	int ifather, iside, ineigh, ineighp4, isonA, isonB;
 	int ineighme, ineighmep4, ineighson, ikey, inewcase, inode;
@@ -2391,7 +2391,7 @@ extern void update_neighbor_interprocessor(HashTable* HT_Elem_Ptr,
 		HashTable* HT_Node_Ptr, refined_neighbor* refined_start, int myid,
 		int nump);
 
-void update_neighbor_info(HashTable* HT_Elem_Ptr, ElemPtrList* RefinedList,
+void update_neighbor_info(HashTable* HT_Elem_Ptr, ElemPtrList<Element>* RefinedList,
 		int myid, int nump, HashTable* HT_Node_Ptr, int h_count)/*-h_count for  debugging-*/
 		{
 	int son_order[2];

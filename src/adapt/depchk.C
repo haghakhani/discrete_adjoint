@@ -24,7 +24,7 @@
 #define NumTriggerRef 256
 
 void depchk(Element* EmTemp, HashTable* El_Table, HashTable* NodeTable,
-		int* ifg, ElemPtrList* RefinedList)
+		int* ifg, ElemPtrList<Element>* RefinedList)
 
 		/*---
 		 refined[] stores the address of ready-for-refinement element of the sub-domain
@@ -37,7 +37,7 @@ void depchk(Element* EmTemp, HashTable* El_Table, HashTable* NodeTable,
 	int i, j, k;
 	Element* element;
 	Element* Neigh;
-	ElemPtrList TempList(384);
+	ElemPtrList<Element> TempList(384);
 	int myid;
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &myid);

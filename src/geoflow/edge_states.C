@@ -33,9 +33,8 @@
  *  GIS map's cummulative outflow (defined as the mass flow off of the
  *  GIS map).  Also, the elements are checked for multiple pile-height values 
  */
-void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
-		MatProps* matprops_ptr, TimeProps* timeprops_ptr, int myid, int* order_flag,
-		double *outflow,int STATE) {
+void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
+    TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow, int STATE) {
 
 	vector<Element*> x_elem_list, y_elem_list;
 
@@ -66,9 +65,8 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 //						int gg = ddd;
 //					}
 
-					Curr_El->calc_edge_states(El_Table, NodeTable, &x_elem_list,
-							&y_elem_list, matprops_ptr, myid, timeprops_ptr->dtime,
-							order_flag, &localoutflow,STATE);
+					Curr_El->calc_edge_states(El_Table, NodeTable, &x_elem_list, &y_elem_list, matprops_ptr,
+					    myid, timeprops_ptr->dtime, order_flag, &localoutflow, STATE);
 					localoutflow_sum += localoutflow;
 				}
 				currentPtr = currentPtr->next;
@@ -76,10 +74,10 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 		}
 
 	for (int i = 0; i < x_elem_list.size(); ++i)
-		x_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 0, STATE);
+		x_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 0);
 
 	for (int i = 0; i < y_elem_list.size(); ++i)
-		y_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 1, STATE);
+		y_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 1);
 
 	*outflow = localoutflow_sum;
 	return;
@@ -97,7 +95,7 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx) {
 
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
-	Element* Curr_El;
+	DualElem* Curr_El;
 
 	vector<Element*> x_elem_list, y_elem_list;
 
@@ -105,7 +103,7 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx) {
 		if (*(buck + i)) {
 			HashEntryPtr currentPtr = *(buck + i);
 			while (currentPtr) {
-				Curr_El = (Element*) (currentPtr->value);
+				Curr_El = (DualElem*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) {
 					//if this element doesn't belong on this processor don't involve
 
@@ -116,8 +114,7 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx) {
 //						int gg = ddd;
 //					}
 
-					Curr_El->calc_fluxes(El_Table, NodeTable, &x_elem_list, &y_elem_list,
-							myid);
+					Curr_El->calc_fluxes(El_Table, NodeTable, &x_elem_list, &y_elem_list, myid);
 
 				}
 				currentPtr = currentPtr->next;
@@ -125,10 +122,10 @@ void calc_flux(MeshCTX* meshctx, PropCTX* propctx) {
 		}
 
 	for (int i = 0; i < x_elem_list.size(); ++i)
-		x_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 0, DUAL);
+		x_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 0);
 
 	for (int i = 0; i < y_elem_list.size(); ++i)
-		y_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 1, DUAL);
+		y_elem_list[i]->boundary_flux(El_Table, NodeTable, myid, 1);
 
 	return;
 }

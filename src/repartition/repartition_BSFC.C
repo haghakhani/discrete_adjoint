@@ -2312,7 +2312,7 @@ void NonSequentialSendAndUpdateNeigh(int numprocs, int myid,
   // 1) which elements I "own" but should not
   // 2) which processors these elements should actually belong to
   // **************************************************************
-  ElemPtrList NotMyElem(256);  //will deallocate self with destructor
+  ElemPtrList<Element> NotMyElem(256);  //will deallocate self with destructor
   int *NumToSecondSend=CAllocI1(numprocs);
   int *NumToSecondRecv=CAllocI1(numprocs);
 

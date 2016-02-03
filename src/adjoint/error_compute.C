@@ -34,7 +34,7 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
-	Element* Curr_El = NULL;
+	ErrorElem* Curr_El = NULL;
 
 	int iter = propctx->timeprops->iter;
 
@@ -43,7 +43,7 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 			if (*(buck + i)) {
 				currentPtr = *(buck + i);
 				while (currentPtr) {
-					Curr_El = (Element*) (currentPtr->value);
+					Curr_El = (ErrorElem*) (currentPtr->value);
 					if (Curr_El->get_adapted_flag() > 0) {
 
 //						int dbgflag;

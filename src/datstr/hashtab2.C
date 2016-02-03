@@ -62,7 +62,6 @@ HashTable::HashTable(unsigned* min, unsigned* max, int size, int prime) {
 		*(bucket + i) = 0;
 
 	/*  MaxMinX[0]=MaxMinY[0]=-1;
-
 	 MaxMinX[1]=MaxMinY[1]=1;*/
 
 }
@@ -324,9 +323,7 @@ void HashTable::remove(unsigned* key, int whatflag, FILE *fp, int myid, int wher
  unsigned numer = *key;
  float    igaze = (float)numer/Range;
  int      igazee = igaze*NBUCKETS+.5;
-
  if(igazee>=NBUCKETS) igazee = NBUCKETS-1;
-
  return (igazee);
  }
  */
@@ -367,20 +364,16 @@ void HashTable::print_out(int type) {
  {
  return bucket;
  }
-
  int HashTable::get_no_of_buckets()
  {
  return NBUCKETS;
  }
-
  double* HashTable::get_Xrange()
  {
  return &Xrange[0];
  }
-
  double* HashTable::get_Yrange()
  {
  return &Yrange[0];
  }
  */
-

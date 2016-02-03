@@ -46,8 +46,8 @@ extern void create_new_node(int, int, int, HashTable*, Node*[], unsigned[][2], i
 //only 4 one step because of the info FLAG!!!
 //if the new node is on INTERFACE flag will be -1
 
-void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps* matprops_ptr,
-    int rescomp) {
+template<typename T>
+void refine(T* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps* matprops_ptr) {
 	//printf("refining element %u %u \n",*(EmTemp->pass_key()), *(EmTemp->pass_key()+1));
 	int which;
 	Node *n1, *n2, *n3, *n4;
@@ -55,9 +55,9 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 	unsigned* KeyTemp;
 	Node* NodeTemp[9];
 	unsigned NewNodeKey[16][KEYLENGTH];
-	Element* Quad9P;
+	T* Quad9P;
 	int numprocs, myid, i;
-	Element* neigh_elm;
+	T* neigh_elm;
 	unsigned* neigh_node_key;
 	int RefinedNeigh = 0;
 	int info;
@@ -128,7 +128,7 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 			other_proc = 0;
 
 		// fourth new node
-		neigh_elm = (Element*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors());
+		neigh_elm = (T*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors());
 		i = 0;
 		which = -1;
 		while (i < 4 && which == -1) {
@@ -152,7 +152,7 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 		if (other_proc) //ERROR: other_proc is never set, we never checked to see if the more refined neighbor was on another processor
 			NodeTemp[4]->putinfo(-1);
 		// fifth new node
-		neigh_elm = (Element*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + 4 * KEYLENGTH);
+		neigh_elm = (T*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + 4 * KEYLENGTH);
 		i = 0;
 		which = -1;
 		while (i < 4 && which == -1) {
@@ -225,7 +225,7 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 			other_proc = 0;
 
 		// eighth new node
-		neigh_elm = (Element*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + KEYLENGTH);
+		neigh_elm = (T*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + KEYLENGTH);
 		i = 0;
 		which = -1;
 		while (i < 4 && which == -1) {
@@ -249,7 +249,7 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 		if (other_proc) //ERROR: other_proc is set based on side 0 neigbor not being more refined or never set, we never checked to see if the more refined neighbor was on another processor
 			NodeTemp[5]->putinfo(-1);
 		// thirteenth new node
-		neigh_elm = (Element*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + 5 * KEYLENGTH);
+		neigh_elm = (T*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + 5 * KEYLENGTH);
 		i = 0;
 		which = -1;
 		while (i < 4 && which == -1) {
@@ -322,7 +322,7 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 			other_proc = 0;
 
 		// fourteenth new node
-		neigh_elm = (Element*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + 6 * KEYLENGTH);
+		neigh_elm = (T*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + 6 * KEYLENGTH);
 		i = 0;
 		which = -1;
 		while (i < 4 && which == -1) {
@@ -346,7 +346,7 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 		if (other_proc) //ERROR: other_proc is never set, we never checked to see if the more refined neighbor was on another processor
 			NodeTemp[6]->putinfo(-1);
 		// fifteenth new node
-		neigh_elm = (Element*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + 2 * KEYLENGTH);
+		neigh_elm = (T*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + 2 * KEYLENGTH);
 		i = 0;
 		which = -1;
 		while (i < 4 && which == -1) {
@@ -418,7 +418,7 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 			other_proc = 0;
 
 		// sixth new node
-		neigh_elm = (Element*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + 7 * KEYLENGTH);
+		neigh_elm = (T*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + 7 * KEYLENGTH);
 		i = 0;
 		which = -1;
 		while (i < 4 && which == -1) {
@@ -442,7 +442,7 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 		if (other_proc) //ERROR: other_proc is never set, we never checked to see if the more refined neighbor was on another processor
 			NodeTemp[7]->putinfo(-1);
 		// eleventh new node
-		neigh_elm = (Element*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + 3 * KEYLENGTH);
+		neigh_elm = (T*) HT_Elem_Ptr->lookup(EmTemp->get_neighbors() + 3 * KEYLENGTH);
 		i = 0;
 		which = -1;
 		while (i < 4 && which == -1) {
@@ -626,14 +626,13 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 	double dpson[2];
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 + 0.5;
 	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 + 0.5;
-	Quad9P = new Element(nodes, neigh, neigh_proc, generation, elm_loc, neigh_gen, material, EmTemp,
-	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson,
-	    rescomp);
+	Quad9P = new T(nodes, neigh, neigh_proc, generation, elm_loc, neigh_gen, material, EmTemp, coord,
+	    HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson);
 	double* state_vars = Quad9P->get_state_vars();
 
 	Quad9P->put_which_son(0);  //--by jp, 0 means son 0
 
-	Element* old_elm = (Element*) HT_Elem_Ptr->lookup(Quad9P->pass_key());
+	T* old_elm = (T*) HT_Elem_Ptr->lookup(Quad9P->pass_key());
 	if (old_elm != NULL) {
 		old_elm->put_adapted_flag(TOBEDELETED); //this line shouldn't be necessary just being redundantly careful
 		HT_Elem_Ptr->remove(old_elm->pass_key(), 1, stdout, myid, 16);
@@ -692,14 +691,13 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 	my_elm_loc[1] = elm_loc[1];
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 - 0.5;
 	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 + 0.5;
-	Quad9P = new Element(nodes, neigh, neigh_proc, generation, my_elm_loc, neigh_gen, material,
-	    EmTemp, coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather,
-	    dpson, rescomp);
+	Quad9P = new T(nodes, neigh, neigh_proc, generation, my_elm_loc, neigh_gen, material, EmTemp,
+	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson);
 	state_vars = Quad9P->get_state_vars();
 
 	Quad9P->put_which_son(1); //--by jp
 
-	old_elm = (Element*) HT_Elem_Ptr->lookup(Quad9P->pass_key());
+	old_elm = (T*) HT_Elem_Ptr->lookup(Quad9P->pass_key());
 	if (old_elm != NULL) {
 		old_elm->put_adapted_flag(TOBEDELETED); //this line shouldn't be necessary just being redundantly careful
 
@@ -759,14 +757,13 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 	my_elm_loc[1] = elm_loc[1] + 1;
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 - 0.5;
 	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 - 0.5;
-	Quad9P = new Element(nodes, neigh, neigh_proc, generation, my_elm_loc, neigh_gen, material,
-	    EmTemp, coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather,
-	    dpson, rescomp);
+	Quad9P = new T(nodes, neigh, neigh_proc, generation, my_elm_loc, neigh_gen, material, EmTemp,
+	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson);
 	state_vars = Quad9P->get_state_vars();
 
 	Quad9P->put_which_son(2); //--by jp
 
-	old_elm = (Element*) HT_Elem_Ptr->lookup(Quad9P->pass_key());
+	old_elm = (T*) HT_Elem_Ptr->lookup(Quad9P->pass_key());
 	if (old_elm != NULL) {
 		old_elm->put_adapted_flag(TOBEDELETED); //this line shouldn't be necessary just being redundantly careful
 
@@ -826,13 +823,12 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 	my_elm_loc[1] = elm_loc[1] + 1;
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 + 0.5;
 	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 - 0.5;
-	Quad9P = new Element(nodes, neigh, neigh_proc, generation, my_elm_loc, neigh_gen, material,
-	    EmTemp, coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather,
-	    dpson, rescomp);
+	Quad9P = new T(nodes, neigh, neigh_proc, generation, my_elm_loc, neigh_gen, material, EmTemp,
+	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson);
 	state_vars = Quad9P->get_state_vars();
 
 	Quad9P->put_which_son(3); //--by jp
-	old_elm = (Element*) HT_Elem_Ptr->lookup(Quad9P->pass_key());
+	old_elm = (T*) HT_Elem_Ptr->lookup(Quad9P->pass_key());
 	if (old_elm != NULL) {
 		old_elm->put_adapted_flag(TOBEDELETED); //this line shouldn't be necessary just being redundantly careful
 
@@ -846,7 +842,7 @@ void refine(Element* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, Mat
 	EmTemp->putson(&NewNodeKey[0][0]);
 	// putting in brother info
 	for (i = 0; i < 4; i++) {
-		EmTemp = (Element*) HT_Elem_Ptr->lookup(&NewNodeKey[i][0]);
+		EmTemp = (T*) HT_Elem_Ptr->lookup(&NewNodeKey[i][0]);
 		EmTemp->putbrothers(&NewNodeKey[0][0]); //was  EmTemp->putbrothers(&NewNodeKey[i][0]);
 	}
 
@@ -909,5 +905,14 @@ void create_new_node(int which, int Node1, int Node2, HashTable* HT_Node_Ptr, No
 		p->putinfo(SIDE);
 
 	return;
+}
+
+void TempFunction(Element* EmTemp, DualElem* dualtemp, ErrorElem* errtemp, HashTable* HT_Elem_Ptr,
+    HashTable* HT_Node_Ptr, MatProps* matprops_ptr) {
+
+	refine<Element>(EmTemp, HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr);
+	refine<DualElem>(dualtemp, HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr);
+	refine<ErrorElem>(errtemp, HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr);
+
 }
 

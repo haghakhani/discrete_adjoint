@@ -20,8 +20,6 @@
 #define DEBUG_HEADER
 const int QUADNODES = 9;
 
-class DualMesh;
-
 //! this function checks for any and all possible mesh errors, i.e. it checks if the mesh is legal, it says nothing about the quality of a legal mesh, you must have ghost information present before performing this check, WARNING THIS CHECK TAKES A LOT OF TIME, ONLY USE IT TO DEBUG.
 void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable, int numprocs, int myid,
     double loc);
@@ -38,7 +36,8 @@ void NodeBackgroundCheck(HashTable* El_Table, HashTable* NodeTable, unsigned *de
 void unrefine(HashTable* El_Table, HashTable* NodeTable, double target, int myid, int nump,
     TimeProps* timeprops_ptr, MatProps* matprops_ptr, int rescomp);
 
-extern void refine(Element*, HashTable*, HashTable*, MatProps* matprops_ptr, int rescomp);
+template <typename T>
+void refine(T*, HashTable*, HashTable*, MatProps* matprops_ptr);
 
 void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *EmFather);
 
@@ -49,14 +48,15 @@ void unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int myid,
     void* NewFatherList);
 
 void dual_unrefine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int myid,
-    void* NewFatherList ,vector <Element*>& dbglist);
+    void* NewFatherList, vector<Element*>& dbglist);
 
 //void unrefine_neigh_update(HashTable* El_Table, int myid, int NumNewFathers, Element** NewFatherList);
 
 void unrefine_interp_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump, int myid,
     void* OtherProcUpdate);
+
 void refinewrapper(HashTable*HT_Elem_Ptr, HashTable*HT_Node_Ptr, MatProps* matprops_ptr,
-    ElemPtrList *RefinedList, Element *EmTemp, int rescomp);
+    ElemPtrList<Element> *RefinedList, Element *EmTemp);
 //void  unrefine_interp_neigh_update(HashTable* El_Table, HashTable* NodeTable,				   int nump, int myid, int NumOtherProcUpdate, 				   Element **OtherProcUpdate);
 
 //! only used in debugging
@@ -186,9 +186,6 @@ extern void output_stoch_stats(MatProps* matprops, StatProps* statprops);
 extern void tecplotter(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps* matprops,
     TimeProps* timeprops, MapNames* mapnames, double v_star, int adjflag);
 
-void dualplot(DualMesh* dualmesh, MatProps* matprops, TimeProps* timeprops, MapNames* mapnames,
-    double v_star_func, int adjflag);
-
 //! this function writes text tecplot output files in the mshplxxxxxxxx.plt format.  This is largely untouched since before I (Keith) joined the GMFG, just minor changes.  This is the preferred (by Professor Patra) format of output for debugging purposes even though tecplxxxxxxxx.plt create nicer images.
 extern void meshplotter(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps* matprops,
     TimeProps* timeprops, MapNames* mapnames, double v_star, int plotflag = 0);
@@ -196,6 +193,12 @@ extern void meshplotter(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps
 //! one of "pady's" output functions, since Keith never met "pady" this is probably long out of date
 extern void vizplotter(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps* matprops,
     TimeProps* timeprops);
+
+void dualplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
+    TimeProps* timeprops, MapNames* mapnames, double v_star, int plotflag);
+
+void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
+    TimeProps* timeprops, MapNames* mapnames, double v_star, int plotflag);
 
 //! another of "pady's" output functions, since Keith never met "pady" this is probably long out of date
 void viz_output(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid, int numprocs,

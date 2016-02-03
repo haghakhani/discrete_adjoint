@@ -353,7 +353,7 @@ int main(int argc, char *argv[]) {
 		output_summary(&timeprops, &statprops, savefileflag);
 
 	//printf("hpfem.C 1: xcen=%g\n",statprops.xcen);
-
+/*
 	if (viz_flag & 1)
 		tecplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames,
 				statprops.vstar, adjflag);
@@ -376,7 +376,7 @@ int main(int argc, char *argv[]) {
 			grass_sites_header_output(&timeprops);
 		grass_sites_proc_output(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops,
 				&timeprops);
-	}
+	}*/
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	// write out ending warning, maybe flow hasn't finished moving

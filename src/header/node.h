@@ -30,6 +30,10 @@ class Node {
 
 	friend class Element;
 
+	friend class DualElem;
+
+	friend class ErrorElem;
+
 	friend void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* matprops_ptr,
 	    FluxProps *fluxprops, TimeProps *timeprops, Element *EmTemp, double *forceint,
 	    double *forcebed, double *eroded, double *deposited);
