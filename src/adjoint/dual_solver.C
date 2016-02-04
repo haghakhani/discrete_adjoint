@@ -121,6 +121,10 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	init_error_grid(&error_meshctx, propctx);
 
+	bilinear_interp(Err_El_Tab);
+
+	error_compute(&error_meshctx, propctx);
+
 	errorplotter(Err_El_Tab, Err_Nod_Tab, matprops_ptr, timeprops_ptr, mapname_ptr, 0., 2);
 
 	cout << "The Error grid has been generated ....\n";
@@ -154,11 +158,6 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //	this function reconstruct bilinear interpolation
 //	set_ithm(cp_El_Table);
 //	plot_ithm(cp_El_Table);
-
-//	bilinear_interp(El_Table, cp_El_Table);
-
-	error_compute(&error_meshctx, propctx);
-
 //	cout<<num_nonzero_elem(El_Table)<<endl;
 //	cout<<num_nonzero_elem(cp_El_Table)<<endl;
 //

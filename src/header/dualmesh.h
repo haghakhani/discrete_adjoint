@@ -205,7 +205,7 @@ public:
 	void error_check_refine_unrefine(SolRec* solrec, HashTable* El_Table, int iter,
 	    ElemPtrList<ErrorElem>* refinelist, ElemPtrList<ErrorElem>* unrefinelist);
 
-	double* get_const_adj();
+	double* get_bilin_adj();
 
 	double* get_correction();
 
@@ -213,16 +213,23 @@ public:
 
 	double* get_adjoint();
 
+	double* get_bilin_state();
+
+	double* get_bilin_prev_state();
+
 private:
 
 	//! adjoint vector
 	double adjoint[NUM_STATE_VARS];
 
-	//! this array just keep the constant reconstruction of adjoints in refinement
-	double consAdj[3];
+	//! this array is for bilinear reconstruction of adjoints
+	double bilin_adj[3];
 
-	//! this array just keep the constant reconstruction of adjoints in refinement
-	double consState[3];
+	//! this array is for bilinear reconstruction of state_vars
+	double bilin_state[3];
+
+	//! this array is for bilinear reconstruction of state_vars
+	double bilin_prev_state[3];
 
 	//! residual vector from error compute
 	double residual[3];
@@ -232,8 +239,18 @@ private:
 
 };
 
-inline double* ErrorElem::get_const_adj() {
-	return consAdj;
+inline double* ErrorElem::get_bilin_adj() {
+	return bilin_adj;
+}
+;
+
+inline double* ErrorElem::get_bilin_state() {
+	return bilin_state;
+}
+;
+
+inline double* ErrorElem::get_bilin_prev_state() {
+	return bilin_prev_state;
 }
 ;
 

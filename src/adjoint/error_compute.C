@@ -61,7 +61,7 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 						double orgSrcSgn[2];
 						double *vec_res = Curr_El->get_residual();
 						double *el_error = Curr_El->get_el_error();
-						double *constAdj = Curr_El->get_const_adj();
+						double *bilin_adj = Curr_El->get_bilin_adj();
 						double* adjoint = Curr_El->get_adjoint();
 						double *correction = Curr_El->get_correction();
 						double dt = timeprops_ptr->dt.at(iter - 1); // if we have n iter size of dt vector is n-1
@@ -92,7 +92,7 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 						*correction = 0.;
 
 						for (int j = 0; j < NUM_STATE_VARS; j++) {
-							el_error[1] += vec_res[j] * (adjoint[j] - constAdj[j]);
+							el_error[1] += vec_res[j] * (adjoint[j] - bilin_adj[j]);
 
 							*correction += vec_res[j] * adjoint[j];
 						}

@@ -1941,11 +1941,11 @@ ErrorElem::ErrorElem(Element* element) {
 
 		adjoint[i] = 0.;
 
-		consAdj[i] = 0.;
+		bilin_adj[i] = 0.;
 
 		residual[i] = 0.;
 
-		consState[i] = 0.;
+		bilin_state[i] = 0.;
 	}
 
 	correction = 0.;
@@ -1966,7 +1966,7 @@ ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH]
 		prev_state_vars[i] = 0.;
 		Influx[i] = 0.;
 		adjoint[i] = 0.;
-		consAdj[i] = 0.;
+		bilin_adj[i] = 0.;
 		Influx[i] = 0.;
 		residual[i] = 0.;
 	}
@@ -2059,7 +2059,7 @@ ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH]
 		state_vars[i] = fthTemp->state_vars[i] * myfractionoffather;
 		prev_state_vars[i] = fthTemp->prev_state_vars[i] * myfractionoffather;
 		adjoint[i] = 0.25 * fthTemp->adjoint[i];
-		consAdj[i] = 0.25 * fthTemp->adjoint[i];
+		bilin_adj[i] = 0.25 * fthTemp->adjoint[i];
 		Influx[i] = 0.;
 		residual[i] = 0.;
 	}
@@ -2327,11 +2327,10 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 		prev_state_vars[i] = 0.;
 		Influx[i] = 0.;
 		adjoint[i] = 0.;
-		consAdj[i] = 0.;
+		bilin_adj[i] = 0.;
 		Influx[i] = 0.;
 		residual[i] = 0.;
 		d_state_vars[i] = d_state_vars[NUM_STATE_VARS + i] = 0.;
-		consAdj[i] = 0.0;
 	}
 
 	Awet = 0.0;

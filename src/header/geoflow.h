@@ -174,8 +174,8 @@ int num_nonzero_elem(HashTable *El_Table, int type);
 
 void bilinear_interp(HashTable* El_Table);
 
-void bilinear_interp_elem(Element *elem11, Element *elem21, Element *elem12, Element *elem22,
-    Element *Curr_El);
+void bilinear_interp_elem(ErrorElem *elem11, ErrorElem *elem21, ErrorElem *elem12,
+    ErrorElem *elem22, ErrorElem *Curr_El);
 
 int void_neigh_elem(HashTable* El_Table, Element* Curr_El, int effelement);
 

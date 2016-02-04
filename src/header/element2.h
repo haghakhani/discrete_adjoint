@@ -588,62 +588,15 @@ public:
 		return (a < 0 ? -1. : 1.);
 	}
 
-	//! this function returns the index of jacobian for this element
-	int get_sol_rec_ind();
-
-	//! this function puts the index of jacobian for this element
-	void put_sol_rec_ind(int ind);
+	void for_link_temp1();
 
 	//! this function returns the neighbor of element considering its position, sides:xp=0, yp=1, xm=2, ym=3, xpyp=4, xpym=5, xmym=6, xpym=7
-	Element* get_side_neighbor(HashTable *El_Table, int side);
-
-	//! this function returns the constant reconstruction of adjoint
-	double* get_const_adj();
-
-	//! this function returns the correction term
-	double* get_correction();
-
-//	void set_jacobian(int neigh_num, double elemjacob[3], int state_vars_num, const double incr);
-
-	// this function sets the jacobian for a boundary element
-	void set_jacobian();
-
-	void set_jacobian(int neigh_num, double elemjacob[NUM_STATE_VARS], int state_vars_num,
-	    const double incr);
-
-	void print_jacobian(int iter);
-
-	Vec_Mat<9>& get_jacobian();
-
-	void alloc_jacobianMat();
-
-	void set_jacobianMat_zero(int jacmatind);
-
-	void add_state_func_sens(double* func_sens_prev, int iter);
-
-	void calc_func_sens(const void * ctx);
-
-	double* get_residual();
-
-	double* get_func_sens();
+	template<class T>
+	T* get_side_neighbor(HashTable *El_Table, int side);
 
 	void gen_my_sons_key(HashTable* El_Table, unsigned son_key[4][KEYLENGTH]);
 
-	void check_refine_unrefine(SolRec* solrec, HashTable* El_Table, int iter, ElemPtrList<Element>* refinelist,
-	    ElemPtrList<Element>* unrefinelist);
-
-	void cp_check_refine_unrefine(SolRec* solrec, HashTable* El_Table, int iter,
-	    ElemPtrList<Element>* refinelist, ElemPtrList<Element>* unrefinelist);
-
-	void update_state(SolRec* solrec, HashTable* El_Table, int iter);
-
-	void error_update_state(SolRec* solrec, int iter);
-
 	int check_state(SolRec* solrec, HashTable* El_Table, int iter);
-
-	FluxJac& get_flx_jac_cont();
-
-	Matrix<double, 2, 5>& get_hslope_sens();
 
 	void write_elem_info(HashTable* NodeTable, char* filename, int iter, double dt);
 

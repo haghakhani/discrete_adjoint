@@ -49,10 +49,10 @@ void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter) {
 void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo) {
 
 	HashEntryPtr currentPtr;
-	Element *Curr_El;
+	DualElem *Curr_El;
 	HashEntryPtr *buck = El_Table->getbucketptr();
 	Jacobian *jacobian, *neighjac;
-	Element *neigh_elem;
+	DualElem *neigh_elem;
 	Vec_Mat<9> jacobianmat;
 	double *curr_adj_ptr, *prev_adj_ptr;
 
@@ -62,7 +62,7 @@ void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo) {
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
 			while (currentPtr) {
-				Curr_El = (Element*) (currentPtr->value);
+				Curr_El = (DualElem*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0) {
 					if (dabs(*(Curr_El->get_coord()) - eleminfo->elempos[0]) < epsilon
@@ -100,7 +100,7 @@ void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo) {
 
 							} else {
 
-								neigh_elem = Curr_El->get_side_neighbor(El_Table, effelement - 1);//basically we are checking all neighbor elements, and start from xp neighbor
+								neigh_elem = Curr_El->get_side_neighbor<DualElem>(El_Table, effelement - 1);//basically we are checking all neighbor elements, and start from xp neighbor
 								if (neigh_elem) {
 
 									curr_adj_ptr = (neigh_elem->get_state_vars() + 6);

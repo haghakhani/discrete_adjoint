@@ -3887,7 +3887,8 @@ int Element::if_next_buffer_boundary(HashTable *ElemTable, HashTable *NodeTable,
 	return (0);
 }
 
-Element* Element::get_side_neighbor(HashTable *El_Table, int side) {
+template<class T>
+T* Element::get_side_neighbor(HashTable *El_Table, int side) {
 
 //       __________yp__________
 //       |  |   |  |   |  |   |
@@ -3907,7 +3908,7 @@ Element* Element::get_side_neighbor(HashTable *El_Table, int side) {
 //	if (keyy[0]==key[0] && keyy[1]==key[1])
 //		cout<<"why?"<<endl;
 
-	Element *neigh = NULL, *reserve;
+	T *neigh = NULL, *reserve;
 	int xp = positive_x_side;
 	int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
 
@@ -3915,79 +3916,79 @@ Element* Element::get_side_neighbor(HashTable *El_Table, int side) {
 
 		case 0: {
 			if (neigh_proc[xp] != INIT)
-				neigh = (Element*) (El_Table->lookup(&neighbor[xp][0]));
+				neigh = (T*) (El_Table->lookup(&neighbor[xp][0]));
 		}
 			break;
 
 		case 1: {
 			if (neigh_proc[yp] != INIT)
-				neigh = (Element*) (El_Table->lookup(&neighbor[yp][0]));
+				neigh = (T*) (El_Table->lookup(&neighbor[yp][0]));
 		}
 			break;
 
 		case 2: {
 			if (neigh_proc[xm] != INIT)
-				neigh = (Element*) (El_Table->lookup(&neighbor[xm][0]));
+				neigh = (T*) (El_Table->lookup(&neighbor[xm][0]));
 		}
 			break;
 
 		case 3: {
 			if (neigh_proc[ym] != INIT)
-				neigh = (Element*) (El_Table->lookup(&neighbor[ym][0]));
+				neigh = (T*) (El_Table->lookup(&neighbor[ym][0]));
 		}
 			break;
 
 		case 4:
 			if (neigh_proc[xp + 4] < 0)
-				neigh = (Element*) (El_Table->lookup(&neighbor[xp][0]));
+				neigh = (T*) (El_Table->lookup(&neighbor[xp][0]));
 			else
-				neigh = (Element*) (El_Table->lookup(&neighbor[xp + 4][0]));
+				neigh = (T*) (El_Table->lookup(&neighbor[xp + 4][0]));
 			break;
 
 		case 5:
 
 			if (neigh_proc[yp] < 0)
-				neigh = (Element*) (El_Table->lookup(&neighbor[yp][0]));
+				neigh = (T*) (El_Table->lookup(&neighbor[yp][0]));
 			else
-				neigh = (Element*) (El_Table->lookup(&neighbor[yp + 4][0]));
+				neigh = (T*) (El_Table->lookup(&neighbor[yp + 4][0]));
 			break;
 
 		case 6:
 
 			if (neigh_proc[xm] < 0)
-				neigh = (Element*) (El_Table->lookup(&neighbor[xm][0]));
+				neigh = (T*) (El_Table->lookup(&neighbor[xm][0]));
 			else
-				neigh = (Element*) (El_Table->lookup(&neighbor[xm + 4][0]));
+				neigh = (T*) (El_Table->lookup(&neighbor[xm + 4][0]));
 			break;
 
 		case 7:
 
 			if (neigh_proc[ym] < INIT)
-				neigh = (Element*) (El_Table->lookup(&neighbor[ym][0]));
+				neigh = (T*) (El_Table->lookup(&neighbor[ym][0]));
 			else
-				neigh = (Element*) (El_Table->lookup(&neighbor[ym + 4][0]));
+				neigh = (T*) (El_Table->lookup(&neighbor[ym + 4][0]));
 			break;
 
 		case 8:
-			reserve = get_side_neighbor(El_Table, 1);
+			reserve = get_side_neighbor<T>(El_Table, 1);
 			if (reserve)
-				neigh = reserve->get_side_neighbor(El_Table, 0);
+				neigh = reserve->get_side_neighbor<T>(El_Table, 0);
 			break;
 
 		case 9:
-			reserve = get_side_neighbor(El_Table, 2);
+			reserve = get_side_neighbor<T>(El_Table, 2);
 			if (reserve)
-				neigh = reserve->get_side_neighbor(El_Table, 1);
+				neigh = reserve->get_side_neighbor<T>(El_Table, 1);
 			break;
 		case 10:
-			reserve = get_side_neighbor(El_Table, 3);
+			reserve = get_side_neighbor<T>(El_Table, 3);
 			if (reserve)
-				neigh = reserve->get_side_neighbor(El_Table, 2);
+				neigh = reserve->get_side_neighbor<T>(El_Table, 2);
 			break;
 		case 11:
-			reserve = get_side_neighbor(El_Table, 0);
+			reserve = get_side_neighbor<T>(El_Table, 0);
 			if (reserve)
-				neigh = reserve->get_side_neighbor(El_Table, 3);
+				neigh = reserve->get_side_neighbor<T>(El_Table, 3);
 			break;
 
 		default:
@@ -3996,6 +3997,20 @@ Element* Element::get_side_neighbor(HashTable *El_Table, int side) {
 	}
 
 	return neigh;
+
+}
+
+void Element::for_link_temp1() {
+	HashTable *El_Table;
+	Element* elem;
+//	DualElem* dualelem;
+//	ErrorElem* errelem;
+
+	elem->get_side_neighbor<Element>(El_Table, 1);
+	elem->get_side_neighbor<DualElem>(El_Table, 1);
+	elem->get_side_neighbor<ErrorElem>(El_Table, 1);
+//	dualelem->get_side_neighbor<DualElem>(El_Table, 1);
+//	errelem->get_side_neighbor<ErrorElem>(El_Table, 1);
 
 }
 
