@@ -20,7 +20,7 @@
 #endif
 
 #define DO_EROSION
-#define DEBUG
+//#define DEBUG
 
 #define KEY0   3781669179
 #define KEY1   330382100

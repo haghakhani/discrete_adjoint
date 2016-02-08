@@ -83,7 +83,7 @@ public:
 	//members
 protected:
 
-	unordered_map<int, Solution*> solContainer;
+	map<int, Solution*> solContainer;
 	unsigned key[DIMENSION];
 //	unsigned create_time;
 //	double position[DIMENSION];

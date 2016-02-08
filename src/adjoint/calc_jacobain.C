@@ -24,7 +24,7 @@
 #define J      0
 #define JACIND 0
 
-#define DEBUG
+//#define DEBUG
 
 void reset_resflag(ResFlag resflag[EFF_ELL]);
 

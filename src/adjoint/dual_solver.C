@@ -257,6 +257,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	delete_hashtables_objects<DualElem>(Err_El_Tab);
 	delete_hashtables_objects<Node>(Err_Nod_Tab);
+
+	delete_hashtables_objects<Jacobian>(solrec);
 }
 
 int num_nonzero_elem(HashTable *El_Table) {
