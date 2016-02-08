@@ -152,7 +152,7 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
     int elm_loc_in[], int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
     HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr, int iwetnodefather,
-    double Awetfather, double *drypoint_in) {
+    double Awetfather, double *drypoint_in, int SETLINK) {
 	counted = 0; //for debugging only
 
 	adapted = NEWSON;
@@ -244,6 +244,8 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 	coord[0] = coord_in[0];
 	coord[1] = coord_in[1];
 
+	calc_which_son();
+
 	stoppedflags = fthTemp->stoppedflags;
 
 	for (int i = 0; i < NUM_STATE_VARS; i++) {
@@ -257,8 +259,8 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 /*********************************
  making a father element from its sons
  *****************************************/
-Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table,
-    MatProps* matprops_ptr) {
+Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr,
+    int SETLINK) {
 	counted = 0; //for debugging only
 
 	adapted = NEWFATHER;
@@ -1748,23 +1750,17 @@ double Element::convect_dryline(double VxVy[2], double dt) {
 
 //x direction flux in current cell
 void Element::xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
-    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], int STATE) {
+    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]) {
 	int i, j;
 	double a, Vel;
 
-	if ((STATE == FORWARD && state_vars[0] < GEOFLOW_TINY)
-	    || (STATE == ERROR && prev_state_vars[0] < GEOFLOW_TINY)) {
+	if (state_vars[0] < GEOFLOW_TINY) {
 
 		for (i = 0; i < 3; i++)
 			for (j = 0; j < NUM_STATE_VARS; j++)
 				hfv[i][j] = 0.;
 
-		for (i = 0; i < 3; i++)
-			for (j = 0; j < NUM_STATE_VARS; j++)
-				hrfv[i][j] = hfv[i][j];
-
-		return;
-	} else if (STATE == FORWARD) {
+	} else {
 		//state variables
 		for (i = 0; i < NUM_STATE_VARS; i++)
 			hfv[0][i] = state_vars[i] + d_state_vars[i] * dz;
@@ -1773,27 +1769,22 @@ void Element::xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 			for (i = 0; i < NUM_STATE_VARS; i++)
 				hfv[0][i] *= wetnessfactor;
 
-	} else {
-		for (i = 0; i < NUM_STATE_VARS; i++)
-			hfv[0][i] = prev_state_vars[i];
+		// Solid-phase velocity in x-dir
+		Vel = hfv[0][1] / hfv[0][0];
+
+		// sound-speed : a^2 = k_ap*h*g(3)
+		a = sqrt(kactxy[0] * hfv[0][0] * gravity[2]);
+
+		//fluxes
+		hfv[1][0] = hfv[0][1];
+		hfv[1][1] = hfv[0][1] * Vel + 0.5 * a * a * hfv[0][0];
+		hfv[1][2] = hfv[0][2] * Vel;
+
+		//wave speeds
+		hfv[2][0] = Vel - a;
+		hfv[2][1] = Vel;
+		hfv[2][2] = Vel + a;
 	}
-
-	// Solid-phase velocity in x-dir
-	Vel = hfv[0][1] / hfv[0][0];
-
-	// sound-speed : a^2 = k_ap*h*g(3)
-	a = sqrt(kactxy[0] * hfv[0][0] * gravity[2]);
-
-	//fluxes
-	hfv[1][0] = hfv[0][1];
-	hfv[1][1] = hfv[0][1] * Vel + 0.5 * a * a * hfv[0][0];
-	hfv[1][2] = hfv[0][2] * Vel;
-
-	//wave speeds
-	hfv[2][0] = Vel - a;
-	hfv[2][1] = Vel;
-	hfv[2][2] = Vel + a;
-
 	for (i = 0; i < 3; i++)
 		for (j = 0; j < NUM_STATE_VARS; j++)
 			hrfv[i][j] = hfv[i][j];
@@ -1803,7 +1794,6 @@ void Element::xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 			if (isnan(hrfv[i][j]))
 				cout << "flux is NAN" << endl;
 
-	return;
 }
 
 //x direction flux in current cell
@@ -1876,51 +1866,43 @@ void Element::dual_xdirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac) {
 
 //y direction flux in current cell
 void Element::ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
-    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], int STATE) {
+    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]) {
 	int i, j;
 	double Vel, a;
 
 //the "update flux" values (hfv) are the fluxes used to update the solution,
 // they may or may not be "reset" from their standard values based on whether
 // or not the stopping criteria is triggering a change intended to cause the flow to stop.
-	if ((STATE == FORWARD && state_vars[0] < GEOFLOW_TINY)
-	    || (STATE == ERROR && prev_state_vars[0] < GEOFLOW_TINY)) {
+	if (state_vars[0] < GEOFLOW_TINY) {
 		for (i = 0; i < 3; i++)
 			for (j = 0; j < NUM_STATE_VARS; j++)
 				hfv[i][j] = 0.0; //state variables
 
-		for (i = 0; i < 3; i++)
-			for (j = 0; j < NUM_STATE_VARS; j++)
-				hrfv[i][j] = hfv[i][j];
-		return;
-	} else if (STATE == FORWARD) {
+	} else {
 		//state variables
-
 		for (i = 0; i < NUM_STATE_VARS; i++)
 			hfv[0][i] = state_vars[i] + d_state_vars[NUM_STATE_VARS + i] * dz;
 
 		if ((0.0 < Awet) && (Awet < 1.0))
 			for (i = 0; i < NUM_STATE_VARS; i++)
 				hfv[0][i] *= wetnessfactor;
-	} else {
-		for (i = 0; i < NUM_STATE_VARS; i++)
-			hfv[0][i] = prev_state_vars[i];
+
+		// a = speed of sound through the medium
+		a = sqrt(kactxy[1] * hfv[0][0] * gravity[2]);
+
+		// Solid-phase velocity in y-dir
+		Vel = hfv[0][2] / hfv[0][0];
+
+		//fluxes
+		hfv[1][0] = hfv[0][2];
+		hfv[1][1] = hfv[0][1] * Vel;
+		hfv[1][2] = hfv[0][2] * Vel + 0.5 * a * a * hfv[0][0];
+
+		//wave speeds
+		hfv[2][0] = Vel - a;
+		hfv[2][1] = Vel;
+		hfv[2][2] = Vel + a;
 	}
-	// a = speed of sound through the medium
-	a = sqrt(kactxy[1] * hfv[0][0] * gravity[2]);
-
-	// Solid-phase velocity in y-dir
-	Vel = hfv[0][2] / hfv[0][0];
-
-	//fluxes
-	hfv[1][0] = hfv[0][2];
-	hfv[1][1] = hfv[0][1] * Vel;
-	hfv[1][2] = hfv[0][2] * Vel + 0.5 * a * a * hfv[0][0];
-
-	//wave speeds
-	hfv[2][0] = Vel - a;
-	hfv[2][1] = Vel;
-	hfv[2][2] = Vel + a;
 
 	for (i = 0; i < 3; i++)
 		for (j = 0; j < NUM_STATE_VARS; j++)
@@ -1930,8 +1912,6 @@ void Element::ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 		for (j = 0; j < NUM_STATE_VARS; j++)
 			if (isnan(hrfv[i][j]))
 				cout << "flux is NAN" << endl;
-
-	return;
 }
 
 //y direction flux in current cell
@@ -2005,7 +1985,7 @@ void Element::dual_ydirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac) {
 //note z is not "z" but either x or y
 void Element::zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
     int order_flag, int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS],
-    Element *EmNeigh, double dt, int STATE) {
+    Element *EmNeigh, double dt) {
 	double dz = 0.0;
 	int ineigh = which_neighbor(EmNeigh->pass_key());
 
@@ -2026,9 +2006,9 @@ void Element::zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matp
 		dz = (1.0 + dir % 2 - dir) * 0.5 * dx[dir % 2]; //+ or - 1/2 dx or dy
 
 	if (dir % 2 == 0)
-		xdirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv, STATE);
+		xdirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv);
 	else if (dir % 2 == 1)
-		ydirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv, STATE);
+		ydirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv);
 	else {
 		printf("zdirflux: direction %d not known\n", dir);
 		exit(1);
@@ -2703,11 +2683,12 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatPro
 
 }
 
-void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
-    vector<Element*>* x_elem_list, vector<Element*>* y_elem_list, MatProps* matprops_ptr, int myid,
-    double dt, int* order_flag, double *outflow, int STATE) {
+template<class T>
+void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, vector<T*>* x_elem_list,
+    vector<T*>* y_elem_list, MatProps* matprops_ptr, int myid, double dt, int* order_flag,
+    double *outflow) {
 	Node *np, *np1, *np2, *nm, *nm1, *nm2;
-	Element *elm1, *elm2;
+	T *elm1, *elm2;
 	int side, zp, zm;
 	int zp2, zm2; //positive_z_side_2 minus_z_side_2
 	int zelmpos = -100, zelmpos_2 = -100;
@@ -2725,7 +2706,7 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 
 	for (side = 0; side < 2; side++) {
 
-		vector<Element*>* elem_list;
+		vector<T*>* elem_list;
 		if (side)
 			elem_list = y_elem_list;
 		else
@@ -2736,7 +2717,7 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 		np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
 
 		if (neigh_proc[zp] == -1) {
-			elem_list->push_back(this);
+			elem_list->push_back((T*) this);
 //			nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
 //			*outflow += (nm->flux[0]) * dx[!side];
 //
@@ -2747,21 +2728,21 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 //			}
 		} else if (neigh_proc[zp] != myid) {
 			np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
-			elm1 = (Element*) El_Table->lookup(&neighbor[zp][0]);
+			elm1 = (T*) El_Table->lookup(&neighbor[zp][0]);
 			assert(elm1);
 
-			zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm1, dt, STATE);
+			zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm1, dt);
 			elm1->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv1, hrfv1, this,
-			    dt, STATE);
+			    dt);
 
 			riemannflux(hfv, hfv1, np->flux);
 			riemannflux(hrfv, hrfv1, np->refinementflux);
 
-			elm2 = (Element*) El_Table->lookup(&neighbor[zp + 4][0]);
+			elm2 = (T*) El_Table->lookup(&neighbor[zp + 4][0]);
 			assert(elm2);
-			zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm2, dt, STATE);
+			zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm2, dt);
 			elm2->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv2, hrfv2, this,
-			    dt, STATE);
+			    dt);
 
 			//note a rectangular domain ensures that neigh_proc[zm+4]!=-1
 			if (neigh_proc[zp + 4] == myid) {
@@ -2787,12 +2768,12 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 		} else {
 
 			np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
-			elm1 = (Element*) El_Table->lookup(&neighbor[zp][0]);
+			elm1 = (T*) El_Table->lookup(&neighbor[zp][0]);
 			assert(elm1);
 
-			zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm1, dt, STATE);
+			zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm1, dt);
 			elm1->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv1, hrfv1, this,
-			    dt, STATE);
+			    dt);
 
 			riemannflux(hfv, hfv1, np->flux);
 			riemannflux(hrfv, hrfv1, np->refinementflux);
@@ -2838,13 +2819,11 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 				assert(zelmpos > -1);
 				nm1 = (Node*) NodeTable->lookup(&elm1->node_key[zelmpos % 4 + 4][0]);
 
-				elm2 = (Element*) El_Table->lookup(&elm1->neighbor[(zelmpos + 4) % 8][0]);
+				elm2 = (T*) El_Table->lookup(&elm1->neighbor[(zelmpos + 4) % 8][0]);
 				assert(elm2);
 
-				elm1->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv1, hrfv1, elm2, dt,
-				    STATE);
-				elm2->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv2, hrfv2, elm1, dt,
-				    STATE);
+				elm1->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv1, hrfv1, elm2, dt);
+				elm2->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv2, hrfv2, elm1, dt);
 
 				if (*(elm1->get_neigh_proc() + (zelmpos + 4) % 8) == myid) {
 					zp2 = elm2->which_neighbor(elm1->pass_key()) % 4;
@@ -2894,12 +2873,12 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 				zelmpos = elm1->which_neighbor(pass_key()) % 4;
 				nm1 = (Node*) NodeTable->lookup(&elm1->node_key[zelmpos + 4][0]);
 
-				elm2 = (Element*) (El_Table->lookup(&neighbor[zp + 4][0]));
+				elm2 = (T*) (El_Table->lookup(&neighbor[zp + 4][0]));
 				assert(elm2);
 
-				zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm2, dt, STATE);
+				zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv, hrfv, elm2, dt);
 				elm2->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv2, hrfv2, this,
-				    dt, STATE);
+				    dt);
 
 				if (neigh_proc[zp + 4] == myid) {
 					zelmpos_2 = elm2->which_neighbor(pass_key()) % 4;
@@ -2937,7 +2916,7 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 
 			if (neigh_proc[zm] == -1) {
 
-				elem_list->push_back(this);
+				elem_list->push_back((T*) this);
 //				np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
 //				nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
 //				*outflow -= (np->flux[0]) * dx[!side];
@@ -2990,24 +2969,20 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable,
 				 */
 
 				nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
-				elm1 = (Element*) El_Table->lookup(&neighbor[zm][0]);
+				elm1 = (T*) El_Table->lookup(&neighbor[zm][0]);
 				assert(elm1);
 
-				zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv, hrfv, elm1, dt,
-				    STATE);
-				elm1->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv1, hrfv1, this, dt,
-				    STATE);
+				zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv, hrfv, elm1, dt);
+				elm1->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv1, hrfv1, this, dt);
 				riemannflux(hfv1, hfv, nm->flux);
 
 				riemannflux(hrfv1, hrfv, nm->refinementflux);
 
-				elm2 = (Element*) El_Table->lookup(&neighbor[zm + 4][0]);
+				elm2 = (T*) El_Table->lookup(&neighbor[zm + 4][0]);
 				assert(elm2);
 
-				zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv, hrfv, elm2, dt,
-				    STATE);
-				elm2->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv2, hrfv2, this, dt,
-				    STATE);
+				zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side + 2, hfv, hrfv, elm2, dt);
+				elm2->zdirflux(El_Table, NodeTable, matprops_ptr, *order_flag, side, hfv2, hrfv2, this, dt);
 
 				//note a rectangular domain ensures that neigh_proc[zm+4]!=-1
 				if (neigh_proc[zm + 4] == myid) {
@@ -4003,14 +3978,21 @@ T* Element::get_side_neighbor(HashTable *El_Table, int side) {
 void Element::for_link_temp1() {
 	HashTable *El_Table;
 	Element* elem;
+	ErrorElem* elem1;
+	vector<Element*> gg;
+	vector<ErrorElem*> ff;
+	MatProps* matprops_ptr;
+	int aa;
+	double bb;
 //	DualElem* dualelem;
 //	ErrorElem* errelem;
 
 	elem->get_side_neighbor<Element>(El_Table, 1);
 	elem->get_side_neighbor<DualElem>(El_Table, 1);
 	elem->get_side_neighbor<ErrorElem>(El_Table, 1);
-//	dualelem->get_side_neighbor<DualElem>(El_Table, 1);
-//	errelem->get_side_neighbor<ErrorElem>(El_Table, 1);
+
+	elem->calc_edge_states<Element>(El_Table, El_Table, &gg, &gg, matprops_ptr, aa, bb, &aa, &bb);
+	elem1->calc_edge_states<ErrorElem>(El_Table, El_Table, &ff, &ff, matprops_ptr, aa, bb, &aa, &bb);
 
 }
 

@@ -11,6 +11,8 @@
 #include "element2.h"
 #include "jacobian.h"
 
+class ErrorElem;
+
 class SolRec: public HashTable {
 
 private:
@@ -86,18 +88,19 @@ public:
 	DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
 	    int elm_loc_in[], int gen_neigh[], int mat, DualElem *fthTemp, double *coord_in,
 	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
-	    int iwetnodefather, double Awetfather, double *drypoint_in);
+	    int iwetnodefather, double Awetfather, double *drypoint_in, int SETLINK);
 
 	//used for unrefinement
-	DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr);
+	DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr,
+	    int SETLINK);
 
 	void get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double gamma);
 
-	void calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<Element*>* elem_list, int myid,
+	void calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<DualElem*>* elem_list, int myid,
 	    int side);
 
-	void calc_fluxes(HashTable* El_Table, HashTable* NodeTable, vector<Element*>* x_elem_list,
-	    vector<Element*>* y_elem_list, int myid);
+	void calc_fluxes(HashTable* El_Table, HashTable* NodeTable, vector<DualElem*>* x_elem_list,
+	    vector<DualElem*>* y_elem_list, int myid);
 
 	void boundary_flux(HashTable* El_Table, HashTable* NodeTable, const int myid, const int side);
 
@@ -131,6 +134,8 @@ public:
 
 	void calc_func_sens(const void * ctx);
 
+	vector<ErrorElem*>& get_son_addresses();
+
 private:
 
 	//! adjoint vector
@@ -152,6 +157,14 @@ private:
 	//5: 0-> element itself, 1->first neighbor in left(down), 2->first neighbor in right(up),
 	//3->second neighbor in left(down), 4->second neighbor in right(up),
 	Matrix<double, 2, 5> hslope_sens;
+
+	// this is to keep the address of his four sons in Error grid
+	// keeping these addresses let us to avoid calling lookup function
+	// for many times
+	// actually we just need to keep the address for 4 sons and 16 is just for the cases
+	// that the four element in error grid has been refined but still the element in dual grid
+	//
+	vector<ErrorElem*> son_address;
 };
 
 inline double* DualElem::get_adjoint() {
@@ -183,6 +196,11 @@ inline Matrix<double, 2, 5>& DualElem::get_hslope_sens() {
 	return hslope_sens;
 }
 
+inline vector<ErrorElem*>& DualElem::get_son_addresses() {
+	return son_address;
+}
+;
+
 class ErrorElem: public Element {
 
 public:
@@ -193,10 +211,11 @@ public:
 	ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
 	    int elm_loc_in[], int gen_neigh[], int mat, ErrorElem *fthTemp, double *coord_in,
 	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
-	    int iwetnodefather, double Awetfather, double *drypoint_in);
+	    int iwetnodefather, double Awetfather, double *drypoint_in, int SETLINK);
 
 	//used for unrefinement
-	ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr);
+	ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr,
+	    int SETLINK);
 
 	void get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double gamma);
 
@@ -217,6 +236,16 @@ public:
 
 	double* get_bilin_prev_state();
 
+	DualElem* get_father_address();
+
+	void put_father_address(DualElem* fth);
+
+	void xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
+
+	void ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
+
 private:
 
 	//! adjoint vector
@@ -236,6 +265,11 @@ private:
 
 	//! this term holds the correction term computed from inner product of linear construction of residual and linear construction of adjoint
 	double correction;
+
+	// this is to keep the address of his father in Dual grid
+	// keeping this address let us to avoid calling lookup function
+	// for many times
+	DualElem* father_address;
 
 };
 
@@ -266,6 +300,17 @@ inline double* ErrorElem::get_residual() {
 
 inline double* ErrorElem::get_adjoint() {
 	return adjoint;
+}
+;
+
+inline DualElem* ErrorElem::get_father_address() {
+	return father_address;
+}
+;
+
+inline void ErrorElem::put_father_address(DualElem* fth) {
+	father_address = fth;
+	return;
 }
 ;
 

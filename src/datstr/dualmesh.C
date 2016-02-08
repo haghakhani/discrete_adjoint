@@ -412,14 +412,13 @@ DualElem::DualElem(Element* element) {
 
 		func_sens[i] = 0.;
 	}
-
 }
 
 //used for refinement
 DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[],
     int gen, int elm_loc_in[], int gen_neigh[], int mat, DualElem *fthTemp, double *coord_in,
     HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr, int iwetnodefather,
-    double Awetfather, double *drypoint_in) {
+    double Awetfather, double *drypoint_in, int SETLINK) {
 	counted = 0; //for debugging only
 
 	adapted = NEWSON;
@@ -518,6 +517,8 @@ DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], 
 	coord[0] = coord_in[0];
 	coord[1] = coord_in[1];
 
+	calc_which_son();
+
 	stoppedflags = fthTemp->stoppedflags;
 
 	kactxy[0] = fthTemp->kactxy[0];
@@ -532,13 +533,33 @@ DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], 
 		Influx[i] = 0.;
 
 	}
+
+	if (SETLINK) {
+
+		// correcting the links
+		vector<ErrorElem*>& errel_vec = fthTemp->get_son_addresses();
+
+		for (int j = 0; j < errel_vec.size(); ++j) {
+
+//			assert(errel_vec[j]->get_father_address() == fthTemp);
+
+			unsigned* father_key = errel_vec[j]->getfather();
+
+			if (compare_key(father_key, key)) {
+				errel_vec[j]->put_father_address(this);
+				son_address.push_back(errel_vec[j]);
+
+			}
+		}
+	}
+
 }
 
 /*********************************
  making a father element from its sons
  *****************************************/
 DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
-    MatProps* matprops_ptr) {
+    MatProps* matprops_ptr, int SETLINK) {
 	counted = 0; //for debugging only
 
 	adapted = NEWFATHER;
@@ -631,7 +652,7 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 	/* brother information -- requires that at least one of this
 	 element's neighboring brothers is on this process in
 	 order to get information on the brother that is not a neighbor */
-	Element* EmTemp;
+	DualElem* EmTemp;
 	switch (which_son) {
 		case 0:
 			for (i = 0; i < KEYLENGTH; i++)
@@ -643,7 +664,7 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[1][i] = neighbor[1][i];
 			} else if (neigh_gen[1] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[1]);
+				EmTemp = (DualElem*) El_Table->lookup(neighbor[1]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -661,7 +682,7 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[3][i] = neighbor[2][i];
 			} else if (neigh_gen[2] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[2]);
+				EmTemp = (DualElem*) El_Table->lookup(neighbor[2]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -683,7 +704,7 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[0][i] = neighbor[3][i];
 			} else if (neigh_gen[3] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[3]);
+				EmTemp = (DualElem*) El_Table->lookup(neighbor[3]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -701,7 +722,7 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[2][i] = neighbor[2][i];
 			} else if (neigh_gen[2] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[2]);
+				EmTemp = (DualElem*) El_Table->lookup(neighbor[2]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -723,7 +744,7 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[1][i] = neighbor[0][i];
 			} else if (neigh_gen[0] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[0]);
+				EmTemp = (DualElem*) El_Table->lookup(neighbor[0]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -741,7 +762,7 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[3][i] = neighbor[3][i];
 			} else if (neigh_gen[3] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[3]);
+				EmTemp = (DualElem*) El_Table->lookup(neighbor[3]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -763,7 +784,7 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[0][i] = neighbor[0][i];
 			} else if (neigh_gen[0] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[0]);
+				EmTemp = (DualElem*) El_Table->lookup(neighbor[0]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -781,7 +802,7 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[2][i] = neighbor[1][i];
 			} else if (neigh_gen[1] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[1]);
+				EmTemp = (DualElem*) El_Table->lookup(neighbor[1]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -838,12 +859,26 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 	kactxy[1] = effect_kactxy[1] = 0.0;
 
 	for (j = 0; j < 4; j++) {
-		for (i = 0; i < EQUATIONS; i++) {
-			kactxy[i] += *(sons[j]->get_kactxy() + i) * 0.25;
-			effect_kactxy[i] += *(sons[j]->get_effect_kactxy() + i) * 0.25;
-			el_error[i] += *(sons[j]->get_el_error() + i) * 0.25;
-		}
+//		for (i = 0; i < EQUATIONS; i++) {
+//			kactxy[i] += *(sons[j]->get_kactxy() + i) * 0.25;
+//			effect_kactxy[i] += *(sons[j]->get_effect_kactxy() + i) * 0.25;
+//			el_error[i] += *(sons[j]->get_el_error() + i) * 0.25;
+//		}
 
+	}
+	if (SETLINK) {
+		// correcting the links
+		for (int i = 0; i < 4; ++i) {
+			vector<ErrorElem*>& errel_vec = sons[i]->get_son_addresses();
+
+			for (int j = 0; j < errel_vec.size(); ++j) {
+
+				assert(errel_vec[j]->get_father_address() == sons[i]);
+				errel_vec[j]->put_father_address(this);
+				son_address.push_back(errel_vec[j]);
+
+			}
+		}
 	}
 
 }
@@ -893,22 +928,22 @@ void DualElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double
 	}
 
 	/* x direction */
-	Element *ep = (Element*) (El_Table->lookup(&neighbor[xp][0]));
-	Element *em = (Element*) (El_Table->lookup(&neighbor[xm][0]));
-	Element *ep2 = NULL;
-	Element *em2 = NULL;
+	DualElem *ep = (DualElem*) (El_Table->lookup(&neighbor[xp][0]));
+	DualElem *em = (DualElem*) (El_Table->lookup(&neighbor[xm][0]));
+	DualElem *ep2 = NULL;
+	DualElem *em2 = NULL;
 
 //check if element has 2 neighbors on either side
 	Node* ndtemp = (Node*) NodeTable->lookup(&node_key[xp + 4][0]);
 
 	if (ndtemp->info == S_C_CON) {
-		ep2 = (Element*) (El_Table->lookup(&neighbor[xp + 4][0]));
+		ep2 = (DualElem*) (El_Table->lookup(&neighbor[xp + 4][0]));
 		assert(neigh_proc[xp + 4] >= 0 && ep2);
 	}
 
 	ndtemp = (Node*) NodeTable->lookup(&node_key[xm + 4][0]);
 	if (ndtemp->info == S_C_CON) {
-		em2 = (Element*) (El_Table->lookup(&neighbor[xm + 4][0]));
+		em2 = (DualElem*) (El_Table->lookup(&neighbor[xm + 4][0]));
 		assert(neigh_proc[xm + 4] >= 0 && em2);
 	}
 
@@ -991,19 +1026,19 @@ void DualElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double
 	}
 
 	/* y direction */
-	ep = (Element*) (El_Table->lookup(&neighbor[yp][0]));
-	em = (Element*) (El_Table->lookup(&neighbor[ym][0]));
+	ep = (DualElem*) (El_Table->lookup(&neighbor[yp][0]));
+	em = (DualElem*) (El_Table->lookup(&neighbor[ym][0]));
 	ep2 = NULL;
 	em2 = NULL;
 //check if element has 2 neighbors on either side
 	ndtemp = (Node*) NodeTable->lookup(&node_key[yp + 4][0]);
 	if (ndtemp->info == S_C_CON) {
-		ep2 = (Element*) (El_Table->lookup(&neighbor[yp + 4][0]));
+		ep2 = (DualElem*) (El_Table->lookup(&neighbor[yp + 4][0]));
 		assert(neigh_proc[yp + 4] >= 0 && ep2);
 	}
 	ndtemp = (Node*) NodeTable->lookup(&node_key[ym + 4][0]);
 	if (ndtemp->info == S_C_CON) {
-		em2 = (Element*) (El_Table->lookup(&neighbor[ym + 4][0]));
+		em2 = (DualElem*) (El_Table->lookup(&neighbor[ym + 4][0]));
 		if (!(neigh_proc[ym + 4] >= 0 && em2)) {
 			printf("ym=%d neigh_proc[ym+4]=%d em2=%d\n", ym, neigh_proc[ym + 4], em2);
 		}
@@ -1300,15 +1335,15 @@ void dual_riemannflux(Mat3x3& hfvl, Mat3x3& hfvr, double flux[NUM_STATE_VARS], M
 
 }
 
-void DualElem::calc_fluxes(HashTable* El_Table, HashTable* NodeTable, vector<Element*>* x_elem_list,
-    vector<Element*>* y_elem_list, int myid) {
+void DualElem::calc_fluxes(HashTable* El_Table, HashTable* NodeTable,
+    vector<DualElem*>* x_elem_list, vector<DualElem*>* y_elem_list, int myid) {
 
 	calc_flux(El_Table, NodeTable, x_elem_list, myid, 0);
 	calc_flux(El_Table, NodeTable, y_elem_list, myid, 1);
 
 }
 
-void DualElem::calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<Element*>* elem_list,
+void DualElem::calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<DualElem*>* elem_list,
     int myid, int side) {
 
 	Node *np, *np1, *np2, *nm, *nm1, *nm2;
@@ -1950,13 +1985,15 @@ ErrorElem::ErrorElem(Element* element) {
 
 	correction = 0.;
 
+	father_address = NULL;
+
 }
 
 //used for refinement
 ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[],
     int gen, int elm_loc_in[], int gen_neigh[], int mat, ErrorElem *fthTemp, double *coord_in,
     HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr, int iwetnodefather,
-    double Awetfather, double *drypoint_in) {
+    double Awetfather, double *drypoint_in, int SETLINK) {
 
 	counted = 0; //for debugging only
 
@@ -2016,7 +2053,7 @@ ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH]
 	refined = 0;
 
 	new_old = NEW;
-	//geoflow stuff
+//geoflow stuff
 	dx[0] = .5 * fthTemp->dx[0];  //assume constant refinement
 	dx[1] = .5 * fthTemp->dx[1];
 
@@ -2048,6 +2085,8 @@ ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH]
 	coord[0] = coord_in[0];
 	coord[1] = coord_in[1];
 
+	calc_which_son();
+
 	stoppedflags = fthTemp->stoppedflags;
 
 	correction = 0.0;
@@ -2063,13 +2102,42 @@ ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH]
 		Influx[i] = 0.;
 		residual[i] = 0.;
 	}
+
+	int aa = 1, bb = 0;
+	if (fthTemp->key[0] == 3897323835 && fthTemp->key[1] == 330382099)
+		aa = bb;
+
+	if (SETLINK) {
+
+		father_address = fthTemp->father_address;
+
+		// we just do that for the son 0
+		int count = 0;
+		if (which_son == 0) { // first deleting the old links
+			vector<ErrorElem*>& mysons = father_address->get_son_addresses();
+			vector<ErrorElem*>::iterator it = mysons.begin();
+
+			while (it != mysons.end())
+				if (*it == fthTemp) {
+					mysons.erase(it);
+					count++;
+				} else
+					++it;
+		}
+
+		if (which_son == 0)
+			assert(count == 1);
+
+		// now adding the new link
+		(father_address->get_son_addresses()).push_back(this);
+	}
 }
 
 /*********************************
  making a father element from its sons
  *****************************************/
 ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Table,
-    MatProps* matprops_ptr) {
+    MatProps* matprops_ptr, int SETLINK) {
 	counted = 0; //for debugging only
 
 	adapted = NEWFATHER;
@@ -2151,7 +2219,7 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 	/* brother information -- requires that at least one of this
 	 element's neighboring brothers is on this process in
 	 order to get information on the brother that is not a neighbor */
-	Element* EmTemp;
+	ErrorElem* EmTemp;
 	switch (which_son) {
 		case 0:
 			for (i = 0; i < KEYLENGTH; i++)
@@ -2163,7 +2231,7 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[1][i] = neighbor[1][i];
 			} else if (neigh_gen[1] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[1]);
+				EmTemp = (ErrorElem*) El_Table->lookup(neighbor[1]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -2181,7 +2249,7 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[3][i] = neighbor[2][i];
 			} else if (neigh_gen[2] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[2]);
+				EmTemp = (ErrorElem*) El_Table->lookup(neighbor[2]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -2203,7 +2271,7 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[0][i] = neighbor[3][i];
 			} else if (neigh_gen[3] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[3]);
+				EmTemp = (ErrorElem*) El_Table->lookup(neighbor[3]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -2221,7 +2289,7 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[2][i] = neighbor[2][i];
 			} else if (neigh_gen[2] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[2]);
+				EmTemp = (ErrorElem*) El_Table->lookup(neighbor[2]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -2243,7 +2311,7 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[1][i] = neighbor[0][i];
 			} else if (neigh_gen[0] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[0]);
+				EmTemp = (ErrorElem*) El_Table->lookup(neighbor[0]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -2261,7 +2329,7 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[3][i] = neighbor[3][i];
 			} else if (neigh_gen[3] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[3]);
+				EmTemp = (ErrorElem*) El_Table->lookup(neighbor[3]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -2283,7 +2351,7 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[0][i] = neighbor[0][i];
 			} else if (neigh_gen[0] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[0]);
+				EmTemp = (ErrorElem*) El_Table->lookup(neighbor[0]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -2301,7 +2369,7 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 				for (i = 0; i < KEYLENGTH; i++)
 					brothers[2][i] = neighbor[1][i];
 			} else if (neigh_gen[1] == generation + 1) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[1]);
+				EmTemp = (ErrorElem*) El_Table->lookup(neighbor[1]);
 				assert(EmTemp);
 				unsigned* bro_key = EmTemp->getfather();
 				for (i = 0; i < KEYLENGTH; i++)
@@ -2357,6 +2425,33 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 	for (i = 0; i < EQUATIONS; i++)
 		el_error[i] = 0.;
 
+	if (SETLINK) {
+		// correcting the link
+
+		for (i = 1; i < 4; i++)
+			assert(sons[i]->get_father_address() == sons[0]->get_father_address());
+
+		father_address = sons[0]->get_father_address();
+
+		// first deleting the old links
+		vector<ErrorElem*>& mysons = father_address->get_son_addresses();
+
+		int count = 0;
+		for (int j = 0; j < 4; ++j) {
+			vector<ErrorElem*>::iterator it = mysons.begin();
+			while (it != mysons.end())
+				if (*it == sons[j]) {
+					mysons.erase(it);
+					count++;
+				} else
+					++it;
+		}
+
+		assert(count == 4);
+
+		// now adding the new link
+		(father_address->get_son_addresses()).push_back(this);
+	}
 }
 
 void ErrorElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double gamma) {
@@ -2400,22 +2495,22 @@ void ErrorElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, doubl
 	}
 
 	/* x direction */
-	Element *ep = (Element*) (El_Table->lookup(&neighbor[xp][0]));
-	Element *em = (Element*) (El_Table->lookup(&neighbor[xm][0]));
-	Element *ep2 = NULL;
-	Element *em2 = NULL;
+	ErrorElem *ep = (ErrorElem*) (El_Table->lookup(&neighbor[xp][0]));
+	ErrorElem *em = (ErrorElem*) (El_Table->lookup(&neighbor[xm][0]));
+	ErrorElem *ep2 = NULL;
+	ErrorElem *em2 = NULL;
 
 //check if element has 2 neighbors on either side
 	Node* ndtemp = (Node*) NodeTable->lookup(&node_key[xp + 4][0]);
 
 	if (ndtemp->info == S_C_CON) {
-		ep2 = (Element*) (El_Table->lookup(&neighbor[xp + 4][0]));
+		ep2 = (ErrorElem*) (El_Table->lookup(&neighbor[xp + 4][0]));
 		assert(neigh_proc[xp + 4] >= 0 && ep2);
 	}
 
 	ndtemp = (Node*) NodeTable->lookup(&node_key[xm + 4][0]);
 	if (ndtemp->info == S_C_CON) {
-		em2 = (Element*) (El_Table->lookup(&neighbor[xm + 4][0]));
+		em2 = (ErrorElem*) (El_Table->lookup(&neighbor[xm + 4][0]));
 		assert(neigh_proc[xm + 4] >= 0 && em2);
 	}
 
@@ -2429,15 +2524,15 @@ void ErrorElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, doubl
 
 	for (j = 0; j < NUM_STATE_VARS; j++) {
 
-		dp = (ep->prev_state_vars[j] - prev_state_vars[j]) * inv_dxp;
+		dp = (ep->bilin_prev_state[j] - bilin_prev_state[j]) * inv_dxp;
 
 		if (ep2 != NULL)
-			dp = .5 * (dp + (ep2->prev_state_vars[j] - prev_state_vars[j]) * inv_dxp);
+			dp = .5 * (dp + (ep2->bilin_prev_state[j] - bilin_prev_state[j]) * inv_dxp);
 
-		dm = (prev_state_vars[j] - em->prev_state_vars[j]) * inv_dxm;
+		dm = (bilin_prev_state[j] - em->bilin_prev_state[j]) * inv_dxm;
 
 		if (em2 != NULL)
-			dm = .5 * (dm + (prev_state_vars[j] - em2->prev_state_vars[j]) * inv_dxm);
+			dm = .5 * (dm + (bilin_prev_state[j] - em2->bilin_prev_state[j]) * inv_dxm);
 
 		dc = (dp * dxm + dm * dxp) * inv_sdxpdxm;  // weighted average
 
@@ -2448,19 +2543,19 @@ void ErrorElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, doubl
 	}
 
 	/* y direction */
-	ep = (Element*) (El_Table->lookup(&neighbor[yp][0]));
-	em = (Element*) (El_Table->lookup(&neighbor[ym][0]));
+	ep = (ErrorElem*) (El_Table->lookup(&neighbor[yp][0]));
+	em = (ErrorElem*) (El_Table->lookup(&neighbor[ym][0]));
 	ep2 = NULL;
 	em2 = NULL;
 //check if element has 2 neighbors on either side
 	ndtemp = (Node*) NodeTable->lookup(&node_key[yp + 4][0]);
 	if (ndtemp->info == S_C_CON) {
-		ep2 = (Element*) (El_Table->lookup(&neighbor[yp + 4][0]));
+		ep2 = (ErrorElem*) (El_Table->lookup(&neighbor[yp + 4][0]));
 		assert(neigh_proc[yp + 4] >= 0 && ep2);
 	}
 	ndtemp = (Node*) NodeTable->lookup(&node_key[ym + 4][0]);
 	if (ndtemp->info == S_C_CON) {
-		em2 = (Element*) (El_Table->lookup(&neighbor[ym + 4][0]));
+		em2 = (ErrorElem*) (El_Table->lookup(&neighbor[ym + 4][0]));
 		if (!(neigh_proc[ym + 4] >= 0 && em2)) {
 			printf("ym=%d neigh_proc[ym+4]=%d em2=%d\n", ym, neigh_proc[ym + 4], em2);
 		}
@@ -2475,10 +2570,10 @@ void ErrorElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, doubl
 	inv_sdxpdxm = 1 / (dxm + dxp);
 
 	for (j = 0; j < NUM_STATE_VARS; j++) {
-		dp = (ep->prev_state_vars[j] - prev_state_vars[j]) * inv_dxp;
+		dp = (ep->bilin_prev_state[j] - bilin_prev_state[j]) * inv_dxp;
 		if (ep2 != NULL)
-			dp = .5 * (dp + (ep2->prev_state_vars[j] - prev_state_vars[j]) * inv_dxp);
-		dm = (prev_state_vars[j] - em->prev_state_vars[j]) * inv_dxm;
+			dp = .5 * (dp + (ep2->bilin_prev_state[j] - bilin_prev_state[j]) * inv_dxp);
+		dm = (bilin_prev_state[j] - em->bilin_prev_state[j]) * inv_dxm;
 		if (em2 != NULL)
 			dm = .5 * (dm + (prev_state_vars[j] - em2->prev_state_vars[j]) * inv_dxm);
 
@@ -2516,7 +2611,97 @@ void ErrorElem::error_check_refine_unrefine(SolRec* solrec, HashTable* El_Table,
 			refinelist->add(this);
 
 		else
-			// the only remaining case is that it has been unrefined so, we have to read from its sons
+// the only remaining case is that it has been unrefined so, we have to read from its sons
 			unrefinelist->add(this);
 	}
 }
+
+//x direction flux in current cell
+void ErrorElem::xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
+    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]) {
+	int i, j;
+	double a, Vel;
+
+	if (bilin_prev_state[0] < GEOFLOW_TINY) {
+
+		for (i = 0; i < 3; i++)
+			for (j = 0; j < NUM_STATE_VARS; j++)
+				hfv[i][j] = 0.;
+
+	} else {
+		//state variables
+		for (i = 0; i < NUM_STATE_VARS; i++)
+			hfv[0][i] = bilin_prev_state[i];
+
+		// Solid-phase velocity in x-dir
+		Vel = hfv[0][1] / hfv[0][0];
+
+		// sound-speed : a^2 = k_ap*h*g(3)
+		a = sqrt(kactxy[0] * hfv[0][0] * gravity[2]);
+
+		//fluxes
+		hfv[1][0] = hfv[0][1];
+		hfv[1][1] = hfv[0][1] * Vel + 0.5 * a * a * hfv[0][0];
+		hfv[1][2] = hfv[0][2] * Vel;
+
+		//wave speeds
+		hfv[2][0] = Vel - a;
+		hfv[2][1] = Vel;
+		hfv[2][2] = Vel + a;
+	}
+	for (i = 0; i < 3; i++)
+		for (j = 0; j < NUM_STATE_VARS; j++)
+			hrfv[i][j] = hfv[i][j];
+
+	for (i = 0; i < 3; i++)
+		for (j = 0; j < NUM_STATE_VARS; j++)
+			if (isnan(hrfv[i][j]))
+				cout << "flux is NAN" << endl;
+
+}
+
+void ErrorElem::ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
+    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]) {
+	int i, j;
+	double Vel, a;
+
+//the "update flux" values (hfv) are the fluxes used to update the solution,
+// they may or may not be "reset" from their standard values based on whether
+// or not the stopping criteria is triggering a change intended to cause the flow to stop.
+	if (bilin_prev_state[0] < GEOFLOW_TINY) {
+		for (i = 0; i < 3; i++)
+			for (j = 0; j < NUM_STATE_VARS; j++)
+				hfv[i][j] = 0.0; //state variables
+
+	} else {
+		//state variables
+		for (i = 0; i < NUM_STATE_VARS; i++)
+			hfv[0][i] = bilin_prev_state[i];
+
+		// a = speed of sound through the medium
+		a = sqrt(kactxy[1] * hfv[0][0] * gravity[2]);
+
+		// Solid-phase velocity in y-dir
+		Vel = hfv[0][2] / hfv[0][0];
+
+		//fluxes
+		hfv[1][0] = hfv[0][2];
+		hfv[1][1] = hfv[0][1] * Vel;
+		hfv[1][2] = hfv[0][2] * Vel + 0.5 * a * a * hfv[0][0];
+
+		//wave speeds
+		hfv[2][0] = Vel - a;
+		hfv[2][1] = Vel;
+		hfv[2][2] = Vel + a;
+	}
+
+	for (i = 0; i < 3; i++)
+		for (j = 0; j < NUM_STATE_VARS; j++)
+			hrfv[i][j] = hfv[i][j];
+
+	for (i = 0; i < 3; i++)
+		for (j = 0; j < NUM_STATE_VARS; j++)
+			if (isnan(hrfv[i][j]))
+				cout << "flux is NAN" << endl;
+}
+

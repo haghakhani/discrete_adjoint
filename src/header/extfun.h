@@ -37,7 +37,7 @@ void unrefine(HashTable* El_Table, HashTable* NodeTable, double target, int myid
     TimeProps* timeprops_ptr, MatProps* matprops_ptr, int rescomp);
 
 template <typename T>
-void refine(T*, HashTable*, HashTable*, MatProps* matprops_ptr);
+void refine(T*, HashTable*, HashTable*, MatProps* matprops_ptr,int SETLINK);
 
 void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *EmFather);
 
@@ -198,7 +198,7 @@ void dualplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
     TimeProps* timeprops, MapNames* mapnames, double v_star, int plotflag);
 
 void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
-    TimeProps* timeprops, MapNames* mapnames, double v_star, int plotflag);
+    TimeProps* timeprops, MapNames* mapnames, double v_star);
 
 //! another of "pady's" output functions, since Keith never met "pady" this is probably long out of date
 void viz_output(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid, int numprocs,

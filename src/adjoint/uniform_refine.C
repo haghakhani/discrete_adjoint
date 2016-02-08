@@ -83,7 +83,7 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx) {
 				Curr_El = (ErrorElem*) (currentPtr->value);
 				currentPtr = currentPtr->next;
 				if (Curr_El->get_adapted_flag() == NOTRECADAPTED) {
-					refine(Curr_El, El_Table, NodeTable, matprops_ptr);
+					refine(Curr_El, El_Table, NodeTable, matprops_ptr,0);
 				}
 
 			}
@@ -108,8 +108,6 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx) {
 	refine_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &RefinedList, timeprops_ptr);
 
 //	cout << "here is the problem   "<<checkElement(El_Table, &max, key) << endl;
-
-	RefinedList.trashlist();
 
 	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
 

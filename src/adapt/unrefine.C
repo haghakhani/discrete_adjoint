@@ -104,7 +104,7 @@ void unrefine(HashTable* El_Table, HashTable* NodeTable, double target, int myid
 							}
 						}
 						Curr_El->find_brothers<Element>(El_Table, NodeTable, target, myid, matprops_ptr, &NewFatherList,
-						    &OtherProcUpdate);
+						    &OtherProcUpdate,0);
 
 					}
 				}
@@ -209,7 +209,7 @@ void unrefine(HashTable* El_Table, HashTable* NodeTable, double target, int myid
 
 template<class T>
 int Element::find_brothers(HashTable* El_Table, HashTable* NodeTable, double target, int myid,
-    MatProps* matprops_ptr, void *NFL, void *OPU) {
+    MatProps* matprops_ptr, void *NFL, void *OPU, int SETLINK) {
 	ElemPtrList<Element>* NewFatherList = (ElemPtrList<Element>*) NFL;
 	ElemPtrList<Element>* OtherProcUpdate = (ElemPtrList<Element>*) OPU;
 
@@ -237,7 +237,7 @@ int Element::find_brothers(HashTable* El_Table, HashTable* NodeTable, double tar
 
 	if (unrefine_flag) { // we want to unrefine this element...
 
-		bros[0] = new T((bros + 1), NodeTable, El_Table, matprops_ptr);
+		bros[0] = new T((bros + 1), NodeTable, El_Table, matprops_ptr,SETLINK);
 		El_Table->add(bros[0]->pass_key(), bros[0]);
 		assert(bros[0]); // a copy of the parent should always be on the same process as the sons
 		NewFatherList->add(bros[0]);
@@ -260,9 +260,9 @@ void Element::for_link_temp() {
 	DualElem* dualelem;
 	ErrorElem* errelem;
 
-	elem->find_brothers<Element>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi);
-	dualelem->find_brothers<DualElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi);
-	errelem->find_brothers<ErrorElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi);
+	elem->find_brothers<Element>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi,0);
+	dualelem->find_brothers<DualElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi,0);
+	errelem->find_brothers<ErrorElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi,0);
 
 }
 

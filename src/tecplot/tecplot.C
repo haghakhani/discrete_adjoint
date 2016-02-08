@@ -986,12 +986,11 @@ void dualplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 					assert(NodeTemp);
 					int jj = j;
 					if (NodeTemp->getinfo() != S_C_CON)
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e\n",
-						    (*(NodeTemp->get_coord())) * lscale, (*(NodeTemp->get_coord() + 1)) * lscale,
-						    NodeTemp->get_elevation() * lscale, state_vars[0] * hscale,
-						    state_vars[1] * momentum_scale, state_vars[2] * momentum_scale,
-						    adjoint[0] * adjoint_scale[0], adjoint[1] * adjoint_scale[1],
-						    adjoint[2] * adjoint_scale[2]);
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e\n", (*(NodeTemp->get_coord())) * lscale,
+						    (*(NodeTemp->get_coord() + 1)) * lscale, NodeTemp->get_elevation() * lscale,
+						    state_vars[0] * hscale, state_vars[1] * momentum_scale,
+						    state_vars[2] * momentum_scale, adjoint[0] * adjoint_scale[0],
+						    adjoint[1] * adjoint_scale[1], adjoint[2] * adjoint_scale[2]);
 
 					else // S_C_CON will have a discontinuity in the elevation so fix that by interpolation
 					{
@@ -1026,11 +1025,11 @@ void dualplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 
 						NodeTemp2 = (Node*) NodeTable->lookup(EmTemp2->getNode() + j * KEYLENGTH);
 						elev += .5 * NodeTemp2->get_elevation();
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e\n",
-						    (*(NodeTemp->get_coord())) * lscale, (*(NodeTemp->get_coord() + 1)) * lscale,
-						    elev * lscale, state_vars[0] * hscale, state_vars[1] * momentum_scale,
-						    state_vars[2] * momentum_scale, adjoint[0] * adjoint_scale[0],
-						    adjoint[1] * adjoint_scale[1], adjoint[2] * adjoint_scale[2]);
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e\n", (*(NodeTemp->get_coord())) * lscale,
+						    (*(NodeTemp->get_coord() + 1)) * lscale, elev * lscale, state_vars[0] * hscale,
+						    state_vars[1] * momentum_scale, state_vars[2] * momentum_scale,
+						    adjoint[0] * adjoint_scale[0], adjoint[1] * adjoint_scale[1],
+						    adjoint[2] * adjoint_scale[2]);
 					}
 				}
 			}
@@ -1046,11 +1045,10 @@ void dualplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	return;
 }
 
-
 void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
-    TimeProps* timeprops, MapNames* mapnames, double v_star, int plotflag) {
+    TimeProps* timeprops, MapNames* mapnames, double v_star) {
 
-	int myid, i;
+	int myid;
 	int numprocs;
 	int material;
 	int done = 1;
@@ -1065,10 +1063,7 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	unsigned* nodes;
 	char filename[256];
 
-	if (plotflag == 2)
-		sprintf(filename, "error%02d%08d.tec", myid, timeprops->iter);
-	else if (plotflag == 1)
-		sprintf(filename, "error%02d%08d.tec", myid, timeprops->iter - 1);
+	sprintf(filename, "error%02d%08d.tec", myid, timeprops->iter);
 
 	int order;
 	int e_buckets = El_Table->get_no_of_buckets();
@@ -1083,9 +1078,13 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 
 	double adjoint_scale[3] = { hscale * hscale / tscale, hscale * hscale * hscale * tscale
 	    / momentum_scale, hscale * hscale * hscale * tscale / momentum_scale };
-	adjoint_scale[0] = 1.; //hscale * hscale * lscale * lscale * tscale * tscale;
+//	adjoint_scale[0] = 1.; //hscale * hscale * lscale * lscale * tscale * tscale;
 	// scale of adjoint is different for first and two other component, and depend on the functional
-	adjoint_scale[1] = adjoint_scale[2] = tscale * hscale / lscale; //hscale * hscale * lscale * tscale * tscale * tscale;
+	//adjoint_scale[0] = adjoint_scale[1] = adjoint_scale[2] = 1;	//tscale * hscale / lscale; //hscale * hscale * lscale * tscale * tscale * tscale;
+
+	double residual_scale[] = { hscale, momentum_scale, momentum_scale };
+	double error_scale, correction_scale;
+	error_scale= correction_scale = hscale * lscale * lscale;
 
 	FILE* fp;
 
@@ -1098,15 +1097,15 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	fprintf(fp, "TITLE= \" %s (MESH OUTPUT) time %d:%02d:%g (hrs:min:sec), V*=%g\"\n",
 	    mapnames->gis_map, hours, minutes, seconds, v_star);
 
-//fprintf ( fp, "TITLE= \"MESH OUTPUT\"\n" );
-
 	fprintf(fp, "VARIABLES = \"X\", \"Y\", \"Z\", \"PILE_HEIGHT\","
 			"\"X_MOMENTUM\", \"Y_MOMENTUM\","
-			"\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\"\n");
+			"\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\","
+			"\"Residual1\", \"Residual2\", \"Residual3\","
+			"\"Correction\", \"Error\"\n");
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	for (i = 0; i < e_buckets; i++) {
+	for (int i = 0; i < e_buckets; i++) {
 		entryp = *(El_Table->getbucketptr() + i);
 		while (entryp) {
 			EmTemp = (ErrorElem*) entryp->value;
@@ -1122,25 +1121,19 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	    element_counter);
 
 	int elements = El_Table->get_no_of_buckets();
-	for (i = 0; i < elements; i++) {
+	for (int i = 0; i < elements; i++) {
 		entryp = *(El_Table->getbucketptr() + i);
 		while (entryp) {
 			EmTemp = (ErrorElem*) entryp->value;
 			assert(EmTemp);
 			if (EmTemp->get_adapted_flag() > 0) {
 
-//				unsigned keyy[2] = { 3910790222, 3303820997 };
-//				if (keyy[0] == *(EmTemp->pass_key()) && keyy[1] == *(EmTemp->pass_key() + 1))
-//					cout << "why?" << endl;
-
 				nodes = EmTemp->getNode();
-				double* state_vars;
-				if (plotflag == 1)
-					state_vars = EmTemp->get_prev_state_vars();
-				else
-					state_vars = EmTemp->get_state_vars();
-
-				double* adjoint = EmTemp->get_adjoint();
+				double* state_vars = EmTemp->get_bilin_state();	// EmTemp->get_state_vars();	//EmTemp->get_bilin_state();
+				double* adjoint = EmTemp->get_bilin_adj();//EmTemp->get_adjoint();	//EmTemp->get_bilin_adj();
+				double error = *(EmTemp->get_el_error() + 1);
+				double* correction = EmTemp->get_correction();
+				double* residual = EmTemp->get_residual();
 				double Vel[4];
 
 				EmTemp->eval_velocity(0., 0., Vel);
@@ -1149,12 +1142,14 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 					assert(NodeTemp);
 					int jj = j;
 					if (NodeTemp->getinfo() != S_C_CON)
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e\n",
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
 						    (*(NodeTemp->get_coord())) * lscale, (*(NodeTemp->get_coord() + 1)) * lscale,
 						    NodeTemp->get_elevation() * lscale, state_vars[0] * hscale,
 						    state_vars[1] * momentum_scale, state_vars[2] * momentum_scale,
 						    adjoint[0] * adjoint_scale[0], adjoint[1] * adjoint_scale[1],
-						    adjoint[2] * adjoint_scale[2]);
+						    adjoint[2] * adjoint_scale[2], residual[0] * residual_scale[0],
+						    residual[1] * residual_scale[1], residual[2] * residual_scale[2],
+						    *correction * correction_scale, error * error_scale);
 
 					else // S_C_CON will have a discontinuity in the elevation so fix that by interpolation
 					{
@@ -1183,24 +1178,27 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 						assert(NodeTemp2);
 
 						elev = .5 * NodeTemp2->get_elevation();
-						Element* EmTemp2 = (Element*) El_Table->lookup(
+						ErrorElem* EmTemp2 = (ErrorElem*) El_Table->lookup(
 						    (EmTemp->get_neighbors() + KEYLENGTH * neighside));
 						assert(EmTemp2);
 
 						NodeTemp2 = (Node*) NodeTable->lookup(EmTemp2->getNode() + j * KEYLENGTH);
 						elev += .5 * NodeTemp2->get_elevation();
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e\n",
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
 						    (*(NodeTemp->get_coord())) * lscale, (*(NodeTemp->get_coord() + 1)) * lscale,
 						    elev * lscale, state_vars[0] * hscale, state_vars[1] * momentum_scale,
 						    state_vars[2] * momentum_scale, adjoint[0] * adjoint_scale[0],
-						    adjoint[1] * adjoint_scale[1], adjoint[2] * adjoint_scale[2]);
+						    adjoint[1] * adjoint_scale[1], adjoint[2] * adjoint_scale[2],
+						    residual[0] * residual_scale[0], residual[1] * residual_scale[1],
+						    residual[2] * residual_scale[2], *correction * correction_scale,
+						    error * error_scale);
 					}
 				}
 			}
 			entryp = entryp->next;
 		}
 	}
-	for (i = 0; i < element_counter; i++) {
+	for (int i = 0; i < element_counter; i++) {
 		for (int j = 0; j < 4; j++)
 			fprintf(fp, "%d ", i * 4 + j + 1);
 		fprintf(fp, "\n");

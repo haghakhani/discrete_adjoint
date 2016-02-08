@@ -592,8 +592,9 @@ struct OutLine {
 
 	//! this is the OutLine it deallocates the 2 dimensional array holding maximum throughout time pileheight in every cell on the map
 	~OutLine() {
-		if ((Nx > 0) && (Ny > 0))
-			CDeAllocD2(pileheight);
+		if (pileheight != NULL)
+			if ((Nx > 0) && (Ny > 0))
+				CDeAllocD2(pileheight);
 		return;
 	}
 
@@ -807,6 +808,8 @@ struct OutLine {
 	//! this function deallocates the 2 dimensional array of maximum throughout time pileheights
 	void dealloc() {
 		CDeAllocD2(pileheight);
+
+		pileheight = NULL;
 		//CDeAllocD2(pileheight2);
 		return;
 	}

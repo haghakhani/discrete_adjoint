@@ -112,10 +112,11 @@ public:
 	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
 	    int elm_loc_in[], int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
 	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
-	    int iwetnodefather, double Awetfather, double *drypoint_in);
+	    int iwetnodefather, double Awetfather, double *drypoint_in, int SETLINK = 0);
 
 	//! constructor that creates a father element from its four sons during unrefinement
-	Element(Element *sons[], HashTable *NodeTable, HashTable *El_Table, MatProps *matprops_ptr);
+	Element(Element *sons[], HashTable *NodeTable, HashTable *El_Table, MatProps *matprops_ptr,
+	    int SETLINK = 0);
 
 	//! constructor that creates/restores a saved element during restart
 	Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
@@ -334,7 +335,7 @@ public:
 
 	//! this function computes the x and y derivatives of the state variables
 	void get_slopes(HashTable*, HashTable*, double);
-	void get_slopes_prev(HashTable*, HashTable*, double);
+	virtual void get_slopes_prev(HashTable*, HashTable*, double);
 
 	//! this function returns a vector containing the previous state variables, previous mean beginning of timestep before the finite difference predictor halfstep
 	double* get_prev_state_vars();
@@ -351,7 +352,7 @@ public:
 	//! this function, based on the dir flag, chooses between calling xdirflux and ydirflux, which respectively, calculate either the x or y direction analytical cell center fluxes (or the fluxes at the the boundary if 2nd order flux option is checked on the gui). Keith wrote this.
 	void zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int order_flag,
 	    int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], Element *EmNeigh,
-	    double dt, int state);
+	    double dt);
 
 	void zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int order_flag,
 	    int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], Element *EmNeigh,
@@ -366,12 +367,12 @@ public:
 	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], ResFlag resflag);
 
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) x direction fluxes. Keith wrote this
-	void xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
-	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], int state);
+	virtual void xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
 
 	//! this function calculates the analytical cell center (or cell boundary if 2nd order flux flag is checked on the gui) y direction fluxes. Keith wrote this
-	void ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
-	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS], int state);
+	virtual void ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
+	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
 
 	void calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<Element*>* elem_list, int myid,
 	    int side);
@@ -385,10 +386,15 @@ public:
 	void dual_ydirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac);
 	void dual_xdirflux(Mat3x3& hfv, Mat3x3& flux_jac, Mat3x3& s_jac);
 
-	//! this function (indirectly) calculates the fluxes that will be used to perform the finite volume corrector step and stores them in element edge nodes, indirectly because it calls other functions to calculate the analytical fluxes and then calls another function to compute the riemann fluxes from the analytical fluxes. Talk to me (Keith) before you modify this, as I am fairly certain that it is now completely bug free and parts of it can be slightly confusing.
-	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, vector<Element*>* x_elem_list,
-	    vector<Element*>* y_elem_list, MatProps* matprops_ptr, int myid, double dt, int* order_flag,
-	    double *outflow, int STATE);
+	//! this function (indirectly) calculates the fluxes that will be used to perform the finite volume
+	//corrector step and stores them in element edge nodes, indirectly because it calls other functions
+	//to calculate the analytical fluxes and then calls another function to compute the riemann fluxes
+	//from the analytical fluxes. Talk to me (Keith) before you modify this, as I am fairly certain that
+	//it is now completely bug free and parts of it can be slightly confusing.
+	template<class T>
+	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, vector<T*>* x_elem_list,
+	    vector<T*>* y_elem_list, MatProps* matprops_ptr, int myid, double dt, int* order_flag,
+	    double *outflow);
 
 	/*! this function calculates the maximum x and y direction wavespeeds
 	 *  which are the eigenvalues of the flux jacobian
@@ -460,7 +466,7 @@ public:
 	//! this function is defined in unrefine.C, it is also called in that file, it finds this element's brothers
 	template<class T>
 	int find_brothers(HashTable* El_Table, HashTable* NodeTable, double target, int myid,
-	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate);
+	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int SETLINK);
 
 	void for_link_temp();
 
@@ -1111,7 +1117,7 @@ inline void Element::put_drypoint(double *drypoint_in) {
 /*************************************************************************/
 
 //! The ElemPtrList class is basically just a "smart array" of pointers to Elements, by smart I mean it keeps track of its size and number of Elements in the list and expands/reallocates itself whenever you add an element ptr to the list when you've run out of space, it also keeps a record of the index of the first "new" element pointer you've added in the current series, which is useful for the intended purpose... ElemList was designed for use in refinement and unrefinement to replace fixed sized arrays (length=297200) of pointers to Elements.  The reason for this upgrade was it was causing valgrind to issue all kinds of warnings about the "client switching stacks" and "invalid write/read of size blah blah blah" because the stacksize was too large.  My 20061121 rewrite of hadapt.C and unrefine.C to make them "fast" caused this problem because I added a second (large) fixed sized array to both of them so I could reduce the number of hashtable scans by only revisiting the "new" additions to the array of pointers of Elements. --Keith wrote this on 20061124, i.e. the day after Thanksgiving, and I'm very thankful for having the inspiration to figure out the cause of valgrid warning
-template <typename T>
+template<typename T>
 class ElemPtrList {
 public:
 
@@ -1194,39 +1200,38 @@ private:
 	T** list;
 };
 
-template <typename T>
+template<typename T>
 inline T* ElemPtrList<T>::get(int i) {
 	return (((i >= 0) && (i < num_elem)) ? list[i] : NULL);
 }
 ;
 
-template <typename T>
+template<typename T>
 inline unsigned* ElemPtrList<T>::get_key(int i) {
 	return (((i >= 0) && (i < num_elem)) ? list[i]->pass_key() : NULL);
 }
 ;
 
-template <typename T>
+template<typename T>
 inline int ElemPtrList<T>::get_inewstart() {
 	return inewstart;
 }
 ;
 
-template <typename T>
+template<typename T>
 inline void ElemPtrList<T>::set_inewstart(int inewstart_in) {
 	inewstart = inewstart_in;
 	return;
 }
 ;
 
-template <typename T>
+template<typename T>
 inline int ElemPtrList<T>::get_num_elem() {
 	return num_elem;
 }
 ;
 
-
-template <typename T>
+template<typename T>
 inline void ElemPtrList<T>::trashlist() {
 	for (int i = 0; i < num_elem; i++)
 		list[i] = NULL;
@@ -1235,7 +1240,7 @@ inline void ElemPtrList<T>::trashlist() {
 }
 ;
 
-template <typename T>
+template<typename T>
 inline void ElemPtrList<T>::add(T* EmTemp) {
 	if (num_elem == list_space - 1) {
 		list_space += size_increment;

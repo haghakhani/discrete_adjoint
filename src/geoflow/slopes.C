@@ -32,7 +32,7 @@ void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, i
 	HashEntryPtr currentPtr;
 	Element* Curr_El;
 #pragma omp parallel for private(currentPtr,Curr_El)
-	if (!dualcall) {
+	if (dualcall == FORWARD) {
 		for (i = 0; i < El_Table->get_no_of_buckets(); i++)
 			if (*(buck + i)) {
 				currentPtr = *(buck + i);
@@ -44,24 +44,39 @@ void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, i
 					currentPtr = currentPtr->next;
 				}
 			}
-	} else {
+	} else if (dualcall == DUAL) {
 		for (i = 0; i < El_Table->get_no_of_buckets(); i++)
-					if (*(buck + i)) {
-						currentPtr = *(buck + i);
-						while (currentPtr) {
-							Curr_El = (Element*) (currentPtr->value);
-							if (Curr_El->get_adapted_flag() > 0) { //if this element does not belong on this processor don't involve!!!
+			if (*(buck + i)) {
+				currentPtr = *(buck + i);
+				while (currentPtr) {
+					Curr_El = (DualElem*) (currentPtr->value);
+					if (Curr_El->get_adapted_flag() > 0) { //if this element does not belong on this processor don't involve!!!
 //								if (Curr_El->get_ithelem() == 4
 //								/**(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
 //								 /*&& timeprops_ptr->iter == ITER*/) {
 //									int ddd, aa = 0;
 //									int gg = ddd;
 //								}
-								Curr_El->get_slopes_prev(El_Table, NodeTable, matprops_ptr->gamma);
-							}
-							currentPtr = currentPtr->next;
-						}
+						Curr_El->get_slopes_prev(El_Table, NodeTable, matprops_ptr->gamma);
 					}
+					currentPtr = currentPtr->next;
+				}
+			}
+	}else {
+
+		for (i = 0; i < El_Table->get_no_of_buckets(); i++)
+			if (*(buck + i)) {
+				currentPtr = *(buck + i);
+				while (currentPtr) {
+					Curr_El = (ErrorElem*) (currentPtr->value);
+					if (Curr_El->get_adapted_flag() > 0) { //if this element does not belong on this processor don't involve!!!
+
+						Curr_El->get_slopes_prev(El_Table, NodeTable, matprops_ptr->gamma);
+					}
+					currentPtr = currentPtr->next;
+				}
+			}
+
 	}
 
 	return;

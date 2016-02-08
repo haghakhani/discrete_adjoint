@@ -81,9 +81,10 @@ void move_data(int nump, int myid, HashTable* El_Table, HashTable* NodeTable,
 //! this function deletes the current ghost elements
 void delete_ghost_elms(HashTable* El_Table, int myid);
 
-//! This function loops through all the non-ghost current elements and calls the Element member function Element::calc_edge_states() which calculates the Riemann fluxes between elements and stores the Riemann fluxes in the edge nodes. 
+//! This function loops through all the non-ghost current elements and calls the Element member function Element::calc_edge_states() which calculates the Riemann fluxes between elements and stores the Riemann fluxes in the edge nodes.
+template<class T>
 void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
-    TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow, int STATE);
+    TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow);
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
 
@@ -119,7 +120,9 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 
 void error_compute(MeshCTX* meshctx, PropCTX* propctx);
 
-void init_error_grid(MeshCTX* meshctx, PropCTX* propctx);
+void update_error_grid(MeshCTX* meshctx, PropCTX* propctx);
+
+void update_bilin_error_grid(MeshCTX* meshctx, PropCTX* propctx);
 
 void dual_unrefine(MeshCTX* meshctx, PropCTX* propctx);
 
@@ -132,6 +135,12 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx);
 void bilinear_interp(HashTable* El_Table);
 
 int num_nonzero_elem(HashTable *El_Table);
+
+void make_dual_err_link(HashTable *Dual_El_Tab, HashTable *Err_El_Tab);
+
+void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab);
+
+void update_dual_err_link(HashTable *Dual_El_Tab, HashTable *Err_El_Tab);
 
 void adjoint_init(HashTable* BT_Elem_Ptr, HashTable* BT_Node_Ptr);
 
@@ -201,6 +210,10 @@ void force_unrefine(HashTable* El_Table, HashTable* NodeTable, Element* Curr_el,
 
 void update_error_grid(SolRec* solrec, MeshCTX* cp_meshctx, PropCTX* propctx);
 
+void update_bilinear_error_grid(MeshCTX* meshctx, PropCTX* propctx);
+
+void update_dual_grid(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
+
 void correct_neighbor_information(Element* newfth, Element* newfth2, Element* bros[4],
     Element* bros_2[4], int neigh);
 
@@ -236,6 +249,8 @@ void plot_ithm(HashTable* El_Table);
 void set_ithm(HashTable* El_Table);
 
 extern Mat3x3 ZERO_MATRIX;
+
+void usefull_link();
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);

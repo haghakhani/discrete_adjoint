@@ -109,7 +109,19 @@ struct Neighbor {
 			return true;
 		return false;
 	}
+
 };
+
+struct NeighLess {
+	bool operator()(const Neighbor& a, const Neighbor& b) const {
+
+		if (((a.x < b.x) && dabs(a.x - b.x) > 1e-12) || (dabs(a.x - b.x) < 1e-12 && (a.y < b.y)))
+			return true;
+		return false;
+	}
+};
+
+int counter = 0;
 
 void bilinear_interp(HashTable* cp_El_Table) {
 
@@ -121,11 +133,13 @@ void bilinear_interp(HashTable* cp_El_Table) {
 			currentPtr = *(buck + i);
 			while (currentPtr) {
 
-				ErrorElem *son[4], *tmp;
+				ErrorElem *son[4];
 
 				son[0] = (ErrorElem*) (currentPtr->value);
 
 				if (son[0]->get_adapted_flag() > 0 && son[0]->get_which_son() == 0) {
+
+					counter++;
 
 					ErrorElem *neighbors[12];
 
@@ -138,12 +152,6 @@ void bilinear_interp(HashTable* cp_El_Table) {
 
 					for (int j = 1; j < 4; ++j)
 						son[j] = (ErrorElem*) cp_El_Table->lookup(son[0]->get_brothers() + j * KEYLENGTH);
-
-//					double father_coord[] = { *(son[0]->get_coord()) - .25 * *(son[0]->get_dx()), *(son[0]->get_coord()
-//					    + 1) - .25 * *(son[0]->get_dx() + 1) };
-//
-//					father = new Neighbor(father_coord, son[0]->get_state_vars(),
-//					    son[0]->get_prev_state_vars(), son[0]->get_adjoint());
 
 					neighbors[3] = son[0]->get_side_neighbor<ErrorElem>(cp_El_Table, 3);
 
@@ -278,6 +286,8 @@ void bilinear_interp(HashTable* cp_El_Table) {
 
 			}
 		}
+
+//	cout<<"counter is "<<counter<<" this is something new "<<num_nonzero_elem(cp_El_Table)<<endl;
 }
 
 //	cout<<"four: "<< four<<" three: "<< three<<" two: "<<two<<endl;
@@ -417,9 +427,9 @@ inline double barycentric_interpolation(double x1, double x2, double x3, double 
 void bilinear_interp_elem(ErrorElem *elem11, ErrorElem *elem21, ErrorElem *elem12,
     ErrorElem *elem22, ErrorElem *Curr_El) {
 
-	double *bi_state_vars = Curr_El->get_state_vars();
-	double *bi_prev_state_vars = Curr_El->get_prev_state_vars();
-	double *bi_adjoint = Curr_El->get_adjoint();
+	double *bi_state_vars = Curr_El->get_bilin_state();
+	double *bi_prev_state_vars = Curr_El->get_bilin_prev_state();
+	double *bi_adjoint = Curr_El->get_bilin_adj();
 
 	double *x = Curr_El->get_coord();
 	ErrorElem* temp[4] = { elem11, elem21, elem12, elem22 };
@@ -451,14 +461,25 @@ void bilinear_interp_elem(ErrorElem *elem11, ErrorElem *elem21, ErrorElem *elem1
 			//father is in corner so there is no element for interp
 			//we do not do any extrapolation and leave as it is,
 			//which in refinement constructor should be the value of father element
+//			cout << "WARNING: ONE ELEMENT FOR BILINEAR INTERPOLATION " << endl;
+
+			for (int i = 0; i < NUM_STATE_VARS; ++i) {
+
+				bi_state_vars[i] = *(Curr_El->get_state_vars() + i);
+
+				bi_prev_state_vars[i] = *(Curr_El->get_prev_state_vars() + i);
+
+				bi_adjoint[i] = *(Curr_El->get_adjoint() + i);
+
+			}
 
 			break;
 		case 2: {
 //			two++;
 
-//			ElLess customLess;
+			NeighLess customLess;
 
-			sort(interpolant.begin(), interpolant.end());
+			sort(interpolant.begin(), interpolant.end(), customLess);
 
 			int xdir = 0, ydir = 1;
 

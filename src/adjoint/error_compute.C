@@ -46,12 +46,8 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 					Curr_El = (ErrorElem*) (currentPtr->value);
 					if (Curr_El->get_adapted_flag() > 0) {
 
-//						int dbgflag;
-//						if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER)
-//							dbgflag = 1;
-
-						double *state_vars = Curr_El->get_state_vars();
-						double *prev_state_vars = Curr_El->get_prev_state_vars();
+						double *state_vars = Curr_El->get_bilin_state();
+						double *prev_state_vars = Curr_El->get_bilin_prev_state();
 						double *gravity = Curr_El->get_gravity();
 						double *d_gravity = Curr_El->get_d_gravity();
 						double *curvature = Curr_El->get_curvature();
@@ -62,19 +58,19 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 						double *vec_res = Curr_El->get_residual();
 						double *el_error = Curr_El->get_el_error();
 						double *bilin_adj = Curr_El->get_bilin_adj();
-						double* adjoint = Curr_El->get_adjoint();
+						double *adjoint = Curr_El->get_adjoint();
 						double *correction = Curr_El->get_correction();
 						double dt = timeprops_ptr->dt.at(iter - 1); // if we have n iter size of dt vector is n-1
 						double dtdx = dt / dx[0];
 						double dtdy = dt / dx[1];
-
-						Curr_El->get_slopes_prev(El_Table, NodeTable, matprops_ptr->gamma);
+						double tiny = GEOFLOW_TINY;
 						double *d_state_vars = Curr_El->get_d_state_vars();
 
 						if (timeprops_ptr->iter < 50)
 							matprops_ptr->frict_tiny = 0.1;
 						else
 							matprops_ptr->frict_tiny = 0.000000001;
+
 
 						orgSourceSgn(Curr_El, matprops_ptr->frict_tiny, orgSrcSgn);
 
@@ -155,24 +151,3 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 
 }
 
-void init_error_grid(MeshCTX* meshctx, PropCTX* propctx) {
-
-	HashTable* El_Table = meshctx->el_table;
-	HashTable* NodeTable = meshctx->nd_table;
-
-	TimeProps* timeprops_ptr = propctx->timeprops;
-	MapNames* mapname_ptr = propctx->mapnames;
-	MatProps* matprops_ptr = propctx->matprops;
-
-	int myid = propctx->myid, numprocs = propctx->numproc;
-
-	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
-
-	double outflow = 0.;
-	int order_flag = 1;
-
-	calc_edge_states(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &order_flag, &outflow,
-	    ERROR);
-
-	slopes(El_Table, NodeTable, matprops_ptr, 1);
-}
