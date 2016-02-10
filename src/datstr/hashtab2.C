@@ -125,6 +125,9 @@ HashTable::HashTable(HashTable* hashtable) {
 
 	bucket = new HashEntryPtr[NBUCKETS];
 
+	for (int i = 0; i < NBUCKETS; i++)
+		*(bucket + i) = 0;
+
 }
 
 HashTable::~HashTable()              //evacuate the table
@@ -141,11 +144,14 @@ HashTable::~HashTable()              //evacuate the table
 }
 
 HashEntryPtr HashTable::searchBucket(HashEntryPtr p, unsigned* keyi) {
+
+	int count=0;
 	int i;
 	while (p) {
 		for (i = 0; i < KEYLENGTH; i++) {
 			if (p->key[i] != *(keyi + i)) {
 				p = p->next;
+				count++;
 				break;                          //not found, check next element
 			} else if (i == KEYLENGTH - 1)
 				return p;                       //found, return element pointer

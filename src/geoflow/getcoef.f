@@ -53,10 +53,10 @@ c     if there is no yielding...
          kactx = 1.d0
          kacty = 1.d0
       endif
-      kactx = kactx*epsilon
-      kacty = kacty*epsilon
-c       kactx=1.d0
-c       kacty=1.d0
+c      kactx = kactx*epsilon
+c      kacty = kacty*epsilon
+       kactx=1.d0*epsilon
+       kacty=1.d0*epsilon
       
       return
       end

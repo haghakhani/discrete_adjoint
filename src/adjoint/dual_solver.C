@@ -22,6 +22,9 @@
 #include <algorithm>
 #include <map>
 
+double max_err1 = 0., max_err2 = 0.;
+unsigned key1_1, key2_1, iter_1, key1_2, key2_2, iter_2;
+
 #define DEBUG1
 //#define Error
 
@@ -192,8 +195,6 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //		cout << "elements number of original grid " << num_nonzero_elem(El_Table) << endl;
 //		cout << "elements number of refined grid " << num_nonzero_elem(cp_El_Table) << endl;
 
-//		cout << "test of adjoint: " << simple_test(El_Table) << endl;
-
 		timeprops_ptr->adjoint_time(iter - 1);
 
 //		compute_functional(El_Table, &functional, timeprops_ptr);
@@ -206,6 +207,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 		calc_adjoint(&dual_meshctx, propctx);
 
+		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
+
 #ifdef Error
 
 		send_from_dual_to_error(Dual_El_Tab, Err_El_Tab);
@@ -217,7 +220,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		error_compute(&error_meshctx, propctx);
 		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 
-			errorplotter(Err_El_Tab, Err_Nod_Tab, matprops_ptr, timeprops_ptr, mapname_ptr, 0.);
+		errorplotter(Err_El_Tab, Err_Nod_Tab, matprops_ptr, timeprops_ptr, mapname_ptr, 0.);
 #endif
 
 //		if (iter - 1 == 1)
@@ -261,8 +264,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 //		dual_unrefine(meshctx, propctx);
 
-		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-			dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., 1);
+//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+		dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., 1);
 
 	}
 
@@ -275,6 +278,14 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 #endif
 
 	delete_hashtables_objects<Jacobian>(solrec);
+
+	if (fabs(max_err1) > fabs(max_err2))
+		cout << "max error occurred in test 1" << max_err1 << "  at iter " << iter_1 << " key is "
+		    << key1_1 << " , " << key2_1 << endl;
+	else
+		cout << "max error occurred in test 2" << max_err2 << "  at iter " << iter_2 << " key is "
+		    << key1_2 << " , " << key2_2 << endl;
+
 }
 
 int num_nonzero_elem(HashTable *El_Table) {
@@ -686,18 +697,18 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 		buck = cp_El_Table->getbucketptr();
 
 		for (int i = 0; i < cp_El_Table->get_no_of_buckets(); i++)
-			if (*(buck + i)) {
-				HashEntryPtr currentPtr = *(buck + i);
-				while (currentPtr) {
-					ErrorElem *Curr_El = (ErrorElem*) (currentPtr->value);
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				ErrorElem *Curr_El = (ErrorElem*) (currentPtr->value);
 
-					if (Curr_El->get_adapted_flag() > 0)
-						Curr_El->error_check_refine_unrefine(solrec, cp_El_Table, iter, &refinelist,
-						    &unrefinelist);
+				if (Curr_El->get_adapted_flag() > 0)
+				Curr_El->error_check_refine_unrefine(solrec, cp_El_Table, iter, &refinelist,
+						&unrefinelist);
 
-					currentPtr = currentPtr->next;
-				}
+				currentPtr = currentPtr->next;
 			}
+		}
 //		cout<<"in refined table"<<endl;
 //		cout<<"has to be refined "<<refinelist->get_num_elem()<<endl;
 //		cout<<"has to be unrefined "<<unrefinelist->get_num_elem()<<endl;
@@ -709,7 +720,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 	}
 
 	if (iter != 1)
-		update_error_grid(solrec, err_meshctx, propctx);
+	update_error_grid(solrec, err_meshctx, propctx);
 #endif
 	if (iter % 5 == 4 && propctx->adapt_flag != 0) {
 
@@ -928,7 +939,7 @@ bool must_write(MemUse* memuse_ptr) {
 double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops_ptr) {
 
 	double dot = 0.;
-	vector<int> wrong_elem;
+	vector<pair<unsigned, unsigned>> wrong_elem;
 	vector<double> wrong_value, wrong_value1;
 
 	HashEntryPtr currentPtr;
@@ -1005,10 +1016,23 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops
 //					test1 = adjoint[1] + adjoint[2] ;
 
 					if (fabs(test1) > 1e-16 || fabs(test2) > 1e-16) {
-						wrong_elem.push_back(Curr_El->get_ithelem());
+						wrong_elem.push_back(make_pair(*(Curr_El->pass_key()), *(Curr_El->pass_key() + 1)));
 						wrong_value.push_back(test1);
 						wrong_value1.push_back(test2);
-						cout << test1 << " , " << test2 << endl;
+//						cout << test1 << " , " << test2 << endl;
+
+						if (fabs(test1) > max_err1) {
+							max_err1 = fabs(test1);
+							key1_1 = *(Curr_El->pass_key());
+							key2_1 = *(Curr_El->pass_key() + 1);
+							iter_1 = timeprops->iter;
+						} else if (fabs(test2) > max_err2) {
+							max_err2 = fabs(test2);
+							key1_2 = *(Curr_El->pass_key());
+							key2_2 = *(Curr_El->pass_key() + 1);
+							iter_2 = timeprops->iter;
+						}
+
 					}
 
 				}
@@ -1020,7 +1044,8 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops
 	ofstream f("wrong_elem.txt", ios::app);
 	f << "time step: " << timeprops->iter << " size of vector: " << wrong_elem.size() << endl;
 	for (int i = 0; i < wrong_elem.size(); ++i)
-		f << wrong_elem[i] << " , " << wrong_value[i] << " , " << wrong_value1[i] << '\n';
+		f << wrong_elem[i].first << " , " << wrong_elem[i].second << " , " << wrong_value[i] << " , "
+		    << wrong_value1[i] << '\n';
 
 	return dot;
 }

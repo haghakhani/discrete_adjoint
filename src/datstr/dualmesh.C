@@ -9,7 +9,7 @@
 
 SolRec::SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[],
     int ifrestart) :
-		HashTable(doublekeyrangein, size, prime, XR, YR, ifrestart), range(20) {
+		HashTable(doublekeyrangein, size, prime, XR, YR, ifrestart), range(50) {
 
 	first_solution_time_step = 0;
 	last_solution_time_step = 0;

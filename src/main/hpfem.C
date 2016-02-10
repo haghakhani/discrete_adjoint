@@ -360,8 +360,10 @@ int main(int argc, char *argv[]) {
 	 grass_sites_proc_output(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops,
 	 &timeprops);
 	 }*/
+//	MPI_Barrier(MPI_COMM_WORLD);
+//	solrec->wrtie_sol_to_disk();
+//	solrec->delete_jacobians_after_writes();
 	MPI_Barrier(MPI_COMM_WORLD);
-
 	// write out ending warning, maybe flow hasn't finished moving
 	sim_end_warning(BT_Elem_Ptr, &matprops, &timeprops, statprops.vstar);
 	MPI_Barrier(MPI_COMM_WORLD);

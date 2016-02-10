@@ -131,6 +131,8 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	int stop[2];
 	double orgSrcSgn[2];
 
+//	curvature[0]=curvature[1]=0.;
+
 	update_states(state_vars, prev_state_vars, //2
 	    fluxxp, fluxyp, fluxxm, fluxym, dtdx, //5
 	    dtdy, dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), //4
