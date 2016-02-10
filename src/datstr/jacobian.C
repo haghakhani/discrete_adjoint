@@ -30,9 +30,24 @@ Solution::Solution(double* curr_sol, double kactxy) {
 
 }
 
+Solution::Solution() {
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		states[i] = 0.;
+
+	kact = 0;
+
+}
+
+Solution Solution::solution_zero;
+
 Solution::~Solution() {
 
 }
+
+//static Solution* instance() {
+//	return &Solution::solution_zero;
+//}
 
 Jacobian::Jacobian(unsigned* key, double* position) {
 
@@ -50,7 +65,22 @@ Jacobian::Jacobian(unsigned* key) {
 
 }
 
+void Jacobian::clear_container(int iter) {
+
+	for (map<int, Solution*>::iterator it = solContainer.begin(); it != solContainer.end(); ++it)
+		if (it->first >= iter - 1) {
+			if (it->second != &(Solution::solution_zero))
+				delete it->second;
+			solContainer.erase(it);
+
+		}
+}
+
 Jacobian::~Jacobian() {
+
+	for (map<int, Solution*>::iterator it = solContainer.begin(); it != solContainer.end(); ++it)
+		if (it->second != &(Solution::solution_zero))
+			delete it->second;
 
 	solContainer.clear();
 

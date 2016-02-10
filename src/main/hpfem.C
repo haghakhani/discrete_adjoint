@@ -262,7 +262,7 @@ int main(int argc, char *argv[]) {
 
 		if (solrec->write_sol() || must_write(&memuse)) {
 			solrec->wrtie_sol_to_disk();
-			solrec->delete_empty_jacobians();
+			solrec->delete_jacobians_after_writes();
 		}
 
 		/*
@@ -365,9 +365,6 @@ int main(int argc, char *argv[]) {
 	// write out ending warning, maybe flow hasn't finished moving
 	sim_end_warning(BT_Elem_Ptr, &matprops, &timeprops, statprops.vstar);
 	MPI_Barrier(MPI_COMM_WORLD);
-
-	// write out ending warning, maybe flow hasn't finished moving
-	sim_end_warning(BT_Elem_Ptr, &matprops, &timeprops, statprops.vstar);
 
 	//write out the final pile statistics (and run time)
 	if (myid == 0)

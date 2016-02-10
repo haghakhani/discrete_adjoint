@@ -66,12 +66,3 @@ void Delete_Table(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, HashTable* Sol
 
 }
 
-void delete_sol(vector<Jacobian*> solHyst) {
-
-	vector<Jacobian*>::iterator it;
-	for (it = solHyst.begin(); it != solHyst.end(); ++it)
-		delete (*it);
-
-	solHyst.clear();
-
-}

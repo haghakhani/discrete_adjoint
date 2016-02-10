@@ -17,9 +17,6 @@ class SolRec: public HashTable {
 
 private:
 
-	// this is a solution class for void region to avoid memmory allocation for each of the void region
-	Solution* solution_zero;
-
 	// this integer shows the first time step that its solution is vailable in SolRec
 	int first_solution_time_step;
 
@@ -37,9 +34,6 @@ public:
 	// constructor
 	SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[], int ifrestart);
 
-	// this function returns he pointer of solution_zero
-	Solution* get_zero_solution();
-
 	// this function records the solution of last time step
 	void record_solution(MeshCTX* meshctx, PropCTX* propctx);
 
@@ -50,7 +44,7 @@ public:
 	void read_sol_from_disk(int iter);
 
 	// this functions deletes the SolRec and deallocate the allocated memory
-	void delete_empty_jacobians();
+	void delete_jacobians_after_writes();
 
 	// this function changes first_solution_time_step to the next time step
 	void update_first_sol_time(int iter);

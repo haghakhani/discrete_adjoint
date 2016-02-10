@@ -214,6 +214,8 @@ void update_bilinear_error_grid(MeshCTX* meshctx, PropCTX* propctx);
 
 void update_dual_grid(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
 
+void clear_empty_jacobians(SolRec* solrec, int iter);
+
 void correct_neighbor_information(Element* newfth, Element* newfth2, Element* bros[4],
     Element* bros_2[4], int neigh);
 

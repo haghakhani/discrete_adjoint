@@ -23,6 +23,7 @@
 #include <map>
 
 #define DEBUG1
+//#define Error
 
 #define KEY0   3920807148
 #define KEY1   1321528399
@@ -107,21 +108,27 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., 2);
 
+#ifdef Error
+
 	HashTable *Err_El_Tab = new HashTable(El_Table);
 	HashTable *Err_Nod_Tab = new HashTable(NodeTable);
 
 	copy_hashtables_objects<Element, ErrorElem>(El_Table, Err_El_Tab);
 	copy_hashtables_objects<Node, Node>(NodeTable, Err_Nod_Tab);
 
-	delete_hashtables_objects<Element>(El_Table);
-
 	MeshCTX error_meshctx;
 	error_meshctx.el_table = Err_El_Tab;
 	error_meshctx.nd_table = Err_Nod_Tab;
 
+#endif
+
+	delete_hashtables_objects<Element>(El_Table);
+
 	cout << "The Error grid has been generated ....\n";
 
 	cout << "computing ADJOINT time step " << maxiter << endl;
+
+#ifdef Error
 
 	// this function refines and do constant reconstruction
 	uinform_refine(&error_meshctx, propctx);
@@ -137,6 +144,9 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	error_compute(&error_meshctx, propctx);
 
 	errorplotter(Err_El_Tab, Err_Nod_Tab, matprops_ptr, timeprops_ptr, mapname_ptr, 0.);
+#else
+	MeshCTX error_meshctx;
+#endif
 
 //	set_ithm(El_Table);
 //
@@ -196,6 +206,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 		calc_adjoint(&dual_meshctx, propctx);
 
+#ifdef Error
+
 		send_from_dual_to_error(Dual_El_Tab, Err_El_Tab);
 
 		bilinear_interp(Err_El_Tab);
@@ -203,6 +215,10 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		update_bilinear_error_grid(&error_meshctx, propctx);
 
 		error_compute(&error_meshctx, propctx);
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+
+			errorplotter(Err_El_Tab, Err_Nod_Tab, matprops_ptr, timeprops_ptr, mapname_ptr, 0.);
+#endif
 
 //		if (iter - 1 == 1)
 //		cout << "test of adjoint: " << simple_test(El_Table, timeprops_ptr, matprops_ptr) << endl;
@@ -245,18 +261,18 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 //		dual_unrefine(meshctx, propctx);
 
-		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 			dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., 1);
-			errorplotter(Err_El_Tab, Err_Nod_Tab, matprops_ptr, timeprops_ptr, mapname_ptr, 0.);
-		}
 
 	}
 
 	delete_hashtables_objects<DualElem>(Dual_El_Tab);
 	delete_hashtables_objects<Node>(NodeTable);
 
+#ifdef Error
 	delete_hashtables_objects<DualElem>(Err_El_Tab);
 	delete_hashtables_objects<Node>(Err_Nod_Tab);
+#endif
 
 	delete_hashtables_objects<Jacobian>(solrec);
 }
@@ -646,23 +662,23 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 
 	HashTable* El_Table = dual_meshctx->el_table;
 	HashTable* NodeTable = dual_meshctx->nd_table;
-
+#ifdef Error
 	HashTable* cp_El_Table = err_meshctx->el_table;
 	HashTable* cp_NodeTable = err_meshctx->nd_table;
-
+#endif
 	TimeProps* timeprops_ptr = propctx->timeprops;
 	MapNames* mapname_ptr = propctx->mapnames;
 	MatProps* matprops_ptr = propctx->matprops;
 	int myid = propctx->myid, numprocs = propctx->numproc;
 	int iter = propctx->timeprops->iter;
 
-	if (solrec->get_first_solution() >= iter) {
-		solrec->free_all_available_sol();
+	if (solrec->get_first_solution() >= iter - 1) {
+//		solrec->free_all_available_sol();
 		solrec->load_new_set_of_solution();
 	}
 
 	HashEntryPtr *buck;
-
+#ifdef Error
 	if (iter % 5 == 0 && propctx->adapt_flag != 0) {
 
 		ElemPtrList<ErrorElem> refinelist, unrefinelist;
@@ -694,7 +710,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 
 	if (iter != 1)
 		update_error_grid(solrec, err_meshctx, propctx);
-
+#endif
 	if (iter % 5 == 4 && propctx->adapt_flag != 0) {
 
 		ElemPtrList<DualElem> refinelist, unrefinelist;
@@ -727,7 +743,11 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 
 	}
 
+	// inside updating state_vars we also delete the solution that we used
+	// since we no longer need it
 	update_dual_grid(solrec, dual_meshctx, propctx);
+
+	clear_empty_jacobians(solrec, iter);
 
 }
 
@@ -1396,5 +1416,28 @@ void update_bilinear_error_grid(MeshCTX* meshctx, PropCTX* propctx) {
 	    &outflow);
 
 	slopes(El_Table, NodeTable, matprops_ptr, 2);
+
+}
+
+void clear_empty_jacobians(SolRec* solrec, int iter) {
+
+	HashEntryPtr *buck = solrec->getbucketptr();
+	for (int i = 0; i < solrec->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				Jacobian * jacobian = (Jacobian*) (currentPtr->value);
+
+				currentPtr = currentPtr->next;
+
+				jacobian->erase_solution(iter - 1);
+
+				if (jacobian->is_container_empty()) {
+					solrec->remove(jacobian->get_key());
+					delete jacobian;
+				}
+
+			}
+		}
 
 }

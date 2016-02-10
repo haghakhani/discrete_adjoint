@@ -9,20 +9,13 @@
 
 SolRec::SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[],
     int ifrestart) :
-		HashTable(doublekeyrangein, size, prime, XR, YR, ifrestart), range(500) {
+		HashTable(doublekeyrangein, size, prime, XR, YR, ifrestart), range(20) {
 
-	double zero_sol[3] = { 0., 0., 0. };
-	double kact_z = 0.;
-	solution_zero = new Solution(zero_sol, kact_z);
 	first_solution_time_step = 0;
 	last_solution_time_step = 0;
 	readflag = 0;
 	writeflag = 0;
 
-}
-
-Solution* SolRec::get_zero_solution() {
-	return solution_zero;
 }
 
 void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
@@ -56,7 +49,7 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 							jacobian->put_solution(solution, timeptr->iter - 1);
 
 						} else
-							jacobian->put_solution(get_zero_solution(), timeptr->iter - 1);
+							jacobian->put_solution(&(Solution::solution_zero), timeptr->iter - 1);
 
 					} else {
 						jacobian = new Jacobian(Curr_El->pass_key());
@@ -68,7 +61,7 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 							jacobian->put_solution(solution, timeptr->iter - 1);
 
 						} else
-							jacobian->put_solution(get_zero_solution(), timeptr->iter - 1);
+							jacobian->put_solution(&(Solution::solution_zero), timeptr->iter - 1);
 
 					}
 				}
@@ -119,7 +112,8 @@ void SolRec::wrtie_sol_to_disk() {
 						fflush(myfile);
 						//fsync(fileno(myfile));
 
-						if (sol != solution_zero)
+						if (sol != &(Solution::solution_zero))
+							delete sol;
 							jacobian->erase_solution(step);
 					}
 
@@ -135,7 +129,7 @@ void SolRec::wrtie_sol_to_disk() {
 
 }
 
-void SolRec::delete_empty_jacobians() {
+void SolRec::delete_jacobians_after_writes() {
 
 	HashEntryPtr currentPtr;
 
@@ -147,15 +141,8 @@ void SolRec::delete_empty_jacobians() {
 
 				Jacobian* jacobian = (Jacobian*) (currentPtr->value);
 				currentPtr = currentPtr->next;
-//				if (jacobian->is_container_empty()) {
-
-//					unsigned key[2] = { 3780766798, 3303820997 };
-//					if (key[0] == *(jacobian->get_key()) && key[1] == *(jacobian->get_key() + 1))
-//						cout << "problem found \n";
 				this->remove(jacobian->get_key());
 				delete jacobian;
-
-//				}
 
 			}
 		}
@@ -196,7 +183,7 @@ void SolRec::read_sol_from_disk(int iter) {
 		if (state_vars[0] > 0.)
 			solution = new Solution(state_vars, kact);
 		else
-			solution = solution_zero;
+			solution = &(Solution::solution_zero);
 
 		if (jacobian)
 
@@ -237,9 +224,14 @@ void SolRec::free_all_available_sol() {
 
 				Jacobian* jacobian = (Jacobian*) (currentPtr->value);
 
-				jacobian->clear_container();
-
 				currentPtr = currentPtr->next;
+
+				jacobian->clear_container(first_solution_time_step);
+
+				if (jacobian->is_container_empty()) {
+					this->remove(jacobian->get_key());
+					delete jacobian;
+				}
 
 			}
 		}
@@ -1830,6 +1822,9 @@ void DualElem::update_state(SolRec* solrec, HashTable* El_Table, int iter) {
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		prev_adjoint[i] = adjoint[i];
+
+	if (prev_sol != &(Solution::solution_zero))
+		delete prev_sol;
 
 }
 
