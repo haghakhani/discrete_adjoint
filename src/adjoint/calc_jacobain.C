@@ -24,7 +24,7 @@
 #define J      0
 #define JACIND 0
 
-#define DEBUG
+//#define DEBUG
 
 void reset_resflag(ResFlag resflag[EFF_ELL]);
 
@@ -91,7 +91,7 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 					double dtdy = dt / dx[1];
 
 					int stop[DIMENSION] = { 0, 0 };
-					double orgSrcSgn[DIMENSION] = { 0., 0. };
+					double orgSrcSgn[4] = { 0., 0., 0., 0. };
 
 					update_states(state_vars, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy,
 					    dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, matprops_ptr->intfrict,
@@ -104,42 +104,39 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 
 #ifdef DEBUG
 						char filename[] = "jacobian";
-						int bb=1,aa=0;
+						int bb = 1, aa = 0;
 
 						if (fabs(*(Curr_El->get_coord()) - 161.3) < .04
 						    && fabs(*(Curr_El->get_coord() + 1) - 539.58) < .04 && (iter == 545 || iter == 546))
-							bb=aa;
+							bb = aa;
 
-							/*Curr_El->get_ithelem() == 8255 && effelement == 0) {/**(Curr_El->pass_key()) == KEY0
-							 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER
-							 && effelement == EFFELL
-							 Curr_El->write_elem_info(NodeTable, filename, timeprops_ptr->iter, dt);*/
+						/*Curr_El->get_ithelem() == 8255 && effelement == 0) {/**(Curr_El->pass_key()) == KEY0
+						 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER
+						 && effelement == EFFELL
+						 Curr_El->write_elem_info(NodeTable, filename, timeprops_ptr->iter, dt);*/
 
 #endif
 
-							if ((effelement == 0 && prev_state_vars[0] == 0.) || //this is a void element so the residual vector does not change by changing it's values
-							    (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == -2) || //one neighbor in this side
-							    (effelement != 0 && void_neigh_elem(El_Table, Curr_El, effelement)) || //this is a void neighbor element so the residual of the curr_el does not depend on this neighbor
-							    (effelement > 0 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == INIT)) {
+						if ((effelement == 0 && prev_state_vars[0] == 0.) || //this is a void element so the residual vector does not change by changing it's values
+						    (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == -2) || //one neighbor in this side
+						    (effelement != 0 && void_neigh_elem(El_Table, Curr_El, effelement)) || //this is a void neighbor element so the residual of the curr_el does not depend on this neighbor
+						    (effelement > 0 && *(Curr_El->get_neigh_proc() + (effelement - 1)) == INIT)) {
 
-								Curr_El->set_jacobianMat_zero(effelement);
+							Curr_El->set_jacobianMat_zero(effelement);
 
-							} else {
-								const Mat3x3 *jac_flux_n_x, *jac_flux_p_x, *jac_flux_n_y, *jac_flux_p_y;
-								double dh_sens[2];
+						} else {
+							const Mat3x3 *jac_flux_n_x, *jac_flux_p_x, *jac_flux_n_y, *jac_flux_p_y;
+							double dh_sens[2];
 
-								set_fluxes_hsens(Curr_El, jac_flux_n_x, jac_flux_p_x, jac_flux_n_y, jac_flux_p_y,
-								    dh_sens, effelement);
+							set_fluxes_hsens(Curr_El, jac_flux_n_x, jac_flux_p_x, jac_flux_n_y, jac_flux_p_y,
+							    dh_sens, effelement);
 
-//							curvature[0]=curvature[1]=0.;
+							calc_jacobian_elem(jacobian(effelement), *jac_flux_n_x, *jac_flux_p_x, *jac_flux_n_y,
+							    *jac_flux_p_y, prev_state_vars, d_state_vars, (d_state_vars + NUM_STATE_VARS),
+							    curvature, gravity, d_gravity, dh_sens, matprops_ptr->intfrict, bedfrict,
+							    *(Curr_El->get_kactxy()), effelement, dtdx, dtdy, dt, stop, orgSrcSgn);
 
-								calc_jacobian_elem(jacobian(effelement), *jac_flux_n_x, *jac_flux_p_x,
-								    *jac_flux_n_y, *jac_flux_p_y, prev_state_vars, d_state_vars,
-								    (d_state_vars + NUM_STATE_VARS), curvature, gravity, d_gravity, dh_sens,
-								    matprops_ptr->intfrict, bedfrict, *(Curr_El->get_kactxy()), effelement, dtdx,
-								    dtdy, dt, stop, orgSrcSgn);
-
-							}
+						}
 					}
 				}
 				currentPtr = currentPtr->next;

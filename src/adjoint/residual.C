@@ -198,22 +198,25 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 
 	if (prev_state_vars[0] > GEOFLOW_TINY) {
 
-		double unitvx = 0., unitvy = 0., h_inv = 0., speed = 0.;
+//		double unitvx = 0., unitvy = 0., h_inv = 0., speed = 0.;
+		double h_inv = 0.;
 
 		h_inv = 1. / prev_state_vars[0];
 
 		tmp = h_inv * (d_state_vars_y[1] - velocity[0] * d_state_vars_y[0]);
 		orgSrcSgn[0] = tiny_sgn(tmp, fric_tiny);
+		orgSrcSgn[2] = tiny_sgn(velocity[0], fric_tiny);
 
 		tmp = h_inv * (d_state_vars_x[2] - velocity[1] * d_state_vars_x[0]);
 		orgSrcSgn[1] = tiny_sgn(tmp, fric_tiny);
+		orgSrcSgn[3] = tiny_sgn(velocity[1], fric_tiny);
 
-		speed = sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
-
-		if (speed > 0.) {
-			unitvx = velocity[0] / speed;
-			unitvy = velocity[1] / speed;
-		}
+//		speed = sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
+//
+//		if (speed > 0.) {
+//			unitvx = velocity[0] / speed;
+//			unitvy = velocity[1] / speed;
+//		}
 
 		//x dir
 		double s1 = gravity[0] * prev_state_vars[0];
@@ -223,11 +226,11 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 		    * (gravity[2] * d_state_vars_y[0] + dgdx[1] * prev_state_vars[0]) * sin_int_fric;
 
 		double tan_bed_fric = tan(bedfrict);
-		double s3 = unitvx
+		double s3 = orgSrcSgn[2]
 		    * max(gravity[2] * prev_state_vars[0] + velocity[0] * prev_state_vars[1] * curvature[0],
 		        0.0) * tan_bed_fric;
 
-		if (s3 == 0. && unitvx)
+		if (s3 == 0. && orgSrcSgn[2])
 			stop[0] = 1;
 
 		state_vars[1] += dt * (s1 - s2 - s3);
@@ -245,11 +248,11 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 		s2 = orgSrcSgn[1] * prev_state_vars[0] * kactxy[0]
 		    * (gravity[2] * d_state_vars_x[0] + dgdx[0] * prev_state_vars[0]) * sin_int_fric;
 
-		s3 = unitvy
+		s3 = orgSrcSgn[3]
 		    * max(gravity[2] * prev_state_vars[0] + velocity[1] * prev_state_vars[2] * curvature[1],
 		        0.0) * tan_bed_fric;
 
-		if (s3 == 0. && unitvy)
+		if (s3 == 0. && orgSrcSgn[3])
 			stop[1] = 1;
 
 		state_vars[2] += dt * (s1 - s2 - s3);

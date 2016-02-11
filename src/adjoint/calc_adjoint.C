@@ -51,10 +51,9 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 //				if (*(Curr_El->pass_key()) == 2821237418 && *(Curr_El->pass_key() + 1) == 2863311530
 //				    && iter == 214)
 //					bb = aa;
-
-				if (fabs(*(Curr_El->get_coord()) - 161.3) < .04
-				    && fabs(*(Curr_El->get_coord() + 1) - 539.58) < .04 && (iter == 545 || iter == 546))
-					bb = aa;
+//				if (fabs(*(Curr_El->get_coord()) - 161.3) < .04
+//				    && fabs(*(Curr_El->get_coord() + 1) - 539.58) < .04 && (iter == 545 || iter == 546))
+//					bb = aa;
 
 				if (Curr_El->get_adapted_flag() > 0) {
 

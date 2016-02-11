@@ -207,7 +207,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 		calc_adjoint(&dual_meshctx, propctx);
 
-		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
+//		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
 
 #ifdef Error
 
@@ -279,12 +279,12 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	delete_hashtables_objects<Jacobian>(solrec);
 
-	if (fabs(max_err1) > fabs(max_err2))
-		cout << "max error occurred in test 1" << max_err1 << "  at iter " << iter_1 << " key is "
-		    << key1_1 << " , " << key2_1 << endl;
-	else
-		cout << "max error occurred in test 2" << max_err2 << "  at iter " << iter_2 << " key is "
-		    << key1_2 << " , " << key2_2 << endl;
+//	if (fabs(max_err1) > fabs(max_err2))
+//		cout << "max error occurred in test 1" << max_err1 << "  at iter " << iter_1 << " key is "
+//		    << key1_1 << " , " << key2_1 << endl;
+//	else
+//		cout << "max error occurred in test 2" << max_err2 << "  at iter " << iter_2 << " key is "
+//		    << key1_2 << " , " << key2_2 << endl;
 
 }
 
@@ -1001,9 +1001,11 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops
 
 					double tmp = h_inv * (d_state_vars_y[1] - vel[0] * d_state_vars_y[0]);
 					orgSrcSgn[0] = tiny_sgn(tmp, fric_tiny);
+					orgSrcSgn[2] = tiny_sgn(vel[0], fric_tiny);
 
 					tmp = h_inv * (d_state_vars_x[2] - vel[1] * d_state_vars_x[0]);
 					orgSrcSgn[1] = tiny_sgn(tmp, fric_tiny);
+					orgSrcSgn[3] = tiny_sgn(vel[1], fric_tiny);
 
 					double test2 = state_vars_prev[0] * kact
 					    * (adjoint[1] * orgSrcSgn[0]
@@ -1044,8 +1046,8 @@ double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops
 	ofstream f("wrong_elem.txt", ios::app);
 	f << "time step: " << timeprops->iter << " size of vector: " << wrong_elem.size() << endl;
 	for (int i = 0; i < wrong_elem.size(); ++i)
-		f << wrong_elem[i].first << " , " << wrong_elem[i].second << " , " << wrong_value[i] << " , "
-		    << wrong_value1[i] << '\n';
+		f << setw(10) << wrong_elem[i].first << " , " << wrong_elem[i].second << " , " << wrong_value[i]
+		    << " , " << wrong_value1[i] << '\n';
 
 	return dot;
 }
