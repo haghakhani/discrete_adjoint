@@ -1389,18 +1389,18 @@ void update_dual_grid(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			}
 		}
 
-	int num_node_buckets = NodeTable->get_no_of_buckets();
-	buck = NodeTable->getbucketptr();
-	for (int i = 0; i < num_node_buckets; i++)
-		if (*(buck + i)) {
-			HashEntryPtr currentPtr = *(buck + i);
-			while (currentPtr) {
-				Node* Curr_Node = (Node*) (currentPtr->value);
-				Curr_Node->zero_flux();
-
-				currentPtr = currentPtr->next;
-			}
-		}
+//	int num_node_buckets = NodeTable->get_no_of_buckets();
+//	buck = NodeTable->getbucketptr();
+//	for (int i = 0; i < num_node_buckets; i++)
+//		if (*(buck + i)) {
+//			HashEntryPtr currentPtr = *(buck + i);
+//			while (currentPtr) {
+//				Node* Curr_Node = (Node*) (currentPtr->value);
+//				Curr_Node->zero_flux();
+//
+//				currentPtr = currentPtr->next;
+//			}
+//		}
 
 	//this function computes slopes based on prev_state_vars and dh/dh_e where h_e is pile height in neighbor element
 	// we need this term to compute jacobian of elements
