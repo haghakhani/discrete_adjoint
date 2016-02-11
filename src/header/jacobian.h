@@ -26,7 +26,7 @@ class Solution {
 
 public:
 
-	Solution(double* curr_sol, double kactxy);
+	Solution(double* curr_sol);
 
 	double* get_solution();
 
@@ -41,16 +41,10 @@ protected:
 	Solution();
 
 	double states[NUM_STATE_VARS]; //to save the solution
-	double kact; //to save kact
-
 };
 
 inline double* Solution::get_solution() {
 	return states;
-}
-
-inline double Solution::get_kact() {
-	return kact;
 }
 
 class Jacobian {

@@ -21,22 +21,16 @@
 
 #include "../header/hpfem.h"
 
-Solution::Solution(double* curr_sol, double kactxy) {
+Solution::Solution(double* curr_sol) {
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		states[i] = curr_sol[i];
-
-	kact = kactxy;
-
 }
 
 Solution::Solution() {
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		states[i] = 0.;
-
-	kact = 0;
-
 }
 
 Solution Solution::solution_zero;

@@ -1362,6 +1362,10 @@ void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab) {
 
 void update_dual_grid(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
+	//order of calling these functions are very important
+	//first we update prev_state_vatrs
+	//then compute k_act and fluxes
+
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
 
@@ -1398,13 +1402,33 @@ void update_dual_grid(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			}
 		}
 
+	//this function computes slopes based on prev_state_vars and dh/dh_e where h_e is pile height in neighbor element
+	// we need this term to compute jacobian of elements
+	slopes(El_Table, NodeTable, matprops_ptr, 1);
+
+	double tiny = GEOFLOW_TINY;
+	buck = El_Table->getbucketptr();
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem * Curr_El = (DualElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0)
+					gmfggetcoef_(Curr_El->get_prev_state_vars(), Curr_El->get_d_state_vars(),
+					    (Curr_El->get_d_state_vars() + NUM_STATE_VARS), Curr_El->get_dx(),
+					    &(matprops_ptr->bedfrict[Curr_El->get_material()]), &(matprops_ptr->intfrict),
+					    (Curr_El->get_kactxy()), (Curr_El->get_kactxy() + 1), &tiny,
+					    &(matprops_ptr->epsilon));
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
 // this function computes fluxes based on prev_state_vars (we need for dual problem),
 // and jacobian of fluxes and store the in elements
 	calc_flux(meshctx, propctx);
 
-//this function computes slopes based on prev_state_vars and dh/dh_e where h_e is pile height in neighbor element
-// we need this term to compute jacobian of elements
-	slopes(El_Table, NodeTable, matprops_ptr, 1);
 }
 
 void update_bilinear_error_grid(MeshCTX* meshctx, PropCTX* propctx) {
@@ -1420,6 +1444,8 @@ void update_bilinear_error_grid(MeshCTX* meshctx, PropCTX* propctx) {
 	int yek = 1;
 	double outflow = 0.;
 	double tiny = GEOFLOW_TINY;
+
+	slopes(El_Table, NodeTable, matprops_ptr, 2);
 
 	HashEntryPtr *buck = El_Table->getbucketptr();
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
@@ -1441,8 +1467,6 @@ void update_bilinear_error_grid(MeshCTX* meshctx, PropCTX* propctx) {
 
 	calc_edge_states<ErrorElem>(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &yek,
 	    &outflow);
-
-	slopes(El_Table, NodeTable, matprops_ptr, 2);
 
 }
 

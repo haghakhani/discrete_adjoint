@@ -44,8 +44,7 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 					Jacobian *jacobian = (Jacobian *) lookup(Curr_El->pass_key());
 					if (jacobian) {
 						if (*(Curr_El->get_prev_state_vars()) > 0.) {
-							Solution *solution = new Solution(Curr_El->get_prev_state_vars(),
-							    *(Curr_El->get_kactxy()));
+							Solution *solution = new Solution(Curr_El->get_prev_state_vars());
 							jacobian->put_solution(solution, timeptr->iter - 1);
 
 						} else
@@ -56,8 +55,7 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 						add(jacobian->get_key(), jacobian);
 
 						if (*(Curr_El->get_prev_state_vars()) > 0.) {
-							Solution *solution = new Solution(Curr_El->get_prev_state_vars(),
-							    *(Curr_El->get_kactxy()));
+							Solution *solution = new Solution(Curr_El->get_prev_state_vars());
 							jacobian->put_solution(solution, timeptr->iter - 1);
 
 						} else
@@ -104,17 +102,16 @@ void SolRec::wrtie_sol_to_disk() {
 					if (sol) {
 
 						solution = sol->get_solution();
-						kact = sol->get_kact();
 
-						fprintf(myfile, "%u %u %.8e %.8e %.8e %.8e\n", *(jacobian->get_key()),
-						    *(jacobian->get_key() + 1), solution[0], solution[1], solution[2], sol->get_kact());
+						fprintf(myfile, "%u %u %.8e %.8e %.8e\n", *(jacobian->get_key()),
+						    *(jacobian->get_key() + 1), solution[0], solution[1], solution[2]);
 
 						fflush(myfile);
 						//fsync(fileno(myfile));
 
 						if (sol != &(Solution::solution_zero))
 							delete sol;
-							jacobian->erase_solution(step);
+						jacobian->erase_solution(step);
 					}
 
 					currentPtr = currentPtr->next;
@@ -163,7 +160,7 @@ void SolRec::read_sol_from_disk(int iter) {
 	FILE *myfile;
 	char filename[50];
 	double state_vars[NUM_STATE_VARS] = { 0., 0., 0. };
-	double kact = 0.;
+
 	unsigned key[DIMENSION] = { 0, 0 };
 	Solution * solution;
 	int dbg, count = 0;
@@ -175,13 +172,13 @@ void SolRec::read_sol_from_disk(int iter) {
 
 		count++;
 
-		dbg = fscanf(myfile, "%u %u %le %le %le %le\n", key, key + 1, state_vars, state_vars + 1,
-		    state_vars + 2, &kact);
+		dbg = fscanf(myfile, "%u %u %le %le %le\n", key, key + 1, state_vars, state_vars + 1,
+		    state_vars + 2);
 
 		Jacobian *jacobian = (Jacobian *) lookup(key);
 
 		if (state_vars[0] > 0.)
-			solution = new Solution(state_vars, kact);
+			solution = new Solution(state_vars);
 		else
 			solution = &(Solution::solution_zero);
 
@@ -1807,21 +1804,12 @@ void DualElem::print_jacobian(int iter) {
 
 void DualElem::update_state(SolRec* solrec, HashTable* El_Table, int iter) {
 
-//	int aa = 0, bb = 1;
-//	unsigned keyy[2] = { 3781669179, 330382100 };
-//	if (key[0] == keyy[0] && key[1] == keyy[1])
-//		bb = aa;
-
 	Solution* prev_sol = solrec->lookup(key, iter - 1);
 
-	for (int i = 0; i < NUM_STATE_VARS; i++)
+	for (int i = 0; i < NUM_STATE_VARS; ++i) {
 		prev_state_vars[i] = *(prev_sol->get_solution() + i);
-
-	kactxy[0] = prev_sol->get_kact();
-	kactxy[1] = kactxy[0];
-
-	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		prev_adjoint[i] = adjoint[i];
+	}
 
 	if (prev_sol != &(Solution::solution_zero))
 		delete prev_sol;
@@ -2587,10 +2575,6 @@ void ErrorElem::error_update_state(SolRec* solrec, int iter) {
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		prev_state_vars[i] = *(prev_sol->get_solution() + i);
-
-	kactxy[0] = prev_sol->get_kact();
-	kactxy[1] = kactxy[0];
-
 }
 
 void ErrorElem::error_check_refine_unrefine(SolRec* solrec, HashTable* El_Table, int iter,
