@@ -190,7 +190,7 @@ void SolRec::read_sol_from_disk(int iter) {
 	dbg = gzread(myfile, &num_non_zero, sizeof(int));
 
 	for (int i = 0; i < num_zero; ++i) {
-		gzread(myfile, &key, sizeof(unsigned) * 2);
+		gzread(myfile, key, sizeof(unsigned) * 2);
 
 		Jacobian *jacobian = (Jacobian *) lookup(key);
 		solution = &(Solution::solution_zero);
@@ -209,8 +209,8 @@ void SolRec::read_sol_from_disk(int iter) {
 
 	for (int i = 0; i < num_non_zero; ++i) {
 
-		gzread(myfile, &key, sizeof(unsigned) * 2);
-		gzread(myfile, &state_vars, sizeof(double) * 3);
+		gzread(myfile, key, sizeof(unsigned) * 2);
+		gzread(myfile, state_vars, sizeof(double) * 3);
 
 		solution = new Solution(state_vars);
 		Jacobian *jacobian = (Jacobian *) lookup(key);
