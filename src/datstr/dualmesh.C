@@ -6,6 +6,7 @@
  */
 
 #include "../header/hpfem.h"
+#include "zlib.h"
 
 SolRec::SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[],
     int ifrestart) :
@@ -73,7 +74,7 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 
 void SolRec::wrtie_sol_to_disk() {
 
-	FILE *myfile;
+	gzFile myfile;
 	char filename[50];
 	HashEntryPtr currentPtr;
 	double *solution, kact;
@@ -82,7 +83,10 @@ void SolRec::wrtie_sol_to_disk() {
 		int count = 0;
 
 		sprintf(filename, "solution_%08d", step);
-		myfile = fopen(filename, "w");
+		myfile = gzopen(filename, "wb");
+
+		vector<unsigned*> zero_key, non_zero_key;
+		vector<Solution*> non_zero_sol;
 
 		for (int i = 0; i < NBUCKETS; ++i)
 			if (*(bucket + i)) {
@@ -94,33 +98,41 @@ void SolRec::wrtie_sol_to_disk() {
 					Solution* sol = jacobian->get_solution(step);
 					count++;
 
-//					unsigned key[2]={541694361,2576980377};
-//					if (key[0]==*(jacobian->get_key()) && key[1]==*(jacobian->get_key()+1))
-//						cout<<"problem found \n";
-
-//					becasue some of the elements are created and deleted in refinement and unrefinement
+//				Because some of the elements are created and deleted in refinement and unrefinement
 					if (sol) {
+						if (sol != &(Solution::solution_zero)) {
+							non_zero_sol.push_back(sol);
+							non_zero_key.push_back(jacobian->get_key());
 
-						solution = sol->get_solution();
-
-						fprintf(myfile, "%u %u %.8e %.8e %.8e\n", *(jacobian->get_key()),
-						    *(jacobian->get_key() + 1), solution[0], solution[1], solution[2]);
-
-						fflush(myfile);
-						//fsync(fileno(myfile));
-
-						if (sol != &(Solution::solution_zero))
-							delete sol;
-						jacobian->erase_solution(step);
+						} else
+							zero_key.push_back(jacobian->get_key());
 					}
+
+					// here we delete it from the jacobian, but we still have access to it from generated vectors
+					jacobian->erase_solution(step);
 
 					currentPtr = currentPtr->next;
 
 				}
 			}
 
-		fclose(myfile);
-		cout << "number of written elem  " << count << endl;
+		int size_zero = zero_key.size(), size_non_zero = non_zero_key.size();
+
+		gzwrite(myfile, (void*) (&size_zero), sizeof(int));
+		gzwrite(myfile, (void*) (&size_non_zero), sizeof(int));
+
+		for (int i = 0; i < size_zero; ++i)
+			gzwrite(myfile, (void*) (zero_key[i]), sizeof(unsigned) * 2);
+
+		for (int i = 0; i < size_non_zero; ++i) {
+			gzwrite(myfile, (void*) (non_zero_key[i]), sizeof(unsigned) * 2);
+			gzwrite(myfile, (void*) (non_zero_sol[i]->get_solution()), sizeof(double) * 3);
+			delete non_zero_sol[i];
+
+		}
+
+		gzclose(myfile);
+		cout << "number of written elem  " << size_zero + size_non_zero << endl;
 	}
 	first_solution_time_step = last_solution_time_step;
 
@@ -157,7 +169,7 @@ void SolRec::update_last_sol_time(int iter) {
 
 void SolRec::read_sol_from_disk(int iter) {
 
-	FILE *myfile;
+	gzFile myfile;
 	char filename[50];
 	double state_vars[NUM_STATE_VARS] = { 0., 0., 0. };
 
@@ -166,39 +178,57 @@ void SolRec::read_sol_from_disk(int iter) {
 	int dbg, count = 0;
 
 	sprintf(filename, "solution_%08d", iter);
-	myfile = fopen(filename, "r");
+	myfile = gzopen(filename, "rb");
 
-	while (!feof(myfile)) {
+//	while (!feof(myfile)) {
 
-		count++;
+	count++;
 
-		dbg = fscanf(myfile, "%u %u %le %le %le\n", key, key + 1, state_vars, state_vars + 1,
-		    state_vars + 2);
+	int num_zero = 0, num_non_zero = 0;
+
+	dbg = gzread(myfile, &num_zero, sizeof(int));
+	dbg = gzread(myfile, &num_non_zero, sizeof(int));
+
+	for (int i = 0; i < num_zero; ++i) {
+		gzread(myfile, &key, sizeof(unsigned) * 2);
 
 		Jacobian *jacobian = (Jacobian *) lookup(key);
-
-		if (state_vars[0] > 0.)
-			solution = new Solution(state_vars);
-		else
-			solution = &(Solution::solution_zero);
+		solution = &(Solution::solution_zero);
 
 		if (jacobian)
-
 			jacobian->put_solution(solution, iter);
 
 		else {
 
 			jacobian = new Jacobian(key);
 			add(key, jacobian);
+			jacobian->put_solution(solution, iter);
 
+		}
+	}
+
+	for (int i = 0; i < num_non_zero; ++i) {
+
+		gzread(myfile, &key, sizeof(unsigned) * 2);
+		gzread(myfile, &state_vars, sizeof(double) * 3);
+
+		solution = new Solution(state_vars);
+		Jacobian *jacobian = (Jacobian *) lookup(key);
+		if (jacobian)
+			jacobian->put_solution(solution, iter);
+
+		else {
+
+			jacobian = new Jacobian(key);
+			add(key, jacobian);
 			jacobian->put_solution(solution, iter);
 
 		}
 
 	}
 
-	fclose(myfile);
-	cout << "number of readed elem  " << count << endl;
+	gzclose(myfile);
+	cout << "number of readed elem  " << num_non_zero + num_zero << endl;
 }
 
 int SolRec::get_first_solution() {
@@ -474,7 +504,7 @@ DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], 
 	refined = 0;
 
 	new_old = NEW;
-	//geoflow stuff
+//geoflow stuff
 	dx[0] = .5 * fthTemp->dx[0];  //assume constant refinement
 	dx[1] = .5 * fthTemp->dx[1];
 
@@ -580,7 +610,7 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 		}
 	}
 
-	//for(i=0;i<4;i++) son[i][0]=son[i][1]=brothers[i][0]=brothers[i][1]=NULL;
+//for(i=0;i<4;i++) son[i][0]=son[i][1]=brothers[i][0]=brothers[i][1]=NULL;
 	lb_key[0] = lb_key[1] = NULL;
 	lb_weight = 1.0;
 	new_old = NEW;
@@ -617,7 +647,7 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 
 	refined = 1; // not an active element yet!!!
 
-	// neighbor information
+// neighbor information
 	for (ison = 0; ison < 4; ison++) {
 		isonneigh = ison;
 		ineigh = isonneigh;
@@ -832,12 +862,12 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 		Awet += sons[ison]->get_Awet();
 	Awet *= 0.25;
 
-	//uninitialized flag values... will fix shortly
+//uninitialized flag values... will fix shortly
 	drypoint[0] = drypoint[1] = 0.0;
 	iwetnode = 8;
 	Swet = 1.0;
 
-	//calculate the shortspeed
+//calculate the shortspeed
 	shortspeed = 0.0;
 	for (j = 0; j < 4; j++)
 		shortspeed += *(sons[j]->get_state_vars()) * sons[j]->get_shortspeed();
@@ -2178,7 +2208,7 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 
 	refined = 1; // not an active element yet!!!
 
-	// neighbor information
+// neighbor information
 	for (ison = 0; ison < 4; ison++) {
 		isonneigh = ison;
 		ineigh = isonneigh;
@@ -2389,12 +2419,12 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 		Awet += sons[ison]->get_Awet();
 	Awet *= 0.25;
 
-	//uninitialized flag values... will fix shortly
+//uninitialized flag values... will fix shortly
 	drypoint[0] = drypoint[1] = 0.0;
 	iwetnode = 8;
 	Swet = 1.0;
 
-	//calculate the shortspeed
+//calculate the shortspeed
 	shortspeed = 0.0;
 	for (j = 0; j < 4; j++)
 		shortspeed += *(sons[j]->get_state_vars()) * sons[j]->get_shortspeed();
