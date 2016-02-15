@@ -761,7 +761,7 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	unsigned* nodes;
 	char filename[256];
 
-	sprintf(filename, "mshpl%02d%08d.tec", myid, timeprops->iter);
+	sprintf(filename, "mshpl%03d%08d.tec", myid, timeprops->iter);
 
 	int order;
 	int e_buckets = El_Table->get_no_of_buckets();
@@ -885,7 +885,7 @@ void meshplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 }
 
 void dualplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
-    TimeProps* timeprops, MapNames* mapnames, double v_star, int plotflag) {
+    TimeProps* timeprops, MapNames* mapnames, int plotflag) {
 
 	int myid, i;
 	int numprocs;
@@ -903,9 +903,9 @@ void dualplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	char filename[256];
 
 	if (plotflag == 2)
-		sprintf(filename, "dual%02d%08d.tec", myid, timeprops->iter);
+		sprintf(filename, "dual%03d%08d.tec", myid, timeprops->iter);
 	else if (plotflag == 1)
-		sprintf(filename, "dual%02d%08d.tec", myid, timeprops->iter - 1);
+		sprintf(filename, "dual%03d%08d.tec", myid, timeprops->iter - 1);
 
 	int order;
 	int e_buckets = El_Table->get_no_of_buckets();
@@ -918,11 +918,11 @@ void dualplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	double velocity_scale = sqrt(lscale * gsacel); // scaling factor for the velocities
 	double momentum_scale = hscale * velocity_scale; // scaling factor for the momentums
 
-	double adjoint_scale[3] = { hscale * hscale / tscale, hscale * hscale * hscale * tscale
-	    / momentum_scale, hscale * hscale * hscale * tscale / momentum_scale };
-	adjoint_scale[0] = 1.; //hscale * hscale * lscale * lscale * tscale * tscale;
-	// scale of adjoint is different for first and two other component, and depend on the functional
-	adjoint_scale[1] = adjoint_scale[2] = tscale * hscale / lscale; //hscale * hscale * lscale * tscale * tscale * tscale;
+	double residual_scale[] = { hscale, momentum_scale, momentum_scale };
+	double error_scale, correction_scale, functional_scale;
+	error_scale = functional_scale = correction_scale = hscale * lscale * lscale;
+	double adjoint_scale[3] = { functional_scale / hscale, functional_scale / momentum_scale,
+	    functional_scale / momentum_scale };
 
 	FILE* fp;
 
@@ -933,9 +933,7 @@ void dualplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	timeprops->chunktime(&hours, &minutes, &seconds);
 
 	fprintf(fp, "TITLE= \" %s (MESH OUTPUT) time %d:%02d:%g (hrs:min:sec), V*=%g\"\n",
-	    mapnames->gis_map, hours, minutes, seconds, v_star);
-
-//fprintf ( fp, "TITLE= \"MESH OUTPUT\"\n" );
+	    mapnames->gis_map, hours, minutes, seconds);
 
 	fprintf(fp, "VARIABLES = \"X\", \"Y\", \"Z\", \"PILE_HEIGHT\","
 			"\"X_MOMENTUM\", \"Y_MOMENTUM\","
@@ -1046,7 +1044,7 @@ void dualplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 }
 
 void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
-    TimeProps* timeprops, MapNames* mapnames, double v_star) {
+    TimeProps* timeprops, MapNames* mapnames, int iter) {
 
 	int myid;
 	int numprocs;
@@ -1063,7 +1061,7 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	unsigned* nodes;
 	char filename[256];
 
-	sprintf(filename, "error%02d%08d.tec", myid, timeprops->iter);
+	sprintf(filename, "error%03d%08d.tec", myid, iter);
 
 	int order;
 	int e_buckets = El_Table->get_no_of_buckets();
@@ -1076,15 +1074,11 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	double velocity_scale = sqrt(lscale * gsacel); // scaling factor for the velocities
 	double momentum_scale = hscale * velocity_scale; // scaling factor for the momentums
 
-	double adjoint_scale[3] = { hscale * hscale / tscale, hscale * hscale * hscale * tscale
-	    / momentum_scale, hscale * hscale * hscale * tscale / momentum_scale };
-//	adjoint_scale[0] = 1.; //hscale * hscale * lscale * lscale * tscale * tscale;
-	// scale of adjoint is different for first and two other component, and depend on the functional
-	//adjoint_scale[0] = adjoint_scale[1] = adjoint_scale[2] = 1;	//tscale * hscale / lscale; //hscale * hscale * lscale * tscale * tscale * tscale;
-
 	double residual_scale[] = { hscale, momentum_scale, momentum_scale };
-	double error_scale, correction_scale;
-	error_scale= correction_scale = hscale * lscale * lscale;
+	double error_scale, correction_scale, functional_scale;
+	error_scale = functional_scale = correction_scale = hscale * lscale * lscale;
+	double adjoint_scale[3] = { functional_scale / hscale, functional_scale / momentum_scale,
+	    functional_scale / momentum_scale };
 
 	FILE* fp;
 
@@ -1095,10 +1089,11 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	timeprops->chunktime(&hours, &minutes, &seconds);
 
 	fprintf(fp, "TITLE= \" %s (MESH OUTPUT) time %d:%02d:%g (hrs:min:sec), V*=%g\"\n",
-	    mapnames->gis_map, hours, minutes, seconds, v_star);
+	    mapnames->gis_map, hours, minutes, seconds);
 
 	fprintf(fp, "VARIABLES = \"X\", \"Y\", \"Z\", \"PILE_HEIGHT\","
-			"\"X_MOMENTUM\", \"Y_MOMENTUM\","
+			"\"X_MOMENTUM\", \"Y_MOMENTUM\", \"PILE_HEIGHT_INTERP\","
+			"\"X_MOMENTUM_INTERP\", \"Y_MOMENTUM_INTERP\","
 			"\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\","
 			"\"Residual1\", \"Residual2\", \"Residual3\","
 			"\"Correction\", \"Error\"\n");
@@ -1129,8 +1124,9 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 			if (EmTemp->get_adapted_flag() > 0) {
 
 				nodes = EmTemp->getNode();
-				double* state_vars = EmTemp->get_bilin_state();	// EmTemp->get_state_vars();	//EmTemp->get_bilin_state();
-				double* adjoint = EmTemp->get_bilin_adj();//EmTemp->get_adjoint();	//EmTemp->get_bilin_adj();
+				double* bi_state_vars = EmTemp->get_bilin_state(); // EmTemp->get_state_vars();	//EmTemp->get_bilin_state();
+				double* state_vars = EmTemp->get_state_vars();
+				double* adjoint = EmTemp->get_bilin_adj(); //EmTemp->get_adjoint();	//EmTemp->get_bilin_adj();
 				double error = *(EmTemp->get_el_error() + 1);
 				double* correction = EmTemp->get_correction();
 				double* residual = EmTemp->get_residual();
@@ -1142,14 +1138,16 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 					assert(NodeTemp);
 					int jj = j;
 					if (NodeTemp->getinfo() != S_C_CON)
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
 						    (*(NodeTemp->get_coord())) * lscale, (*(NodeTemp->get_coord() + 1)) * lscale,
 						    NodeTemp->get_elevation() * lscale, state_vars[0] * hscale,
 						    state_vars[1] * momentum_scale, state_vars[2] * momentum_scale,
-						    adjoint[0] * adjoint_scale[0], adjoint[1] * adjoint_scale[1],
-						    adjoint[2] * adjoint_scale[2], residual[0] * residual_scale[0],
-						    residual[1] * residual_scale[1], residual[2] * residual_scale[2],
-						    *correction * correction_scale, error * error_scale);
+						    bi_state_vars[0] * hscale, bi_state_vars[1] * momentum_scale,
+						    bi_state_vars[2] * momentum_scale, adjoint[0] * adjoint_scale[0],
+						    adjoint[1] * adjoint_scale[1], adjoint[2] * adjoint_scale[2],
+						    residual[0] * residual_scale[0], residual[1] * residual_scale[1],
+						    residual[2] * residual_scale[2], *correction * correction_scale,
+						    error * error_scale);
 
 					else // S_C_CON will have a discontinuity in the elevation so fix that by interpolation
 					{
@@ -1184,14 +1182,15 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 
 						NodeTemp2 = (Node*) NodeTable->lookup(EmTemp2->getNode() + j * KEYLENGTH);
 						elev += .5 * NodeTemp2->get_elevation();
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
 						    (*(NodeTemp->get_coord())) * lscale, (*(NodeTemp->get_coord() + 1)) * lscale,
 						    elev * lscale, state_vars[0] * hscale, state_vars[1] * momentum_scale,
-						    state_vars[2] * momentum_scale, adjoint[0] * adjoint_scale[0],
-						    adjoint[1] * adjoint_scale[1], adjoint[2] * adjoint_scale[2],
-						    residual[0] * residual_scale[0], residual[1] * residual_scale[1],
-						    residual[2] * residual_scale[2], *correction * correction_scale,
-						    error * error_scale);
+						    state_vars[2] * momentum_scale, bi_state_vars[0] * hscale,
+						    bi_state_vars[1] * momentum_scale, bi_state_vars[2] * momentum_scale,
+						    adjoint[0] * adjoint_scale[0], adjoint[1] * adjoint_scale[1],
+						    adjoint[2] * adjoint_scale[2], residual[0] * residual_scale[0],
+						    residual[1] * residual_scale[1], residual[2] * residual_scale[2],
+						    *correction * correction_scale, error * error_scale);
 					}
 				}
 			}

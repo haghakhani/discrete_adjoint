@@ -2588,7 +2588,7 @@ void ErrorElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, doubl
 			dp = .5 * (dp + (ep2->bilin_prev_state[j] - bilin_prev_state[j]) * inv_dxp);
 		dm = (bilin_prev_state[j] - em->bilin_prev_state[j]) * inv_dxm;
 		if (em2 != NULL)
-			dm = .5 * (dm + (prev_state_vars[j] - em2->prev_state_vars[j]) * inv_dxm);
+			dm = .5 * (dm + (bilin_prev_state[j] - em2->bilin_prev_state[j]) * inv_dxm);
 
 		dc = (dp * dxm + dm * dxp) * inv_sdxpdxm;  // weighted average
 
@@ -2658,13 +2658,10 @@ void ErrorElem::xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor
 		hfv[2][1] = Vel;
 		hfv[2][2] = Vel + a;
 	}
-	for (i = 0; i < 3; i++)
-		for (j = 0; j < NUM_STATE_VARS; j++)
-			hrfv[i][j] = hfv[i][j];
 
 	for (i = 0; i < 3; i++)
 		for (j = 0; j < NUM_STATE_VARS; j++)
-			if (isnan(hrfv[i][j]))
+			if (isnan(hfv[i][j]))
 				cout << "flux is NAN" << endl;
 
 }
@@ -2706,11 +2703,7 @@ void ErrorElem::ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor
 
 	for (i = 0; i < 3; i++)
 		for (j = 0; j < NUM_STATE_VARS; j++)
-			hrfv[i][j] = hfv[i][j];
-
-	for (i = 0; i < 3; i++)
-		for (j = 0; j < NUM_STATE_VARS; j++)
-			if (isnan(hrfv[i][j]))
+			if (isnan(hfv[i][j]))
 				cout << "flux is NAN" << endl;
 }
 

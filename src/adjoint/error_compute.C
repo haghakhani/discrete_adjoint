@@ -38,66 +38,89 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 
 	int iter = propctx->timeprops->iter;
 
-	if (iter != 0) {
-		for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
-			if (*(buck + i)) {
-				currentPtr = *(buck + i);
-				while (currentPtr) {
-					Curr_El = (ErrorElem*) (currentPtr->value);
-					if (Curr_El->get_adapted_flag() > 0) {
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (ErrorElem*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() > 0) {
 
-						double *state_vars = Curr_El->get_bilin_state();
-						double *prev_state_vars = Curr_El->get_bilin_prev_state();
-						double *gravity = Curr_El->get_gravity();
-						double *d_gravity = Curr_El->get_d_gravity();
-						double *curvature = Curr_El->get_curvature();
-						Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
-						double bedfrict = Curr_El->get_effect_bedfrict();
-						double *dx = Curr_El->get_dx();
-						double orgSrcSgn[2];
-						double *vec_res = Curr_El->get_residual();
-						double *el_error = Curr_El->get_el_error();
-						double *bilin_adj = Curr_El->get_bilin_adj();
-						double *adjoint = Curr_El->get_adjoint();
-						double *correction = Curr_El->get_correction();
-						double dt = timeprops_ptr->dt.at(iter - 1); // if we have n iter size of dt vector is n-1
-						double dtdx = dt / dx[0];
-						double dtdy = dt / dx[1];
-						double tiny = GEOFLOW_TINY;
-						double *d_state_vars = Curr_El->get_d_state_vars();
+					double *state_vars = Curr_El->get_bilin_state();
+					double *prev_state_vars = Curr_El->get_bilin_prev_state();
+					double *gravity = Curr_El->get_gravity();
+					double *d_gravity = Curr_El->get_d_gravity();
+					double *curvature = Curr_El->get_curvature();
+					Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
+					double bedfrict = Curr_El->get_effect_bedfrict();
+					double *dx = Curr_El->get_dx();
+					double orgSrcSgn[4];
+					double *vec_res = Curr_El->get_residual();
+					double *el_error = Curr_El->get_el_error();
+					double *bilin_adj = Curr_El->get_bilin_adj();
+					double *adjoint = Curr_El->get_adjoint();
+					double *correction = Curr_El->get_correction();
+					double dt = timeprops_ptr->dt.at(iter - 2); // if we have n iter size of dt vector is n-1
+					double dtdx = dt / dx[0];
+					double dtdy = dt / dx[1];
+					double tiny = GEOFLOW_TINY;
+					double *d_state_vars = Curr_El->get_d_state_vars();
 
-						if (timeprops_ptr->iter < 50)
-							matprops_ptr->frict_tiny = 0.1;
-						else
-							matprops_ptr->frict_tiny = 0.000000001;
+					if (timeprops_ptr->iter < 50)
+						matprops_ptr->frict_tiny = 0.1;
+					else
+						matprops_ptr->frict_tiny = 0.000000001;
 
+					double flux[4][NUM_STATE_VARS];
+					get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
 
-						orgSourceSgn(Curr_El, matprops_ptr->frict_tiny, orgSrcSgn);
+					int stop[2];
+					double tmp[] = { 0., 0., 0. };
 
-						double flux[4][NUM_STATE_VARS];
-						get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
+					update_states(tmp, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy, dt,
+					    d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, matprops_ptr->intfrict,
+					    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), matprops_ptr->frict_tiny,
+					    stop, orgSrcSgn);
 
-						int stop[2];
+					el_error[0] = el_error[1] = 0.;
+					*correction = 0.;
 
-						residual(vec_res, state_vars, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx,
-						    dtdy, dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature,
-						    matprops_ptr->intfrict, bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()),
-						    matprops_ptr->frict_tiny, stop, orgSrcSgn);
+					for (int j = 0; j < NUM_STATE_VARS; j++) {
 
-						el_error[0] = el_error[1] = 0.;
-						*correction = 0.;
+						vec_res[j] = tmp[j] - state_vars[j];
 
-						for (int j = 0; j < NUM_STATE_VARS; j++) {
-							el_error[1] += vec_res[j] * (adjoint[j] - bilin_adj[j]);
+						el_error[1] += fabs(vec_res[j] * (adjoint[j] - bilin_adj[j]));
 
-							*correction += vec_res[j] * adjoint[j];
-						}
+						*correction += vec_res[j] * adjoint[j];
+
+//						double r_adj = 0., r_res = 0., r_prev = 0., r_state = 0.;
+//
+//						if (adjoint[j] != 0)
+//							r_adj = fabs((adjoint[j] - bilin_adj[j]) / adjoint[j]);
+//						if (state_vars[j] != 0)
+//							r_res = fabs(vec_res[j] / state_vars[j]);
+//						if (*(Curr_El->get_state_vars() + j) != 0.)
+//							r_state = fabs(
+//							    (state_vars[j] - *(Curr_El->get_state_vars() + j))
+//							        / *(Curr_El->get_state_vars() + j));
+//
+//						if (*(Curr_El->get_prev_state_vars() + j) != 0.)
+//							r_prev = fabs(
+//							    (prev_state_vars[j] - *(Curr_El->get_prev_state_vars() + j))
+//							        / *(Curr_El->get_prev_state_vars() + j));
+//
+//						if ((r_adj > .1 || r_state > .1 || r_res > .1 || r_prev > .1) && el_error[1] > 1e-7)
+//							printf(
+//							    "ratio adj %-8f ratio res %-8f ratio prev  %-8f  ratio bilin %-8f error %-8e  state %-1d key: %-u, %-u \n",
+//							    r_adj, r_res, r_prev, r_state, el_error[1], j, *(Curr_El->pass_key()),
+//							    *(Curr_El->pass_key() + 1));
 
 					}
-					currentPtr = currentPtr->next;
+
 				}
+				currentPtr = currentPtr->next;
 			}
-	}
+		}
+
 //	meshplotter(El_Table, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., 2);
 #ifdef DEBUG
 	if (checkElement(El_Table))

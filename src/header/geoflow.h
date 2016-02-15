@@ -138,7 +138,7 @@ int num_nonzero_elem(HashTable *El_Table);
 
 void make_dual_err_link(HashTable *Dual_El_Tab, HashTable *Err_El_Tab);
 
-void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab);
+void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab, int last);
 
 void update_dual_err_link(HashTable *Dual_El_Tab, HashTable *Err_El_Tab);
 

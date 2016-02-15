@@ -26,7 +26,7 @@ double max_err1 = 0., max_err2 = 0.;
 unsigned key1_1, key2_1, iter_1, key1_2, key2_2, iter_2;
 
 #define DEBUG1
-//#define Error
+#define Error
 
 #define KEY0   3920807148
 #define KEY1   1321528399
@@ -109,7 +109,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	calc_adjoint(&dual_meshctx, propctx);
 
-	dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., 2);
+	dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 2);
 
 #ifdef Error
 
@@ -138,7 +138,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	make_dual_err_link(Dual_El_Tab, Err_El_Tab);
 
-	send_from_dual_to_error(Dual_El_Tab, Err_El_Tab);
+	send_from_dual_to_error(Dual_El_Tab, Err_El_Tab, 1);
 
 	bilinear_interp(Err_El_Tab);
 
@@ -146,7 +146,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	error_compute(&error_meshctx, propctx);
 
-	errorplotter(Err_El_Tab, Err_Nod_Tab, matprops_ptr, timeprops_ptr, mapname_ptr, 0.);
+	errorplotter(Err_El_Tab, Err_Nod_Tab, matprops_ptr, timeprops_ptr, mapname_ptr, maxiter);
+
 #else
 	MeshCTX error_meshctx;
 #endif
@@ -210,17 +211,19 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
 
 #ifdef Error
+		if (iter > 1) {
 
-		send_from_dual_to_error(Dual_El_Tab, Err_El_Tab);
+			send_from_dual_to_error(Dual_El_Tab, Err_El_Tab, 0);
 
-		bilinear_interp(Err_El_Tab);
+			bilinear_interp(Err_El_Tab);
 
-		update_bilinear_error_grid(&error_meshctx, propctx);
+			update_bilinear_error_grid(&error_meshctx, propctx);
 
-		error_compute(&error_meshctx, propctx);
-		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+			error_compute(&error_meshctx, propctx);
+//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 
-		errorplotter(Err_El_Tab, Err_Nod_Tab, matprops_ptr, timeprops_ptr, mapname_ptr, 0.);
+			errorplotter(Err_El_Tab, Err_Nod_Tab, matprops_ptr, timeprops_ptr, mapname_ptr, iter - 1);
+		}
 #endif
 
 //		if (iter - 1 == 1)
@@ -265,7 +268,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //		dual_unrefine(meshctx, propctx);
 
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-		dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., 1);
+		dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 1);
 
 	}
 
@@ -697,18 +700,18 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 		buck = cp_El_Table->getbucketptr();
 
 		for (int i = 0; i < cp_El_Table->get_no_of_buckets(); i++)
-		if (*(buck + i)) {
-			HashEntryPtr currentPtr = *(buck + i);
-			while (currentPtr) {
-				ErrorElem *Curr_El = (ErrorElem*) (currentPtr->value);
+			if (*(buck + i)) {
+				HashEntryPtr currentPtr = *(buck + i);
+				while (currentPtr) {
+					ErrorElem *Curr_El = (ErrorElem*) (currentPtr->value);
 
-				if (Curr_El->get_adapted_flag() > 0)
-				Curr_El->error_check_refine_unrefine(solrec, cp_El_Table, iter, &refinelist,
-						&unrefinelist);
+					if (Curr_El->get_adapted_flag() > 0)
+						Curr_El->error_check_refine_unrefine(solrec, cp_El_Table, iter, &refinelist,
+						    &unrefinelist);
 
-				currentPtr = currentPtr->next;
+					currentPtr = currentPtr->next;
+				}
 			}
-		}
 //		cout<<"in refined table"<<endl;
 //		cout<<"has to be refined "<<refinelist->get_num_elem()<<endl;
 //		cout<<"has to be unrefined "<<unrefinelist->get_num_elem()<<endl;
@@ -720,7 +723,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 	}
 
 	if (iter != 1)
-	update_error_grid(solrec, err_meshctx, propctx);
+		update_error_grid(solrec, err_meshctx, propctx);
 #endif
 	if (iter % 5 == 4 && propctx->adapt_flag != 0) {
 
@@ -1329,7 +1332,7 @@ void make_dual_err_link(HashTable *Dual_El_Tab, HashTable *Err_El_Tab) {
 		}
 }
 
-void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab) {
+void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab, int last) {
 
 	HashEntryPtr *buck = Dual_El_Tab->getbucketptr();
 	HashEntryPtr currentPtr;
@@ -1340,19 +1343,43 @@ void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab) {
 			while (currentPtr) {
 
 				DualElem* dual_el = (DualElem*) (currentPtr->value);
+//				double max_x = 0., min_x = 1.e8, max_y = 0., min_y = 1.e8;
 
 				if (dual_el->get_adapted_flag() > 0) {
 
-					vector<ErrorElem*> error_el = dual_el->get_son_addresses();
+					vector<ErrorElem*>& error_el = dual_el->get_son_addresses();
 
-					for (int j = 0; j < error_el.size(); ++j)
+					for (int j = 0; j < error_el.size(); ++j) {
+						ErrorElem* err_El = error_el[j];
+
 						for (int k = 0; k < NUM_STATE_VARS; ++k) {
-
-							*(error_el[j]->get_prev_state_vars() + k) = *(dual_el->get_prev_state_vars() + k);
-							*(error_el[j]->get_state_vars() + k) = *(dual_el->get_state_vars() + k);
-							*(error_el[j]->get_adjoint() + k) = *(dual_el->get_adjoint() + k);
+							if (!last)
+								*(err_El->get_state_vars() + k) = *(dual_el->get_prev_state_vars() + k);
+							*(err_El->get_adjoint() + k) = *(dual_el->get_adjoint() + k);
 
 						}
+
+//						if (*(err_El->get_coord()) + .5 * *(err_El->get_dx()) > max_x)
+//							max_x = *(err_El->get_coord()) + .5 * *(err_El->get_dx());
+//
+//						if (*(err_El->get_coord()) - .5 * *(err_El->get_dx()) < min_x)
+//							min_x = *(err_El->get_coord()) - .5 * *(err_El->get_dx());
+//
+//						if (*(err_El->get_coord() + 1) + .5 * *(err_El->get_dx() + 1) > max_y)
+//							max_y = *(err_El->get_coord() + 1) + .5 * *(err_El->get_dx() + 1);
+//
+//						if (*(err_El->get_coord() + 1) - .5 * *(err_El->get_dx() + 1) < min_y)
+//							min_y = *(err_El->get_coord() + 1) - .5 * *(err_El->get_dx() + 1);
+
+					}
+
+//					assert(fabs(max_x - (*(dual_el->get_coord()) + .5 * *(dual_el->get_dx()))) < 1e-8);
+//					assert(fabs(min_x - (*(dual_el->get_coord()) - .5 * *(dual_el->get_dx()))) < 1e-8);
+//					assert(
+//					    fabs(max_y - (*(dual_el->get_coord() + 1) + .5 * *(dual_el->get_dx() + 1))) < 1e-8);
+//					assert(
+//					    fabs(min_y - (*(dual_el->get_coord() + 1) - .5 * *(dual_el->get_dx() + 1))) < 1e-8);
+
 				}
 				currentPtr = currentPtr->next;
 			}
@@ -1362,9 +1389,9 @@ void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab) {
 
 void update_dual_grid(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
-	//order of calling these functions are very important
-	//first we update prev_state_vatrs
-	//then compute k_act and fluxes
+//order of calling these functions are very important
+//first we update prev_state_vatrs
+//then compute k_act and fluxes
 
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
@@ -1402,8 +1429,8 @@ void update_dual_grid(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //			}
 //		}
 
-	//this function computes slopes based on prev_state_vars and dh/dh_e where h_e is pile height in neighbor element
-	// we need this term to compute jacobian of elements
+//this function computes slopes based on prev_state_vars and dh/dh_e where h_e is pile height in neighbor element
+// we need this term to compute jacobian of elements
 	slopes(El_Table, NodeTable, matprops_ptr, 1);
 
 	double tiny = GEOFLOW_TINY;
