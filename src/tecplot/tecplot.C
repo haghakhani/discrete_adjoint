@@ -1076,7 +1076,7 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 
 	double residual_scale[] = { hscale, momentum_scale, momentum_scale };
 	double error_scale, correction_scale, functional_scale;
-	error_scale = functional_scale = correction_scale = hscale * lscale * lscale;
+	error_scale = functional_scale = correction_scale = hscale; // * lscale * lscale;
 	double adjoint_scale[3] = { functional_scale / hscale, functional_scale / momentum_scale,
 	    functional_scale / momentum_scale };
 
@@ -1092,8 +1092,9 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	    mapnames->gis_map, hours, minutes, seconds);
 
 	fprintf(fp, "VARIABLES = \"X\", \"Y\", \"Z\", \"PILE_HEIGHT\","
-			"\"X_MOMENTUM\", \"Y_MOMENTUM\", \"PILE_HEIGHT_INTERP\","
-			"\"X_MOMENTUM_INTERP\", \"Y_MOMENTUM_INTERP\","
+			"\"X_MOMENTUM\", \"Y_MOMENTUM\", "
+			//"\"PILE_HEIGHT_INTERP\","
+			//"\"X_MOMENTUM_INTERP\", \"Y_MOMENTUM_INTERP\","
 			"\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\","
 			"\"Residual1\", \"Residual2\", \"Residual3\","
 			"\"Correction\", \"Error\"\n");
@@ -1138,16 +1139,16 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 					assert(NodeTemp);
 					int jj = j;
 					if (NodeTemp->getinfo() != S_C_CON)
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
 						    (*(NodeTemp->get_coord())) * lscale, (*(NodeTemp->get_coord() + 1)) * lscale,
 						    NodeTemp->get_elevation() * lscale, state_vars[0] * hscale,
 						    state_vars[1] * momentum_scale, state_vars[2] * momentum_scale,
-						    bi_state_vars[0] * hscale, bi_state_vars[1] * momentum_scale,
-						    bi_state_vars[2] * momentum_scale, adjoint[0] * adjoint_scale[0],
-						    adjoint[1] * adjoint_scale[1], adjoint[2] * adjoint_scale[2],
-						    residual[0] * residual_scale[0], residual[1] * residual_scale[1],
-						    residual[2] * residual_scale[2], *correction * correction_scale,
-						    error * error_scale);
+						    //bi_state_vars[0] * hscale, bi_state_vars[1] * momentum_scale,
+						    //bi_state_vars[2] * momentum_scale,
+						    adjoint[0] * adjoint_scale[0], adjoint[1] * adjoint_scale[1],
+						    adjoint[2] * adjoint_scale[2], residual[0] * residual_scale[0],
+						    residual[1] * residual_scale[1], residual[2] * residual_scale[2],
+						    *correction * correction_scale, error * error_scale);
 
 					else // S_C_CON will have a discontinuity in the elevation so fix that by interpolation
 					{
@@ -1182,11 +1183,12 @@ void errorplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 
 						NodeTemp2 = (Node*) NodeTable->lookup(EmTemp2->getNode() + j * KEYLENGTH);
 						elev += .5 * NodeTemp2->get_elevation();
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
 						    (*(NodeTemp->get_coord())) * lscale, (*(NodeTemp->get_coord() + 1)) * lscale,
 						    elev * lscale, state_vars[0] * hscale, state_vars[1] * momentum_scale,
-						    state_vars[2] * momentum_scale, bi_state_vars[0] * hscale,
-						    bi_state_vars[1] * momentum_scale, bi_state_vars[2] * momentum_scale,
+						    state_vars[2] * momentum_scale,
+						    //bi_state_vars[0] * hscale,
+						    //bi_state_vars[1] * momentum_scale, bi_state_vars[2] * momentum_scale,
 						    adjoint[0] * adjoint_scale[0], adjoint[1] * adjoint_scale[1],
 						    adjoint[2] * adjoint_scale[2], residual[0] * residual_scale[0],
 						    residual[1] * residual_scale[1], residual[2] * residual_scale[2],

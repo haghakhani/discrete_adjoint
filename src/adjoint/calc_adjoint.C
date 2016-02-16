@@ -30,10 +30,11 @@ struct Func_CTX {
 void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx);
 int get_jacind(int effelement);
 void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, DualElem* eff_el, int side);
+void calc_func_sens_hmax(MeshCTX* meshctx, PropCTX* propctx);
 
 void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 
-	calc_func_sens(meshctx, propctx);
+//	calc_func_sens(meshctx, propctx);
 
 	HashTable* El_Table = meshctx->el_table;
 	HashEntryPtr* buck = El_Table->getbucketptr();
@@ -41,6 +42,9 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 	DualElem* Curr_El = NULL;
 	int iter = propctx->timeprops->iter;
 	int aa = 0, bb = 1;
+
+	if (propctx->timeprops->adjiter == 0)
+		calc_func_sens_hmax(meshctx, propctx);
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
@@ -54,9 +58,7 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 //				if (fabs(*(Curr_El->get_coord()) - 161.3) < .04
 //				    && fabs(*(Curr_El->get_coord() + 1) - 539.58) < .04 && (iter == 545 || iter == 546))
 //					bb = aa;
-
 				if (Curr_El->get_adapted_flag() > 0) {
-
 					calc_adjoint_elem(meshctx, propctx, Curr_El);
 
 				}
@@ -135,7 +137,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 		}
 
 		for (int j = 0; j < NUM_STATE_VARS; j++)
-			adjoint[j] = *(Curr_El->get_func_sens() + j) - adjcontr[j];
+			adjoint[j] = /**(Curr_El->get_func_sens() + j)*/-adjcontr[j];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
@@ -185,6 +187,42 @@ void DualElem::calc_func_sens(const void * ctx) {
 //		func_sens[0] = .5 * prev_state_vars[0] * (dt_n + dt_p) * contx->dx * contx->dy;
 //
 //	}
+}
+
+void calc_func_sens_hmax(MeshCTX* meshctx, PropCTX* propctx) {
+	HashTable* El_Table = meshctx->el_table;
+	TimeProps* timeprops = propctx->timeprops;
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashEntryPtr currentPtr;
+
+	double hmax = 0.;
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0 && hmax < *(Curr_El->get_state_vars())) {
+					hmax = *(Curr_El->get_state_vars());
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0 && hmax == *(Curr_El->get_state_vars())) {
+					*(Curr_El->get_func_sens()) = 1.;
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+
 }
 
 void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
