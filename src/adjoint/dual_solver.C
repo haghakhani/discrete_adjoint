@@ -591,7 +591,7 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 //		cout << "3 \n";
 //		refinement_report(El_Table);
 
-		move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
+		move_dual_data(meshctx, propctx);
 
 //		cout << "4 \n";
 //		refinement_report(El_Table);
@@ -654,7 +654,7 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 
 		}
 
-		move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
+		move_dual_data(meshctx, propctx);
 	}
 
 //	calc_d_gravity(El_Table);
