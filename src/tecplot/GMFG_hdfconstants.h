@@ -24,10 +24,9 @@
 #define __GMFG_HDFCONSTS__
 
 //datatype flags
-const int INT   =1;
-const int FLOAT =2;
-const int DOUBLE=3;
-const int CHAR  =4;
-
+const int INT = 1;
+const int FLOAT = 2;
+const int DOUBLE = 3;
+const int CHAR = 4;
 
 #endif

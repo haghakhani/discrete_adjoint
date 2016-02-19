@@ -6,38 +6,34 @@
 #include <fstream>
 using namespace std;
 
-class GisColors
-{
+class GisColors {
 public:
 
-  GisColors (const string & name);
+	GisColors(const string & name);
 
-    virtual ~ GisColors ()
-  {
-  }
+	virtual ~ GisColors() {
+	}
 
-  bool good ()
-  {
-    return _status;
-  }
+	bool good() {
+		return _status;
+	}
 
-  void getColor (int index, unsigned char &red, unsigned char &green,
-                 unsigned char &blue);
+	void getColor(int index, unsigned char &red, unsigned char &green, unsigned char &blue);
 
-  void print ();
+	void print();
 
 protected:
 
-  bool _status;
-  unsigned int _red[256];
-  unsigned int _green[256];
-  unsigned int _blue[256];
+	bool _status;
+	unsigned int _red[256];
+	unsigned int _green[256];
+	unsigned int _blue[256];
 
 private:
 
 // No copy allowed
-  GisColors (const GisColors &);
-  GisColors & operator= (const GisColors &);
+	GisColors(const GisColors &);
+	GisColors & operator=(const GisColors &);
 };
 
 #endif

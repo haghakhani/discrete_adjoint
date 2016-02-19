@@ -8,8 +8,8 @@ C* This software is distributed in the hope that it will be useful,
 C* but WITHOUT ANY WARRANTY; without even the implied warranty of
 C* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 C*
-C* Author: 
-C* Description: 
+C* Author:
+C* Description:
 C*
 C*******************************************************************
 C* $Id:$
@@ -42,18 +42,18 @@ C***********************************************************************
       temp = uvec(1)*volf*(1.-volf)**(-exponant)
       denfrac = den_fluid/den_solid
 
-       
+
       do 10 i=1,4
         drag(i)=0.
 10    continue
- 
+
       ! fluid vel - solid vel
       if ( uvec(1).gt.tiny ) then
         do 20 j=1,2
           delv(j) = (vfluid(j)-vsolid(j))/vterminal
 20      continue
 
-!       cap (u-v)/Vt to 0.1 
+!       cap (u-v)/Vt to 0.1
 !        do 30 j=1,2
 !          if (dabs(delv(j)).gt.0.1) then
 !            delv(j)=0.1*sgn(delv(i), tiny)
@@ -127,4 +127,4 @@ C***************************************************************************
         drag(4) = (1.-denfrac)*kterm*relvel(2)/denfrac
       endif
 
-      end subroutine calc_drag_force2   
+      end subroutine calc_drag_force2

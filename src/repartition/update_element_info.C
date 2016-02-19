@@ -252,6 +252,7 @@ void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, 
 	}
 	for (i = 0; i < NUM_STATE_VARS; i++) {
 		newelement->state_vars[i] = elem2->state_vars[i];
+		newelement->prev_state_vars[i] = elem2->prev_state_vars[i];
 		newelement->Influx[i] = elem2->Influx[i];
 	}
 	for (i = 0; i < 3; i++)
@@ -271,6 +272,123 @@ void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, 
 
 	return;
 }
+
+//void construct_dual_el(void* newelem, DUALElemPack* elem2, HashTable* HT_Node_Ptr, int myid,
+//    double* e_error) {
+//	DualElem* newelement= (DualElem*) newelem;
+//
+//	Node* node;
+//	int i, j;
+//	newelement->myprocess = myid;
+//	newelement->generation = elem2->generation;
+//	newelement->opposite_brother_flag = elem2->opposite_brother_flag;
+//	newelement->material = elem2->material;
+//
+//	for (i = 0; i < 8; i++) {
+//		newelement->neigh_proc[i] = elem2->neigh_proc[i];
+//		newelement->neigh_gen[i] = elem2->neigh_gen[i];
+//	}
+//
+//	newelement->refined = elem2->refined;
+//	newelement->adapted = elem2->adapted;
+//	newelement->which_son = elem2->which_son;
+//	newelement->new_old = elem2->new_old;
+//	for (i = 0; i < 4; i++)
+//		for (j = 0; j < KEYLENGTH; j++)
+//			newelement->brothers[i][j] = elem2->brothers[i][j];
+//
+//	for (i = 0; i < KEYLENGTH; i++)
+//		newelement->key[i] = elem2->key[i];
+//
+//	for (i = 0; i < 8; i++)
+//		for (int j = 0; j < KEYLENGTH; j++) {
+//			newelement->node_key[i][j] = elem2->node_key[i][j];
+//			newelement->neighbor[i][j] = elem2->neighbor[i][j];
+//			if (i < 4)
+//				newelement->son[i][j] = elem2->son[i][j];
+//
+//		}
+//	for (i = 0; i < EQUATIONS; i++) {
+//		newelement->el_error[i] = elem2->el_error[i];
+//	}
+//
+//	//and the node info -- ignore some info if this is just getting a parent from another processor...
+//	for (i = 0; i < 8; i++) {
+//		if (elem2->n_coord[i][0] * elem2->n_coord[i][1] == 0) {
+//			printf(
+//			    "myid=%d elem2->key={%u,%u} elem2->coord=(%20g,%20g) inode=%d node->key={%u,%u} node->coord=(%20g,%20g)\n",
+//			    myid, elem2->key[0], elem2->key[1], elem2->n_coord[8][0], elem2->n_coord[8][1], i,
+//			    elem2->node_key[i][0], elem2->node_key[i][1], elem2->n_coord[i][0], elem2->n_coord[i][1]);
+//		}
+//
+//		node = (Node*) HT_Node_Ptr->lookup(elem2->node_key[i]);
+//		if (!node) {
+//			node = new Node(elem2->node_key[i], elem2->n_coord[i], elem2->n_info[i],
+//			    elem2->node_elevation[i], i);
+//
+//			HT_Node_Ptr->add(elem2->node_key[i], node);
+//		} else {
+//			//because of storing all the node but not updating the
+//			//info and order if the node was not previously in the subdomain
+//			//check if the sfc is screwed
+//			if (*(node->get_coord()) != elem2->n_coord[i][0]
+//			    || *(node->get_coord() + 1) != elem2->n_coord[i][1]) {
+//				printf("myid=%d\n  pack  elem(x,y)=(%20g,%20g)\n exist elem(x,y)=(%20g,%20g)\n\n", myid,
+//				    elem2->n_coord[i][0], elem2->n_coord[i][1], *(node->get_coord()),
+//				    *(node->get_coord() + 1));
+//				fflush(stdout);
+//				int screwd = 0;
+//				assert(screwd);
+//			}
+//			if (newelement->refined == 0)  // only update if this is from an active element
+//				node->set_parameters(elem2->n_info[i]);
+//		}
+//	}
+//
+//	node = (Node*) HT_Node_Ptr->lookup(elem2->key);
+//	if (!node) {
+//		node = new Node(elem2->key, elem2->n_coord[8], elem2->n_info[8], elem2->node_elevation[8], 8);
+//
+//		HT_Node_Ptr->add(elem2->key, node);
+//	} else if (newelement->refined != 0) // only update if this is from an active element
+//		node->set_parameters(elem2->n_info[8]);
+//
+//	//The boundary conditions
+//	*e_error = newelement->el_error[0];
+//
+//	//geoflow stuff
+//	newelement->positive_x_side = elem2->positive_x_side;
+//	newelement->elevation = elem2->elevation;
+//	for (i = 0; i < DIMENSION; i++) {
+//		newelement->coord[i] = elem2->n_coord[8][i];
+//		newelement->dx[i] = elem2->dx[i];
+//		newelement->eigenvxymax[i] = elem2->eigenvxymax[i];
+//		newelement->kactxy[i] = elem2->kactxy[i];
+//		newelement->zeta[i] = elem2->zeta[i];
+//		newelement->curvature[i] = elem2->curvature[i];
+//		newelement->d_gravity[i] = elem2->d_gravity[i];
+//	}
+//	for (i = 0; i < NUM_STATE_VARS; i++) {
+//		newelement->state_vars[i] = elem2->state_vars[i];
+//		newelement->prev_state_vars[i] = elem2->prev_state_vars[i];
+//		newelement->Influx[i] = elem2->Influx[i];
+//	}
+//	for (i = 0; i < 3; i++)
+//		newelement->gravity[i] = elem2->gravity[i];
+//	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
+//		newelement->d_state_vars[i] = elem2->d_state_vars[i];
+//	newelement->shortspeed = elem2->shortspeed;
+//	newelement->lb_weight = elem2->lb_weight;
+//	newelement->elm_loc[0] = elem2->elm_loc[0];
+//	newelement->elm_loc[1] = elem2->elm_loc[1];
+//
+//	newelement->iwetnode = elem2->iwetnode;
+//	newelement->Awet = elem2->Awet;
+//	newelement->Swet = elem2->Swet;
+//	newelement->drypoint[0] = elem2->drypoint[0];
+//	newelement->drypoint[1] = elem2->drypoint[1];
+//
+//}
 
 void check_neighbor_info(Element* newelement, HashTable* HT_Elem_Ptr, int myid) {
 

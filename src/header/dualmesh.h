@@ -88,6 +88,16 @@ public:
 	DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr,
 	    int SETLINK);
 
+	DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid);
+
+	void update(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid);
+
+	void Pack_jacobian(JacPack* jac,int neigh);
+
+	void put_jacpack(JacPack* jac);
+
+	void Pack_element(DualElemPack* elem, HashTable* HT_Node_Ptr, int destination_proc);
+
 	void get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double gamma);
 
 	void calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<DualElem*>* elem_list, int myid,

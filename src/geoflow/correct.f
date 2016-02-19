@@ -6,11 +6,11 @@ C     * file in the top distribution directory for more details.
 C     *
 C     * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 C     *
-C     * Author: 
-C     * Description: 
+C     * Author:
+C     * Description:
 C     *
 C*******************************************************************
-C     * $Id: correct.f 143 2007-06-25 17:58:08Z dkumar $ 
+C     * $Id: correct.f 143 2007-06-25 17:58:08Z dkumar $
 C     *
 
 C***********************************************************************

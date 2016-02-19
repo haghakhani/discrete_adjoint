@@ -107,8 +107,8 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 						int bb = 1, aa = 0;
 
 						if (fabs(*(Curr_El->get_coord()) - 161.3) < .04
-						    && fabs(*(Curr_El->get_coord() + 1) - 539.58) < .04 && (iter == 545 || iter == 546))
-							bb = aa;
+								&& fabs(*(Curr_El->get_coord() + 1) - 539.58) < .04 && (iter == 545 || iter == 546))
+						bb = aa;
 
 						/*Curr_El->get_ithelem() == 8255 && effelement == 0) {/**(Curr_El->pass_key()) == KEY0
 						 && *(Curr_El->pass_key() + 1) == KEY1 && iter == ITER
@@ -457,8 +457,8 @@ void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx) {
 							int gggflag = 0;
 
 							if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
-							    && iter == ITER && effelement == EFFELL)
-								gggflag = 1;
+									&& iter == ITER && effelement == EFFELL)
+							gggflag = 1;
 #endif
 
 							if (effelement == 0 && prev_state_vars[0] == 0.)
@@ -514,7 +514,7 @@ void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx) {
 //										if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1
 //										    && effelement == EFFELL && iter == ITER && j == J)
 										flux_debug(Curr_El, fluxold[0], fluxold[2], fluxold[1], fluxold[3], flux[0],
-										    flux[2], flux[1], flux[3], effelement, j, iter, dt);
+												flux[2], flux[1], flux[3], effelement, j, iter, dt);
 #endif
 
 										double *d_state_vars = Curr_El->get_d_state_vars();

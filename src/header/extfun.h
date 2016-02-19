@@ -134,6 +134,10 @@ extern void htflush(HashTable*, HashTable*, int);
 //! Pack_element() is a friend function of the Element and Node classes that packs relevant information from an element "sendel" into a smaller data structure (ElemPack) to be sent by an mpi call to another processor, this is used when exchanging ghost cell information or repartitioning.
 extern void Pack_element(void *sendel, ElemPack *elem, HashTable* HT_Node_Ptr,
     int destination_proc);
+
+//extern void Pack_dual_element(void *sendel, DualElemPack* elem, HashTable* HT_Node_Ptr,
+//	    int destination_proc);
+
 //extern void Pack_element(Element* sendel, ElemPack** elemptr, HashTable* HT_Node_Ptr, int s_f);
 
 //! Create new MPI datatype: ElemPack type definition in struct.h so structures of ElemPack and NeighborPack can be sent and received 

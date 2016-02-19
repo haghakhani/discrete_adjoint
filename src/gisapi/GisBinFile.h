@@ -24,27 +24,31 @@
 #include <vector>
 using namespace std;
 
-bool GisUncompress (int inSize, unsigned char* inChars, int outSize, unsigned char* outChars );
+bool GisUncompress(int inSize, unsigned char* inChars, int outSize, unsigned char* outChars);
 
 bool Gis_is_little_endian();
 
-class GisBinFile
-{
+class GisBinFile {
 public:
-	GisBinFile( const string& name, const char* mode = "r");
+	GisBinFile(const string& name, const char* mode = "r");
 
-	virtual ~GisBinFile(){};
+	virtual ~GisBinFile() {
+	}
+	;
 
-	void setEndian (const char* mode = "little");
+	void setEndian(const char* mode = "little");
 
-	void setWordSize (int wordSize)
-	{ wordSize_ = wordSize; }
+	void setWordSize(int wordSize) {
+		wordSize_ = wordSize;
+	}
 
-	void setDataSize (int dataSize)
-	{ dataSize_ = dataSize; }
+	void setDataSize(int dataSize) {
+		dataSize_ = dataSize;
+	}
 
-	void setIsInteger (bool trueFalse)
-	{ isInteger_ = trueFalse; }
+	void setIsInteger(bool trueFalse) {
+		isInteger_ = trueFalse;
+	}
 
 	bool readRow(int row, float* floatValues);
 	bool readRow(int row, char* charValues);
@@ -52,38 +56,45 @@ public:
 	bool readCompressdRow(int row, float* floatValues);
 	bool readCompressdRow(int row, char* charValues);
 
-	bool read (float* floatValue);	//IEEE 32 bits
-	
-	bool read (off_t* offsetVals);	// read row pointers
+	bool read(float* floatValue);	//IEEE 32 bits
 
-	bool read (int* intValue);		// 32 bits
+	bool read(off_t* offsetVals);	// read row pointers
 
-	bool read (short* shortValue); //16 bits
+	bool read(int* intValue);		// 32 bits
+
+	bool read(short* shortValue); //16 bits
 
 	bool read4Bytes(char* char4Values);
-	
-	bool readNChar (char* charValues, int nValues);
 
-	bool good()
-	{ return file_.good(); }
+	bool readNChar(char* charValues, int nValues);
 
-	int nRows ()
-	{ return nRows_; }
+	bool good() {
+		return file_.good();
+	}
 
-	int nCols ()
-	{ return nCols_; }
+	int nRows() {
+		return nRows_;
+	}
 
-	void nRows (int nrows)
-	{ nRows_ = nrows; }
+	int nCols() {
+		return nCols_;
+	}
 
-	void nCols (int ncols)
-	{ nCols_ = ncols; }
+	void nRows(int nrows) {
+		nRows_ = nrows;
+	}
 
-	bool isCompressed()
-	{ return ( compressed_ == 1); }
+	void nCols(int ncols) {
+		nCols_ = ncols;
+	}
 
-	void isCompressed( bool compFlag )
-	{ compressed_ = compFlag; }
+	bool isCompressed() {
+		return (compressed_ == 1);
+	}
+
+	void isCompressed(bool compFlag) {
+		compressed_ = compFlag;
+	}
 
 	void gotoPos(long newPos);
 

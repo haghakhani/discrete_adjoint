@@ -68,7 +68,7 @@ const int OLD = 0;
 
 const int INIT = -1;
 const int ONE_SIDE_NEIGH = -2;
-const int MUST_BE_CORRECTED=-3;
+const int MUST_BE_CORRECTED = -3;
 
 const float MAX_X = 1.0;
 const float MAX_Y = 1.0;

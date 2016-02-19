@@ -8,17 +8,17 @@ C* This software is distributed in the hope that it will be useful,
 C* but WITHOUT ANY WARRANTY; without even the implied warranty of
 C* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 C*
-C* Author: 
-C* Description: 
+C* Author:
+C* Description:
 C*
 C*******************************************************************
-C* $Id: predict.f 143 2007-06-25 17:58:08Z dkumar $ 
+C* $Id: predict.f 143 2007-06-25 17:58:08Z dkumar $
 C*
 
 C***********************************************************************
-      subroutine predict(Uvec,dUdx,dUdy,Uprev,tiny,kactxy,dt2, g, 
+      subroutine predict(Uvec,dUdx,dUdy,Uprev,tiny,kactxy,dt2, g,
      1     curv, bedfrictang, intfrictang,
-     2     dgdx, frict_tiny, order_flag, VxVy, 
+     2     dgdx, frict_tiny, order_flag, VxVy,
      3     IF_STOPPED,fluxsrc)
 C***********************************************************************
 c     this routine only calculates Uvec for a half step

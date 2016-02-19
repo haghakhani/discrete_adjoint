@@ -8,11 +8,11 @@ C* This software is distributed in the hope that it will be useful,
 C* but WITHOUT ANY WARRANTY; without even the implied warranty of
 C* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 C*
-C* Author: 
-C* Description: 
+C* Author:
+C* Description:
 C*
 C*******************************************************************
-C* $Id: sgn.f 2 2003-08-13 19:26:11Z sorokine $ 
+C* $Id: sgn.f 2 2003-08-13 19:26:11Z sorokine $
 C*
 
 C***********************************************************************

@@ -145,7 +145,7 @@ HashTable::~HashTable()              //evacuate the table
 
 HashEntryPtr HashTable::searchBucket(HashEntryPtr p, unsigned* keyi) {
 
-	int count=0;
+	int count = 0;
 	int i;
 	while (p) {
 		for (i = 0; i < KEYLENGTH; i++) {

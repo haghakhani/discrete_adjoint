@@ -8,11 +8,11 @@ C* This software is distributed in the hope that it will be useful,
 C* but WITHOUT ANY WARRANTY; without even the implied warranty of
 C* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 C*
-C* Author: 
-C* Description: 
+C* Author:
+C* Description:
 C*
 C*******************************************************************
-C* $Id: getcoef.f 128 2007-06-07 19:51:52Z dkumar $ 
+C* $Id: getcoef.f 128 2007-06-07 19:51:52Z dkumar $
 C*
 
 C***********************************************************************
@@ -26,7 +26,7 @@ C***********************************************************************
       double precision vel,cosphi,tandel,w,sgn,ka, epsilon
       
       double precision bedfrictang, intfrictang, tttest
-      integer i,j 
+      integer i,j
 c     vel is used to determine if velocity gradients are converging or diverging
       external sgn
       
@@ -48,7 +48,7 @@ c     if there is no yielding...
             kactx = 1.d0
             kacty = 1.d0
          endif
-      else 
+      else
          vel = 0.d0
          kactx = 1.d0
          kacty = 1.d0

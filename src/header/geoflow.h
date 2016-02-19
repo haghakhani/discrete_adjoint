@@ -78,6 +78,9 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* m
 void move_data(int nump, int myid, HashTable* El_Table, HashTable* NodeTable,
     TimeProps* timeprops_ptr);
 
+//! this function transfers information during events such as ghost element data exchange and repartitioning
+void move_dual_data(MeshCTX* meshctx, PropCTX* propctx);
+
 //! this function deletes the current ghost elements
 void delete_ghost_elms(HashTable* El_Table, int myid);
 
@@ -109,6 +112,8 @@ void zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
     double dt, ResFlag resflag);
 
 void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx);
+
+void comminucate_jacobians(MeshCTX* meshctx, PropCTX* propctx);
 
 void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx);
 
@@ -199,7 +204,9 @@ void print_jacobian(HashTable* El_Table, int iter);
 
 void calc_flux(MeshCTX* meshctx, PropCTX* propctx);
 
-void refinement_report(HashTable* El_Table);
+void refinement_report(HashTable* El_Table, int myid);
+
+void refine_flag_report(HashTable* El_Table, int myid);
 
 template<typename T>
 void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* refinelist,
@@ -240,7 +247,7 @@ void check_state_vars_with_record(HashTable* El_Table, SolRec* solrec, int iter)
 
 void print_Elem_Table(HashTable* El_Table, HashTable* NodeTable, int iter, int place);
 
-bool must_write(MemUse* memuse_ptr);
+bool must_write(MemUse* memuse_ptr, int myid);
 
 extern double max_jac;
 

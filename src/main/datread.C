@@ -563,7 +563,7 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 
 	Element *Quad9P;
 	float* value = new float[2];
-	BC* dummy=new BC;
+	BC* dummy = new BC;
 	void* p;
 	int* assocp;/*--*/
 	unsigned* keyP;

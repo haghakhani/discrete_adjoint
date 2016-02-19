@@ -8,11 +8,11 @@ C     * This software is distributed in the hope that it will be useful,
 C     * but WITHOUT ANY WARRANTY; without even the implied warranty of
 C     * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 C     *
-C     * Author: 
-C     * Description: 
+C     * Author:
+C     * Description:
 C     *
 C*******************************************************************
-C     * $Id: eigen.f 128 2007-06-07 19:51:52Z dkumar $ 
+C     * $Id: eigen.f 128 2007-06-07 19:51:52Z dkumar $
 C     *
 
 C***********************************************************************
@@ -47,4 +47,3 @@ c     iverson and denlinger
 
       return
       end
-

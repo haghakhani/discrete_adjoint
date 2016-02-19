@@ -9,100 +9,91 @@ using namespace std;
 
 class GisTriOut;
 
-class GisGrid
-{
+class GisGrid {
 public:
 
-  GisGrid ();
+	GisGrid();
 
-  virtual ~ GisGrid ()
-  {
-  }
+	virtual ~ GisGrid() {
+	}
 
-  void setNumRowsCols (int nRows, int nCols);
+	void setNumRowsCols(int nRows, int nCols);
 
-  void setNumRows (int nRows);
+	void setNumRows(int nRows);
 
-  void setNumCols (int nCols);
+	void setNumCols(int nCols);
 
-  void setBox (double xMin, double yMin, double xMax, double yMax)
-  {
-    xMin_ = xMin;
-    yMin_ = yMin;
-    xMax_ = xMax;
-    yMax_ = yMax;
-  }
+	void setBox(double xMin, double yMin, double xMax, double yMax) {
+		xMin_ = xMin;
+		yMin_ = yMin;
+		xMax_ = xMax;
+		yMax_ = yMax;
+	}
 
-  void setRes (float res);
+	void setRes(float res);
 
-  void setResX (float res);
+	void setResX(float res);
 
-  double getResX ()
-  {
-    return resX_;
-  }
+	double getResX() {
+		return resX_;
+	}
 
-  void setResY (float res);
+	void setResY(float res);
 
-  double getResY ()
-  {
-    return resY_;
-  }
+	double getResY() {
+		return resY_;
+	}
 
-  double deltaX ()
-  {
-    return (xMax_ - xMin_);
-  }
+	double deltaX() {
+		return (xMax_ - xMin_);
+	}
 
-  double deltaY ()
-  {
-    return (yMax_ - yMin_);
-  }
+	double deltaY() {
+		return (yMax_ - yMin_);
+	}
 
-  double noDataValue ()
-  {
-    return noData_;
-  }
+	double noDataValue() {
+		return noData_;
+	}
 
-  void noDataValue (double doubleVal)
-  {
-    noData_ = doubleVal;
-  }
+	void noDataValue(double doubleVal) {
+		noData_ = doubleVal;
+	}
 
-  void initGrid ();
+	void initGrid();
 
-  void setMax (GisTriOut & tri, int simVar);
-  //    simVar: 1 - Pile height; 2 - Velocity";
+	void setMax(GisTriOut & tri, int simVar);
+	//    simVar: 1 - Pile height; 2 - Velocity";
 
-  double get (int row, int col);
+	double get(int row, int col);
 
-  int getRow (double y);
+	int getRow(double y);
 
-  int getCol (double x);
+	int getCol(double x);
 
-  double getY (int row);
+	double getY(int row);
 
-  double getX (int col);
+	double getX(int col);
 
-  void set (int row, int col, float floatVal);
+	void set(int row, int col, float floatVal);
 
-  void smooth3 ();
+	void smooth3();
 
-  void print ();
+	void print();
 
-  // protected: 
+	// protected: 
 
-  double resX_;
-  double resY_;
-  double xMin_;
-  double yMin_;
-  double xMax_;
-  double yMax_;
-  double noData_;
-  int nCols_;
-  int nRows_;
+	double resX_;
+	double resY_;
+	double xMin_;
+	double yMin_;
+	double xMax_;
+	double yMax_;
+	double noData_;
+	int nCols_;
+	int nRows_;
 
-  vector < float >gisGrid_;
+	vector<float> gisGrid_;
 
 private:
 

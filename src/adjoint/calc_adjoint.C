@@ -34,7 +34,7 @@ void calc_func_sens_hmax(MeshCTX* meshctx, PropCTX* propctx);
 
 void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 
-//	calc_func_sens(meshctx, propctx);
+	calc_func_sens(meshctx, propctx);
 
 	HashTable* El_Table = meshctx->el_table;
 	HashEntryPtr* buck = El_Table->getbucketptr();
@@ -43,8 +43,8 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 	int iter = propctx->timeprops->iter;
 	int aa = 0, bb = 1;
 
-	if (propctx->timeprops->adjiter == 0)
-		calc_func_sens_hmax(meshctx, propctx);
+//	if (propctx->timeprops->adjiter == 0)
+//		calc_func_sens_hmax(meshctx, propctx);
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
@@ -137,7 +137,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 		}
 
 		for (int j = 0; j < NUM_STATE_VARS; j++)
-			adjoint[j] = /**(Curr_El->get_func_sens() + j)*/-adjcontr[j];
+			adjoint[j] = *(Curr_El->get_func_sens() + j) - adjcontr[j];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
@@ -260,10 +260,6 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 					for (int j = 0; j < 4; j++)
 						if (neigh_proc[j] == INIT) { // this is a boundary!
 
-							int aa = 1, bb = 0;
-							if (Curr_El->get_ithelem() == 8255)
-								aa = bb;
-
 							unsigned* neigh_key = Curr_El->get_neighbors();
 
 							int opos_dirc = (j + 2) % 4;
@@ -272,7 +268,7 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 							sens_on_boundary(meshctx, propctx, eff_el, j);
 
 							// if the adjacent cell to the boundary has two neighbors on the opposite side
-							if (neigh_proc[opos_dirc] > 0) {
+							if (neigh_proc[opos_dirc + 4] != -2) {
 								DualElem* eff_el = (DualElem*) El_Table->lookup(
 								    neigh_key + (opos_dirc + 4) * KEYLENGTH);
 

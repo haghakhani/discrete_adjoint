@@ -1,9 +1,9 @@
 /***************************************************************************
-                          cgis_trigrid.h  -  description
-                             -------------------
-    begin                : Mon Feb 21 2005
-    copyright            : (C) 2005 by Amrita Chanda
-    email                : achanda@buffalo.edu
+ cgis_trigrid.h  -  description
+ -------------------
+ begin                : Mon Feb 21 2005
+ copyright            : (C) 2005 by Amrita Chanda
+ email                : achanda@buffalo.edu
  ***************************************************************************/
 
 /***************************************************************************
@@ -19,21 +19,21 @@
 #define CGIS_TRIGRID_H
 
 /**This class creates an array of elevations. 
-  It answers the queries: Which triangle(s) contain point (x,y)?
-  and which triangles fall within the bounding area (x1,y1) and (x2,y2)?
-  *@author Amrita Chanda
-  */
+ It answers the queries: Which triangle(s) contain point (x,y)?
+ and which triangles fall within the bounding area (x1,y1) and (x2,y2)?
+ *@author Amrita Chanda
+ */
 
 class CGIS_TriGrid {
-public: 
+public:
 	CGIS_TriGrid(char *GIS_Dbase, char *GIS_Maplocation, char *GIS_Mapset, char *GIS_Rasterimage);
 	~CGIS_TriGrid();
 
-  double *_elevations;
-  double _xmax, _xmin, _ymax, _ymin;
-  int _num_of_rows;
-  int _num_of_cols;
-  double _res;
+	double *_elevations;
+	double _xmax, _xmin, _ymax, _ymin;
+	int _num_of_rows;
+	int _num_of_cols;
+	double _res;
 
 };
 

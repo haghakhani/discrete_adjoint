@@ -935,9 +935,8 @@ void dualplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 	fprintf(fp, "TITLE= \" %s (MESH OUTPUT) time %d:%02d:%g (hrs:min:sec), V*=%g\"\n",
 	    mapnames->gis_map, hours, minutes, seconds);
 
-	fprintf(fp, "VARIABLES = \"X\", \"Y\", \"Z\", \"PILE_HEIGHT\","
-			"\"X_MOMENTUM\", \"Y_MOMENTUM\","
-			"\"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\"\n");
+	fprintf(fp,
+	    "VARIABLES = \"X\", \"Y\", \"Z\", \"PILE_HEIGHT\", \"X_MOMENTUM\", \"Y_MOMENTUM\", \"DISC_ADJ1\", \"DISC_ADJ2\", \"DISC_ADJ3\", \"ithem\" \n");
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
@@ -984,11 +983,12 @@ void dualplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 					assert(NodeTemp);
 					int jj = j;
 					if (NodeTemp->getinfo() != S_C_CON)
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e\n", (*(NodeTemp->get_coord())) * lscale,
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e %d\n", (*(NodeTemp->get_coord())) * lscale,
 						    (*(NodeTemp->get_coord() + 1)) * lscale, NodeTemp->get_elevation() * lscale,
 						    state_vars[0] * hscale, state_vars[1] * momentum_scale,
 						    state_vars[2] * momentum_scale, adjoint[0] * adjoint_scale[0],
-						    adjoint[1] * adjoint_scale[1], adjoint[2] * adjoint_scale[2]);
+						    adjoint[1] * adjoint_scale[1], adjoint[2] * adjoint_scale[2],
+						    EmTemp->get_ithelem());
 
 					else // S_C_CON will have a discontinuity in the elevation so fix that by interpolation
 					{
@@ -1023,11 +1023,11 @@ void dualplotter(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops,
 
 						NodeTemp2 = (Node*) NodeTable->lookup(EmTemp2->getNode() + j * KEYLENGTH);
 						elev += .5 * NodeTemp2->get_elevation();
-						fprintf(fp, "%e %e %e %e %e %e %e %e %e\n", (*(NodeTemp->get_coord())) * lscale,
+						fprintf(fp, "%e %e %e %e %e %e %e %e %e %d\n", (*(NodeTemp->get_coord())) * lscale,
 						    (*(NodeTemp->get_coord() + 1)) * lscale, elev * lscale, state_vars[0] * hscale,
 						    state_vars[1] * momentum_scale, state_vars[2] * momentum_scale,
 						    adjoint[0] * adjoint_scale[0], adjoint[1] * adjoint_scale[1],
-						    adjoint[2] * adjoint_scale[2]);
+						    adjoint[2] * adjoint_scale[2], EmTemp->get_ithelem());
 					}
 				}
 			}

@@ -28,36 +28,34 @@ using namespace std;
 #include "useful_lib.h"
 #include "../header/FileFormat.h"
 
+Boundary::Boundary() {
+}
 
-Boundary::Boundary(){}
+void Boundary::setparameters(Node* n, double xv, double yv, int t) {
 
-
-void Boundary::setparameters(Node* n, double xv, double yv, int t)
-{
-
-  node=n;
-  x_value=xv;
-  y_value=yv;
-  type=t;
+	node = n;
+	x_value = xv;
+	y_value = yv;
+	type = t;
 
 }
 
-void Boundary::write_b_data_bin(FILE *fp){
-  fwriteI(fp,type);
-  fwriteI(fp,node->key[0]);
-  fwriteI(fp,node->key[1]);
+void Boundary::write_b_data_bin(FILE *fp) {
+	fwriteI(fp, type);
+	fwriteI(fp, node->key[0]);
+	fwriteI(fp, node->key[1]);
 #ifdef WRITEDOUBLEASFLOAT
-  fwriteF(fp,x_value);
-  fwriteF(fp,y_value);
+	fwriteF(fp,x_value);
+	fwriteF(fp,y_value);
 #else
-  fwriteD(fp,x_value);
-  fwriteD(fp,y_value);
+	fwriteD(fp, x_value);
+	fwriteD(fp, y_value);
 #endif
-  return;
+	return;
 }
 
-void Boundary::write_b_data(ofstream* out)
-{
-  *out<<type<<' '<<node->key[0]<<' '<<node->key[1]<<' '<<x_value<<' '<<y_value<<' '<<'\n';
+void Boundary::write_b_data(ofstream* out) {
+	*out << type << ' ' << node->key[0] << ' ' << node->key[1] << ' ' << x_value << ' ' << y_value
+	    << ' ' << '\n';
 
 }

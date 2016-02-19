@@ -628,7 +628,7 @@ void refine(T* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps*
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 + 0.5;
 	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 + 0.5;
 	Quad9P = new T(nodes, neigh, neigh_proc, generation, elm_loc, neigh_gen, material, EmTemp, coord,
-	    HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson,SETLINK);
+	    HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson, SETLINK);
 	double* state_vars = Quad9P->get_state_vars();
 
 	Quad9P->put_which_son(0);  //--by jp, 0 means son 0
@@ -693,7 +693,8 @@ void refine(T* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps*
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 - 0.5;
 	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 + 0.5;
 	Quad9P = new T(nodes, neigh, neigh_proc, generation, my_elm_loc, neigh_gen, material, EmTemp,
-	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson,SETLINK);
+	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson,
+	    SETLINK);
 	state_vars = Quad9P->get_state_vars();
 
 	Quad9P->put_which_son(1); //--by jp
@@ -759,7 +760,8 @@ void refine(T* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps*
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 - 0.5;
 	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 - 0.5;
 	Quad9P = new T(nodes, neigh, neigh_proc, generation, my_elm_loc, neigh_gen, material, EmTemp,
-	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson,SETLINK);
+	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson,
+	    SETLINK);
 	state_vars = Quad9P->get_state_vars();
 
 	Quad9P->put_which_son(2); //--by jp
@@ -825,7 +827,8 @@ void refine(T* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps*
 	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 + 0.5;
 	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 - 0.5;
 	Quad9P = new T(nodes, neigh, neigh_proc, generation, my_elm_loc, neigh_gen, material, EmTemp,
-	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson,SETLINK);
+	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson,
+	    SETLINK);
 	state_vars = Quad9P->get_state_vars();
 
 	Quad9P->put_which_son(3); //--by jp

@@ -6,12 +6,13 @@
 #include "GisAscFile.h"
 #include "GisLines.h"
 
-class GisSPRFile :	public GisAscFile{
+class GisSPRFile: public GisAscFile {
 public:
 
 	GisSPRFile(const string& name, const char* mode = "r");
-	
-	virtual ~GisSPRFile(){} 
+
+	virtual ~GisSPRFile() {
+	}
 
 	bool gotoPOINTSSection();
 	bool gotoLINESSection();
@@ -26,13 +27,12 @@ public:
 
 	bool gotoSection(string& sectionName);
 
-
 protected:
 
 	string _sepStr;
 
 private:
-	
+
 // No copy allowed
 	GisSPRFile(const GisSPRFile&);
 	GisSPRFile& operator=(const GisSPRFile&);

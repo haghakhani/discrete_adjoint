@@ -26,55 +26,58 @@ using namespace std;
 
 class GisLabels;
 
-class GisLine
-{
+class GisLine {
 public:
 
 	GisLine();
 	GisLine(vector<double>& xS, vector<double>& yS);
-	
-	virtual ~GisLine(){} 
 
-	int numberOfPoints()
-	{ return _nPoints; }
+	virtual ~GisLine() {
+	}
+
+	int numberOfPoints() {
+		return _nPoints;
+	}
 
 	void getPoints(double* xCoords, double* yCoords);
 
-	void insertPoints (double x, double y);
+	void insertPoints(double x, double y);
 
-	void setIndex (int lineIndex)
-	{ _lineIndex = lineIndex; }
-	
-	void setLabel (string lineLabel)
-	{ _lineLabel = lineLabel; }
+	void setIndex(int lineIndex) {
+		_lineIndex = lineIndex;
+	}
 
-	int getIndex ()
-	{ return _lineIndex; }
+	void setLabel(string lineLabel) {
+		_lineLabel = lineLabel;
+	}
 
-	string getLabel ()
-	{ return _lineLabel; }
-	
+	int getIndex() {
+		return _lineIndex;
+	}
+
+	string getLabel() {
+		return _lineLabel;
+	}
+
 	bool findPoints(double x, double y, double scale);
 
 	void print();
 
 	vector<double> _xS;
 	vector<double> _yS;
-	GisLine(const GisLine& a)
-	{
+	GisLine(const GisLine& a) {
 		_xS = a._xS;
 		_yS = a._yS;
 		_lineIndex = 0;
-		_nPoints = (int)_xS.size();
+		_nPoints = (int) _xS.size();
 	}
 
-	GisLine& operator=(const GisLine& a)
-	{
-		if ( this != &a )
-		{	
-			_xS = a._xS; _yS = a._yS;
+	GisLine& operator=(const GisLine& a) {
+		if (this != &a) {
+			_xS = a._xS;
+			_yS = a._yS;
 			_lineIndex = 0;
-			_nPoints = (int)_xS.size();
+			_nPoints = (int) _xS.size();
 		}
 		return *this;
 	}
@@ -87,22 +90,25 @@ private:
 
 };
 
-class GisLines
-{
+class GisLines {
 public:
 
 	GisLines(const string& name);
-	
-	virtual ~GisLines(){} 
 
-	bool good()
-	{ return _status; }
+	virtual ~GisLines() {
+	}
 
-	int numberOfLines()
-	{ return _nLines; }
+	bool good() {
+		return _status;
+	}
 
-	void insertLine (const GisLine& readLine)
-	{ _lines.push_back(readLine); }
+	int numberOfLines() {
+		return _nLines;
+	}
+
+	void insertLine(const GisLine& readLine) {
+		_lines.push_back(readLine);
+	}
 
 	int getLineSize(int nLine, int* lineSize);
 
@@ -124,7 +130,7 @@ protected:
 	vector<GisLine> _lines;
 
 private:
-	
+
 // No copy allowed
 	GisLines(const GisLines&);
 	GisLines& operator=(const GisLines&);

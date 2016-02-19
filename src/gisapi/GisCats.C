@@ -26,27 +26,22 @@
 #include "GisCats.h"
 #include "GisAscFile.h"
 
-
-
-GisCats::GisCats ( const string& name )
-{
+GisCats::GisCats(const string& name) {
 	_status = false;
-	GisAscFile catsFile( name );
-	if (catsFile.good())
-	{
+	GisAscFile catsFile(name);
+	if (catsFile.good()) {
 		char charText[200];
 		catsFile.getLine(charText, 200, '#');	//#
-		catsFile.getAscInt( _ncats );	// number of categories
+		catsFile.getAscInt(_ncats);	// number of categories
 		catsFile.getLine(charText, 200);	//categories
 		catsFile.getLine(charText, 200);	//Geology
 		catsFile.getLine(charText, 200);	//Empty line
 		catsFile.getLine(charText, 200);	//0.00 0.00 0.00 0.00
 
-		while (	catsFile.good() )
-		{
+		while (catsFile.good()) {
 			string catName;
 			int catNumber;
-			catsFile.getAscInt( catNumber );	//category number
+			catsFile.getAscInt(catNumber);	//category number
 			catsFile.getLine(charText, 20, ':');
 			catsFile.getString(catName);
 			_catnames[catNumber] = catName;
@@ -58,12 +53,10 @@ GisCats::GisCats ( const string& name )
 	}
 }
 
-void
-GisCats::print()
-{
-	map<int,string>::iterator i;
+void GisCats::print() {
+	map<int, string>::iterator i;
 
-	for( i = _catnames.begin(); i != _catnames.end(); i++)
-        cout << (*i).first << " " << (*i).second << endl;
+	for (i = _catnames.begin(); i != _catnames.end(); i++)
+		cout << (*i).first << " " << (*i).second << endl;
 }
 

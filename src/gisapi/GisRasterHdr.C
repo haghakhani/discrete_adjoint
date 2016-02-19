@@ -18,53 +18,48 @@
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
- 
+
 #include <string.h>
 
 #include "GisRasterHdr.h"
 #include "GisAscFile.h"
 
-GisRasterHdr::GisRasterHdr ( const string& name )
-{
+GisRasterHdr::GisRasterHdr(const string& name) {
 	_status = false;
-	GisAscFile headerFile( name );
-	if (headerFile.good())
-	{
+	GisAscFile headerFile(name);
+	if (headerFile.good()) {
 		char charText[20];
 		headerFile.getLine(charText, 20, ':');
-		if ( strcmp(charText, "proj") == 0)
-		{ //At least test first line!!!
-			headerFile.getAscInt ( _projId );
+		if (strcmp(charText, "proj") == 0) { //At least test first line!!!
+			headerFile.getAscInt(_projId);
 			headerFile.getLine(charText, 20, ':');
-			headerFile.getAscInt ( _zoneId );
+			headerFile.getAscInt(_zoneId);
 			headerFile.getLine(charText, 20, ':');
-			headerFile.getAscDouble (_north);
+			headerFile.getAscDouble(_north);
 			headerFile.getLine(charText, 20, ':');
-			headerFile.getAscDouble (_south);
+			headerFile.getAscDouble(_south);
 			headerFile.getLine(charText, 20, ':');
-			headerFile.getAscDouble (_east);
+			headerFile.getAscDouble(_east);
 			headerFile.getLine(charText, 20, ':');
-			headerFile.getAscDouble (_west);
+			headerFile.getAscDouble(_west);
 			headerFile.getLine(charText, 20, ':');
-			headerFile.getAscInt (_cols);
+			headerFile.getAscInt(_cols);
 			headerFile.getLine(charText, 20, ':');
-			headerFile.getAscInt (_rows);
+			headerFile.getAscInt(_rows);
 			headerFile.getLine(charText, 20, ':');
-			headerFile.getAscDouble (_ewresol);
+			headerFile.getAscDouble(_ewresol);
 			headerFile.getLine(charText, 20, ':');
-			headerFile.getAscDouble (_nsresol);
+			headerFile.getAscDouble(_nsresol);
 			headerFile.getLine(charText, 20, ':');
-			headerFile.getAscInt (_formatId);
+			headerFile.getAscInt(_formatId);
 			headerFile.getLine(charText, 20, ':');
-			headerFile.getAscInt (_compressed);
+			headerFile.getAscInt(_compressed);
 			_status = true;
 		}
 	}
 }
 
-void
-GisRasterHdr::print()
-{
+void GisRasterHdr::print() {
 	cout << "projId " << _projId << "\n";
 	cout << "zoneId " << _zoneId << "\n";
 	cout << "north " << _north << "\n";

@@ -18,32 +18,26 @@
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
- 
 
 #ifdef WIN32
 #pragma warning ( disable: 4786 )
 #endif
 #include "GisSPRFile.h"
 
-GisSPRFile::GisSPRFile ( const string& name, const char* mode ):
-	GisAscFile ( name, mode )
-{
+GisSPRFile::GisSPRFile(const string& name, const char* mode) :
+		GisAscFile(name, mode) {
 }
 
-bool
-GisSPRFile::gotoLINESSection()
-{
+bool GisSPRFile::gotoLINESSection() {
 	bool stringFound = false;
 	this->rewind();
-	while ( this->good() )
-	{
+	while (this->good()) {
 		string inString;
 		string outString;
 		this->getLine(inString);
 		istringstream inStrStream(inString);
 		inStrStream >> outString;
-		if ( outString == string("LINES") )
-		{
+		if (outString == string("LINES")) {
 			stringFound = true;
 			break;
 		}
@@ -51,20 +45,16 @@ GisSPRFile::gotoLINESSection()
 	return stringFound;
 }
 
-bool
-GisSPRFile::gotoPOINTSSection()
-{
+bool GisSPRFile::gotoPOINTSSection() {
 	bool stringFound = false;
 	this->rewind();
-	while ( this->good() )
-	{
+	while (this->good()) {
 		string inString;
 		string outString;
 		this->getLine(inString);
 		istringstream inStrStream(inString);
 		inStrStream >> outString;
-		if ( outString == string("POINTS") )
-		{
+		if (outString == string("POINTS")) {
 			stringFound = true;
 			break;
 		}
@@ -72,19 +62,15 @@ GisSPRFile::gotoPOINTSSection()
 	return stringFound;
 }
 
-bool
-GisSPRFile::gotoSection(string& sectionName)
-{
+bool GisSPRFile::gotoSection(string& sectionName) {
 	bool stringFound = false;
-	while ( this->good() )
-	{
+	while (this->good()) {
 		string inString;
 		string outString;
 		this->getLine(inString);
 		istringstream inStrStream(inString);
 		inStrStream >> outString;
-		if ( outString == sectionName )
-		{
+		if (outString == sectionName) {
 			stringFound = true;
 			break;
 		}
@@ -92,15 +78,11 @@ GisSPRFile::gotoSection(string& sectionName)
 	return stringFound;
 }
 
-bool
-GisSPRFile::readINFOSection()
-{
+bool GisSPRFile::readINFOSection() {
 	string infoStr("INFO");
-        if ( this->gotoSection (infoStr) )
-	{
+	if (this->gotoSection(infoStr)) {
 		bool infoSection = false;
-		while ( this->good() )
-		{
+		while (this->good()) {
 			string inString;
 			string outString;
 
@@ -108,18 +90,16 @@ GisSPRFile::readINFOSection()
 			istringstream inStrStream(inString);
 			inStrStream >> outString;
 
-			if ( outString.find ("//") == 0)
+			if (outString.find("//") == 0)
 				continue;
 
-			if ( outString == string("INFO_END") )
-			{
+			if (outString == string("INFO_END")) {
 				infoSection = true;
 				break;
 			}
 
-			if ( outString == string("SEPARATOR") )
-			{
-				inStrStream >>  _sepStr;
+			if (outString == string("SEPARATOR")) {
+				inStrStream >> _sepStr;
 				continue;
 			}
 		}
@@ -128,85 +108,72 @@ GisSPRFile::readINFOSection()
 	return false;
 }
 
-bool
-GisSPRFile::readFirstLine(vector<double>& x, vector<double>& y)
-{
+bool GisSPRFile::readFirstLine(vector<double>& x, vector<double>& y) {
 	bool lineFound = false;
-	if ( this->gotoLINESSection() )
-	{
-		if ( this->readINFOSection() )
-		{
+	if (this->gotoLINESSection()) {
+		if (this->readINFOSection()) {
 			double xString, yString;
 			string inString, outString;
-			for (;;)
-			{
+			for (;;) {
 				this->getLine(inString);
 				istringstream inStrStream(inString);
 				inStrStream >> outString;
-				if ( outString == string("END") )
+				if (outString == string("END"))
 					break;
 
-				inStrStream.seekg(0, ios::beg );
+				inStrStream.seekg(0, ios::beg);
 				inStrStream >> xString >> yString;
 
 				x.push_back(xString);
 				y.push_back(yString);
 			}
-			if ( x.size() > 0 )
+			if (x.size() > 0)
 				lineFound = true;
 		}
 	}
 	return lineFound;
 }
 
-bool
-GisSPRFile::readNextLine(vector<double>& x, vector<double>& y)
-{
+bool GisSPRFile::readNextLine(vector<double>& x, vector<double>& y) {
 	bool lineFound = false;
 	double xString, yString;
 	string inString, outString;
-	for (;;)
-	{
+	for (;;) {
 		this->getLine(inString);
 		istringstream inStrStream(inString);
 		inStrStream >> outString;
-		if ( outString == string("END") )
+		if (outString == string("END"))
 			break;
 
-		inStrStream.seekg(0, ios::beg );
+		inStrStream.seekg(0, ios::beg);
 		inStrStream >> xString >> yString;
 
 		x.push_back(xString);
 		y.push_back(yString);
 	}
-	if ( x.size() > 0 )
+	if (x.size() > 0)
 		lineFound = true;
 
 	return lineFound;
 }
 
-bool
-GisSPRFile::readLabels(vector<double>& x, vector<double>& y, vector<string>& labelsStr)
-{
+bool GisSPRFile::readLabels(vector<double>& x, vector<double>& y, vector<string>& labelsStr) {
 	bool labelFound = false;
-	if ( this->gotoPOINTSSection() )
-	{
-		if ( this->readINFOSection() )
-		{
+	if (this->gotoPOINTSSection()) {
+		if (this->readINFOSection()) {
 			double xString, yString;
 			string labelStr;
 			string nextString1, nextString2;
 			string inString, outString;
 
-			for (;;)
-			{
+			for (;;) {
 				this->getLine(inString);
 				istringstream inStrStream(inString);
 				inStrStream >> outString;
-				if ( outString == string("END") )
+				if (outString == string("END"))
 					break;
 
-				inStrStream.seekg(0, ios::beg );
+				inStrStream.seekg(0, ios::beg);
 				if (_sepStr.size() > 0)
 					inStrStream >> xString >> nextString1 >> yString >> nextString2 >> labelStr;
 				else

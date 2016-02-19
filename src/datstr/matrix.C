@@ -100,15 +100,15 @@ inline Matrix<T, Row, Col> Matrix<T, Row, Col>::operator/(const T& rhs) {
 
 // Access the individual elements
 template<typename T, unsigned Row, unsigned Col>
-inline T& Matrix<T, Row, Col>::operator()(const unsigned& row, const unsigned& col){
+inline T& Matrix<T, Row, Col>::operator()(const unsigned& row, const unsigned& col) {
 
-	return this->mat[row*cols+col];
+	return this->mat[row * cols + col];
 }
 
 template<typename T, unsigned Row, unsigned Col>
-inline const T& Matrix<T, Row, Col>::operator()(const unsigned& row, const unsigned& col) const{
+inline const T& Matrix<T, Row, Col>::operator()(const unsigned& row, const unsigned& col) const {
 
-	return this->mat[row*cols+col];
+	return this->mat[row * cols + col];
 }
 
 template<unsigned size>
@@ -130,7 +130,8 @@ inline Mat3x3& Vec_Mat<size>::operator()(const unsigned& index) {
 }
 
 template<unsigned size>
-inline double Vec_Mat<size>::operator()(const unsigned& index, const unsigned& i, const unsigned& j) {
+inline double Vec_Mat<size>::operator()(const unsigned& index, const unsigned& i,
+    const unsigned& j) {
 	Mat3x3& A = vec_mat[index];
 	return A(i, j);
 }

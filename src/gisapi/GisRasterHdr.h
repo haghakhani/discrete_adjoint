@@ -23,46 +23,57 @@
 #include <fstream>
 using namespace std;
 
-class GisRasterHdr
-{
+class GisRasterHdr {
 public:
 
 	GisRasterHdr(const string& name);
-	
-	virtual ~GisRasterHdr(){} 
 
-	bool isCompressed()
-	{ return (_compressed == 1); }
+	virtual ~GisRasterHdr() {
+	}
 
-	int Rows()
-	{ return _rows; }
+	bool isCompressed() {
+		return (_compressed == 1);
+	}
 
-	int Cols()
-	{ return _cols; }
+	int Rows() {
+		return _rows;
+	}
 
-	double XRes()
-	{ return _ewresol;}
+	int Cols() {
+		return _cols;
+	}
 
-	double YRes()
-	{ return _nsresol;}
+	double XRes() {
+		return _ewresol;
+	}
 
-	double North()
-	{ return _north;}
+	double YRes() {
+		return _nsresol;
+	}
 
-	double South()
-	{ return _south;}
+	double North() {
+		return _north;
+	}
 
-	double East()
-	{ return _east;}
+	double South() {
+		return _south;
+	}
 
-	double West()
-	{ return _west;}
+	double East() {
+		return _east;
+	}
 
-	bool good()
-	{ return _status; }
+	double West() {
+		return _west;
+	}
 
-	int cellFormat()
-	{ return _formatId; }
+	bool good() {
+		return _status;
+	}
+
+	int cellFormat() {
+		return _formatId;
+	}
 
 	void print();
 
@@ -83,7 +94,7 @@ protected:
 	bool _status; // true = OK, 1false = some error
 
 private:
-	
+
 // No copy allowed
 	GisRasterHdr(const GisRasterHdr&);
 	GisRasterHdr& operator=(const GisRasterHdr&);

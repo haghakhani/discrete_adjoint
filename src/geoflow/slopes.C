@@ -62,7 +62,7 @@ void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, i
 					currentPtr = currentPtr->next;
 				}
 			}
-	}else {
+	} else {
 
 		for (i = 0; i < El_Table->get_no_of_buckets(); i++)
 			if (*(buck + i)) {

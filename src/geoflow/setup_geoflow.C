@@ -47,7 +47,6 @@ void setup_geoflow(HashTable* El_Table, HashTable* NodeTable, int myid, int nump
 			HashEntryPtr currentPtr = *(buck + i);
 			while (currentPtr) {
 				Element* Curr_El = (Element*) (currentPtr->value);
-				int refined = Curr_El->get_refined_flag();
 				if (Curr_El->get_adapted_flag() > 0) //if this is a refined element don't involve!!!
 				    {
 					Curr_El->find_positive_x_side(NodeTable);
@@ -74,12 +73,6 @@ void setup_geoflow(HashTable* El_Table, HashTable* NodeTable, int myid, int nump
 				if (Curr_El->get_adapted_flag() > 0) //if this is a refined element don't involve!!!
 				    {
 					Curr_El->calc_d_gravity(El_Table);
-//					double aaa = 1.3, ddd = .5;
-//					if (*(Curr_El->pass_key()) == 2379037459
-//							&& *(Curr_El->pass_key() + 1) == 2973438897) {
-//						ddd = 0;
-//						aaa = 0;
-//					}
 
 				}
 
@@ -100,7 +93,7 @@ void calc_d_gravity(HashTable* El_Table) {
 			HashEntryPtr currentPtr = *(buck + i);
 			while (currentPtr) {
 				Element* Curr_El = (Element*) (currentPtr->value);
-				int refined = Curr_El->get_refined_flag();
+
 				if (Curr_El->get_adapted_flag() > 0) {
 					Curr_El->calc_d_gravity(El_Table);
 				}

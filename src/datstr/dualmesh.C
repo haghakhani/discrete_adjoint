@@ -270,10 +270,14 @@ int SolRec::data_range() {
 }
 
 int SolRec::write_sol() {
-	if (data_range() > range)
-		return 1;
+	int write = 0, globe_write = 0;
+	if (data_range() > range) {
+		write = 1;
+		MPI_Allreduce(&write, &globe_write, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+		return globe_write;
+	}
 
-	return 0;
+	return globe_write;
 }
 
 int SolRec::read_sol() {
@@ -902,6 +906,365 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 
 }
 
+DualElem::DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
+
+	Node* node;
+	int i, j;
+	myprocess = myid;
+	generation = elem2->generation;
+	opposite_brother_flag = elem2->opposite_brother_flag;
+	material = elem2->material;
+
+	for (i = 0; i < 8; i++) {
+		neigh_proc[i] = elem2->neigh_proc[i];
+		neigh_gen[i] = elem2->neigh_gen[i];
+	}
+
+	refined = elem2->refined;
+	adapted = elem2->adapted;
+	which_son = elem2->which_son;
+	new_old = elem2->new_old;
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < KEYLENGTH; j++)
+			brothers[i][j] = elem2->brothers[i][j];
+
+	for (i = 0; i < KEYLENGTH; i++)
+		key[i] = elem2->key[i];
+
+	for (i = 0; i < 8; i++)
+		for (int j = 0; j < KEYLENGTH; j++) {
+			node_key[i][j] = elem2->node_key[i][j];
+			neighbor[i][j] = elem2->neighbor[i][j];
+			if (i < 4)
+				son[i][j] = elem2->son[i][j];
+
+		}
+	for (i = 0; i < EQUATIONS; i++) {
+		el_error[i] = elem2->el_error[i];
+	}
+
+	//and the node info -- ignore some info if this is just getting a parent from another processor...
+	for (i = 0; i < 8; i++) {
+		if (elem2->n_coord[i][0] * elem2->n_coord[i][1] == 0) {
+			printf(
+			    "myid=%d elem2->key={%u,%u} elem2->coord=(%20g,%20g) inode=%d node->key={%u,%u} node->coord=(%20g,%20g)\n",
+			    myid, elem2->key[0], elem2->key[1], elem2->n_coord[8][0], elem2->n_coord[8][1], i,
+			    elem2->node_key[i][0], elem2->node_key[i][1], elem2->n_coord[i][0], elem2->n_coord[i][1]);
+		}
+
+		node = (Node*) HT_Node_Ptr->lookup(elem2->node_key[i]);
+		if (!node) {
+			node = new Node(elem2->node_key[i], elem2->n_coord[i], elem2->n_info[i],
+			    elem2->node_elevation[i], i);
+
+			HT_Node_Ptr->add(elem2->node_key[i], node);
+		} else {
+			//because of storing all the node but not updating the
+			//info and order if the node was not previously in the subdomain
+			//check if the sfc is screwed
+			if (*(node->get_coord()) != elem2->n_coord[i][0]
+			    || *(node->get_coord() + 1) != elem2->n_coord[i][1]) {
+				printf("myid=%d\n  pack  elem(x,y)=(%20g,%20g)\n exist elem(x,y)=(%20g,%20g)\n\n", myid,
+				    elem2->n_coord[i][0], elem2->n_coord[i][1], *(node->get_coord()),
+				    *(node->get_coord() + 1));
+				fflush(stdout);
+				int screwd = 0;
+				assert(screwd);
+			}
+			if (refined == 0)  // only update if this is from an active element
+				node->set_parameters(elem2->n_info[i]);
+		}
+	}
+
+	node = (Node*) HT_Node_Ptr->lookup(elem2->key);
+	if (!node) {
+		node = new Node(elem2->key, elem2->n_coord[8], elem2->n_info[8], elem2->node_elevation[8], 8);
+
+		HT_Node_Ptr->add(elem2->key, node);
+	} else if (refined != 0) // only update if this is from an active element
+		node->set_parameters(elem2->n_info[8]);
+
+	//geoflow stuff
+	positive_x_side = elem2->positive_x_side;
+	elevation = elem2->elevation;
+	for (i = 0; i < DIMENSION; i++) {
+		coord[i] = elem2->n_coord[8][i];
+		dx[i] = elem2->dx[i];
+		eigenvxymax[i] = elem2->eigenvxymax[i];
+		kactxy[i] = elem2->kactxy[i];
+		zeta[i] = elem2->zeta[i];
+		curvature[i] = elem2->curvature[i];
+		d_gravity[i] = elem2->d_gravity[i];
+	}
+	for (i = 0; i < NUM_STATE_VARS; i++) {
+		state_vars[i] = elem2->state_vars[i];
+		prev_state_vars[i] = elem2->prev_state_vars[i];
+		Influx[i] = elem2->Influx[i];
+		adjoint[i] = elem2->adjoint[i];
+		prev_adjoint[i] = elem2->prev_adjoint[i];
+	}
+	for (i = 0; i < 3; i++)
+		gravity[i] = elem2->gravity[i];
+	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
+		d_state_vars[i] = elem2->d_state_vars[i];
+	shortspeed = elem2->shortspeed;
+	lb_weight = elem2->lb_weight;
+	elm_loc[0] = elem2->elm_loc[0];
+	elm_loc[1] = elem2->elm_loc[1];
+
+	iwetnode = elem2->iwetnode;
+	Awet = elem2->Awet;
+	Swet = elem2->Swet;
+	drypoint[0] = elem2->drypoint[0];
+	drypoint[1] = elem2->drypoint[1];
+
+}
+
+void DualElem::update(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
+
+	Node* node;
+	int i, j;
+	myprocess = myid;
+	generation = elem2->generation;
+	opposite_brother_flag = elem2->opposite_brother_flag;
+	material = elem2->material;
+
+	for (i = 0; i < 8; i++) {
+		neigh_proc[i] = elem2->neigh_proc[i];
+		neigh_gen[i] = elem2->neigh_gen[i];
+	}
+
+	refined = elem2->refined;
+	adapted = elem2->adapted;
+	which_son = elem2->which_son;
+	new_old = elem2->new_old;
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < KEYLENGTH; j++)
+			brothers[i][j] = elem2->brothers[i][j];
+
+	for (i = 0; i < KEYLENGTH; i++)
+		key[i] = elem2->key[i];
+
+	for (i = 0; i < 8; i++)
+		for (int j = 0; j < KEYLENGTH; j++) {
+			node_key[i][j] = elem2->node_key[i][j];
+			neighbor[i][j] = elem2->neighbor[i][j];
+			if (i < 4)
+				son[i][j] = elem2->son[i][j];
+
+		}
+	for (i = 0; i < EQUATIONS; i++) {
+		el_error[i] = elem2->el_error[i];
+	}
+
+	//and the node info -- ignore some info if this is just getting a parent from another processor...
+	for (i = 0; i < 8; i++) {
+		if (elem2->n_coord[i][0] * elem2->n_coord[i][1] == 0) {
+			printf(
+			    "myid=%d elem2->key={%u,%u} elem2->coord=(%20g,%20g) inode=%d node->key={%u,%u} node->coord=(%20g,%20g)\n",
+			    myid, elem2->key[0], elem2->key[1], elem2->n_coord[8][0], elem2->n_coord[8][1], i,
+			    elem2->node_key[i][0], elem2->node_key[i][1], elem2->n_coord[i][0], elem2->n_coord[i][1]);
+		}
+
+		node = (Node*) HT_Node_Ptr->lookup(elem2->node_key[i]);
+		if (!node) {
+			node = new Node(elem2->node_key[i], elem2->n_coord[i], elem2->n_info[i],
+			    elem2->node_elevation[i], i);
+
+			HT_Node_Ptr->add(elem2->node_key[i], node);
+		} else {
+			//because of storing all the node but not updating the
+			//info and order if the node was not previously in the subdomain
+			//check if the sfc is screwed
+			if (*(node->get_coord()) != elem2->n_coord[i][0]
+			    || *(node->get_coord() + 1) != elem2->n_coord[i][1]) {
+				printf("myid=%d\n  pack  elem(x,y)=(%20g,%20g)\n exist elem(x,y)=(%20g,%20g)\n\n", myid,
+				    elem2->n_coord[i][0], elem2->n_coord[i][1], *(node->get_coord()),
+				    *(node->get_coord() + 1));
+				fflush(stdout);
+				int screwd = 0;
+				assert(screwd);
+			}
+			if (refined == 0)  // only update if this is from an active element
+				node->set_parameters(elem2->n_info[i]);
+		}
+	}
+
+	node = (Node*) HT_Node_Ptr->lookup(elem2->key);
+	if (!node) {
+		node = new Node(elem2->key, elem2->n_coord[8], elem2->n_info[8], elem2->node_elevation[8], 8);
+
+		HT_Node_Ptr->add(elem2->key, node);
+	} else if (refined != 0) // only update if this is from an active element
+		node->set_parameters(elem2->n_info[8]);
+
+	//geoflow stuff
+	positive_x_side = elem2->positive_x_side;
+	elevation = elem2->elevation;
+	for (i = 0; i < DIMENSION; i++) {
+		coord[i] = elem2->n_coord[8][i];
+		dx[i] = elem2->dx[i];
+		eigenvxymax[i] = elem2->eigenvxymax[i];
+		kactxy[i] = elem2->kactxy[i];
+		zeta[i] = elem2->zeta[i];
+		curvature[i] = elem2->curvature[i];
+		d_gravity[i] = elem2->d_gravity[i];
+	}
+	for (i = 0; i < NUM_STATE_VARS; i++) {
+		state_vars[i] = elem2->state_vars[i];
+		prev_state_vars[i] = elem2->prev_state_vars[i];
+		Influx[i] = elem2->Influx[i];
+		adjoint[i] = elem2->adjoint[i];
+		prev_adjoint[i] = elem2->prev_adjoint[i];
+	}
+	for (i = 0; i < 3; i++)
+		gravity[i] = elem2->gravity[i];
+	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
+		d_state_vars[i] = elem2->d_state_vars[i];
+	shortspeed = elem2->shortspeed;
+	lb_weight = elem2->lb_weight;
+	elm_loc[0] = elem2->elm_loc[0];
+	elm_loc[1] = elem2->elm_loc[1];
+
+	iwetnode = elem2->iwetnode;
+	Awet = elem2->Awet;
+	Swet = elem2->Swet;
+	drypoint[0] = elem2->drypoint[0];
+	drypoint[1] = elem2->drypoint[1];
+
+}
+
+void DualElem::put_jacpack(JacPack* jac) {
+
+	int neigh = which_neighbor(jac->key_neigh);
+	Vec_Mat<9>& jacobian = get_jacobian();
+
+//	if ((jac->key_send[0] == 3934801604 && jac->key_send[1] == 3964585199)
+//	    || (jac->key_neigh[0] == 3934801604 && jac->key_neigh[1] == 3964585199)) {
+//		cout << "key_send: " << jac->key_send[0] << " , " << jac->key_send[1] << "  key_neigh: "
+//		    << jac->key_neigh[0] << " , " << jac->key_neigh[1] << "\njacobian matrix is:\n";
+//
+//		for (int i = 0; i < NUM_STATE_VARS; ++i) {
+//			for (int j = 0; j < NUM_STATE_VARS; ++j)
+//				cout << jac->mat[i * NUM_STATE_VARS + j] << " ";
+//			cout << endl;
+//		}
+//	}
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		for (int j = 0; j < NUM_STATE_VARS; ++j)
+			//neigh + 1 because we stoere the jacobian of element itself in 0
+			jacobian(neigh + 1, i, j) = jac->mat[i * NUM_STATE_VARS + j];
+}
+
+void DualElem::Pack_jacobian(JacPack* jac, int neigh) {
+
+	Vec_Mat<9>& jacobian = get_jacobian();
+
+	for (int i = 0; i < KEYLENGTH; ++i) {
+		jac->key_send[i] = key[i];
+		jac->key_neigh[i] = *(get_neighbors() + neigh * KEYLENGTH + i);
+	}
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		for (int j = 0; j < NUM_STATE_VARS; ++j)
+			//neigh + 1 because we stoere the jacobian of element itself in 0
+			jac->mat[i * NUM_STATE_VARS + j] = jacobian(neigh + 1, i, j);
+
+}
+
+void DualElem::Pack_element(DualElemPack* elem, HashTable* HT_Node_Ptr, int destination_proc) {
+	int j, i = 0;
+
+	Node* node;
+
+	elem->myprocess = destination_proc;
+	elem->generation = generation;
+	elem->opposite_brother_flag = opposite_brother_flag;
+	elem->material = material;
+
+	for (i = 0; i < 8; i++) {
+		elem->neigh_proc[i] = neigh_proc[i];
+		elem->neigh_gen[i] = neigh_gen[i];
+	}
+
+	elem->refined = refined;
+	elem->adapted = adapted;
+	elem->which_son = which_son;
+	elem->new_old = new_old;
+
+	for (i = 0; i < KEYLENGTH; i++)
+		elem->key[i] = key[i];
+
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < KEYLENGTH; j++)
+			elem->brothers[i][j] = brothers[i][j];
+
+	for (i = 0; i < 8; i++)
+		for (j = 0; j < KEYLENGTH; j++) {
+			elem->node_key[i][j] = node_key[i][j];
+			elem->neighbor[i][j] = neighbor[i][j];
+			if (i < 4)
+				elem->son[i][j] = son[i][j];
+		}
+	for (i = 0; i < EQUATIONS; i++) {
+		elem->el_error[i] = el_error[i];
+
+	}
+
+	//and the node info:
+	for (i = 0; i < 8; i++) {
+		node = (Node*) HT_Node_Ptr->lookup(elem->node_key[i]);
+		assert(node);
+		elem->n_info[i] = node->info;
+		for (j = 0; j < 2; j++)
+			elem->n_coord[i][j] = node->coord[j];
+		elem->node_elevation[i] = node->elevation;
+	}
+
+	node = (Node*) HT_Node_Ptr->lookup(elem->key);
+	assert(node);
+	elem->n_info[8] = node->info;
+	for (j = 0; j < 2; j++)
+		elem->n_coord[8][j] = node->coord[j];
+	elem->node_elevation[8] = node->elevation;
+
+	//geoflow stuff
+	elem->positive_x_side = positive_x_side;
+	elem->elevation = elevation;
+	for (i = 0; i < DIMENSION; i++) {
+		elem->dx[i] = dx[i];
+		elem->eigenvxymax[i] = eigenvxymax[i];
+		elem->kactxy[i] = kactxy[i];
+		elem->zeta[i] = zeta[i];
+		elem->curvature[i] = curvature[i];
+		elem->d_gravity[i] = d_gravity[i];
+	}
+	for (i = 0; i < NUM_STATE_VARS; i++) {
+		elem->state_vars[i] = state_vars[i];
+		elem->prev_state_vars[i] = prev_state_vars[i];
+		elem->Influx[i] = Influx[i];
+		elem->adjoint[i] = adjoint[i];
+		elem->prev_adjoint[i] = prev_adjoint[i];
+	}
+	for (i = 0; i < 3; i++)
+		elem->gravity[i] = gravity[i];
+
+	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
+		elem->d_state_vars[i] = d_state_vars[i];
+
+	elem->shortspeed = shortspeed;
+	elem->lb_weight = lb_weight;
+	elem->elm_loc[0] = elm_loc[0];
+	elem->elm_loc[1] = elm_loc[1];
+
+	elem->iwetnode = iwetnode;
+	elem->Awet = Awet;
+	elem->Swet = Swet;
+	elem->drypoint[0] = drypoint[0];
+	elem->drypoint[1] = drypoint[1];
+}
+
 void DualElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double gamma) {
 	int j = 0, bc = 0;
 	/* check to see if this is a boundary */
@@ -1407,9 +1770,9 @@ void DualElem::calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<DualE
 		flx_jac_cont.set(side, 1, 2, ZERO_MATRIX);
 
 		// here the element elm1 must be a ghost element
-		(elm1->get_flx_jac_cont()).set(side, 0, 0, jac_neigh1);
-		(elm1->get_flx_jac_cont()).set(side, 0, 1, jac);
-		(elm1->get_flx_jac_cont()).set(side, 0, 2, ZERO_MATRIX);
+//		(elm1->get_flx_jac_cont()).set(side, 0, 0, jac_neigh1);
+//		(elm1->get_flx_jac_cont()).set(side, 0, 1, jac);
+//		(elm1->get_flx_jac_cont()).set(side, 0, 2, ZERO_MATRIX);
 
 		// why element elm2 which must be a ghost element always exists?????(Hossein asking)
 		elm2 = (DualElem*) El_Table->lookup(&neighbor[zp + 4][0]);
@@ -1445,14 +1808,15 @@ void DualElem::calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<DualE
 			for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
 				np->flux[ivar] = 0.5 * (np->flux[ivar] + ghostflux[ivar]);
 
-			flx_jac_cont.set(side, 1, 0, jac, jac_res);
-			flx_jac_cont.set(side, 1, 1, jac_neigh1, ZERO_MATRIX);
-			flx_jac_cont.set(side, 1, 2, jac_neigh2);
-
-			// here the element elm1 must be a ghost element
-			(elm2->get_flx_jac_cont()).set(side, 0, 0, jac_neigh2);
-			(elm2->get_flx_jac_cont()).set(side, 0, 1, jac_res);
-			(elm2->get_flx_jac_cont()).set(side, 0, 2, ZERO_MATRIX);
+			if (neigh_proc[zp + 4] != -2) {
+				flx_jac_cont.set(side, 1, 0, jac, jac_res);
+				flx_jac_cont.set(side, 1, 1, jac_neigh1, ZERO_MATRIX);
+				flx_jac_cont.set(side, 1, 2, jac_neigh2, ZERO_MATRIX);
+			}
+//			// here the element elm1 must be a ghost element
+//			(elm2->get_flx_jac_cont()).set(side, 0, 0, jac_neigh2);
+//			(elm2->get_flx_jac_cont()).set(side, 0, 1, jac_res);
+//			(elm2->get_flx_jac_cont()).set(side, 0, 2, ZERO_MATRIX);
 
 		}
 
@@ -1728,8 +2092,8 @@ void DualElem::calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<DualE
 
 				//now we can store jacobians in elements
 				flx_jac_cont.set(side, 0, 0, jac, jac_res);
-				flx_jac_cont.set(side, 0, 1, jac_neigh1);
-				flx_jac_cont.set(side, 0, 2, jac_neigh2);
+				flx_jac_cont.set(side, 0, 1, jac_neigh1, ZERO_MATRIX);
+				flx_jac_cont.set(side, 0, 2, jac_neigh2, ZERO_MATRIX);
 
 			} else {
 				dual_riemannflux(hfv2, hfv, ghostflux, flux_jac2, flux_jac, s_jac2, s_jac, jac_neigh2,
@@ -1738,11 +2102,12 @@ void DualElem::calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<DualE
 				for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
 					nm->flux[ivar] = 0.5 * (nm->flux[ivar] + ghostflux[ivar]);
 
-				//now we can store jacobians in elements
-				flx_jac_cont.set(side, 0, 0, jac, jac_res);
-				flx_jac_cont.set(side, 0, 1, jac_neigh1);
-				flx_jac_cont.set(side, 0, 2, jac_neigh2);
-
+				if (neigh_proc[zm + 4] != -2) {
+					//now we can store jacobians in elements
+					flx_jac_cont.set(side, 0, 0, jac, jac_res);
+					flx_jac_cont.set(side, 0, 1, jac_neigh1, ZERO_MATRIX);
+					flx_jac_cont.set(side, 0, 2, jac_neigh2, ZERO_MATRIX);
+				}
 			}
 
 		}
@@ -1757,12 +2122,12 @@ void DualElem::boundary_flux(HashTable* El_Table, HashTable* NodeTable, const in
 	Node* np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
 	Node* nm = (Node*) NodeTable->lookup(&node_key[zm + 4][0]);
 
-	if (neigh_proc[zp] == -1) {
+	if (neigh_proc[zp] == INIT) {
 
 		// note the this may causes a bug if there is 2 level of refinement
 		// for three layers of the cells adjacent to the boundary
 
-		//in the boundary is in the right side of the cell
+		//boundary is in the right side of the cell
 
 		//outflow boundary conditions
 		for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
@@ -1773,7 +2138,7 @@ void DualElem::boundary_flux(HashTable* El_Table, HashTable* NodeTable, const in
 			flx_jac_cont.set(side, 1, i, flx_jac_cont(side, 0, i));
 
 	}
-	if (neigh_proc[zm] == -1) {
+	if (neigh_proc[zm] == INIT) {
 
 		//outflow boundary conditions
 		for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
@@ -1781,7 +2146,6 @@ void DualElem::boundary_flux(HashTable* El_Table, HashTable* NodeTable, const in
 
 		//in above line we do not compute the flux on negative side and just
 		// set it to positive flux which means outlet=inlet
-		//by default fluxes_jac has been initialized to zero, but to be on the safe side
 
 		//by default fluxes_jac has been initialized to zero, but to be on the safe side
 		for (int i = 0; i < NUM_STATE_VARS; ++i)

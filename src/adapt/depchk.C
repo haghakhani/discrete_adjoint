@@ -23,16 +23,16 @@
 
 #define NumTriggerRef 256
 
-void depchk(Element* EmTemp, HashTable* El_Table, HashTable* NodeTable,
-		int* ifg, ElemPtrList<Element>* RefinedList)
+void depchk(Element* EmTemp, HashTable* El_Table, HashTable* NodeTable, int* ifg,
+    ElemPtrList<Element>* RefinedList)
 
-		/*---
-		 refined[] stores the address of ready-for-refinement element of the sub-domain
-		 refined_temp[] stores the address of ready-for-refinement element triggered by one element refinement
-		 count is counting the number of refinement of the subdomain
-		 j is counting the number of refinement triggered by one element refinement
-		 ---------------*/
-		{
+    /*---
+     refined[] stores the address of ready-for-refinement element of the sub-domain
+     refined_temp[] stores the address of ready-for-refinement element triggered by one element refinement
+     count is counting the number of refinement of the subdomain
+     j is counting the number of refinement triggered by one element refinement
+     ---------------*/
+    {
 
 	int i, j, k;
 	Element* element;
@@ -56,8 +56,7 @@ void depchk(Element* EmTemp, HashTable* El_Table, HashTable* NodeTable,
 
 			if ((neigh_proc != -1) && (neigh_proc != -2)) { //-- if there is a neighbor
 
-				Neigh = (Element*) (El_Table->lookup(
-						element->get_neighbors() + i * KEYLENGTH));
+				Neigh = (Element*) (El_Table->lookup(element->get_neighbors() + i * KEYLENGTH));
 				/*
 				 if(!Neigh){
 				 printf("this element is {%u,%u} and is missing his %dth neighbor\n ",
@@ -80,7 +79,7 @@ void depchk(Element* EmTemp, HashTable* El_Table, HashTable* NodeTable,
 						//-- if the neighbor is bigger, then it must be refined
 
 						if ((Neigh->get_adapted_flag() == NOTRECADAPTED)
-								|| (Neigh->get_adapted_flag() == NEWFATHER)) {
+						    || (Neigh->get_adapted_flag() == NEWFATHER)) {
 							int flag = 1;
 							for (int m = 0; m < TempList.get_num_elem(); m++)
 								if (compare_key(TempList.get_key(m), Neigh->pass_key())) {

@@ -304,7 +304,7 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //2
 
 	if (prev_state_vars[0] > GEOFLOW_TINY) {
 
-		double  h_inv = 0.;
+		double h_inv = 0.;
 
 		h_inv = 1. / prev_state_vars[0];
 

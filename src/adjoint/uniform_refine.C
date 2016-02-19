@@ -83,7 +83,7 @@ void uinform_refine(MeshCTX* meshctx, PropCTX* propctx) {
 				Curr_El = (ErrorElem*) (currentPtr->value);
 				currentPtr = currentPtr->next;
 				if (Curr_El->get_adapted_flag() == NOTRECADAPTED) {
-					refine(Curr_El, El_Table, NodeTable, matprops_ptr,0);
+					refine(Curr_El, El_Table, NodeTable, matprops_ptr, 0);
 				}
 
 			}

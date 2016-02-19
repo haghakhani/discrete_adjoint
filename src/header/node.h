@@ -26,6 +26,7 @@
 class SolRec;
 class Jacobian;
 class Element;
+class DualElem;
 class Node {
 
 	friend class Element;
@@ -106,7 +107,9 @@ public:
 	//! copy constructor
 	Node(Node* node);
 
-	~Node(){};
+	~Node() {
+	}
+	;
 
 	//! this function writes all of one Node's data necessary for restart to a file in a single fwrite statement
 	void save_node(FILE* fp); //for restart

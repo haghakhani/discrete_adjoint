@@ -300,6 +300,368 @@ void move_data(int numprocs, int myid, HashTable* El_Table, HashTable* NodeTable
 	return;
 }
 
+void move_dual_data(MeshCTX* meshctx, PropCTX* propctx) {
+
+	int myid = propctx->myid, numprocs = propctx->numproc;
+
+	HashTable* El_Table = meshctx->el_table;
+	HashTable* NodeTable = meshctx->nd_table;
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
+
+	if (numprocs < 2)
+		return;
+
+	int ibuck, iproc, inode, ierr, ineigh, ivar, ielem;
+	/* assume that no elements share a neighboring element on another processor */
+	int* num_send_recv = new int[numprocs];
+	int* IfSendDone = new int[numprocs]; //initially holds current count of elements
+	//packed to send then "morphs" into whether or not the send has completed.
+	int* IfRecvDone = new int[numprocs]; //says whether or not (1 or 0) the receive
+	//has completed, note if I'm not going to receive from a particular element
+	//then I'm already done receiving from them.
+	MPI_Request* RequestSend = new MPI_Request[numprocs];
+	MPI_Request* RequestRecv = new MPI_Request[numprocs];
+
+	for (iproc = 0; iproc < numprocs; iproc++)
+		num_send_recv[iproc] = IfSendDone[iproc] = 0;
+
+	int num_elem_on_proc = 0, num_neighbors = 0;
+	/* count how many elements we should send and receive from other procs */
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashEntryPtr entryp;
+	int *neigh_proc;
+	int ifprint, numprocsrint = 0; //for debug
+
+	for (ibuck = 0; ibuck < El_Table->get_no_of_buckets(); ibuck++) {
+
+		entryp = *(buck + ibuck);
+		while (entryp) {
+			DualElem* EmTemp = (DualElem*) (entryp->value);
+			entryp = entryp->next;
+
+			if ((EmTemp->get_refined_flag() == 0) && (EmTemp->get_adapted_flag() > 0)) {
+
+				neigh_proc = EmTemp->get_neigh_proc();
+				for (ineigh = 0; ineigh < 8; ineigh++)
+					if ((neigh_proc[ineigh] >= 0) && (neigh_proc[ineigh] != myid))
+						num_send_recv[neigh_proc[ineigh]] += 1;
+
+			}
+		}
+	}
+
+	num_send_recv[myid] = 0;  // don't need to send info to myself
+
+	int send_tag = 22674; //original value Keith didn't change
+	DualElemPack** send_array = new DualElemPack*[numprocs];
+	DualElemPack** recv_array = new DualElemPack*[numprocs];
+
+	for (iproc = 0; iproc < numprocs; iproc++) {
+		IfRecvDone[iproc] = !num_send_recv[iproc];
+		if (num_send_recv[iproc] > 0) {
+			send_array[iproc] = new DualElemPack[num_send_recv[iproc]];
+			recv_array[iproc] = new DualElemPack[num_send_recv[iproc]];
+
+			ierr = MPI_Irecv((void*) recv_array[iproc], num_send_recv[iproc], DUALELEMTYPE, iproc,
+			    send_tag + iproc, MPI_COMM_WORLD, &(RequestRecv[iproc]));
+		} //if(num_send_recv[iproc] != 0)
+	} //for(iproc=0;iproc<numprocs;iproc++)
+
+	/* put (GHOST) elements to be moved in the proper arrays */
+	for (ibuck = 0; ibuck < El_Table->get_no_of_buckets(); ibuck++) {
+
+		entryp = *(buck + ibuck);
+		while (entryp) {
+			DualElem* EmTemp = (DualElem*) (entryp->value);
+			entryp = entryp->next;
+
+			if ((EmTemp->get_refined_flag() == 0) && (EmTemp->get_adapted_flag() > 0)) {
+				//if this element should not be on this processor don't involve!!!
+
+				neigh_proc = EmTemp->get_neigh_proc();
+				for (ineigh = 0; ineigh < 8; ineigh++) {
+					iproc = neigh_proc[ineigh];
+					if ((iproc != myid) && (iproc >= 0)) {
+						assert(IfSendDone[iproc] < num_send_recv[iproc]);
+
+						EmTemp->Pack_element((send_array[iproc] + IfSendDone[iproc]), NodeTable, myid);
+
+						(send_array[iproc] + IfSendDone[iproc])->refined = GHOST;
+						(send_array[iproc] + IfSendDone[iproc])->adapted = -(EmTemp->get_adapted_flag());
+
+						IfSendDone[iproc]++;
+					} //if((iproc!=myid) && (iproc>=0))
+				} //for(ineigh=0;ineigh<8;ineigh++)
+			} //if((EmTemp->get_refined_flag()==0)&& ...
+		} //while(entryp)
+	} //for(ibuck=0;ibuck<El_Table->get_no_of_buckets();ibuck++)
+
+	for (iproc = 0; iproc < numprocs; iproc++) {
+
+		//better paranoid than dead
+		assert(IfSendDone[iproc] == num_send_recv[iproc]);
+
+		IfSendDone[iproc] = !IfSendDone[iproc]; //"It's morphing time!"
+		//IfSendDone now holds whether or not (1 or 0) I'm done sending
+		//to each processor, if I'm not going to send to a processor then
+		//I'm already "done" sending to them.
+
+		if (num_send_recv[iproc] > 0)
+			//send ghost elements to processor iproc
+			ierr = MPI_Isend((void*) send_array[iproc], num_send_recv[iproc], DUALELEMTYPE, iproc,
+			    send_tag + myid, MPI_COMM_WORLD, &(RequestSend[iproc]));
+	}
+
+	int NumNotRecvd, IfSentRecvd;
+	MPI_Status status;
+	DualElem *elm, *new_elm;
+	double not_used, *dPtr, *d2Ptr;
+	int add_counter = 0, update_counter = 0;
+
+	//wait for incomming data from each processor and incorporate each
+	//processor's data as soon as I get it.
+	do {
+		NumNotRecvd = 0;
+		for (iproc = 0; iproc < numprocs; iproc++)
+			if (!IfRecvDone[iproc]) {
+				MPI_Test(&(RequestRecv[iproc]), &IfSentRecvd, &status);
+
+				if (IfSentRecvd) {
+
+					for (ielem = 0; ielem < num_send_recv[iproc]; ielem++) {
+						elm = (DualElem*) (El_Table->lookup((recv_array[iproc] + ielem)->key));
+						if (elm == NULL) { // this elm doesn't exist on this proc
+							new_elm = new DualElem((recv_array[iproc] + ielem), NodeTable, myid);
+							if ((new_elm->get_adapted_flag() < 0) && (new_elm->get_adapted_flag() >= -BUFFER))
+								new_elm->put_myprocess(iproc);
+							El_Table->add(new_elm->pass_key(), new_elm);
+							add_counter++;
+						} //if(elm == NULL)
+						else {
+							//this elm is already on this proc, rather than delete old copy
+							//and allocate space for a new one, save time by only copying the
+							//new element data to the old element.
+							elm->update((recv_array[iproc] + ielem), NodeTable, myid);
+							if ((elm->get_adapted_flag() < 0) && (elm->get_adapted_flag() >= -BUFFER))
+								elm->put_myprocess(iproc);
+							update_counter++;
+						}	      //else
+					}	      //for(ielem=0;ielem<num_send_recv[iproc];ielem++)
+
+					IfRecvDone[iproc] = 1;
+					delete[] (recv_array[iproc]);
+				}	      //if(IfSentRecvd)
+
+				else
+					NumNotRecvd++;
+			}	      //if(!IfRecvDone[iproc])
+
+	} while (NumNotRecvd > 0);
+	delete[] recv_array;
+	delete[] IfRecvDone;
+	delete[] RequestRecv;
+	delete[] num_send_recv;
+
+	//wait for sends to complete, delete sent arrays as soon as possible
+	int NumNotSent;
+	do {
+
+		NumNotSent = 0;
+		for (iproc = 0; iproc < numprocs; iproc++)
+			if (!IfSendDone[iproc]) {
+				MPI_Test(&(RequestSend[iproc]), &IfSentRecvd, &status);
+
+				if (IfSentRecvd) {
+					IfSendDone[iproc] = 1;
+					delete[] (send_array[iproc]);
+				} else
+					NumNotSent++;
+			}
+	} while (NumNotSent > 0);
+	delete[] send_array;
+	delete[] IfSendDone;
+	delete[] RequestSend;
+
+	//shouldn't need this Barrier but "better paranoid than dead"
+	MPI_Barrier(MPI_COMM_WORLD);
+}
+
+void comminucate_jacobians(MeshCTX* meshctx, PropCTX* propctx) {
+	int myid = propctx->myid, numprocs = propctx->numproc;
+
+	HashTable* El_Table = meshctx->el_table;
+	HashTable* NodeTable = meshctx->nd_table;
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
+
+	if (numprocs < 2)
+		return;
+
+	int ibuck, iproc, inode, ierr, ineigh, ivar, ielem;
+	/* assume that no elements share a neighboring element on another processor */
+	int* num_send_recv = new int[numprocs];
+	int* IfSendDone = new int[numprocs]; //initially holds current count of elements
+	//packed to send then "morphs" into whether or not the send has completed.
+	int* IfRecvDone = new int[numprocs]; //says whether or not (1 or 0) the receive
+	//has completed, note if I'm not going to receive from a particular element
+	//then I'm already done receiving from them.
+	MPI_Request* RequestSend = new MPI_Request[numprocs];
+	MPI_Request* RequestRecv = new MPI_Request[numprocs];
+
+	for (iproc = 0; iproc < numprocs; iproc++)
+		num_send_recv[iproc] = IfSendDone[iproc] = 0;
+
+	/* count how many elements we should send and receive from other procs */
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashEntryPtr entryp;
+	int *neigh_proc;
+	int ifprint, numprocsrint = 0; //for debug
+
+	for (ibuck = 0; ibuck < El_Table->get_no_of_buckets(); ibuck++) {
+
+		entryp = *(buck + ibuck);
+		while (entryp) {
+			DualElem* EmTemp = (DualElem*) (entryp->value);
+			entryp = entryp->next;
+
+			if ((EmTemp->get_refined_flag() == 0) && (EmTemp->get_adapted_flag() > 0)) {
+
+				neigh_proc = EmTemp->get_neigh_proc();
+				for (ineigh = 0; ineigh < 8; ineigh++)
+					if ((neigh_proc[ineigh] >= 0) && (neigh_proc[ineigh] != myid))
+						num_send_recv[neigh_proc[ineigh]] += 1;
+
+			}
+		}
+	}
+
+	num_send_recv[myid] = 0;  // don't need to send info to myself
+
+	int send_tag = 22674; //original value Keith didn't change
+	JacPack** send_array = new JacPack*[numprocs];
+	JacPack** recv_array = new JacPack*[numprocs];
+
+	for (iproc = 0; iproc < numprocs; iproc++) {
+		IfRecvDone[iproc] = !num_send_recv[iproc];
+		if (num_send_recv[iproc] > 0) {
+			send_array[iproc] = new JacPack[num_send_recv[iproc]];
+			recv_array[iproc] = new JacPack[num_send_recv[iproc]];
+
+			ierr = MPI_Irecv((void*) recv_array[iproc], num_send_recv[iproc], JACTYPE, iproc,
+			    send_tag + iproc, MPI_COMM_WORLD, &(RequestRecv[iproc]));
+		} //if(num_send_recv[iproc] != 0)
+	} //for(iproc=0;iproc<numprocs;iproc++)
+
+	/* put (GHOST) elements to be moved in the proper arrays */
+	for (ibuck = 0; ibuck < El_Table->get_no_of_buckets(); ibuck++) {
+
+		entryp = *(buck + ibuck);
+		while (entryp) {
+			DualElem* EmTemp = (DualElem*) (entryp->value);
+			entryp = entryp->next;
+
+			if ((EmTemp->get_refined_flag() == 0) && (EmTemp->get_adapted_flag() > 0)) {
+				//if this element should not be on this processor don't involve!!!
+
+				neigh_proc = EmTemp->get_neigh_proc();
+				for (ineigh = 0; ineigh < 8; ineigh++) {
+					iproc = neigh_proc[ineigh];
+					if ((iproc != myid) && (iproc >= 0)) {
+						assert(IfSendDone[iproc] < num_send_recv[iproc]);
+
+						EmTemp->Pack_jacobian((send_array[iproc] + IfSendDone[iproc]), ineigh);
+
+						IfSendDone[iproc]++;
+					} //if((iproc!=myid) && (iproc>=0))
+				} //for(ineigh=0;ineigh<8;ineigh++)
+			} //if((EmTemp->get_refined_flag()==0)&& ...
+		} //while(entryp)
+	} //for(ibuck=0;ibuck<El_Table->get_no_of_buckets();ibuck++)
+
+	for (iproc = 0; iproc < numprocs; iproc++) {
+
+		//better paranoid than dead
+		assert(IfSendDone[iproc] == num_send_recv[iproc]);
+
+		IfSendDone[iproc] = !IfSendDone[iproc]; //"It's morphing time!"
+		//IfSendDone now holds whether or not (1 or 0) I'm done sending
+		//to each processor, if I'm not going to send to a processor then
+		//I'm already "done" sending to them.
+
+		if (num_send_recv[iproc] > 0)
+			//send ghost elements to processor iproc
+			ierr = MPI_Isend((void*) send_array[iproc], num_send_recv[iproc], JACTYPE, iproc,
+			    send_tag + myid, MPI_COMM_WORLD, &(RequestSend[iproc]));
+	}
+
+	int NumNotRecvd, IfSentRecvd;
+	MPI_Status status;
+	DualElem *elm, *new_elm;
+	double not_used, *dPtr, *d2Ptr;
+	int add_counter = 0, update_counter = 0;
+
+	//wait for incomming data from each processor and incorporate each
+	//processor's data as soon as I get it.
+	do {
+		NumNotRecvd = 0;
+		for (iproc = 0; iproc < numprocs; iproc++)
+			if (!IfRecvDone[iproc]) {
+				MPI_Test(&(RequestRecv[iproc]), &IfSentRecvd, &status);
+
+				if (IfSentRecvd) {
+
+					for (ielem = 0; ielem < num_send_recv[iproc]; ielem++) {
+						elm = (DualElem*) (El_Table->lookup((recv_array[iproc] + ielem)->key_send));
+						assert(elm->get_adapted_flag()<0);
+						elm->put_jacpack((recv_array[iproc] + ielem));
+
+						add_counter++;
+					}
+
+					IfRecvDone[iproc] = 1;
+					delete[] (recv_array[iproc]);
+				}	      //if(IfSentRecvd)
+
+				else
+					NumNotRecvd++;
+			}
+
+	} while (NumNotRecvd > 0);
+	delete[] recv_array;
+	delete[] IfRecvDone;
+	delete[] RequestRecv;
+	delete[] num_send_recv;
+
+	//wait for sends to complete, delete sent arrays as soon as possible
+	int NumNotSent;
+	do {
+
+		NumNotSent = 0;
+		for (iproc = 0; iproc < numprocs; iproc++)
+			if (!IfSendDone[iproc]) {
+				MPI_Test(&(RequestSend[iproc]), &IfSentRecvd, &status);
+
+				if (IfSentRecvd) {
+					IfSendDone[iproc] = 1;
+					delete[] (send_array[iproc]);
+				} else
+					NumNotSent++;
+			}
+	} while (NumNotSent > 0);
+	delete[] send_array;
+	delete[] IfSendDone;
+	delete[] RequestSend;
+
+	//shouldn't need this Barrier but "better paranoid than dead"
+	MPI_Barrier(MPI_COMM_WORLD);
+
+}
+
 /* delete the ghost elements that were put in the element hashtable */
 void delete_ghost_elms(HashTable* El_Table, int myid) {
 	int ibuck;

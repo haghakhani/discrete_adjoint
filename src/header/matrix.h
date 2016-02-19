@@ -187,7 +187,13 @@ public:
 	}
 	;
 
-	double operator()(const unsigned& index, const unsigned& i, const unsigned& j) {
+	double operator()(const unsigned& index, const unsigned& i, const unsigned& j) const{
+		Mat3x3& A = vec_mat[index];
+		return A(i, j);
+	}
+	;
+
+	double& operator()(const unsigned& index, const unsigned& i, const unsigned& j) {
 		Mat3x3& A = vec_mat[index];
 		return A(i, j);
 	}
