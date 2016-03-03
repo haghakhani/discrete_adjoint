@@ -364,3 +364,36 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //2
 		assert(!isnan(state_vars[i]) && !isinf(state_vars[i]));
 
 }
+
+void orgSourceSgn(Element* Curr_El, double frictiny, double* orgSgn) {
+
+	double* d_state_vars_x = Curr_El->get_d_state_vars();
+	double* d_state_vars_y = d_state_vars_x + NUM_STATE_VARS;
+	double* prev_state_vars = Curr_El->get_prev_state_vars();
+	double h_inv;
+	double tmp = 0.0;
+	double velocity[2];
+	for (int i = 0; i < 2; i++)
+		orgSgn[i] = 0.0;
+
+	if (prev_state_vars[0] > GEOFLOW_TINY) {
+
+		velocity[0] = prev_state_vars[1] / prev_state_vars[0];
+		velocity[1] = prev_state_vars[2] / prev_state_vars[0];
+
+	} else {
+		for (int k = 0; k < DIMENSION; k++)
+			velocity[k] = 0.;
+	}
+
+	if (prev_state_vars[0] > 0.0)
+		h_inv = 1. / prev_state_vars[0];
+
+	tmp = h_inv * (d_state_vars_y[1] - velocity[0] * d_state_vars_y[0]);
+	orgSgn[0] = tiny_sgn(tmp, frictiny);
+
+	tmp = h_inv * (d_state_vars_x[2] - velocity[1] * d_state_vars_x[0]);
+	orgSgn[1] = tiny_sgn(tmp, frictiny);
+
+}
+

@@ -331,6 +331,8 @@ struct TimeProps {
 
 	vector<double> dt;
 
+	int REFINE;
+
 	//! this function initializes the time properties at the beginning of the simulation
 	void inittime(int maxiterin, double maxtimein, double timeoutputin, double timesavein,
 	    double TIME_SCALEin) {
@@ -437,6 +439,18 @@ struct TimeProps {
 	//! return the simulated time in seconds
 	double timesec() {
 		return (time * TIME_SCALE);
+	}
+
+	bool ifrefine() {
+		if (iter % REFINE == REFINE - 1)
+			return true;
+		return false;
+	}
+
+	bool ifrepartition() {
+		if (iter % (2 * REFINE) == 2 * REFINE - 1)
+			return true;
+		return false;
 	}
 
 };

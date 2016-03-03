@@ -2239,6 +2239,55 @@ void DualElem::dual_check_refine_unrefine(SolRec* solrec, HashTable* El_Table, i
 	}
 }
 
+void DualElem::dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable* El_Table, int iter,
+    ElemPtrList<DualElem>* refinelist, ElemPtrList<DualElem>* unrefinelist,
+    vector<TRANSKEY>& trans_keys_vec, vector<int>& trans_keys_status,
+    ElemPtrList<DualElem>* repart_list) {
+
+	Solution* prev_sol = solrec->lookup(key, iter - 1);
+
+	if (!prev_sol) {
+// first we check to see whether the element has been refined, so we have to read from its father
+		prev_sol = solrec->lookup(getfather(), iter - 1);
+
+		if (prev_sol)
+			unrefinelist->add(this);
+
+		else {
+
+			unsigned son_key[4][2];
+			gen_my_sons_key(El_Table, son_key);
+			int check = 0;
+			for (int i = 0; i < 4; ++i) {
+				prev_sol = solrec->lookup(son_key[i], iter - 1);
+				if (prev_sol)
+					check++;
+			}
+
+			if (check > 0 && check < 4) {
+				TRANSKEY new_transpack;
+				SetTransPack(El_Table, this, &new_transpack);
+				trans_keys_vec.push_back(new_transpack);
+				trans_keys_status.push_back(check * 3);
+				refinelist->add(this);
+				repart_list->add(this);
+			} else if (check == 4) {
+				// the only remaining case is that it has been unrefined so, we have to read from its sons
+				refinelist->add(this);
+			} else if (check == 0) {
+				TRANSKEY new_transpack;
+				SetTransPack(El_Table, this, &new_transpack);
+				trans_keys_vec.push_back(new_transpack);
+				trans_keys_status.push_back(check * 3);
+				repart_list->add(this);
+			} else
+				cerr
+				    << "something is wrong in status of the element in dual_check_refine_unrefine_repartition function \n";
+
+		}
+	}
+}
+
 //==========================================================================
 
 ErrorElem::ErrorElem(Element* element) {

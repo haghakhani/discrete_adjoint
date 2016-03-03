@@ -92,7 +92,7 @@ public:
 
 	void update(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid);
 
-	void Pack_jacobian(JacPack* jac,int neigh);
+	void Pack_jacobian(JacPack* jac, int neigh);
 
 	void put_jacpack(JacPack* jac);
 
@@ -139,6 +139,11 @@ public:
 	void calc_func_sens(const void * ctx);
 
 	vector<ErrorElem*>& get_son_addresses();
+
+	void dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable* El_Table, int iter,
+	    ElemPtrList<DualElem>* refinelist, ElemPtrList<DualElem>* unrefinelist,
+	    vector<TRANSKEY>& trans_keys_vec, vector<int>& trans_keys_status,
+	    ElemPtrList<DualElem>* repart_list);
 
 private:
 

@@ -4028,6 +4028,37 @@ void Element::gen_my_sons_key(HashTable* El_Table, unsigned son_key[4][KEYLENGTH
 		fhsfc2d_(norm_coord[i], &nkey, son_key[i]);
 }
 
+void Element::gen_my_sons_key(HashTable* El_Table, unsigned* son_key) {
+
+	/*	---------
+	 | 3 | 2 |
+	 |   |   |
+	 ---------
+	 | 0 | 1 |
+	 |   |   |
+	 ---------*/
+
+	static double XRange[KEYLENGTH], YRange[KEYLENGTH];
+	double Xson[4] = { coord[0] - 0.25 * dx[0], coord[0] + 0.25 * dx[0], coord[0] + 0.25 * dx[0],
+	    coord[0] - 0.25 * dx[0] };
+	double Yson[4] = { coord[1] - 0.25 * dx[1], coord[1] - 0.25 * dx[1], coord[1] + 0.25 * dx[1],
+	    coord[1] + 0.25 * dx[1] };
+	double norm_coord[4][KEYLENGTH];
+	unsigned nkey = 2;
+
+	for (int i = 0; i < KEYLENGTH; ++i) {
+		XRange[i] = *(El_Table->get_Xrange() + i);
+		YRange[i] = *(El_Table->get_Yrange() + i);
+	}
+
+	for (int i = 0; i < 4; ++i) {
+		norm_coord[i][0] = (Xson[i] - XRange[0]) / (XRange[1] - XRange[0]);
+		norm_coord[i][1] = (Yson[i] - YRange[0]) / (YRange[1] - YRange[0]);
+		fhsfc2d_(norm_coord[i], &nkey, (son_key+i*KEYLENGTH));
+	}
+
+}
+
 int Element::check_state(SolRec* solrec, HashTable* El_Table, int iter) {
 
 	Solution* curr_sol = solrec->lookup(key, iter);
@@ -4482,63 +4513,3 @@ Element::Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myi
 	calc_which_son();
 	return;
 }
-
-/* //for debugging purposes only, had to trick ddd into working right
- int Element::get_adapted_flag() {return adapted;}
-
- void Element::put_adapted_flag(int new_adapted_status) {adapted = new_adapted_status;}
- */
-
-//#define DEBUGLIST
-#ifdef DEBUGLIST
-ElemPtrList::ElemPtrList() {
-	init(1024);
-	return;
-}
-
-//! this constructor allocates space for user specified initial-size, the size_increment equals the initial size.
-ElemPtrList::ElemPtrList(int initial_size) {
-	if(initial_size==0) initial_size=1024;
-	init(initial_size);
-	return;
-}
-
-//! the destructor frees the list space so the programmer never has to worry about it
-ElemPtrList:: ~ElemPtrList() {
-//printf("list_space=%d, num_elem=%d, inewstart=%d\n",list_space,num_elem,inewstart);
-	free(list);
-	return;
-}
-
-//! add an element pointer to the list, it will increase the size of the list by the size_increment if necessary, the size_increment is the initial size.
-void ElemPtrList::add(Element* EmTemp) {
-	if(num_elem==list_space-1) {
-		list_space+=size_increment;
-		list=(Element**) realloc(list,list_space*sizeof(Element *));
-	}
-
-	list[num_elem]=EmTemp;
-	num_elem++;
-	return;
-}
-
-void ElemPtrList::init(int initial_size) {
-	list_space=size_increment=initial_size;
-	num_elem=inewstart=0;
-	list=(Element **) malloc(list_space*sizeof(Element*));
-	for(int i=0;i<list_space;i++) list[i]=NULL;
-}
-
-Element* ElemPtrList::get(int i) {return (((i>=0)&&(i<num_elem))?list[i]:NULL);};
-unsigned* ElemPtrList::get_key(int i) {return (((i>=0)&&(i<num_elem))?list[i]->pass_key():NULL);};
-int ElemPtrList::get_inewstart() {return inewstart;};
-void ElemPtrList::set_inewstart(int inewstart_in) {inewstart=inewstart_in; return;};
-int ElemPtrList::get_num_elem() {return num_elem;};
-
-void ElemPtrList::trashlist() {
-	for(int i=0;i<num_elem;i++) list[i]=NULL;
-	num_elem=inewstart=0;
-	return;
-};
-#endif
-

@@ -10,6 +10,125 @@
 #endif
 #include "../header/hpfem.h"
 
+double max_err1 = 0., max_err2 = 0.;
+unsigned key1_1, key2_1, iter_1, key1_2, key2_2, iter_2;
+
+double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops_ptr) {
+
+	double dot = 0.;
+	vector<pair<unsigned, unsigned>> wrong_elem;
+	vector<double> wrong_value, wrong_value1;
+
+	HashEntryPtr currentPtr;
+	DualElem *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+	cout << "results:  \n";
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (DualElem*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() > 0) {
+
+					double* state_vars_prev = Curr_El->get_prev_state_vars();
+					double* adjoint = Curr_El->get_adjoint();
+					double* gravity = Curr_El->get_gravity();
+					double* curve = Curr_El->get_curvature();
+					double vel[2], h_inv, orgSrcSgn[2];
+					double unitvx, unitvy;
+					double* d_state_vars_x = Curr_El->get_d_state_vars();
+					double* d_state_vars_y = (Curr_El->get_d_state_vars() + 3);
+					double fric_tiny = matprops_ptr->frict_tiny;
+					double kact = *(Curr_El->get_kactxy());
+					double* d_grav = Curr_El->get_d_gravity();
+
+					if (state_vars_prev[0] > GEOFLOW_TINY) {
+						h_inv = 1. / state_vars_prev[0];
+						vel[0] = state_vars_prev[1] / state_vars_prev[0];
+						vel[1] = state_vars_prev[2] / state_vars_prev[0];
+
+					} else {
+						h_inv = 0.;
+						vel[0] = 0.;
+						vel[1] = 0.;
+						unitvx = unitvy = 0.;
+
+					}
+
+					double speed = sqrt(vel[0] * vel[0] + vel[1] * vel[1]);
+
+					if (speed > 0.) {
+
+						unitvx = vel[0] / speed;
+						unitvy = vel[1] / speed;
+					}
+
+					double test1 = 0.;
+
+					if (max(gravity[2] * state_vars_prev[0] + vel[0] * state_vars_prev[1] * curve[0], 0.))
+						test1 = adjoint[1] * unitvx
+						    * (state_vars_prev[0] * gravity[2] + state_vars_prev[1] * vel[0] * curve[0]);
+
+					if (max(gravity[2] * state_vars_prev[0] + vel[1] * state_vars_prev[2] * curve[1], 0.))
+						test1 += adjoint[2] * unitvy
+						    * (state_vars_prev[0] * gravity[2] + state_vars_prev[2] * vel[1] * curve[1]);
+
+					dot += test1;
+
+					double tmp = h_inv * (d_state_vars_y[1] - vel[0] * d_state_vars_y[0]);
+					orgSrcSgn[0] = tiny_sgn(tmp, fric_tiny);
+					orgSrcSgn[2] = tiny_sgn(vel[0], fric_tiny);
+
+					tmp = h_inv * (d_state_vars_x[2] - vel[1] * d_state_vars_x[0]);
+					orgSrcSgn[1] = tiny_sgn(tmp, fric_tiny);
+					orgSrcSgn[3] = tiny_sgn(vel[1], fric_tiny);
+
+					double test2 = state_vars_prev[0] * kact
+					    * (adjoint[1] * orgSrcSgn[0]
+					        * (gravity[2] * d_state_vars_y[0] + d_grav[1] * state_vars_prev[0])
+					        + adjoint[2] * orgSrcSgn[1]
+					            * (gravity[2] * d_state_vars_x[0] + d_grav[0] * state_vars_prev[0]));
+
+					// this is for simple test
+//					double test1, test2 = 0.;
+//					test1 = adjoint[1] + adjoint[2] ;
+
+					if (fabs(test1) > 1e-16 || fabs(test2) > 1e-16) {
+						wrong_elem.push_back(make_pair(*(Curr_El->pass_key()), *(Curr_El->pass_key() + 1)));
+						wrong_value.push_back(test1);
+						wrong_value1.push_back(test2);
+//						cout << test1 << " , " << test2 << endl;
+
+						if (fabs(test1) > max_err1) {
+							max_err1 = fabs(test1);
+							key1_1 = *(Curr_El->pass_key());
+							key2_1 = *(Curr_El->pass_key() + 1);
+							iter_1 = timeprops->iter;
+						} else if (fabs(test2) > max_err2) {
+							max_err2 = fabs(test2);
+							key1_2 = *(Curr_El->pass_key());
+							key2_2 = *(Curr_El->pass_key() + 1);
+							iter_2 = timeprops->iter;
+						}
+
+					}
+
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	ofstream f("wrong_elem.txt", ios::app);
+	f << "time step: " << timeprops->iter << " size of vector: " << wrong_elem.size() << endl;
+	for (int i = 0; i < wrong_elem.size(); ++i)
+		f << setw(10) << wrong_elem[i].first << " , " << wrong_elem[i].second << " , " << wrong_value[i]
+		    << " , " << wrong_value1[i] << '\n';
+
+	return dot;
+}
+
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter) {
 
 	HashEntryPtr currentPtr;

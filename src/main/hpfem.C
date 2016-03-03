@@ -78,6 +78,7 @@ int main(int argc, char *argv[]) {
 	    frict_tiny, 1.0, 1.0, 1.0);
 	TimeProps timeprops;
 	timeprops.starttime = time(NULL);
+	timeprops.REFINE = 5;
 
 	MapNames mapnames;
 	PileProps pileprops;
@@ -220,7 +221,7 @@ int main(int argc, char *argv[]) {
 			update_topo(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops, &mapnames);
 		}
 
-		if ((adaptflag != 0) && (timeprops.iter % 5 == 4)) {
+		if ((adaptflag != 0) && timeprops.ifrefine()) {
 			AssertMeshErrorFree(BT_Elem_Ptr, BT_Node_Ptr, numprocs, myid, -2.0);
 
 //				unsigned keyy[2] = { 635356396, 1321528399 };
@@ -243,7 +244,7 @@ int main(int argc, char *argv[]) {
 
 			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
 
-			if ((numprocs > 1) && (timeprops.iter % 10 == 9)) {
+			if ((numprocs > 1) && timeprops.ifrepartition()) {
 
 				repartition2(BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
@@ -257,8 +258,8 @@ int main(int argc, char *argv[]) {
 		step(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops, &pileprops, &fluxprops,
 		    &statprops, &order_flag, &outline, &discharge, adaptflag);
 
-		refinement_report(BT_Elem_Ptr, myid);
-		refine_flag_report(BT_Elem_Ptr, myid);
+//		refinement_report(BT_Elem_Ptr, myid);
+//		refine_flag_report(BT_Elem_Ptr, myid);
 
 //		cout<<"elements number: "<<num_nonzero_elem(BT_Elem_Ptr)<<endl;
 
@@ -424,6 +425,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 //	Delete_Table(BT_Elem_Ptr, BT_Node_Ptr, solrec);
+	free_mpi_types();
 
 	MPI_Finalize();
 	return (0);

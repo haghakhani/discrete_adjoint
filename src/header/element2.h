@@ -602,6 +602,8 @@ public:
 
 	void gen_my_sons_key(HashTable* El_Table, unsigned son_key[4][KEYLENGTH]);
 
+	void gen_my_sons_key(HashTable* El_Table, unsigned* son_key);
+
 	int check_state(SolRec* solrec, HashTable* El_Table, int iter);
 
 	void write_elem_info(HashTable* NodeTable, char* filename, int iter, double dt);

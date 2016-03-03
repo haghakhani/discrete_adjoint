@@ -123,6 +123,20 @@ struct JacPack {
 	double mat[9];
 };
 
+//see ../repartition/new_datatype.C blockcounts={6*KEYLENGTH}
+struct TRANSKEY {
+
+	unsigned key[12];
+
+	TRANSKEY() {
+	}
+	;
+
+	TRANSKEY(unsigned* keys) {
+		for (unsigned i = 0; i < 12; ++i)
+			key[i] = keys[i];
+	}
+};
 //                             \|||/    
 //                             (o o)   
 //---------Elementlink------oo0-(_)-0oo----------STARTS HERE-------

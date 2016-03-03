@@ -56,6 +56,7 @@ using namespace std;
 #include "FileFormat.h"
 #include "flux_srcs.h"
 #include "geoflow.h"
+#include "adjoint.h"
 #include <unistd.h>
 
 #undef CRAY

@@ -50,7 +50,7 @@ void adjoint_init(HashTable *El_Table, HashTable *Node_Table) {
 //      currentPtr = *(buck+i);
 //      while(currentPtr){
 //	Curr_El=(Element*)(currentPtr->value);
-////	  if (isinf(*(Curr_El->get_state_vars()+6))) 
+////	  if (isinf(*(Curr_El->get_state_vars()+6)))
 //	    cout<<"there is something wrong in initialization   "<<   *(Curr_El->get_state_vars()+6)<<endl;
 //
 //	currentPtr=currentPtr->next;
