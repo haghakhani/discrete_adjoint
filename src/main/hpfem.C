@@ -232,15 +232,15 @@ int main(int argc, char *argv[]) {
 
 			H_adapt(BT_Elem_Ptr, BT_Node_Ptr, h_count, TARGET, &matprops, &fluxprops, &timeprops, 5);
 
-			refinement_report(BT_Elem_Ptr, myid);
-			refine_flag_report(BT_Elem_Ptr, myid);
+//			refinement_report(BT_Elem_Ptr, myid);
+//			refine_flag_report(BT_Elem_Ptr, myid);
 
 			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
 			unrefine(BT_Elem_Ptr, BT_Node_Ptr, UNREFINE_TARGET, myid, numprocs, &timeprops, &matprops,
 			    rescomp);
-			refinement_report(BT_Elem_Ptr, myid);
-			refine_flag_report(BT_Elem_Ptr, myid);
+//			refinement_report(BT_Elem_Ptr, myid);
+//			refine_flag_report(BT_Elem_Ptr, myid);
 
 			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
 
@@ -270,7 +270,7 @@ int main(int argc, char *argv[]) {
 		solrec->record_solution(&meshctx, &propctx);
 
 		if (solrec->write_sol() || must_write(&memuse, myid)) {
-			solrec->wrtie_sol_to_disk();
+			solrec->wrtie_sol_to_disk(myid);
 			solrec->delete_jacobians_after_writes();
 		}
 

@@ -179,8 +179,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 //	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
 
-	refinement_report(Dual_El_Tab, myid);
-	refine_flag_report(Dual_El_Tab, myid);
+//	refinement_report(Dual_El_Tab, myid);
+//	refine_flag_report(Dual_El_Tab, myid);
 
 	for (int iter = maxiter; iter > 0; --iter) {
 

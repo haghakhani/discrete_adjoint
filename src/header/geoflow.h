@@ -29,6 +29,7 @@
 
 //#define REFINE_LEVEL 3
 extern int REFINE_LEVEL; //make REFINE_LEVEL a global variable that can be changed set it in  Read_grid() (datread.C) or loadrun() (restart.C)
+extern double doubleKeyRange;
 //(mdj)2007-04-11 #define MIN_GENERATION -1 //minimum refinement level
 #define MIN_GENERATION -3 //minimum refinement level
 

@@ -72,7 +72,7 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 
 }
 
-void SolRec::wrtie_sol_to_disk() {
+void SolRec::wrtie_sol_to_disk(int myid) {
 
 	gzFile myfile;
 	char filename[50];
@@ -82,7 +82,7 @@ void SolRec::wrtie_sol_to_disk() {
 	for (int step = first_solution_time_step; step < last_solution_time_step; ++step) {
 		int count = 0;
 
-		sprintf(filename, "solution_%08d", step);
+		sprintf(filename, "solution_%04d_%08d", myid, step);
 		myfile = gzopen(filename, "wb");
 
 		vector<unsigned*> zero_key, non_zero_key;
@@ -132,7 +132,9 @@ void SolRec::wrtie_sol_to_disk() {
 		}
 
 		gzclose(myfile);
-		cout << "number of written elem  " << size_zero + size_non_zero << endl;
+//		cout << "number of written elem  " << size_zero + size_non_zero << endl;
+		if (myid == 0)
+			cout << "writing solution of time step " << step << " to the disk" << endl;
 	}
 	first_solution_time_step = last_solution_time_step;
 
@@ -167,7 +169,7 @@ void SolRec::update_last_sol_time(int iter) {
 	last_solution_time_step = iter;
 }
 
-void SolRec::read_sol_from_disk(int iter) {
+void SolRec::read_sol_from_disk(int myid, int iter) {
 
 	gzFile myfile;
 	char filename[50];
@@ -177,7 +179,7 @@ void SolRec::read_sol_from_disk(int iter) {
 	Solution * solution;
 	int dbg, count = 0;
 
-	sprintf(filename, "solution_%08d", iter);
+	sprintf(filename, "solution_%04d_%08d", myid, iter);
 	myfile = gzopen(filename, "rb");
 
 //	while (!feof(myfile)) {
@@ -228,7 +230,8 @@ void SolRec::read_sol_from_disk(int iter) {
 	}
 
 	gzclose(myfile);
-	cout << "number of readed elem  " << num_non_zero + num_zero << endl;
+	if (myid == 0)
+		cout << "reading the solution of time step " << iter << " from the disk  " << endl;
 }
 
 int SolRec::get_first_solution() {
@@ -287,7 +290,7 @@ int SolRec::read_sol() {
 	return 0;
 }
 
-void SolRec::load_new_set_of_solution() {
+void SolRec::load_new_set_of_solution(int myid) {
 
 	struct sysinfo memInfo;
 	double ratio = 1.;
@@ -296,7 +299,7 @@ void SolRec::load_new_set_of_solution() {
 
 	while ((data_range() < 2 || read_sol()) && first_solution_time_step) {
 
-		read_sol_from_disk(first_solution_time_step - 1);
+		read_sol_from_disk(myid, first_solution_time_step - 1);
 		first_solution_time_step--;
 		sysinfo(&memInfo);
 		totalPhysMem = memInfo.totalram;
@@ -2242,49 +2245,86 @@ void DualElem::dual_check_refine_unrefine(SolRec* solrec, HashTable* El_Table, i
 void DualElem::dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable* El_Table, int iter,
     ElemPtrList<DualElem>* refinelist, ElemPtrList<DualElem>* unrefinelist,
     vector<TRANSKEY>& trans_keys_vec, vector<int>& trans_keys_status,
-    ElemPtrList<DualElem>* repart_list) {
+    ElemPtrList<DualElem>* repart_list, double* myKeyRange) {
+
+	// trans_keys_status is a vector that holds the status of the element that are being transfered
+	// the number of elements that are being transfered is equal to number of TRANSKEYS that are stored
+	// in the trans_keys_vec and is equal to the size of trans_keys_status vector
+	// TRANSKEY is a simple structure that holds 6x2 unsigned which is equal to 6 keys
+	// the first key is for element itself, the second key is for element's father and the next four
+	// key are for element's sons
+	// status of a must_be_transfered element is as following:
+	// status=0 it has to be transfered and if it is refined in the next step non of his sons have been found in the current procs
+	// status=1
 
 	Solution* prev_sol = solrec->lookup(key, iter - 1);
 
 	if (!prev_sol) {
-// first we check to see whether the element has been refined, so we have to read from its father
-		prev_sol = solrec->lookup(getfather(), iter - 1);
+		// first we check to see whether the element has been refined, so we have to read from its father
+		unsigned* father_key = getfather();
+		prev_sol = solrec->lookup(father_key, iter - 1);
 
-		if (prev_sol)
+		if (prev_sol) {
 			unrefinelist->add(this);
 
-		else {
+			double doublekey = father_key[0] * doubleKeyRange + father_key[1];
 
+			if (doublekey < myKeyRange[0])
+				myKeyRange[0] = doublekey;
+
+			if (doublekey > myKeyRange[1])
+				myKeyRange[1] = doublekey;
+
+		} else {
+			// the only remaining case is that it has been unrefined so, we have to read from its sons
 			unsigned son_key[4][2];
 			gen_my_sons_key(El_Table, son_key);
 			int check = 0;
 			for (int i = 0; i < 4; ++i) {
 				prev_sol = solrec->lookup(son_key[i], iter - 1);
-				if (prev_sol)
+
+				if (prev_sol) {
+					double doublekey = son_key[i][0] * doubleKeyRange + son_key[i][1];
+
+					if (doublekey < myKeyRange[0])
+						myKeyRange[0] = doublekey;
+
+					if (doublekey > myKeyRange[1])
+						myKeyRange[1] = doublekey;
+
 					check++;
+				}
 			}
 
 			if (check > 0 && check < 4) {
 				TRANSKEY new_transpack;
-				SetTransPack(El_Table, this, &new_transpack);
+				SetTransPack(new_transpack, pass_key(), father_key, son_key);
 				trans_keys_vec.push_back(new_transpack);
 				trans_keys_status.push_back(check * 3);
 				refinelist->add(this);
 				repart_list->add(this);
 			} else if (check == 4) {
-				// the only remaining case is that it has been unrefined so, we have to read from its sons
+
 				refinelist->add(this);
 			} else if (check == 0) {
 				TRANSKEY new_transpack;
-				SetTransPack(El_Table, this, &new_transpack);
+				SetTransPack(new_transpack, pass_key(), father_key, son_key);
 				trans_keys_vec.push_back(new_transpack);
 				trans_keys_status.push_back(check * 3);
 				repart_list->add(this);
 			} else
 				cerr
 				    << "something is wrong in status of the element in dual_check_refine_unrefine_repartition function \n";
-
 		}
+	} else {
+
+		double doublekey = key[0] * doubleKeyRange + key[1];
+
+		if (doublekey < myKeyRange[0])
+			myKeyRange[0] = doublekey;
+
+		if (doublekey > myKeyRange[1])
+			myKeyRange[1] = doublekey;
 	}
 }
 

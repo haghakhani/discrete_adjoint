@@ -38,10 +38,10 @@ public:
 	void record_solution(MeshCTX* meshctx, PropCTX* propctx);
 
 	// this function writes the recorded solution to files, and for each time step separately
-	void wrtie_sol_to_disk();
+	void wrtie_sol_to_disk(int myid);
 
 	// this function reads the recorded solution from files, and for each time step separately and store it in SolRec
-	void read_sol_from_disk(int iter);
+	void read_sol_from_disk(int myid, int iter);
 
 	// this functions deletes the SolRec and deallocate the allocated memory
 	void delete_jacobians_after_writes();
@@ -56,7 +56,7 @@ public:
 
 	int get_last_solution();
 
-	void load_new_set_of_solution();
+	void load_new_set_of_solution(int myid);
 
 	void free_all_available_sol();
 
@@ -143,7 +143,7 @@ public:
 	void dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable* El_Table, int iter,
 	    ElemPtrList<DualElem>* refinelist, ElemPtrList<DualElem>* unrefinelist,
 	    vector<TRANSKEY>& trans_keys_vec, vector<int>& trans_keys_status,
-	    ElemPtrList<DualElem>* repart_list);
+	    ElemPtrList<DualElem>* repart_list, double* allKeyRange);
 
 private:
 

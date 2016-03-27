@@ -37,7 +37,7 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 
 	reset_adaption_flag(El_Table);
 
-	delete_unused_elements_nodes(El_Table, NodeTable, myid);
+//	delete_unused_elements_nodes(El_Table, NodeTable, myid);
 
 	double target = 0.1;
 
@@ -58,8 +58,7 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 		refine_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) refinelist, timeprops_ptr);
 
 //		cout << "3 \n";
-//		refinement_report(El_Table);
-//		MPI_Barrier(MPI_COMM_WORLD);
+//		refinement_report(El_Table, myid);
 
 		move_dual_data(meshctx, propctx);
 
@@ -76,8 +75,8 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 
 				if (EmTemp->get_adapted_flag() == TOBEDELETED) {
 					El_Table->remove(EmTemp->pass_key());
+					delete EmTemp;
 					refdel++;
-
 				}
 			}
 		}
@@ -88,6 +87,8 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
+
+//	AssertMeshErrorFree(El_Table, NodeTable, numprocs, myid, -2.0);
 
 	if (unrefinelist->get_num_elem()) {
 
@@ -125,6 +126,7 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 			reset_newfather_adaption_flag(El_Table);
 
 			NewFatherList.trashlist();
+			OtherProcUpdate.trashlist();
 			size = first_son.size();
 			MPI_Allreduce(&size, &global_f_son_size, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
@@ -138,8 +140,8 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 //	cout << "8 \n";
 //this is not required but good for checks
 	set_new_fathers(El_Table, new_father);
-	refinement_report(El_Table, myid);
-	refine_flag_report(El_Table, myid);
+//	refinement_report(El_Table, myid);
+//	refine_flag_report(El_Table, myid);
 
 	refinelist->trashlist();
 	unrefinelist->trashlist();
@@ -233,7 +235,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 
 	if (solrec->get_first_solution() >= iter - 1) {
 //		solrec->free_all_available_sol();
-		solrec->load_new_set_of_solution();
+		solrec->load_new_set_of_solution(myid);
 	}
 
 	HashEntryPtr *buck;
@@ -272,7 +274,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 	update_error_grid(solrec, err_meshctx, propctx);
 #endif
 
-	if (timeprops_ptr->ifrepartition() && propctx->adapt_flag) {
+	if (timeprops_ptr->ifrepartition() && propctx->adapt_flag && numprocs>1) {
 		dual_repartition(solrec, dual_meshctx, propctx);
 		//		cout<<"in original table"<<endl;
 //		cout<<"has to be refined "<<refinelist->get_num_elem()<<endl;

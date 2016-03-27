@@ -553,7 +553,7 @@ void repartition2(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprop
 	do {
 		ifrepeat = SequentialSend(numprocs, myid, El_Table, NodeTable, timeprops_ptr,
 		    NewProcDoubleKeyBoundaries, counter);
-		//printf("myid=%d counter=%d MyFirstAndLastDoubleKey=%g %g\n",myid,counter,MyFirstAndLastDoubleKey[0],MyFirstAndLastDoubleKey[1]);
+//		printf("myid=%d counter=%d MyFirstAndLastDoubleKey=%g , %g\n",myid,counter,NewProcDoubleKeyBoundaries[myid],NewProcDoubleKeyBoundaries[myid+1]);
 		if (counter++ > 4 * numprocs) {
 			printf(
 			    "myid=%d repartition2() did %d SequentialSend()'s when there were only %d processors.  This means we are probably in an infinite loop, so we are aborting\n",
@@ -567,6 +567,7 @@ void repartition2(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprop
 
 	NonSequentialSendAndUpdateNeigh(numprocs, myid, El_Table, NodeTable, timeprops_ptr,
 	    NewProcDoubleKeyBoundaries);
+	printf("myid=%d nonseq MyFirstAndLastDoubleKey=%g , %g\n",myid,NewProcDoubleKeyBoundaries[myid],NewProcDoubleKeyBoundaries[myid+1]);
 
 	CDeAllocD1(NewProcDoubleKeyBoundaries);
 

@@ -348,7 +348,7 @@ int ifCheckNode(HashTable* El_Table, HashTable* NodeTable, int NdDebugInfo, int 
 void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable, int numprocs, int myid,
     double loc) {
 
-	return;
+//	return;
 
 	char filename[256];
 	sprintf(filename, "AssertMeshErrorFree%04d.debug", myid);
