@@ -143,7 +143,7 @@ public:
 	void dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable* El_Table, int iter,
 	    ElemPtrList<DualElem>* refinelist, ElemPtrList<DualElem>* unrefinelist,
 	    vector<TRANSKEY>& trans_keys_vec, vector<int>& trans_keys_status,
-	    ElemPtrList<DualElem>* repart_list, double* allKeyRange);
+	    vector<DualElem*>& repart_list, double* allKeyRange);
 
 private:
 

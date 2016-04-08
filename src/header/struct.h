@@ -136,6 +136,11 @@ struct TRANSKEY {
 		for (unsigned i = 0; i < 12; ++i)
 			key[i] = keys[i];
 	}
+
+	TRANSKEY(const TRANSKEY& transkey) {
+		for (unsigned i = 0; i < 12; ++i)
+			key[i] = transkey.key[i];
+	}
 };
 //                             \|||/    
 //                             (o o)   

@@ -2245,7 +2245,7 @@ void DualElem::dual_check_refine_unrefine(SolRec* solrec, HashTable* El_Table, i
 void DualElem::dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable* El_Table, int iter,
     ElemPtrList<DualElem>* refinelist, ElemPtrList<DualElem>* unrefinelist,
     vector<TRANSKEY>& trans_keys_vec, vector<int>& trans_keys_status,
-    ElemPtrList<DualElem>* repart_list, double* myKeyRange) {
+    vector<DualElem*>& repart_list, double* myKeyRange) {
 
 	// trans_keys_status is a vector that holds the status of the element that are being transfered
 	// the number of elements that are being transfered is equal to number of TRANSKEYS that are stored
@@ -2302,7 +2302,7 @@ void DualElem::dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable*
 				trans_keys_vec.push_back(new_transpack);
 				trans_keys_status.push_back(check * 3);
 				refinelist->add(this);
-				repart_list->add(this);
+				repart_list.push_back(this);
 			} else if (check == 4) {
 
 				refinelist->add(this);
@@ -2311,7 +2311,7 @@ void DualElem::dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable*
 				SetTransPack(new_transpack, pass_key(), father_key, son_key);
 				trans_keys_vec.push_back(new_transpack);
 				trans_keys_status.push_back(check * 3);
-				repart_list->add(this);
+				repart_list.push_back(this);
 			} else
 				cerr
 				    << "something is wrong in status of the element in dual_check_refine_unrefine_repartition function \n";

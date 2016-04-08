@@ -11,6 +11,7 @@
 #include "../header/hpfem.h"
 #include "../header/exvar.h"
 #include <float.h>
+#include <algorithm>
 
 double doubleKeyRange;
 
@@ -35,22 +36,12 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	//get the first and last key for this proc
 	double myKeyRange[] = { DBL_MAX, -1. };
 
-//	find_my_key_range(solrec, myKeyRange, iter);
-
-//	cout << "myid " << myid << " my key range " << myKeyRange[0] << " , " << myKeyRange[1] << endl;
-
-//	double *allKeyRange = new double[2 * numprocs];
-//
-//	MPI_Allgather(myKeyRange, 2, MPI_DOUBLE, allKeyRange, 2, MPI_DOUBLE, MPI_COMM_WORLD);
-
-//	for (int i = 0; i < 2 * numprocs; ++i)
-//		cout << allKeyRange[i] << " , ";
-
 	vector<TRANSKEY> trans_keys_vec;
 	vector<int> trans_keys_status;
+	vector<DualElem*> repart_list;
 
 	//first of all each procs search it hashtable for missing elements
-	ElemPtrList<DualElem> refinelist, unrefinelist, repart_list;
+	ElemPtrList<DualElem> refinelist, unrefinelist;
 
 	HashEntryPtr * buck = El_Table->getbucketptr();
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
@@ -62,7 +53,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 				if (Curr_El->get_adapted_flag() > 0) {
 
 					Curr_El->dual_check_refine_unrefine_repartition(solrec, El_Table, iter, &refinelist,
-					    &unrefinelist, trans_keys_vec, trans_keys_status, &repart_list, myKeyRange);
+					    &unrefinelist, trans_keys_vec, trans_keys_status, repart_list, myKeyRange);
 
 				} else {
 					//during repartitioning we delete the GHOST elements as we do in forward run
@@ -76,13 +67,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	delete_extra_nodes(El_Table, NodeTable);
 
-	// make a connection pairs between available processors
-	//following lines initialize the connection loop
-	int send = trans_keys_vec.size(), receive_size;
-	int receive_from = 0, send_to = 0, count = 0, found = 0;
-
-	vector<TRANSKEY> keys_to_check_vec;
-	vector<int> my_keys_status(send), other_keys_status;
+	int count = 0, remaining;
 
 	MPI_Status status;
 	MPI_Request* s_request = new MPI_Request[2];
@@ -93,6 +78,14 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	do {
 		count++;
+
+		// make a connection pairs between available processors
+		//following lines initialize the connection loop
+		int send = trans_keys_vec.size(), receive_size;
+		int receive_from = 0, send_to = 0, found = 0;
+		vector<TRANSKEY> keys_to_check_vec;
+		vector<int> my_keys_status(send), other_keys_status;
+
 		set_send_receive_proc(count, myid, numprocs, receive_from, send_to);
 
 		MPI_Send(&send, 1, MPI_INT, send_to, count, MPI_COMM_WORLD);
@@ -115,7 +108,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			found = 0;
 			check_received_keys(solrec, keys_to_check_vec, other_keys_status, iter, found);
 
-			update_my_key_range_receiving_elements(keys_to_check_vec, other_keys_status, myKeyRange);
+//			update_my_key_range_receiving_elements(keys_to_check_vec, other_keys_status, myKeyRange);
 
 			MPI_Isend(&other_keys_status[0], receive_size, MPI_INT, receive_from, count, MPI_COMM_WORLD,
 			    &(s_request[0]));
@@ -148,12 +141,12 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 						int component = 0;
 						for (int i = 0; i < my_keys_status.size(); ++i)
 							if (my_keys_status[i] > 0) {
-								repart_list.get(i)->Pack_element((send_array + component), NodeTable, send_to);
+								repart_list[i]->Pack_element((send_array + component), NodeTable, send_to);
 								component += 1;
 								if (my_keys_status[i] == 1 || my_keys_status[i] == 2 || my_keys_status[i] == 12) {
 
-									El_Table->remove(repart_list.get(i)->pass_key());
-									delete repart_list.get(i);
+									El_Table->remove(repart_list[i]->pass_key());
+									delete repart_list[i];
 
 								} else
 									cerr << " it is not good, but my sibling is far from me since my status is:"
@@ -243,7 +236,32 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			} while (IfSentRecvd != 1);
 		}
 
-		if (send)
+		if (send) {
+			vector<TRANSKEY> cp_trans_keys_vec;
+			vector<int> cp_trans_keys_status;
+			vector<DualElem*> cp_repart_list;
+
+			assert(trans_keys_vec.size() == my_keys_status.size());
+			assert(trans_keys_status.size() == my_keys_status.size());
+			assert(repart_list.size() == my_keys_status.size());
+			// we must clean those elements that we sent from the list
+			// and update status of those elements that we have found their sons in other procs
+			for (int i = 0; i < my_keys_status.size(); ++i)
+				// the following condition means those elements that we have not found them yet or just some of their sons have been found
+				if (my_keys_status[i] % 3 == 0 && my_keys_status[i] != 12) {
+					cp_repart_list.push_back(repart_list[i]);
+					cp_trans_keys_status.push_back(my_keys_status[i] + trans_keys_status[i]);
+					cp_trans_keys_vec.push_back(trans_keys_vec[i].key);
+				}
+
+			trans_keys_vec.clear();
+			trans_keys_status.clear();
+			repart_list.clear();
+
+			trans_keys_vec = cp_trans_keys_vec;
+			trans_keys_status = cp_trans_keys_status;
+			repart_list = cp_repart_list;
+
 			do {
 
 				MPI_Test(&(s_request[1]), &IfSentRecvd, &status);
@@ -252,13 +270,14 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 			} while (IfSentRecvd != 1);
 
-		MPI_Barrier(MPI_COMM_WORLD);
+		}
 
-		my_keys_status.clear();
-		other_keys_status.clear();
+		int nsize = trans_keys_vec.size();
+
+		MPI_Allreduce(&nsize, &remaining, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
 		// or when there is no missing element anymore
-	} while (count < numprocs - 1);
+	} while (count < numprocs - 1 && remaining > 0);
 
 	delete_extra_nodes(El_Table, NodeTable);
 
@@ -278,7 +297,6 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	move_dual_data(meshctx, propctx);
 
 	dual_refine_unrefine<DualElem>(meshctx, propctx, &refinelist, &unrefinelist);
-
 
 	delete[] s_request;
 	delete[] r_request;
