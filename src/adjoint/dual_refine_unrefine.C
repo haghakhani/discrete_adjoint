@@ -44,7 +44,7 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 //	cout << "1 \n";
 //	refinement_report(El_Table);
 
-	if (refinelist->get_num_elem()) {
+//	if (refinelist->get_num_elem()) {
 		// start refinement
 		for (int i = 0; i < refinelist->get_num_elem(); ++i) {
 			refine(refinelist->get(i), El_Table, NodeTable, matprops_ptr, 1);
@@ -84,13 +84,13 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 //		refinement_report(El_Table);
 //		cout << "number of deleted elem after ref " << refdel << "  number of ref list  "
 //		    << refinelist->get_num_elem() << endl;
-	}
+//	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
 //	AssertMeshErrorFree(El_Table, NodeTable, numprocs, myid, -2.0);
 
-	if (unrefinelist->get_num_elem()) {
+//	if (unrefinelist->get_num_elem()) {
 
 		for (int i = 0; i < unrefinelist->get_num_elem(); ++i)
 			if (unrefinelist->get(i)->get_which_son() == 0) {
@@ -134,7 +134,7 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 
 		move_dual_data(meshctx, propctx);
 
-	}
+//	}
 
 //	calc_d_gravity(El_Table);
 //	cout << "8 \n";

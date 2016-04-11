@@ -270,7 +270,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 //		dual_unrefine(meshctx, propctx);
 
-//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 		dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 1);
 
 	}

@@ -97,6 +97,8 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			MPI_Irecv(&my_keys_status[0], send, MPI_INT, send_to, count, MPI_COMM_WORLD, &(r_request[0]));
 		}
 
+		cout<<"proc "<<myid<<" send "<<send<<" receive_size "<<receive_size<< " send to "<<send_to<<" receive_from "<<receive_from<<endl;
+
 		if (receive_size > 0) {
 
 			keys_to_check_vec.resize(receive_size);
@@ -119,6 +121,8 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 				    &(r_request[1]));
 			}
 		}
+
+		cout<<"receive_size passed \n";
 
 		if (send > 0) {
 			//now we have to ask the source proc to send us the elements that belong to us
@@ -164,6 +168,8 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 				}
 			} while (IfSentRecvd != 1);
 		}
+  
+		cout<<"send<0 passed \n";
 
 		if (found) {
 //			cout << found << endl;
@@ -236,6 +242,8 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			} while (IfSentRecvd != 1);
 		}
 
+		cout<<" found is "<<found<<" passed \n";
+
 		if (send) {
 			vector<TRANSKEY> cp_trans_keys_vec;
 			vector<int> cp_trans_keys_status;
@@ -272,20 +280,30 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 		}
 
+		cout<<" second send passed \n";
+
 		int nsize = trans_keys_vec.size();
 
 		MPI_Allreduce(&nsize, &remaining, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
+		cout<<"nsize "<<nsize<<" remaining  "<<remaining<<endl;
+
 		// or when there is no missing element anymore
 	} while (count < numprocs - 1 && remaining > 0);
 
+	cout<<" out of while loop \n";
+
 	delete_extra_nodes(El_Table, NodeTable);
+
+	cout<<" extra node deleted \n";
 
 	// we need this because we still have not refined and unrefined
 //	adjust_range(El_Table, refinelist, unrefinelist, myKeyRange);
 	double *allKeyRange = new double[2 * numprocs];
 
 	MPI_Allgather(myKeyRange, 2, MPI_DOUBLE, allKeyRange, 2, MPI_DOUBLE, MPI_COMM_WORLD);
+
+	cout<<" after all gather \n";
 
 	allKeyRange[0] = -1;
 
@@ -294,9 +312,15 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	update_neighbor_proc(propctx, El_Table, allKeyRange);
 
+	cout<<" after update neighb proc \n";
+
 	move_dual_data(meshctx, propctx);
 
+	cout<<"after move data \n";
+
 	dual_refine_unrefine<DualElem>(meshctx, propctx, &refinelist, &unrefinelist);
+
+	cout<<"after ref and unref \n";
 
 	delete[] s_request;
 	delete[] r_request;
