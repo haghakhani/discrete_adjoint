@@ -2267,13 +2267,21 @@ void DualElem::dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable*
 		if (prev_sol) {
 			unrefinelist->add(this);
 
-			double doublekey = father_key[0] * doubleKeyRange + father_key[1];
+			double doublekey = key[0] * doubleKeyRange + key[1];
 
 			if (doublekey < myKeyRange[0])
 				myKeyRange[0] = doublekey;
 
 			if (doublekey > myKeyRange[1])
 				myKeyRange[1] = doublekey;
+
+//			double doublekey = father_key[0] * doubleKeyRange + father_key[1];
+//
+//			if (doublekey < myKeyRange[0])
+//				myKeyRange[0] = doublekey;
+//
+//			if (doublekey > myKeyRange[1])
+//				myKeyRange[1] = doublekey;
 
 		} else {
 			// the only remaining case is that it has been unrefined so, we have to read from its sons
@@ -2284,13 +2292,21 @@ void DualElem::dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable*
 				prev_sol = solrec->lookup(son_key[i], iter - 1);
 
 				if (prev_sol) {
-					double doublekey = son_key[i][0] * doubleKeyRange + son_key[i][1];
+
+					double doublekey = key[0] * doubleKeyRange + key[1];
 
 					if (doublekey < myKeyRange[0])
 						myKeyRange[0] = doublekey;
 
 					if (doublekey > myKeyRange[1])
 						myKeyRange[1] = doublekey;
+//					double doublekey = son_key[i][0] * doubleKeyRange + son_key[i][1];
+//
+//					if (doublekey < myKeyRange[0])
+//						myKeyRange[0] = doublekey;
+//
+//					if (doublekey > myKeyRange[1])
+//						myKeyRange[1] = doublekey;
 
 					check++;
 				}

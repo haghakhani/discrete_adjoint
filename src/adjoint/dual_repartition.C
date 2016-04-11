@@ -97,7 +97,8 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			MPI_Irecv(&my_keys_status[0], send, MPI_INT, send_to, count, MPI_COMM_WORLD, &(r_request[0]));
 		}
 
-		cout<<"proc "<<myid<<" send "<<send<<" receive_size "<<receive_size<< " send to "<<send_to<<" receive_from "<<receive_from<<endl;
+		cout << "proc " << myid << " send " << send << " receive_size " << receive_size << " send to "
+		    << send_to << " receive_from " << receive_from << endl;
 
 		if (receive_size > 0) {
 
@@ -122,7 +123,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			}
 		}
 
-		cout<<"receive_size passed \n";
+		cout << "receive_size passed \n";
 
 		if (send > 0) {
 			//now we have to ask the source proc to send us the elements that belong to us
@@ -168,8 +169,8 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 				}
 			} while (IfSentRecvd != 1);
 		}
-  
-		cout<<"send<0 passed \n";
+
+		cout << "send<0 passed \n";
 
 		if (found) {
 //			cout << found << endl;
@@ -191,44 +192,93 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 								double doublekey = *(elm->pass_key()) * doubleKeyRange + *(elm->pass_key() + 1);
 
-								if (doublekey < myKeyRange[0])
+								if (doublekey < myKeyRange[0]) {
 									myKeyRange[0] = doublekey;
+//									cout << "change 1\n";
+								}
 
-								if (doublekey > myKeyRange[1])
+								if (doublekey > myKeyRange[1]) {
 									myKeyRange[1] = doublekey;
+//									cout << "change 2\n";
+								}
 
 							} else if (other_keys_status[i] == 2) {
+
 								unrefinelist.add(elm);
 
-								double doublekey = *(elm->getfather()) * doubleKeyRange + *(elm->getfather() + 1);
+								double doublekey = *(elm->pass_key()) * doubleKeyRange + *(elm->pass_key() + 1);
 
-								if (doublekey < myKeyRange[0])
+								if (doublekey < myKeyRange[0]) {
 									myKeyRange[0] = doublekey;
+//									cout << "change 3\n";
+								}
 
-								if (doublekey > myKeyRange[1])
+								if (doublekey > myKeyRange[1]) {
 									myKeyRange[1] = doublekey;
+//									cout << "change 4\n";
+								}
+//								double doublekey = *(elm->getfather()) * doubleKeyRange + *(elm->getfather() + 1);
+//
+//								if (doublekey < myKeyRange[0]) {
+//									myKeyRange[0] = doublekey;
+//									cout << "change 3\n";
+//								}
+//
+//								if (doublekey > myKeyRange[1]) {
+//									myKeyRange[1] = doublekey;
+//									cout << "change 4\n";
+//								}
 
 							} else if (other_keys_status[i] == 3 || other_keys_status[i] == 6
 							    || other_keys_status[i] == 9 || other_keys_status[i] == 12) {
 
 								refinelist.add(elm);
 
-								unsigned son_key[4][2];
-								elm->gen_my_sons_key(El_Table, son_key);
+								double doublekey = *(elm->pass_key()) * doubleKeyRange + *(elm->pass_key() + 1);
 
-								for (int i = 0; i < 4; ++i) {
-									Solution* prev_sol = solrec->lookup(son_key[i], iter - 1);
-
-									if (prev_sol) {
-										double doublekey = son_key[i][0] * doubleKeyRange + son_key[i][1];
-
-										if (doublekey < myKeyRange[0])
-											myKeyRange[0] = doublekey;
-
-										if (doublekey > myKeyRange[1])
-											myKeyRange[1] = doublekey;
-									}
+								if (doublekey < myKeyRange[0]) {
+									myKeyRange[0] = doublekey;
+//									cout << "change 1\n";
 								}
+
+								if (doublekey > myKeyRange[1]) {
+									myKeyRange[1] = doublekey;
+//									cout << "change 2\n";
+								}
+
+//								unsigned son_key[4][2];
+//								elm->gen_my_sons_key(El_Table, son_key);
+//
+//								for (int i = 0; i < 4; ++i) {
+//									Solution* prev_sol = solrec->lookup(son_key[i], iter - 1);
+//
+//									if (prev_sol) {
+//
+//										double doublekey = *(elm->pass_key()) * doubleKeyRange + *(elm->pass_key() + 1);
+//
+//										if (doublekey < myKeyRange[0]) {
+//											myKeyRange[0] = doublekey;
+//											cout << "change 1\n";
+//										}
+//
+//										if (doublekey > myKeyRange[1]) {
+//											myKeyRange[1] = doublekey;
+//											cout << "change 2\n";
+//										}
+//
+////										double doublekey = son_key[i][0] * doubleKeyRange + son_key[i][1];
+////
+////										if (doublekey < myKeyRange[0]) {
+////											myKeyRange[0] = doublekey;
+////											cout << "change 5\n";
+////										}
+////
+////										if (doublekey > myKeyRange[1]) {
+////											myKeyRange[1] = doublekey;
+////											cout << "change 6\n";
+////										}
+//									}
+//								}
 
 							} else
 								cerr << "element status is not correct, and repartitioning fails \n";
@@ -242,7 +292,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			} while (IfSentRecvd != 1);
 		}
 
-		cout<<" found is "<<found<<" passed \n";
+		cout << " found is " << found << " passed \n";
 
 		if (send) {
 			vector<TRANSKEY> cp_trans_keys_vec;
@@ -280,22 +330,22 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 		}
 
-		cout<<" second send passed \n";
+		cout << " second send passed \n";
 
 		int nsize = trans_keys_vec.size();
 
 		MPI_Allreduce(&nsize, &remaining, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-		cout<<"nsize "<<nsize<<" remaining  "<<remaining<<endl;
+		cout << "nsize " << nsize << " remaining  " << remaining << endl;
 
 		// or when there is no missing element anymore
 	} while (count < numprocs - 1 && remaining > 0);
 
-	cout<<" out of while loop \n";
+	cout << " out of while loop \n";
 
 	delete_extra_nodes(El_Table, NodeTable);
 
-	cout<<" extra node deleted \n";
+	cout << " extra node deleted \n";
 
 	// we need this because we still have not refined and unrefined
 //	adjust_range(El_Table, refinelist, unrefinelist, myKeyRange);
@@ -303,7 +353,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	MPI_Allgather(myKeyRange, 2, MPI_DOUBLE, allKeyRange, 2, MPI_DOUBLE, MPI_COMM_WORLD);
 
-	cout<<" after all gather \n";
+	cout << "after all gather my range is " << myKeyRange[0] << " , " << myKeyRange[1] << endl;
 
 	allKeyRange[0] = -1;
 
@@ -312,15 +362,15 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	update_neighbor_proc(propctx, El_Table, allKeyRange);
 
-	cout<<" after update neighb proc \n";
+	cout << " after update neighb proc \n";
 
 	move_dual_data(meshctx, propctx);
 
-	cout<<"after move data \n";
+	cout << "after move data \n";
 
 	dual_refine_unrefine<DualElem>(meshctx, propctx, &refinelist, &unrefinelist);
 
-	cout<<"after ref and unref \n";
+	cout << "after ref and unref \n";
 
 	delete[] s_request;
 	delete[] r_request;
@@ -468,6 +518,13 @@ void delete_extra_nodes(HashTable* El_Table, HashTable* NodeTable) {
 void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKeyRange) {
 
 	int myid = propctx->myid, numprocs = propctx->numproc;
+
+//	double *KeyBoundaries = CAllocD1(numprocs + 1);
+//	for (int iproc = 1; iproc < numprocs; iproc++)
+//		KeyBoundaries[iproc] = allKeyRange[2 *iproc ];
+//
+//	KeyBoundaries[0] = -1.;
+//	KeyBoundaries[numprocs] = DBL_MAX;
 //	int num_elem=0;
 
 	HashEntryPtr * buck = El_Table->getbucketptr();
@@ -494,6 +551,7 @@ void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKey
 						for (int iproc = 0; iproc < numprocs; iproc++)
 							if ((allKeyRange[2 * iproc] <= doublekey)
 							    && (allKeyRange[2 * iproc + 1] >= doublekey)) {
+//							if ((KeyBoundaries[iproc] <= doublekey) && (KeyBoundaries[iproc + 1] > doublekey)) {
 								Curr_El->put_neigh_proc(ineigh, iproc);
 								break;
 							}
@@ -502,6 +560,7 @@ void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKey
 				currentPtr = currentPtr->next;
 			}
 		}
+//	CDeAllocD1 (KeyBoundaries);
 }
 
 void update_my_key_range_leaving_elements(vector<TRANSKEY>& trans_keys_vec,
