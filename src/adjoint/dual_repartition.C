@@ -20,6 +20,8 @@ void set_proc_state(HashTable* El_Table);
 void adjust_range(HashTable* El_Table, ElemPtrList<DualElem>& refList,
     ElemPtrList<DualElem>& unRefList, double* myKeyRange);
 
+void inspect_element(HashTable* El_Table, unsigned* key);
+
 void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	HashTable* El_Table = meshctx->el_table;
@@ -32,6 +34,8 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	int iter = timeprops_ptr->iter;
 
 	doubleKeyRange = *(El_Table->get_doublekeyrange() + 1);
+
+	unsigned dbg_key[2] = { 1, 2081 };
 
 	//get the first and last key for this proc
 	double myKeyRange[] = { DBL_MAX, -1. };
@@ -67,6 +71,10 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	delete_extra_nodes(El_Table, NodeTable);
 
+//	AssertMeshErrorFree(El_Table, NodeTable, numprocs, myid, 2.0);
+
+//	inspect_element(El_Table, dbg_key);
+
 	int count = 0, remaining;
 
 	MPI_Status status;
@@ -97,8 +105,8 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			MPI_Irecv(&my_keys_status[0], send, MPI_INT, send_to, count, MPI_COMM_WORLD, &(r_request[0]));
 		}
 
-		cout << "proc " << myid << " send " << send << " receive_size " << receive_size << " send to "
-		    << send_to << " receive_from " << receive_from << endl;
+//		cout << "proc " << myid << " send " << send << " receive_size " << receive_size << " send to "
+//		    << send_to << " receive_from " << receive_from << endl;
 
 		if (receive_size > 0) {
 
@@ -123,7 +131,8 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			}
 		}
 
-		cout << "receive_size passed \n";
+//		cout << "receive_size passed and " << found << " found \n";
+		int to_be_sent=0;
 
 		if (send > 0) {
 			//now we have to ask the source proc to send us the elements that belong to us
@@ -134,7 +143,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			do {
 				MPI_Test(&(r_request[0]), &IfSentRecvd, &status);
 				if (IfSentRecvd) {
-					int to_be_sent = 0;
+					to_be_sent = 0;
 					for (int i = 0; i < my_keys_status.size(); ++i)
 						if (my_keys_status[i] > 0)
 							to_be_sent += 1;
@@ -148,6 +157,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 							if (my_keys_status[i] > 0) {
 								repart_list[i]->Pack_element((send_array + component), NodeTable, send_to);
 								component += 1;
+//								cout << "status[" << i << "] " << my_keys_status[i] << endl;
 								if (my_keys_status[i] == 1 || my_keys_status[i] == 2 || my_keys_status[i] == 12) {
 
 									El_Table->remove(repart_list[i]->pass_key());
@@ -170,21 +180,23 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			} while (IfSentRecvd != 1);
 		}
 
-		cout << "send<0 passed \n";
+//		cout << "send passed \n";
 
 		if (found) {
 //			cout << found << endl;
 			do {
 				MPI_Test(&(r_request[1]), &IfSentRecvd, &status);
 				if (IfSentRecvd) {
-					found = 0;
+					int component = 0;
 					for (int i = 0; i < other_keys_status.size(); ++i) {
 						if (other_keys_status[i] > 0) {
 
-							DualElem* elm = (DualElem*) El_Table->lookup(receive_array[found].key);
+							DualElem* elm = (DualElem*) El_Table->lookup(receive_array[component].key);
 							assert(elm == NULL);
 
-							elm = new DualElem((receive_array + i), NodeTable, myid);
+//							cout << component << endl;
+
+							elm = new DualElem((receive_array + component), NodeTable, myid);
 
 							El_Table->add(elm->pass_key(), elm);
 
@@ -283,7 +295,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 							} else
 								cerr << "element status is not correct, and repartitioning fails \n";
 
-							found++;
+							component++;
 						}
 					}
 					delete[] receive_array;
@@ -292,9 +304,9 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			} while (IfSentRecvd != 1);
 		}
 
-		cout << " found is " << found << " passed \n";
+//		cout << " found passed " << endl;
 
-		if (send) {
+		if (to_be_sent) {
 			vector<TRANSKEY> cp_trans_keys_vec;
 			vector<int> cp_trans_keys_status;
 			vector<DualElem*> cp_repart_list;
@@ -330,47 +342,50 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 		}
 
-		cout << " second send passed \n";
+//		cout << " second send passed \n";
 
 		int nsize = trans_keys_vec.size();
 
 		MPI_Allreduce(&nsize, &remaining, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-		cout << "nsize " << nsize << " remaining  " << remaining << endl;
+//		cout << "nsize " << nsize << " remaining  " << remaining << endl;
 
 		// or when there is no missing element anymore
 	} while (count < numprocs - 1 && remaining > 0);
 
-	cout << " out of while loop \n";
+//	cout << " out of while loop \n";
 
 	delete_extra_nodes(El_Table, NodeTable);
 
-	cout << " extra node deleted \n";
+//	cout << " extra node deleted \n";
 
 	// we need this because we still have not refined and unrefined
-//	adjust_range(El_Table, refinelist, unrefinelist, myKeyRange);
+	//	adjust_range(El_Table, refinelist, unrefinelist, myKeyRange);
 	double *allKeyRange = new double[2 * numprocs];
 
 	MPI_Allgather(myKeyRange, 2, MPI_DOUBLE, allKeyRange, 2, MPI_DOUBLE, MPI_COMM_WORLD);
 
-	cout << "after all gather my range is " << myKeyRange[0] << " , " << myKeyRange[1] << endl;
+//	cout << "after all gather my range is " << fixed << myKeyRange[0] << " , " << myKeyRange[1]
+//	    << endl;
 
-	allKeyRange[0] = -1;
+	allKeyRange[0] = -1.0;
 
 //	for (int i = 0; i < 2 * numprocs; ++i)
 //		cout << allKeyRange[i] << " , ";
 
 	update_neighbor_proc(propctx, El_Table, allKeyRange);
 
-	cout << " after update neighb proc \n";
+//	cout << " after update neighb proc \n";
 
 	move_dual_data(meshctx, propctx);
 
-	cout << "after move data \n";
+//	cout << "after move data \n";
 
 	dual_refine_unrefine<DualElem>(meshctx, propctx, &refinelist, &unrefinelist);
 
-	cout << "after ref and unref \n";
+	AssertMeshErrorFree(El_Table, NodeTable, numprocs, myid, 1.0);
+
+//	cout << "after ref and unref \n";
 
 	delete[] s_request;
 	delete[] r_request;
@@ -718,3 +733,20 @@ void set_proc_state(HashTable* El_Table) {
 		}
 }
 
+void inspect_element(HashTable* El_Table, unsigned* key) {
+
+	HashEntryPtr * buck = El_Table->getbucketptr();
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				Element *Curr_El = (Element*) (currentPtr->value);
+				if (compare_key(Curr_El->pass_key(), key)) {
+					cout << "this is something you have to avoid \n";
+					exit(1);
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
+}
