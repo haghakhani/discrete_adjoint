@@ -200,14 +200,6 @@ void delete_extra_nodes(HashTable* El_Table,HashTable* NodeTable);
 
 void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table,double * allKeyRange);
 
-void update_my_key_range_leaving_elements(vector<TRANSKEY>& trans_keys_vec, vector<int>& trans_keys_status,
-		vector<double>& myDoubleKeys);
-
-void update_my_key_range_receiving_elements(vector<TRANSKEY>& keys_to_check_vec,
-    vector<int>& other_keys_status, double* keyRange);
-
-void find_my_key_range(SolRec* solrec,double* myKeyRange,int iter);
-
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);
 

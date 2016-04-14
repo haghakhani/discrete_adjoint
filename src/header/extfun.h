@@ -220,6 +220,9 @@ void hdf_output(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 int write_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timeprops_ptr,
     MatProps *matprops_ptr, MapNames *mapnames, const int mode);
 
+int write_dual_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timeprops_ptr,
+    MatProps *matprops_ptr, MapNames *mapnames, const int mode, const int plotflag);
+
 //! this is Amrita's output function, Keith wrote it to her specifications, it is for use with the gmfg viewer, which Daniel rewrote during the summer of 2006 to remove a lot dependencies and use basically only opengl calls.  This makes the viewer compatible with almost every linux machine and a lot easier (read as possible) to install
 void incr_tri_output(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid, int numprocs,
     MatProps* matprops, TimeProps* timeprops, double v_star);

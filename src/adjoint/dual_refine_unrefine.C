@@ -125,15 +125,14 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 
 			reset_newfather_adaption_flag(El_Table);
 
+			move_dual_data(meshctx, propctx);
+
 			NewFatherList.trashlist();
 			OtherProcUpdate.trashlist();
 			size = first_son.size();
 			MPI_Allreduce(&size, &global_f_son_size, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
 		}
-
-		move_dual_data(meshctx, propctx);
-
 //	}
 
 //	calc_d_gravity(El_Table);

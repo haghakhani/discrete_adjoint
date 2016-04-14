@@ -20,6 +20,9 @@
 #endif
 #include "../header/hpfem.h"
 #include "../header/exvar.h"
+#if HAVE_HDF5
+#include "../header/GMFG_hdfapi.h"
+#endif
 
 #define DEBUG1
 //#define Error
@@ -28,8 +31,6 @@
 #define KEY1   1321528399
 #define ITER   10
 #define J      0
-
-
 
 template<typename T1, typename T2>
 void copy_hashtables_objects(HashTable* El_Table, HashTable* cp_El_Table) {
@@ -99,7 +100,9 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	calc_adjoint(&dual_meshctx, propctx);
 
-	dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 2);
+//	dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 2);
+	write_dual_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW,2);
+//	write_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW);
 
 #ifdef Error
 
@@ -271,9 +274,12 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //		dual_unrefine(meshctx, propctx);
 
 		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-		dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 1);
-
+//			dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 1);
+			write_dual_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD, 1);
+//			write_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD);
 	}
+//	write_dual_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_CLOSE, 1);
+//	write_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_CLOSE);
 
 	delete_hashtables_objects<DualElem>(Dual_El_Tab);
 	delete_hashtables_objects<Node>(NodeTable);
@@ -293,8 +299,6 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //		    << key1_2 << " , " << key2_2 << endl;
 
 }
-
-
 
 bool must_write(MemUse* memuse_ptr, int myid) {
 

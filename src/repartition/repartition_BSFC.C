@@ -567,7 +567,7 @@ void repartition2(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprop
 
 	NonSequentialSendAndUpdateNeigh(numprocs, myid, El_Table, NodeTable, timeprops_ptr,
 	    NewProcDoubleKeyBoundaries);
-	printf("myid=%d nonseq MyFirstAndLastDoubleKey=%g , %g\n",myid,NewProcDoubleKeyBoundaries[myid],NewProcDoubleKeyBoundaries[myid+1]);
+//	printf("myid=%d nonseq MyFirstAndLastDoubleKey=%g , %g\n",myid,NewProcDoubleKeyBoundaries[myid],NewProcDoubleKeyBoundaries[myid+1]);
 
 	CDeAllocD1(NewProcDoubleKeyBoundaries);
 

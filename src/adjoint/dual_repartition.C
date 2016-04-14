@@ -15,11 +15,6 @@
 
 double doubleKeyRange;
 
-void set_proc_state(HashTable* El_Table);
-
-void adjust_range(HashTable* El_Table, ElemPtrList<DualElem>& refList,
-    ElemPtrList<DualElem>& unRefList, double* myKeyRange);
-
 void inspect_element(HashTable* El_Table, unsigned* key);
 
 void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
@@ -132,7 +127,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		}
 
 //		cout << "receive_size passed and " << found << " found \n";
-		int to_be_sent=0;
+		int to_be_sent = 0;
 
 		if (send > 0) {
 			//now we have to ask the source proc to send us the elements that belong to us
@@ -193,106 +188,29 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 							DualElem* elm = (DualElem*) El_Table->lookup(receive_array[component].key);
 							assert(elm == NULL);
-
 //							cout << component << endl;
 
 							elm = new DualElem((receive_array + component), NodeTable, myid);
 
 							El_Table->add(elm->pass_key(), elm);
 
-							if (other_keys_status[i] == 1) {
+							double doublekey = *(elm->pass_key()) * doubleKeyRange + *(elm->pass_key() + 1);
 
-								double doublekey = *(elm->pass_key()) * doubleKeyRange + *(elm->pass_key() + 1);
+							if (doublekey < myKeyRange[0])
+								myKeyRange[0] = doublekey;
 
-								if (doublekey < myKeyRange[0]) {
-									myKeyRange[0] = doublekey;
-//									cout << "change 1\n";
-								}
+							if (doublekey > myKeyRange[1])
+								myKeyRange[1] = doublekey;
 
-								if (doublekey > myKeyRange[1]) {
-									myKeyRange[1] = doublekey;
-//									cout << "change 2\n";
-								}
-
-							} else if (other_keys_status[i] == 2) {
+							if (other_keys_status[i] == 2)
 
 								unrefinelist.add(elm);
 
-								double doublekey = *(elm->pass_key()) * doubleKeyRange + *(elm->pass_key() + 1);
-
-								if (doublekey < myKeyRange[0]) {
-									myKeyRange[0] = doublekey;
-//									cout << "change 3\n";
-								}
-
-								if (doublekey > myKeyRange[1]) {
-									myKeyRange[1] = doublekey;
-//									cout << "change 4\n";
-								}
-//								double doublekey = *(elm->getfather()) * doubleKeyRange + *(elm->getfather() + 1);
-//
-//								if (doublekey < myKeyRange[0]) {
-//									myKeyRange[0] = doublekey;
-//									cout << "change 3\n";
-//								}
-//
-//								if (doublekey > myKeyRange[1]) {
-//									myKeyRange[1] = doublekey;
-//									cout << "change 4\n";
-//								}
-
-							} else if (other_keys_status[i] == 3 || other_keys_status[i] == 6
-							    || other_keys_status[i] == 9 || other_keys_status[i] == 12) {
+							else if (other_keys_status[i] == 3 || other_keys_status[i] == 6
+							    || other_keys_status[i] == 9 || other_keys_status[i] == 12)
 
 								refinelist.add(elm);
-
-								double doublekey = *(elm->pass_key()) * doubleKeyRange + *(elm->pass_key() + 1);
-
-								if (doublekey < myKeyRange[0]) {
-									myKeyRange[0] = doublekey;
-//									cout << "change 1\n";
-								}
-
-								if (doublekey > myKeyRange[1]) {
-									myKeyRange[1] = doublekey;
-//									cout << "change 2\n";
-								}
-
-//								unsigned son_key[4][2];
-//								elm->gen_my_sons_key(El_Table, son_key);
-//
-//								for (int i = 0; i < 4; ++i) {
-//									Solution* prev_sol = solrec->lookup(son_key[i], iter - 1);
-//
-//									if (prev_sol) {
-//
-//										double doublekey = *(elm->pass_key()) * doubleKeyRange + *(elm->pass_key() + 1);
-//
-//										if (doublekey < myKeyRange[0]) {
-//											myKeyRange[0] = doublekey;
-//											cout << "change 1\n";
-//										}
-//
-//										if (doublekey > myKeyRange[1]) {
-//											myKeyRange[1] = doublekey;
-//											cout << "change 2\n";
-//										}
-//
-////										double doublekey = son_key[i][0] * doubleKeyRange + son_key[i][1];
-////
-////										if (doublekey < myKeyRange[0]) {
-////											myKeyRange[0] = doublekey;
-////											cout << "change 5\n";
-////										}
-////
-////										if (doublekey > myKeyRange[1]) {
-////											myKeyRange[1] = doublekey;
-////											cout << "change 6\n";
-////										}
-//									}
-//								}
-
-							} else
+							 else if(other_keys_status[i] != 1)
 								cerr << "element status is not correct, and repartitioning fails \n";
 
 							component++;
@@ -383,7 +301,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	dual_refine_unrefine<DualElem>(meshctx, propctx, &refinelist, &unrefinelist);
 
-	AssertMeshErrorFree(El_Table, NodeTable, numprocs, myid, 1.0);
+//	AssertMeshErrorFree(El_Table, NodeTable, numprocs, myid, 1.0);
 
 //	cout << "after ref and unref \n";
 
@@ -534,14 +452,6 @@ void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKey
 
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
-//	double *KeyBoundaries = CAllocD1(numprocs + 1);
-//	for (int iproc = 1; iproc < numprocs; iproc++)
-//		KeyBoundaries[iproc] = allKeyRange[2 *iproc ];
-//
-//	KeyBoundaries[0] = -1.;
-//	KeyBoundaries[numprocs] = DBL_MAX;
-//	int num_elem=0;
-
 	HashEntryPtr * buck = El_Table->getbucketptr();
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -566,7 +476,6 @@ void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKey
 						for (int iproc = 0; iproc < numprocs; iproc++)
 							if ((allKeyRange[2 * iproc] <= doublekey)
 							    && (allKeyRange[2 * iproc + 1] >= doublekey)) {
-//							if ((KeyBoundaries[iproc] <= doublekey) && (KeyBoundaries[iproc + 1] > doublekey)) {
 								Curr_El->put_neigh_proc(ineigh, iproc);
 								break;
 							}
@@ -575,162 +484,7 @@ void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKey
 				currentPtr = currentPtr->next;
 			}
 		}
-//	CDeAllocD1 (KeyBoundaries);
-}
 
-void update_my_key_range_leaving_elements(vector<TRANSKEY>& trans_keys_vec,
-    vector<int>& trans_keys_status, vector<double>& myDoubleKeys) {
-
-	assert(trans_keys_status.size() == trans_keys_vec.size());
-	vector<double> repDoubleKey;
-
-	for (int i = 0; i < trans_keys_status.size(); ++i)
-//		if (trans_keys_status[i] == 1 || trans_keys_status[i] == 2 || trans_keys_status[i] == 12) {
-		repDoubleKey.push_back(trans_keys_vec[i].key[0] * doubleKeyRange + trans_keys_vec[i].key[1]);
-
-}
-
-void update_my_key_range_receiving_elements(vector<TRANSKEY>& keys_to_check_vec,
-    vector<int>& other_keys_status, double* keyRange) {
-
-	assert(other_keys_status.size() == keys_to_check_vec.size());
-
-	for (int i = 0; i < other_keys_status.size(); ++i)
-
-		if (other_keys_status[i] > 0) {
-
-			double doubleKey = keys_to_check_vec[i].key[0] * doubleKeyRange + keys_to_check_vec[i].key[1];
-
-			if (doubleKey < keyRange[0])
-				keyRange[0] = doubleKey;
-
-			if (doubleKey > keyRange[1])
-				keyRange[1] = doubleKey;
-
-		}
-}
-
-void find_my_key_range(SolRec* solrec, double* myKeyRange, int iter) {
-
-	HashEntryPtr * buck = solrec->getbucketptr();
-	for (int i = 0; i < solrec->get_no_of_buckets(); i++)
-		if (*(buck + i)) {
-			HashEntryPtr currentPtr = *(buck + i);
-			while (currentPtr) {
-				Jacobian *jacobian = (Jacobian*) (currentPtr->value);
-
-				Solution* solution = jacobian->get_solution(iter - 1);
-				if (solution) {
-					unsigned* key = jacobian->get_key();
-					double doubleKey = key[0] * doubleKeyRange + key[1];
-					if (doubleKey > myKeyRange[1])
-						myKeyRange[1] = doubleKey;
-					if (doubleKey < myKeyRange[0])
-						myKeyRange[0] = doubleKey;
-				}
-
-				currentPtr = currentPtr->next;
-			}
-		}
-}
-
-void adjust_range(HashTable* El_Table, ElemPtrList<DualElem>& refList,
-    ElemPtrList<DualElem>& unRefList, double* myKeyRange) {
-
-	for (int i = 0; i < refList.get_num_elem(); ++i) {
-
-		unsigned* key = refList.get(i)->pass_key();
-		double doubleKey = key[0] * doubleKeyRange + key[1];
-
-		if (doubleKey < myKeyRange[0]) {
-			myKeyRange[0] = doubleKey;
-			cout << "key min updated\n";
-		}
-
-		if (doubleKey > myKeyRange[1]) {
-			myKeyRange[1] = doubleKey;
-			cout << "key max updated\n";
-		}
-	}
-
-	for (int i = 0; i < unRefList.get_num_elem(); ++i) {
-
-		unsigned* key = unRefList.get(i)->pass_key();
-		double doubleKey = key[0] * doubleKeyRange + key[1];
-
-		if (doubleKey < myKeyRange[0]) {
-			myKeyRange[0] = doubleKey;
-			cout << "key min updated\n";
-		}
-
-		if (doubleKey > myKeyRange[1]) {
-			myKeyRange[1] = doubleKey;
-			cout << "key max updated\n";
-		}
-	}
-//	if (status == 2) {
-//		unsigned* father_key = elm->getfather();
-//		double doubleKey = father_key[0] * doubleKeyRange + father_key[1];
-//
-//		if (doubleKey < myKeyRange[0]) {
-//			myKeyRange[0] = doubleKey;
-//			cout << "key min updated\n";
-//		}
-//
-//		if (doubleKey > myKeyRange[1]) {
-//			myKeyRange[1] = doubleKey;
-//			cout << "key max updated\n";
-//		}
-//	}
-//
-//	if (status == 3 || status == 4 || status == 8 || status == 12) {
-//
-//		unsigned son_key[4][2];
-//		elm->gen_my_sons_key(El_Table, son_key);
-//		double doubleKey[4];
-//
-//		for (int i = 0; i < 4; ++i) {
-//			doubleKey[i] = son_key[i][0] * doubleKeyRange + son_key[i][1];
-//
-//			if (doubleKey[i] < myKeyRange[0]) {
-//				myKeyRange[0] = doubleKey[i];
-//				cout << "key min updated\n";
-//			}
-//
-//			if (doubleKey[i] > myKeyRange[1]) {
-//				myKeyRange[1] = doubleKey[i];
-//				cout << "key max updated\n";
-//			}
-//		}
-//	}
-}
-
-void set_proc_state(HashTable* El_Table) {
-
-	HashEntryPtr * buck = El_Table->getbucketptr();
-	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
-		if (*(buck + i)) {
-			HashEntryPtr currentPtr = *(buck + i);
-			while (currentPtr) {
-				DualElem *Curr_El = (DualElem*) (currentPtr->value);
-
-				*(Curr_El->get_prev_state_vars()) = 0.;
-				*(Curr_El->get_prev_state_vars() + 1) = 0.;
-
-				if (Curr_El->get_adapted_flag() > 0) {
-					*(Curr_El->get_prev_state_vars()) = Curr_El->get_myprocess();
-
-					int *neigh_proc = Curr_El->get_neigh_proc();
-
-					for (int i = 0; i < 8; ++i)
-						if (neigh_proc[i] >= 0 && neigh_proc[i] != Curr_El->get_myprocess()) {
-							*(Curr_El->get_prev_state_vars() + 1) = GHOST;
-							break;
-						}
-				}
-				currentPtr = currentPtr->next;
-			}
-		}
 }
 
 void inspect_element(HashTable* El_Table, unsigned* key) {
