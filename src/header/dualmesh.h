@@ -10,6 +10,8 @@
 
 #include "element2.h"
 #include "jacobian.h"
+#include <hdf5.h>
+#include "GMFG_hdfapi.h"
 
 class ErrorElem;
 
@@ -39,6 +41,8 @@ public:
 
 	// this function writes the recorded solution to files, and for each time step separately
 	void wrtie_sol_to_disk(int myid);
+
+	void wrtie_sol_to_disk_hdf5(int myid);
 
 	// this function reads the recorded solution from files, and for each time step separately and store it in SolRec
 	void read_sol_from_disk(int myid, int iter);

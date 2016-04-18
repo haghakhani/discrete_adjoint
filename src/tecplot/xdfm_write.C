@@ -31,15 +31,44 @@ using namespace std;
 
 #include <hdf5.h>
 #include <mpi.h>
-
-#include <hashtab.h>
-#include <element2.h>
 #include <dualmesh.h>
-#include <node.h>
 #include <GMFG_hdfapi.h>
 
-//just an innocent declaration. defined at end of the file
-double interpolate_elv(HashTable *, HashTable *, Element *, int, unsigned *);
+/*
+ * interpolate_elv is exactly the same code that is
+ * being used in meshplotter(...), in tecplot.C
+ */
+template <typename T>
+double interpolate_elv(HashTable *El_Table, HashTable *NodeTable, T *EmTemp, int j,
+    unsigned *nodes) {
+	double elev;
+	int neighside, mynode;
+	if (j == EmTemp->get_which_son() + 1) {
+		mynode = j - 1;
+		neighside = j;
+	} else if (j == EmTemp->get_which_son() - 1) {
+		mynode = j + 1;
+		neighside = j - 1;
+		if (neighside < 0)
+			neighside = 3;
+	} else if (EmTemp->get_which_son() == 0) {
+		mynode = 0;
+		neighside = 2;
+	} else if (EmTemp->get_which_son() == 3) {
+		mynode = 3;
+		neighside = 0;
+	} else {
+		mynode = 1;
+		neighside = 1;
+	}
+	Node* NodeTemp2 = (Node*) NodeTable->lookup(nodes + mynode * KEYLENGTH);
+	elev = 0.5 * NodeTemp2->get_elevation();
+	T* EmTemp2 = (T*) El_Table->lookup((EmTemp->get_neighbors() + KEYLENGTH * neighside));
+	NodeTemp2 = (Node*) NodeTable->lookup(EmTemp2->getNode() + j * KEYLENGTH);
+	elev += 0.5 * NodeTemp2->get_elevation();
+	return elev;
+}
+
 void newXmlfile(char *);
 
 int write_dual_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timeprops_ptr,
@@ -69,18 +98,16 @@ int write_dual_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timepr
 	unsigned *nodes;
 
 	/* scan HashTable and store coordinates and variables in vectors */
-	DualElem *EmTemp = NULL;
-	Node *NodeTemp = NULL;
 	HashEntry *entryptr;
 	int buckets = El_Table->get_no_of_buckets();
 	for (i = 0; i < buckets; i++) {
 		entryptr = *(El_Table->getbucketptr() + i);
 		while (entryptr) {
-			EmTemp = (DualElem *) entryptr->value;
+			DualElem* EmTemp = (DualElem *) entryptr->value;
 			if (EmTemp->get_adapted_flag() > 0/*!(EmTemp->get_refined_flag())*/) {
-				if (plotflag == 1)
-					state_vars = EmTemp->get_prev_state_vars();
-				else
+//				if (plotflag == 1)
+//					state_vars = EmTemp->get_prev_state_vars();
+//				else
 					state_vars = EmTemp->get_state_vars();
 
 				adjoint = EmTemp->get_adjoint();
@@ -94,7 +121,7 @@ int write_dual_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timepr
 				num_elm++;
 				nodes = EmTemp->getNode();
 				for (j = 0; j < 4; j++) {
-					NodeTemp = (Node *) NodeTable->lookup(nodes + j * KEYLENGTH);
+					Node * NodeTemp = (Node *) NodeTable->lookup(nodes + j * KEYLENGTH);
 					coord = NodeTemp->get_coord();
 					xcoord.push_back(coord[0] * lscale);
 					ycoord.push_back(coord[1] * lscale);
@@ -106,7 +133,7 @@ int write_dual_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timepr
 					}
 					// hence <get a fake one> interpolate from neighbor
 					else {
-						elevation = interpolate_elv(El_Table, NodeTable, EmTemp, j, nodes) * lscale;
+						elevation = interpolate_elv<DualElem>(El_Table, NodeTable, EmTemp, j, nodes) * lscale;
 						zcoord.push_back(elevation);
 					}
 					num_nodes++;
@@ -489,7 +516,7 @@ int write_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timeprops_p
 					}
 					// hence <get a fake one> interpolate from neighbor
 					else {
-						elevation = interpolate_elv(El_Table, NodeTable, EmTemp, j, nodes)
+						elevation = interpolate_elv<Element>(El_Table, NodeTable, EmTemp, j, nodes)
 						    * matprops_ptr->LENGTH_SCALE;
 						zcoord.push_back(elevation);
 					}
@@ -627,36 +654,3 @@ void newXmlfile(char *filename) {
 	return;
 }
 
-/*
- * interpolate_elv is exactly the same code that is
- * being used in meshplotter(...), in tecplot.C
- */
-double interpolate_elv(HashTable *El_Table, HashTable *NodeTable, Element *EmTemp, int j,
-    unsigned *nodes) {
-	double elev;
-	int neighside, mynode;
-	if (j == EmTemp->get_which_son() + 1) {
-		mynode = j - 1;
-		neighside = j;
-	} else if (j == EmTemp->get_which_son() - 1) {
-		mynode = j + 1;
-		neighside = j - 1;
-		if (neighside < 0)
-			neighside = 3;
-	} else if (EmTemp->get_which_son() == 0) {
-		mynode = 0;
-		neighside = 2;
-	} else if (EmTemp->get_which_son() == 3) {
-		mynode = 3;
-		neighside = 0;
-	} else {
-		mynode = 1;
-		neighside = 1;
-	}
-	Node* NodeTemp2 = (Node*) NodeTable->lookup(nodes + mynode * KEYLENGTH);
-	elev = 0.5 * NodeTemp2->get_elevation();
-	Element* EmTemp2 = (Element*) El_Table->lookup((EmTemp->get_neighbors() + KEYLENGTH * neighside));
-	NodeTemp2 = (Node*) NodeTable->lookup(EmTemp2->getNode() + j * KEYLENGTH);
-	elev += 0.5 * NodeTemp2->get_elevation();
-	return elev;
-}

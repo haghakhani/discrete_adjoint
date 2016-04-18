@@ -101,7 +101,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	calc_adjoint(&dual_meshctx, propctx);
 
 //	dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 2);
-	write_dual_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW,2);
+	write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW,2);
 //	write_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW);
 
 #ifdef Error
@@ -275,7 +275,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 //			dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 1);
-			write_dual_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD, 1);
+			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD, 1);
 //			write_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD);
 	}
 //	write_dual_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_CLOSE, 1);

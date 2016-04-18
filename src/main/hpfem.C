@@ -172,7 +172,7 @@ int main(int argc, char *argv[]) {
 	if(viz_flag&8)
 	xdmerr=write_xdmf(BT_Elem_Ptr,BT_Node_Ptr,&timeprops,&matprops,&mapnames,XDMF_NEW);
 #endif
-	write_xdmf(BT_Elem_Ptr,BT_Node_Ptr,&timeprops,&matprops,&mapnames,XDMF_NEW);
+
 	if (viz_flag & 16) {
 		if (myid == 0)
 			grass_sites_header_output(&timeprops);
@@ -270,7 +270,8 @@ int main(int argc, char *argv[]) {
 		solrec->record_solution(&meshctx, &propctx);
 
 		if (solrec->write_sol() || must_write(&memuse, myid)) {
-			solrec->wrtie_sol_to_disk(myid);
+//			solrec->wrtie_sol_to_disk(myid);
+			solrec->wrtie_sol_to_disk_hdf5(myid);
 			solrec->delete_jacobians_after_writes();
 		}
 
@@ -278,7 +279,7 @@ int main(int argc, char *argv[]) {
 		 * output results to file
 		 */
 		//if (OUTPUT) {
-		write_xdmf(BT_Elem_Ptr,BT_Node_Ptr,&timeprops,&matprops,&mapnames,XDMF_OLD);
+
 		if (timeprops.ifoutput() && OUTPUT) {
 			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
@@ -344,6 +345,7 @@ int main(int argc, char *argv[]) {
 
 	if (myid == 0)
 		output_summary(&timeprops, &statprops, savefileflag);
+	return (0);
 
 	//printf("hpfem.C 1: xcen=%g\n",statprops.xcen);
 	/*
@@ -373,7 +375,7 @@ int main(int argc, char *argv[]) {
 //	MPI_Barrier(MPI_COMM_WORLD);
 //	solrec->wrtie_sol_to_disk();
 //	solrec->delete_jacobians_after_writes();
-	write_xdmf(BT_Elem_Ptr,BT_Node_Ptr,&timeprops,&matprops,&mapnames,XDMF_CLOSE);
+//	write_xdmf(BT_Elem_Ptr,BT_Node_Ptr,&timeprops,&matprops,&mapnames,XDMF_CLOSE);
 	MPI_Barrier(MPI_COMM_WORLD);
 	// write out ending warning, maybe flow hasn't finished moving
 	sim_end_warning(BT_Elem_Ptr, &matprops, &timeprops, statprops.vstar);

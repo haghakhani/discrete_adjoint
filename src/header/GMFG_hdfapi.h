@@ -34,9 +34,9 @@ const int XDMF_CLOSE = 2;
 #include <hdf5.h>
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 /*! GH5_openfile opens hdf file for reading or writing.
  * mode can have "n" or "o" values
@@ -46,6 +46,10 @@ extern "C" {
  * If it fails to open the file, it stops TITAN
  */
 hid_t GH5_openfile(const char *filename, char mode);
+
+hid_t GH5_open_sol_file(const char *filename, char mode);
+
+hid_t GH5_open_zip_sol_file(const char *filename, char mode);
 
 /*! Closed hdf file. Every file must be closed
  * after data writing is finished, or system will
@@ -74,9 +78,13 @@ void GH5_write_mesh_data(hid_t fp, int conns, int points, int *conndata, double 
  */
 void GH5_write_state_vars(hid_t fp, int num_elms, double *state_var, const char *var_names);
 
-#ifdef __cplusplus
-}
-#endif
+void GH5_write_zero_keys(hid_t h5fid, int size_zero, vector<unsigned>& key);
+
+void GH5_write_non_zero_keys_sol(hid_t h5fid, int size, vector<unsigned>& key,vector<double>& state);
+
+//#ifdef __cplusplus
+//}
+//#endif
 /*************************************************************
  *
  *      FOLLOWING CALLS ARE NOT EXPECTED TO BE MADE
