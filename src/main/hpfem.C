@@ -345,7 +345,7 @@ int main(int argc, char *argv[]) {
 
 	if (myid == 0)
 		output_summary(&timeprops, &statprops, savefileflag);
-	return (0);
+//	return (0);
 
 	//printf("hpfem.C 1: xcen=%g\n",statprops.xcen);
 	/*

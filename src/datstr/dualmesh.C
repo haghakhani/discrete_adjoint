@@ -184,8 +184,8 @@ void SolRec::wrtie_sol_to_disk_hdf5(int myid) {
 		sprintf(hdf5file, "solution_%04d_%08d.h5", myid, step);
 		hid_t h5fid = GH5_open_zip_sol_file(hdf5file, 'n');
 
-		GH5_write_zero_keys(h5fid, zero_key.size()/2, zero_key);
-		GH5_write_non_zero_keys_sol(h5fid, non_zero_key.size()/2, non_zero_key, non_zero_sol);
+		GH5_write_zero_keys(h5fid, zero_key.size() / 2, zero_key);
+		GH5_write_non_zero_keys_sol(h5fid, non_zero_key.size() / 2, non_zero_key, non_zero_sol);
 		GH5_closefile(h5fid);
 
 		if (myid == 0)
@@ -288,72 +288,95 @@ void SolRec::read_sol_from_disk(int myid, int iter) {
 	if (myid == 0)
 		cout << "reading the solution of time step " << iter << " from the disk  " << endl;
 }
-//
-//void SolRec::read_sol_from_disk_hdf5(int myid, int iter) {
-//
-//
-//	char filename[50];
-//	double state_vars[NUM_STATE_VARS] = { 0., 0., 0. };
-//
-//	unsigned key[DIMENSION] = { 0, 0 };
-//	Solution * solution;
-//	int dbg, count = 0;
-//
-//	sprintf(filename, "solution_%04d_%08d.h5", myid, iter);
-//
-//
-//
-//	myfile = gzopen(filename, "rb");
-//
-//	count++;
-//
-//	int num_zero = 0, num_non_zero = 0;
-//
-//	dbg = gzread(myfile, &num_zero, sizeof(int));
-//	dbg = gzread(myfile, &num_non_zero, sizeof(int));
-//
-//	for (int i = 0; i < num_zero; ++i) {
-//		gzread(myfile, key, sizeof(unsigned) * 2);
-//
-//		Jacobian *jacobian = (Jacobian *) lookup(key);
-//		solution = &(Solution::solution_zero);
-//
-//		if (jacobian)
-//			jacobian->put_solution(solution, iter);
-//
-//		else {
-//
-//			jacobian = new Jacobian(key);
-//			add(key, jacobian);
-//			jacobian->put_solution(solution, iter);
-//
-//		}
-//	}
-//
-//	for (int i = 0; i < num_non_zero; ++i) {
-//
-//		gzread(myfile, key, sizeof(unsigned) * 2);
-//		gzread(myfile, state_vars, sizeof(double) * 3);
-//
-//		solution = new Solution(state_vars);
-//		Jacobian *jacobian = (Jacobian *) lookup(key);
-//		if (jacobian)
-//			jacobian->put_solution(solution, iter);
-//
-//		else {
-//
-//			jacobian = new Jacobian(key);
-//			add(key, jacobian);
-//			jacobian->put_solution(solution, iter);
-//
-//		}
-//
-//	}
-//
-//	gzclose(myfile);
-//	if (myid == 0)
-//		cout << "reading the solution of time step " << iter << " from the disk  " << endl;
-//}
+
+void SolRec::read_sol_from_disk_hdf5(int myid, int iter) {
+
+	char filename[50];
+	Solution * solution;
+	int dbg, count = 0;
+	herr_t status;
+
+	sprintf(filename, "solution_%04d_%08d.h5", myid, iter);
+	hid_t myfile = GH5_open_zip_sol_file(filename, 'o');
+	hid_t gz_id = GH5_open_group(myfile, "ZERO_CELLS");
+	hid_t dset = H5Dopen(gz_id, "KEYS");
+
+	hid_t dcpl = H5Dget_create_plist(dset);
+	hid_t dspace = H5Dget_space(dset);
+	hsize_t dims[2];
+	status = H5Sget_simple_extent_dims(dspace, dims, NULL);
+	unsigned* keys = new unsigned[2 * dims[0]];
+	status = H5Dread(dset, H5T_NATIVE_UINT, H5P_DEFAULT, dspace, H5P_DEFAULT, keys);
+	for (int i = 0; i < dims[0]; ++i) {
+
+		Jacobian *jacobian = (Jacobian *) lookup(keys + 2 * i);
+		solution = &(Solution::solution_zero);
+
+		if (jacobian)
+			jacobian->put_solution(solution, iter);
+
+		else {
+
+			jacobian = new Jacobian(keys + 2 * i);
+			add(keys + 2 * i, jacobian);
+			jacobian->put_solution(solution, iter);
+
+		}
+	}
+	delete[] keys;
+	H5Pclose(dcpl);
+	H5Sclose(dspace);
+	H5Dclose(dset);
+	H5Gclose(gz_id);
+
+
+	gz_id = GH5_open_group(myfile, "NON_ZERO_CELLS");
+	dset = H5Dopen(gz_id, "KEYS");
+	dcpl = H5Dget_create_plist(dset);
+	dspace = H5Dget_space(dset);
+	status = H5Sget_simple_extent_dims(dspace, dims, NULL);
+	keys = new unsigned[2 * dims[0]];
+	status = H5Dread(dset, H5T_NATIVE_UINT, H5P_DEFAULT, dspace, H5P_DEFAULT, keys);
+
+	hid_t dset1 = H5Dopen(gz_id, "SOLUTIONS");
+	hid_t dcpl1 = H5Dget_create_plist(dset1);
+	hid_t dspace1 = H5Dget_space(dset1);
+	status = H5Sget_simple_extent_dims(dspace1, dims, NULL);
+	double* state_vars = new double[3 * dims[0]];
+	status = H5Dread(dset1, H5T_NATIVE_DOUBLE, H5P_DEFAULT, dspace1, H5P_DEFAULT, state_vars);
+
+	for (int i = 0; i < dims[0]; ++i) {
+
+		solution = new Solution(state_vars + 3 * i);
+		Jacobian *jacobian = (Jacobian *) lookup(keys + 2 * i);
+		if (jacobian)
+			jacobian->put_solution(solution , iter);
+
+		else {
+
+			jacobian = new Jacobian(keys + 2 * i);
+			add(keys + 2 * i, jacobian);
+			jacobian->put_solution(solution, iter);
+
+		}
+	}
+	delete[] keys;
+	delete[] state_vars;
+
+	H5Pclose(dcpl);
+	H5Sclose(dspace);
+	H5Dclose(dset);
+
+	H5Pclose(dcpl1);
+	H5Sclose(dspace1);
+	H5Dclose(dset1);
+
+	H5Gclose(gz_id);
+	H5Fclose(myfile);
+
+	if (myid == 0)
+		cout << "reading the solution of time step " << iter << " from the disk  " << endl;
+}
 
 int SolRec::get_first_solution() {
 	return first_solution_time_step;
@@ -420,7 +443,8 @@ void SolRec::load_new_set_of_solution(int myid) {
 
 	while ((data_range() < 2 || read_sol()) && first_solution_time_step) {
 
-		read_sol_from_disk(myid, first_solution_time_step - 1);
+//		read_sol_from_disk(myid, first_solution_time_step - 1);
+		read_sol_from_disk_hdf5(myid, first_solution_time_step - 1);
 		first_solution_time_step--;
 		sysinfo(&memInfo);
 		totalPhysMem = memInfo.totalram;

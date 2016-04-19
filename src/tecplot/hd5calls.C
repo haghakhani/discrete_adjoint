@@ -256,39 +256,35 @@ void GH5_write_mesh_data(hid_t fp, int conns, int points, int *conndata, double 
 void GH5_write_zero_keys(hid_t h5fid, int size_zero, vector<unsigned>& key) {
 
 	hsize_t key_dim[2] = { size_zero, 2 };
-//	int ch_size = size_zero > 2056 ? 2056 : size_zero;
-//	hsize_t chunk_dims[2] = { 256, 2 };
+	int ch_size = size_zero > 1 * 1024 * 1024 ? 1 * 1024 * 1024 : size_zero;
+	hsize_t chunk_dims[2] = { ch_size, 2 };
 
-	// create group of Meshdata
+// create group of Meshdata
 	hid_t zero_cell = GH5_open_group(h5fid, "/ZERO_CELLS");
 
 	//create data spaces
 	hid_t key_spc = H5Screate_simple(2, key_dim, 0);
 
-//	hid_t plist_id = H5Pcreate(H5P_DATASET_CREATE);
+	hid_t plist = H5Pcreate(H5P_DATASET_CREATE);
 
 	herr_t status;
 
-//status = H5Pset_chunk(plist_id, 2, chunk_dims);
+	status = H5Pset_chunk(plist, 2, chunk_dims);
 
-//	status = H5Pset_deflate(plist_id, 9);
+	status = H5Pset_deflate(plist, 9);
 
-	//create dataset for Connections
-//	hid_t key_dataid = H5Dcreate2(h5fid, "KEYS", H5T_NATIVE_UINT, key_spc, H5P_DEFAULT, plist_id,
-//	H5P_DEFAULT);
-	hid_t key_dataid = H5Dcreate2(zero_cell, "KEYS", H5T_NATIVE_UINT, key_spc, H5P_DEFAULT, H5P_DEFAULT,
+	//create dataset
+	hid_t key_dataid = H5Dcreate2(zero_cell, "KEYS", H5T_NATIVE_UINT, key_spc, H5P_DEFAULT, plist,
 	H5P_DEFAULT);
-//	hid_t key_dataid = GH5_createdataset(zero_cell, key_spc, "KEYS", UNSINT);
-
-//write connectivity data
+	//write data
 	status = H5Dwrite(key_dataid, H5T_NATIVE_UINT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &key[0]);
 
-	//close conn dataset and dataspcae
-//	status = H5Pclose(plist_id);
+	//close dataset and dataspcae
+	status = H5Pclose(plist);
 	status = H5Dclose(key_dataid);
 	status = H5Sclose(key_spc);
 
-	//close Mesh Group
+	//close Group
 	status = H5Gclose(zero_cell);
 }
 
@@ -297,59 +293,40 @@ void GH5_write_non_zero_keys_sol(hid_t h5fid, int size, vector<unsigned>& key,
 
 	hsize_t key_dim[2] = { size, 2 };
 	hsize_t sol_dim[2] = { size, 3 };
-////	int ch_size = size_zero > 2056 ? 2056 : size_zero;
-//	hsize_t key_chunk_dims[2] = { 256, 2 };
-//	hsize_t sol_chunk_dims[2] = { 256, 3 };
+	int ch_size = size > 1 * 1024 * 1024 ? 1 * 1024 * 1024 : size;
+	hsize_t key_chunk_dims[2] = { ch_size, 2 };
+	hsize_t sol_chunk_dims[2] = { ch_size, 3 };
 
-// create group of Meshdata
+// create group
 	hid_t non_zero_cell = GH5_open_group(h5fid, "/NON_ZERO_CELLS");
 
-//	status = H5Pset_chunk (key_plist_id, 2, key_chunk_dims);
-//	status = H5Pset_chunk (sol_plist_id, 2, sol_chunk_dims);
+	hid_t plist_k = H5Pcreate(H5P_DATASET_CREATE);
+	hid_t plist_s = H5Pcreate(H5P_DATASET_CREATE);
 
-//	hid_t key_dataid = GH5_createdataset(zero_cell, key_spc, "KEYS", UNSINT);
+	herr_t status;
+	status = H5Pset_chunk(plist_k, 2, key_chunk_dims);
+	status = H5Pset_chunk(plist_s, 2, sol_chunk_dims);
+
 //create data spaces
 	hid_t key_spc = H5Screate_simple(2, key_dim, 0);
 	hid_t sol_spc = H5Screate_simple(2, sol_dim, 0);
 
+	status = H5Pset_deflate(plist_k, 9);
+	status = H5Pset_deflate(plist_s, 9);
 
-//	hid_t key_plist_id = H5Pcreate(H5P_DATASET_CREATE);
-//	hid_t sol_plist_id = H5Pcreate(H5P_DATASET_CREATE);
-//	hid_t pal = H5Pcreate(H5P_DATASET_ACCESS);
-
-//	//The number of chunk slots in the raw data chunk cache for this dataset
-//	size_t nslots = 521;
-//
-//	//The total size of the raw data chunk cache for this dataset
-//	size_t nbytes = 1 * 1024 * 1024;
-//
-//	//The chunk preemption policy for this dataset
-//	double w0 = .75;
-//
-//	herr_t status;
-//
-////	status = H5Pset_chunk_cache(key_plist_id, nslots, nbytes, w0);
-//	status = H5Pset_chunk_cache(pal, nslots, nbytes, w0);
-	herr_t status;
-//	status = H5Pset_deflate(key_plist_id, 9);
-//	status = H5Pset_deflate(sol_plist_id, 9);
-
-	//create dataset for Connections
-//	hid_t key_dataid = H5Dcreate2(h5fid, "KEYS", H5T_NATIVE_UINT, key_spc, H5P_DEFAULT, plist_id,
-//	H5P_DEFAULT);
+//create dataset
 	hid_t key_dataid = H5Dcreate2(non_zero_cell, "KEYS", H5T_NATIVE_UINT, key_spc, H5P_DEFAULT,
-			H5P_DEFAULT, H5P_DEFAULT);
+	    plist_k, H5P_DEFAULT);
 	hid_t sol_dataid = H5Dcreate2(non_zero_cell, "SOLUTIONS", H5T_NATIVE_DOUBLE, sol_spc, H5P_DEFAULT,
-			H5P_DEFAULT, H5P_DEFAULT);
+	    plist_s, H5P_DEFAULT);
 
 //write data
 	status = H5Dwrite(key_dataid, H5T_NATIVE_UINT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &key[0]);
 	status = H5Dwrite(sol_dataid, H5T_NATIVE_DOUBLE_g, H5S_ALL, H5S_ALL, H5P_DEFAULT, &state[0]);
 
 	//close dataset and dataspcae
-//	status = H5Pclose(key_plist_id);
-//	status = H5Pclose(sol_plist_id);
-//	status = H5Pclose(pal);
+	status = H5Pclose(plist_k);
+	status = H5Pclose(plist_s);
 	status = H5Dclose(key_dataid);
 	status = H5Dclose(sol_dataid);
 	status = H5Sclose(key_spc);

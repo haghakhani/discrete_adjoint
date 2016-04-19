@@ -47,6 +47,8 @@ public:
 	// this function reads the recorded solution from files, and for each time step separately and store it in SolRec
 	void read_sol_from_disk(int myid, int iter);
 
+	void read_sol_from_disk_hdf5(int myid, int iter);
+
 	// this functions deletes the SolRec and deallocate the allocated memory
 	void delete_jacobians_after_writes();
 
