@@ -14,8 +14,21 @@ SolRec::SolRec(double *doublekeyrangein, int size, int prime, double XR[], doubl
 
 	first_solution_time_step = 0;
 	last_solution_time_step = 0;
-	readflag = 0;
-	writeflag = 0;
+
+}
+
+SolRec::SolRec(gzFile& myfile) :
+		HashTable(myfile),range(50) {
+
+	gzread(myfile, &(last_solution_time_step), sizeof(int));
+	first_solution_time_step=last_solution_time_step;
+
+}
+
+void SolRec::write_table(gzFile& myfile) {
+
+	HashTable::write_table(myfile);
+	gzwrite(myfile, &last_solution_time_step, sizeof(int));
 
 }
 
@@ -35,12 +48,6 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 			while (currentPtr) {
 				Curr_El = (Element*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) {
-
-//					int aa = 0, bb = 1;
-//					unsigned keyy[2] = { 4041453883, 330382100 };
-//					if (*(Curr_El->pass_key()) == keyy[0] && *(Curr_El->pass_key() + 1) == keyy[1]
-//							&& timeptr->iter == 140)
-//						bb = aa;
 
 					Jacobian *jacobian = (Jacobian *) lookup(Curr_El->pass_key());
 					if (jacobian) {
@@ -118,15 +125,15 @@ void SolRec::wrtie_sol_to_disk(int myid) {
 
 		int size_zero = zero_key.size(), size_non_zero = non_zero_key.size();
 
-		gzwrite(myfile, (void*) (&size_zero), sizeof(int));
-		gzwrite(myfile, (void*) (&size_non_zero), sizeof(int));
+		gzwrite(myfile, &size_zero, sizeof(int));
+		gzwrite(myfile, &size_non_zero, sizeof(int));
 
 		for (int i = 0; i < size_zero; ++i)
-			gzwrite(myfile, (void*) (zero_key[i]), sizeof(unsigned) * 2);
+			gzwrite(myfile, zero_key[i], sizeof(unsigned) * 2);
 
 		for (int i = 0; i < size_non_zero; ++i) {
-			gzwrite(myfile, (void*) (non_zero_key[i]), sizeof(unsigned) * 2);
-			gzwrite(myfile, (void*) (non_zero_sol[i]->get_solution()), sizeof(double) * 3);
+			gzwrite(myfile, non_zero_key[i], sizeof(unsigned) * 2);
+			gzwrite(myfile, non_zero_sol[i]->get_solution(), sizeof(double) * 3);
 			delete non_zero_sol[i];
 		}
 
@@ -168,7 +175,7 @@ void SolRec::wrtie_sol_to_disk_hdf5(int myid) {
 							non_zero_sol.push_back(*(sol->get_solution() + 2));
 							non_zero_key.push_back(*(jacobian->get_key()));
 							non_zero_key.push_back(*(jacobian->get_key() + 1));
-
+							delete sol;
 						} else {
 							zero_key.push_back(*(jacobian->get_key()));
 							zero_key.push_back(*(jacobian->get_key() + 1));
@@ -329,7 +336,6 @@ void SolRec::read_sol_from_disk_hdf5(int myid, int iter) {
 	H5Dclose(dset);
 	H5Gclose(gz_id);
 
-
 	gz_id = GH5_open_group(myfile, "NON_ZERO_CELLS");
 	dset = H5Dopen(gz_id, "KEYS");
 	dcpl = H5Dget_create_plist(dset);
@@ -350,7 +356,7 @@ void SolRec::read_sol_from_disk_hdf5(int myid, int iter) {
 		solution = new Solution(state_vars + 3 * i);
 		Jacobian *jacobian = (Jacobian *) lookup(keys + 2 * i);
 		if (jacobian)
-			jacobian->put_solution(solution , iter);
+			jacobian->put_solution(solution, iter);
 
 		else {
 
@@ -443,8 +449,8 @@ void SolRec::load_new_set_of_solution(int myid) {
 
 	while ((data_range() < 2 || read_sol()) && first_solution_time_step) {
 
-//		read_sol_from_disk(myid, first_solution_time_step - 1);
-		read_sol_from_disk_hdf5(myid, first_solution_time_step - 1);
+		read_sol_from_disk(myid, first_solution_time_step - 1);
+//		read_sol_from_disk_hdf5(myid, first_solution_time_step - 1);
 		first_solution_time_step--;
 		sysinfo(&memInfo);
 		totalPhysMem = memInfo.totalram;

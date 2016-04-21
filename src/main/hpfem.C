@@ -112,8 +112,7 @@ int main(int argc, char *argv[]) {
 	Read_data(myid, &matprops, &pileprops, &statprops, &timeprops, &fluxprops, &adaptflag, &viz_flag,
 	    &order_flag, &mapnames, &discharge, &outline, &srctype);
 
-	if (!loadrun(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &matprops, &timeprops, &mapnames,
-	    &adaptflag, &order_flag, &statprops, &discharge, &outline)) {
+	if (!loadrun(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &solrec, &matprops, &timeprops)) {
 		Read_grid(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &matprops, &outline, &solrec);
 
 		setup_geoflow(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops);
@@ -154,6 +153,7 @@ int main(int argc, char *argv[]) {
 	propctx.timeprops = &timeprops;
 	propctx.matprops = &matprops;
 	propctx.mapnames = &mapnames;
+	propctx.outline = &outline;
 	propctx.numproc = numprocs;
 	propctx.myid = myid;
 	propctx.adapt_flag = adaptflag;
@@ -269,18 +269,17 @@ int main(int argc, char *argv[]) {
 
 		solrec->record_solution(&meshctx, &propctx);
 
-		if (solrec->write_sol() || must_write(&memuse, myid)) {
-//			solrec->wrtie_sol_to_disk(myid);
-			solrec->wrtie_sol_to_disk_hdf5(myid);
+		if (solrec->write_sol()/* || must_write(&memuse, myid)*/) {
+			solrec->wrtie_sol_to_disk(myid);
+//			solrec->wrtie_sol_to_disk_hdf5(myid);
 			solrec->delete_jacobians_after_writes();
 		}
 
 		/*
 		 * output results to file
 		 */
-		//if (OUTPUT) {
-
-		if (timeprops.ifoutput() && OUTPUT) {
+//		if (OUTPUT) {
+		if (timeprops.ifoutput()/* && OUTPUT*/) {
 			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
 			output_discharge(&matprops, &timeprops, &discharge, myid);
@@ -307,7 +306,13 @@ int main(int argc, char *argv[]) {
 				grass_sites_proc_output(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops, &timeprops);
 			}
 		}
-		//}
+//		}
+
+		if (timeprops.ifsave()) {
+			save_forward(meshctx, propctx, solrec);
+			solrec->wrtie_sol_to_disk(myid);
+			solrec->delete_jacobians_after_writes();
+		}
 
 #ifdef PERFTEST
 		int countedvalue=timeprops.iter%2+1;

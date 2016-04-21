@@ -103,6 +103,9 @@ extern int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** El
     MatProps* matprops_ptr, TimeProps* timeprops_ptr, MapNames *mapnames_ptr, int *adaptflag_ptr,
     int *order_flag_ptr, StatProps* statprops_ptr, DISCHARGE* discharge_ptr, OutLine* outline_ptr);
 
+extern int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable,
+		SolRec** solrec, MatProps* matprops_ptr, TimeProps* timeprops_ptr);
+
 //! this function writes a restart file, all the non Node, non Element data, thfor example material properties, statistics, and hastable information.  A loop through the hastables call member functions Node::save_node() and Element::save_elem() which each save 1 Node or Element in a single write statement to the restart file so this is VERY fast.  However it could be rewritten in a slightly cleaner fashion by adding/moving functionality to useful_lib.h and useful_lib.C to pack/unpack variables into an unsigned array, which is what should be done if Read_grid is ever rewritten.
 extern void saverun(HashTable** NodeTable, int myid, int numprocs, HashTable** ElemTable,
     MatProps* matprops_ptr, TimeProps* timeprops_ptr, MapNames *mapnames_ptr, int adaptflag,

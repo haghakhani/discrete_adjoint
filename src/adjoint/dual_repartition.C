@@ -317,12 +317,12 @@ void set_send_receive_proc(int count, int myid, int numprocs, int& receive_from,
 	int odd = count % 2;
 
 	if (odd) {
-		send_to = (myid + (int) ceil(count / 2.)) % numprocs;
-		receive_from = (myid - (int) ceil(count / 2.) + numprocs) % numprocs;
+		send_to = (myid - (int) ceil(count / 2.)+ numprocs) % numprocs;
+		receive_from = (myid + (int) ceil(count / 2.) ) % numprocs;
 
 	} else {
-		receive_from = (myid + (int) ceil(count / 2.) + numprocs) % numprocs;
-		send_to = (myid - (int) ceil(count / 2.) + numprocs) % numprocs;
+		receive_from = (myid - (int) ceil(count / 2.) + numprocs) % numprocs;
+		send_to = (myid + (int) ceil(count / 2.) + numprocs) % numprocs;
 
 	}
 

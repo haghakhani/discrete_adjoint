@@ -130,6 +130,28 @@ HashTable::HashTable(HashTable* hashtable) {
 
 }
 
+HashTable::HashTable(gzFile& myfile) {
+
+	gzread(myfile, MinKey, sizeof(unsigned) * 2);
+	gzread(myfile, MaxKey, sizeof(unsigned) * 2);
+	gzread(myfile, &(Range), sizeof(unsigned));
+	gzread(myfile, doublekeyrange, sizeof(double) * 2);
+	gzread(myfile, &(hashconstant), sizeof(double));
+	gzread(myfile, Xrange, sizeof(double) * 2);
+	gzread(myfile, Yrange, sizeof(double) * 2);
+	gzread(myfile, &(invdxrange), sizeof(double));
+	gzread(myfile, &(invdyrange), sizeof(double));
+	gzread(myfile, &(NBUCKETS), sizeof(int));
+	gzread(myfile, &(PRIME), sizeof(int));
+	gzread(myfile, &(ENTRIES), sizeof(int));
+
+	bucket = new HashEntryPtr[NBUCKETS];
+
+	for (int i = 0; i < NBUCKETS; i++)
+		*(bucket + i) = 0;
+
+}
+
 HashTable::~HashTable()              //evacuate the table
 {
 	for (int i = 0; i < NBUCKETS; i++) {
@@ -320,6 +342,22 @@ void HashTable::remove(unsigned* key, int whatflag, FILE *fp, int myid, int wher
 			delete p;
 		}
 	}
+}
+
+void HashTable::write_table(gzFile& myfile){
+
+	gzwrite(myfile, MinKey, sizeof(unsigned) * 2);
+	gzwrite(myfile, MaxKey, sizeof(unsigned) * 2);
+	gzwrite(myfile, &(Range), sizeof(unsigned));
+	gzwrite(myfile, doublekeyrange, sizeof(double) * 2);
+	gzwrite(myfile, &(hashconstant), sizeof(double));
+	gzwrite(myfile, Xrange, sizeof(double) * 2);
+	gzwrite(myfile, Yrange, sizeof(double) * 2);
+	gzwrite(myfile, &(invdxrange), sizeof(double));
+	gzwrite(myfile, &(invdyrange), sizeof(double));
+	gzwrite(myfile, &(NBUCKETS), sizeof(int));
+	gzwrite(myfile, &(PRIME), sizeof(int));
+	gzwrite(myfile, &(ENTRIES), sizeof(int));
 }
 
 /* Keith changed the hash function 20061109 and made it an inline function, this is the old hash function which is outdated

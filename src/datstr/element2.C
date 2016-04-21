@@ -4054,7 +4054,7 @@ void Element::gen_my_sons_key(HashTable* El_Table, unsigned* son_key) {
 	for (int i = 0; i < 4; ++i) {
 		norm_coord[i][0] = (Xson[i] - XRange[0]) / (XRange[1] - XRange[0]);
 		norm_coord[i][1] = (Yson[i] - YRange[0]) / (YRange[1] - YRange[0]);
-		fhsfc2d_(norm_coord[i], &nkey, (son_key+i*KEYLENGTH));
+		fhsfc2d_(norm_coord[i], &nkey, (son_key + i * KEYLENGTH));
 	}
 
 }
@@ -4132,229 +4132,43 @@ void Element::write_elem_info(HashTable* NodeTable, char* filename, int iter, do
 
 }
 
-void Element::save_elem(FILE* fp, FILE *fptxt) {
+void Element::write_elem(gzFile& myfile) {
 
-	FourBytes temp4;
-	EightBytes temp8;
-	unsigned writespace[138];
+	gzwrite(myfile, &(generation), sizeof(int));
+	gzwrite(myfile, (lb_key), sizeof(unsigned) * 2);
+	gzwrite(myfile, (key), sizeof(unsigned) * 2);
 
-	int Itemp = 0, itemp, jtemp;
-	for (itemp = 0; itemp < 2; itemp++) {
-		temp4.i = elm_loc[itemp];
-		writespace[Itemp++] = temp4.u;
+	for (int i = 0; i < 8; ++i) {
+		gzwrite(myfile, (node_key[i]), sizeof(unsigned) * 2);
+		gzwrite(myfile, (neighbor[i]), sizeof(unsigned) * 2);
 	}
-	assert(Itemp == 2);
 
-#ifdef DEBUG_SAVE_ELEM
-//FILE *fpdb=fopen("save_elem.debug","w");
-	FILE *fpdb=fptxt;
-	fprintf(fpdb,"\n\nelm_loc=%d %d\n",elm_loc[0],elm_loc[1]);
-#endif
-
-	temp4.i = generation;
-	writespace[Itemp++] = temp4.u;
-	assert(Itemp == 3);
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"generation=%d\n",generation);
-#endif
-
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"order={ ");
-#endif
-
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"}\n");
-#endif
-	assert(Itemp == 8);
-
-	temp4.i = opposite_brother_flag;
-	writespace[Itemp++] = temp4.u;
-	assert(Itemp == 9);
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"opposite_brother_flag=%d\n",opposite_brother_flag);
-#endif
-
-	temp4.i = new_old;
-	writespace[Itemp++] = temp4.u;
-	assert(Itemp == 10);
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"new_old=%d\n",new_old);
-#endif
-
-	temp4.i = material;
-	writespace[Itemp++] = temp4.u;
-	assert(Itemp == 11);
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"material=%d\n",material);
-#endif
-
-	writespace[Itemp++] = temp4.u;
-	assert(Itemp == 12);
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"ndof=%d\n",ndof);
-#endif
-
-	temp4.i = refined;
-	writespace[Itemp++] = temp4.u;
-	assert(Itemp == 13);
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"refined=%d\n",refined);
-#endif
-
-	temp4.i = adapted;
-	writespace[Itemp++] = temp4.u;
-	assert(Itemp == 14);
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"adapted=%d\n",adapted);
-#endif
-
-	temp8.d = lb_weight;
-	writespace[Itemp++] = temp8.u[0];
-	writespace[Itemp++] = temp8.u[1];
-	assert(Itemp == 16);
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"lb_weight=%g\n",lb_weight);
-#endif
-
-	for (jtemp = 0; jtemp < KEYLENGTH; jtemp++) {
-		writespace[Itemp++] = lb_key[jtemp];
+	for (int i = 0; i < 4; ++i) {
+		gzwrite(myfile, (son[i]), sizeof(unsigned) * 2);
+		gzwrite(myfile, (brothers[i]), sizeof(unsigned) * 2);
 	}
-	assert(Itemp == 18);
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"lb_key=%u %u\n",lb_key[0],lb_key[1]);
-#endif
 
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"neigh_proc={ ");
-#endif
-	for (itemp = 0; itemp < 8; itemp++) {
-		temp4.i = neigh_proc[itemp];
-		writespace[Itemp++] = temp4.u;
-#ifdef DEBUG_SAVE_ELEM
-		fprintf(fpdb,"%d ",neigh_proc[itemp]);
-#endif
-	}
-	assert(Itemp == 26);
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"}\nneigh_gen={ ");
-#endif
-	for (itemp = 0; itemp < 8; itemp++) {
-		temp4.i = neigh_gen[itemp];
-		writespace[Itemp++] = temp4.u;
-#ifdef DEBUG_SAVE_ELEM
-		fprintf(fpdb,"%d ",neigh_gen[itemp]);
-#endif 
-	}
-	assert(Itemp == 34);
+	gzwrite(myfile, (neigh_proc), sizeof(int) * 8);
+	gzwrite(myfile, (neigh_gen), sizeof(int) * 8);
+	gzwrite(myfile, &(refined), sizeof(int));
+	gzwrite(myfile, &(adapted), sizeof(int));
+	gzwrite(myfile, &(new_old), sizeof(int));
 
-	for (jtemp = 0; jtemp < KEYLENGTH; jtemp++) {
-		writespace[Itemp++] = key[jtemp];
-	}
-	assert(Itemp == 36);
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"}\nkey=%u %u\nnode_key={ ",key[0],key[1]);
-#endif  
+	gzwrite(myfile, (coord), sizeof(double) * 2);
+	gzwrite(myfile, (elm_loc), sizeof(int) * 2);
+	gzwrite(myfile, (state_vars), sizeof(double) * 3);
+	assert(state_vars[0] >= 0.);
+	gzwrite(myfile, (prev_state_vars), sizeof(double) * 3);
+	gzwrite(myfile, (zeta), sizeof(double) * 2);
+	gzwrite(myfile, &(effect_bedfrict), sizeof(double));
+	gzwrite(myfile, &(effect_tanbedfrict), sizeof(double));
 
-	for (itemp = 0; itemp < 8; itemp++) {
-		for (jtemp = 0; jtemp < KEYLENGTH; jtemp++) {
-			writespace[Itemp++] = node_key[itemp][jtemp];
-		}
-#ifdef DEBUG_SAVE_ELEM
-		fprintf(fpdb,"(%u %u) ",node_key[itemp][0],node_key[itemp][1]);
-#endif 
-	}
-	assert(Itemp == 52);
-
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"}\nneighbor={ ");
-#endif 
-	for (itemp = 0; itemp < 8; itemp++) {
-		for (jtemp = 0; jtemp < KEYLENGTH; jtemp++) {
-			writespace[Itemp++] = neighbor[itemp][jtemp];
-		}
-#ifdef DEBUG_SAVE_ELEM
-		fprintf(fpdb,"(%u %u) ",neighbor[itemp][0],neighbor[itemp][1]);
-#endif
-	}
-	assert(Itemp == 68);
-
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"}\nbrothers={ ");
-#endif 
-	for (itemp = 0; itemp < 4; itemp++) {
-		for (jtemp = 0; jtemp < KEYLENGTH; jtemp++) {
-			writespace[Itemp++] = brothers[itemp][jtemp];
-		}
-#ifdef DEBUG_SAVE_ELEM
-		fprintf(fpdb,"(%u %u) ",brothers[itemp][0],brothers[itemp][1]);
-#endif
-	}
-	assert(Itemp == 76);
-
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"}\nson={ ");
-#endif 
-	for (itemp = 0; itemp < 4; itemp++) {
-		for (jtemp = 0; jtemp < KEYLENGTH; jtemp++) {
-			writespace[Itemp++] = son[itemp][jtemp];
-		}
-#ifdef DEBUG_SAVE_ELEM
-		fprintf(fpdb,"(%u %u) ",son[itemp][0],son[itemp][1]);
-#endif 
-	}
-	assert(Itemp == 84);
-
-	for (itemp = 0; itemp < NUM_STATE_VARS; itemp++) {
-		temp8.d = state_vars[itemp];
-		writespace[Itemp++] = temp8.u[0];
-		writespace[Itemp++] = temp8.u[1];
-	}
-	assert(Itemp == 96);
-
-//don't need prev_state_vars or d_state_vars do need shortspeed
-	temp8.d = shortspeed;
-	writespace[Itemp++] = temp8.u[0];
-	writespace[Itemp++] = temp8.u[1];
-	assert(Itemp == 98);
-
-#ifdef DEBUG_SAVE_ELEM
-	fprintf(fpdb,"}\nstate_vars={ %g %g %g }\nshortspeed=%g\n",
-			state_vars[0],state_vars[1],state_vars[2],shortspeed);
-#endif 
-	temp8.i[0] = iwetnode;
-	writespace[Itemp++] = temp8.u[0];
-	assert(Itemp == 99);
-
-	temp8.d = Awet;
-	writespace[Itemp++] = temp8.u[0];
-	writespace[Itemp++] = temp8.u[1];
-	assert(Itemp == 101);
-
-	temp8.d = Swet;
-	writespace[Itemp++] = temp8.u[0];
-	writespace[Itemp++] = temp8.u[1];
-	assert(Itemp == 103);
-
-	temp8.d = drypoint[0];
-	writespace[Itemp++] = temp8.u[0];
-	writespace[Itemp++] = temp8.u[1];
-	assert(Itemp == 105);
-
-	temp8.d = drypoint[1];
-	writespace[Itemp++] = temp8.u[0];
-	writespace[Itemp++] = temp8.u[1];
-	assert(Itemp == 107);
-
-#ifdef DEBUG_SAVE_ELEM
-//fclose(fpdb);
-#endif
-
-	fwrite(writespace, sizeof(unsigned), Itemp, fp);
-
-	return;
 }
 
-Element::Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myid) {
+void Element::save_elem(FILE* fp, FILE *fptxt) {
+}
+
+Element::Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, int myid) {
 	counted = 0; //for debugging only
 
 	for (int ikey = 0; ikey < KEYLENGTH; ikey++)
@@ -4364,152 +4178,41 @@ Element::Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myi
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		Influx[i] = 0.0;
 	myprocess = myid;
-//refined=0;
 
-	FourBytes temp4;
-	EightBytes temp8;
-	unsigned readspace[102];
+	gzread(myfile, &(generation), sizeof(int));
+	gzread(myfile, (lb_key), sizeof(unsigned) * 2);
+	gzread(myfile, (key), sizeof(unsigned) * 2);
 
-	fread(readspace, sizeof(unsigned), 102, fp);
-
-//read the element here
-	int Itemp = 0, itemp, jtemp;
-	for (itemp = 0; itemp < 2; itemp++) {
-		temp4.u = readspace[Itemp++];
-		elm_loc[itemp] = temp4.i;
-	}
-	assert(Itemp == 2);
-
-	temp4.u = readspace[Itemp++];
-	generation = temp4.i;
-	assert(Itemp == 3);
-
-	for (itemp = 0; itemp < 5; itemp++) {
-		temp4.u = readspace[Itemp++];
-	}
-	assert(Itemp == 8);
-
-	temp4.u = readspace[Itemp++];
-	opposite_brother_flag = temp4.i;
-	assert(Itemp == 9);
-
-	temp4.u = readspace[Itemp++];
-	new_old = temp4.i;
-	assert(Itemp == 10);
-
-	temp4.u = readspace[Itemp++];
-	material = temp4.i;
-	assert(Itemp == 11);
-
-	temp4.u = readspace[Itemp++];
-	assert(Itemp == 12);
-
-	temp4.u = readspace[Itemp++];
-	refined = temp4.i;
-	assert(Itemp == 13);
-
-	temp4.u = readspace[Itemp++];
-	adapted = temp4.i;
-	assert(Itemp == 14);
-
-	temp8.u[0] = readspace[Itemp++];
-	temp8.u[1] = readspace[Itemp++];
-	lb_weight = temp8.d;
-	assert(Itemp == 16);
-
-	for (jtemp = 0; jtemp < KEYLENGTH; jtemp++) {
-		lb_key[jtemp] = readspace[Itemp++];
-	}
-	assert(Itemp == 18);
-
-	for (itemp = 0; itemp < 8; itemp++) {
-		temp4.u = readspace[Itemp++];
-		neigh_proc[itemp] = temp4.i;
-	}
-	assert(Itemp == 26);
-
-	for (itemp = 0; itemp < 8; itemp++) {
-		temp4.u = readspace[Itemp++];
-		neigh_gen[itemp] = temp4.i;
-	}
-	assert(Itemp == 34);
-
-	for (jtemp = 0; jtemp < KEYLENGTH; jtemp++) {
-		key[jtemp] = readspace[Itemp++];
-	}
-	assert(Itemp == 36);
-
-	for (itemp = 0; itemp < 8; itemp++)
-		for (jtemp = 0; jtemp < KEYLENGTH; jtemp++) {
-			node_key[itemp][jtemp] = readspace[Itemp++];
-		}
-	assert(Itemp == 52);
-
-	for (itemp = 0; itemp < 8; itemp++)
-		for (jtemp = 0; jtemp < KEYLENGTH; jtemp++) {
-			neighbor[itemp][jtemp] = readspace[Itemp++];
-		}
-	assert(Itemp == 68);
-
-	for (itemp = 0; itemp < 4; itemp++)
-		for (jtemp = 0; jtemp < KEYLENGTH; jtemp++) {
-			brothers[itemp][jtemp] = readspace[Itemp++];
-		}
-	assert(Itemp == 76);
-
-	for (itemp = 0; itemp < 4; itemp++)
-		for (jtemp = 0; jtemp < KEYLENGTH; jtemp++) {
-			son[itemp][jtemp] = readspace[Itemp++];
-		}
-	assert(Itemp == 84);
-
-	for (itemp = 0; itemp < NUM_STATE_VARS; itemp++) {
-		temp8.u[0] = readspace[Itemp++];
-		temp8.u[1] = readspace[Itemp++];
-		state_vars[itemp] = temp8.d;
-	}
-	assert(Itemp == 90);
-
-//don't need prev_state_vars or d_state_vars do need shortspeed
-	temp8.u[0] = readspace[Itemp++];
-	temp8.u[1] = readspace[Itemp++];
-	shortspeed = temp8.d;
-	assert(Itemp == 92);
-
-	for (int i = 0; i < NUM_STATE_VARS; i++) {
-		prev_state_vars[i] = 0.;
-		d_state_vars[i] = 0.;
-		d_state_vars[NUM_STATE_VARS + i] = 0;
+	for (int i = 0; i < 8; ++i) {
+		gzread(myfile, (node_key[i]), sizeof(unsigned) * 2);
+		gzread(myfile, (neighbor[i]), sizeof(unsigned) * 2);
 	}
 
-	temp8.u[0] = readspace[Itemp++];
-	iwetnode = temp8.i[0];
-	assert(Itemp == 93);
+	for (int i = 0; i < 4; ++i) {
+		gzread(myfile, (son[i]), sizeof(unsigned) * 2);
+		gzread(myfile, (brothers[i]), sizeof(unsigned) * 2);
+	}
 
-	temp8.u[0] = readspace[Itemp++];
-	temp8.u[1] = readspace[Itemp++];
-	Awet = temp8.d;
-	assert(Itemp == 95);
+	gzread(myfile, (neigh_proc), sizeof(int) * 8);
+	gzread(myfile, (neigh_gen), sizeof(int) * 8);
+	gzread(myfile, &(refined), sizeof(int));
+	gzread(myfile, &(adapted), sizeof(int));
+	gzread(myfile, &(new_old), sizeof(int));
 
-	temp8.u[0] = readspace[Itemp++];
-	temp8.u[1] = readspace[Itemp++];
-	Swet = temp8.d;
-	assert(Itemp == 97);
+	gzread(myfile, (coord), sizeof(double) * 2);
+	gzread(myfile, (elm_loc), sizeof(int) * 2);
+	gzread(myfile, (state_vars), sizeof(double) * 3);
+	assert(state_vars[0] >= 0.);
+	gzread(myfile, (prev_state_vars), sizeof(double) * 3);
+	gzread(myfile, (zeta), sizeof(double) * 2);
+	gzread(myfile, &(effect_bedfrict), sizeof(double));
+	gzread(myfile, &(effect_tanbedfrict), sizeof(double));
 
-	temp8.u[0] = readspace[Itemp++];
-	temp8.u[1] = readspace[Itemp++];
-	drypoint[0] = temp8.d;
-	assert(Itemp == 99);
-
-	temp8.u[0] = readspace[Itemp++];
-	temp8.u[1] = readspace[Itemp++];
-	drypoint[1] = temp8.d;
-	assert(Itemp == 101);
-
-	find_positive_x_side(NodeTable);
-	calculate_dx(NodeTable);
-	calc_topo_data(matprops_ptr);
-	calc_gravity_vector(matprops_ptr);
-	calc_which_son();
-	return;
+	if (adapted > 0) {
+		calc_which_son();
+		find_positive_x_side(NodeTable);
+		calculate_dx(NodeTable);
+		calc_topo_data(matprops_ptr);
+		calc_gravity_vector(matprops_ptr);
+	}
 }

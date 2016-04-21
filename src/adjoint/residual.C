@@ -190,6 +190,9 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 		state_vars[i] = prev_state_vars[i] - dtdx * (fluxxp[i] - fluxxm[i])
 		    - dtdy * (fluxyp[i] - fluxym[i]);
 
+	if (state_vars[0] < 0.)
+		state_vars[0] = 0;
+
 	/// I have added this part
 //	double cte=1.,bte=1.;
 //

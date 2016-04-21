@@ -25,16 +25,14 @@ private:
 	// this integer shows the last time step that its solution is vailable in SolRec
 	int last_solution_time_step;
 
-	int readflag;
-
-	int writeflag;
-
 	const int range;
 
 public:
 
 	// constructor
 	SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[], int ifrestart);
+
+	SolRec(gzFile& myfile);
 
 	// this function records the solution of last time step
 	void record_solution(MeshCTX* meshctx, PropCTX* propctx);
@@ -75,6 +73,8 @@ public:
 	using HashTable::lookup;
 
 	Solution* lookup(unsigned* key, int iter);
+
+	void write_table(gzFile& myfile);
 
 };
 

@@ -30,6 +30,7 @@
 #include "../gisapi/GisApi.h"
 #include "../header/constant.h"
 #include<vector>
+#include "zlib.h"
 
 //! LHS stands for Latin Hypercube Sampling, it is a constrained sampling method whose convergence can be much faster than monte carlo 
 struct LHS_Props {
@@ -408,8 +409,8 @@ struct TimeProps {
 	//! checks if the restart file should be saved now
 	int ifsave() {
 		// don't save if nobody asked you to do it
-		if (timesave < 1.0E-06)
-			return 0;
+//		if (timesave < 1.0E-06)
+//			return 0;
 		if (time >= ndnextsave) {
 			isave++; //using isave eliminates roundoff
 			ndnextsave = ((isave + 1) * timesave) / TIME_SCALE;
@@ -451,6 +452,34 @@ struct TimeProps {
 		if (iter % (2 * REFINE) == 2 * REFINE - 1)
 			return true;
 		return false;
+	}
+
+	void wrtie_to_file(gzFile& myfile) {
+
+		gzwrite(myfile, &iter, sizeof(int));
+		gzwrite(myfile, &adjiter, sizeof(int));
+		gzwrite(myfile, &time, sizeof(double));
+		int size = dt.size();
+		gzwrite(myfile, &size, sizeof(int));
+		gzwrite(myfile, &(dt[0]), sizeof(double) * size);
+
+	}
+
+	void read_from_file(gzFile& myfile) {
+
+		gzread(myfile, &iter, sizeof(int));
+		gzread(myfile, &adjiter, sizeof(int));
+		gzread(myfile, &time, sizeof(double));
+		int size = 0;
+		gzread(myfile, &size, sizeof(int));
+		dt.resize(size);
+		gzread(myfile, &(dt[0]), sizeof(double) * size);
+		dtime = dt[size - 1];
+		isave = floor(time / ndnextsave);
+		ioutput = floor(time / ndnextoutput);
+		ndnextsave = ((isave + 1) * timesave) / TIME_SCALE;
+		ndnextoutput = ((ioutput + 1) * timeoutput) / TIME_SCALE;
+
 	}
 
 };
@@ -1371,6 +1400,7 @@ struct PropCTX {
 	MatProps* matprops;
 	TimeProps* timeprops;
 	MapNames* mapnames;
+	OutLine* outline;
 	int numproc;
 	int myid;
 	int adapt_flag;

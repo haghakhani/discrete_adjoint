@@ -175,6 +175,32 @@ Node::Node(Node* node) {
 	}
 }
 
+Node::Node(gzFile& myfile, MatProps* matprops_ptr){
+
+	gzread(myfile, (void*) &(id), sizeof(int));
+	gzread(myfile, (void*) &(info), sizeof(int));
+	gzread(myfile, (void*) (key), sizeof(unsigned) * 2);
+	gzread(myfile, (void*) (coord), sizeof(double) * 2);
+
+	double resolution = 0;
+	int i = Get_max_resolution(&resolution);
+	if (i != 0) {
+		printf("error in Get_max_resolution\n");
+		exit(1);
+	}
+	double xcoord = coord[0] * (matprops_ptr->LENGTH_SCALE);
+	double ycoord = coord[1] * (matprops_ptr->LENGTH_SCALE);
+	i = Get_elevation(resolution, xcoord, ycoord, &elevation);
+	if (i != 0) {
+		printf("error in Get_elevation\n");
+		exit(1);
+	}
+	elevation = elevation / matprops_ptr->LENGTH_SCALE;
+
+	zero_flux();
+	num_assoc_elem=0;
+}
+
 void Node::set_parameters(int inf) {
 	info = inf;
 	/*  if(key[0] == (unsigned) 3197207111) {
@@ -377,5 +403,13 @@ Node::Node(FILE* fp, MatProps* matprops_ptr) {
 	return;
 }
 
+void Node::write_node(gzFile myfile){
+
+	gzwrite(myfile, (void*) &(id), sizeof(int));
+	gzwrite(myfile, (void*) &(info), sizeof(int));
+	gzwrite(myfile, (void*) (key), sizeof(unsigned) * 2);
+	gzwrite(myfile, (void*) (coord), sizeof(double) * 2);
+
+}
 #endif
 

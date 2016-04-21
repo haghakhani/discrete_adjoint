@@ -100,6 +100,7 @@ public:
 
 	//! this is the constructor that recreates/restores a node that was saved in a restart file.
 	Node(FILE* fp, MatProps* matprops_ptr); //for restart
+	Node(gzFile& myfile, MatProps* matprops_ptr);
 
 	//! constructor that creates a node without setting any of its values
 	Node();
@@ -191,6 +192,8 @@ public:
 
 	//! this function returns the number of elements associated with this node
 	int get_num_assoc_elem();
+
+	void write_node(gzFile myfile);
 
 protected:
 	//! used in delete_unused_nodes_and_elements() function

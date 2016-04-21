@@ -453,6 +453,23 @@ int num_nonzero_elem(HashTable *El_Table) {
 	return (num);
 }
 
+int table_members(HashTable *NodeTable) {
+
+	int num = 0;
+	HashEntryPtr currentPtr;
+	HashEntryPtr *buck = NodeTable->getbucketptr();
+
+	for (int i = 0; i < NodeTable->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				num++;
+				currentPtr = currentPtr->next;
+			}
+		}
+return num;
+}
+
 void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
     int myid, double flux[4][NUM_STATE_VARS]) {
 

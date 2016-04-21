@@ -121,6 +121,9 @@ public:
 	//! constructor that creates/restores a saved element during restart
 	Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
 
+	Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr,
+	    int myid);
+
 	//! destructor that does nothing except delete boundary condition pointer
 	virtual ~Element() {
 	}
@@ -610,6 +613,8 @@ public:
 
 	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int myid,
 	    double dt, int* order_flag, double *outflow, ResFlag lresflag, ResFlag rresflag);
+
+	void write_elem(gzFile& myfile);
 
 protected:
 	//! myprocess is id of the process(or) that owns this element

@@ -31,6 +31,7 @@ using namespace std;
 #include <stdio.h>
 #include <stdlib.h>
 #include "constant.h"
+#include "zlib.h"
 
 struct HashEntry {
 	unsigned key[KEYLENGTH];  //key: object key word
@@ -93,6 +94,7 @@ public:
 	HashTable(unsigned*, unsigned*, int, int);
 	HashTable(double *doublekeyrangein, int, int, double* XR, double* YR, int ifrestart);
 	HashTable(HashTable* hashtable);
+	HashTable(gzFile& myfile);
 	~HashTable();
 
 	int hash(unsigned* key);
@@ -121,6 +123,8 @@ public:
 	 double* getYrange();
 	 */
 	int get_no_of_entries();
+
+	virtual void write_table(gzFile& myfile);
 
 };
 

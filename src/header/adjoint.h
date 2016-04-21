@@ -65,6 +65,8 @@ void bilinear_interp(HashTable* El_Table);
 
 int num_nonzero_elem(HashTable *El_Table);
 
+int table_members(HashTable *NodeTable);
+
 void make_dual_err_link(HashTable *Dual_El_Tab, HashTable *Err_El_Tab);
 
 void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab, int last);
@@ -189,16 +191,18 @@ void set_send_receive_proc(int count, int myid, int numprocs, int& receive_from,
 
 void free_mpi_types();
 
-void SetTransPack(TRANSKEY& transelem, unsigned* key, unsigned* father_key, unsigned son_key[][2]) ;
+void SetTransPack(TRANSKEY& transelem, unsigned* key, unsigned* father_key, unsigned son_key[][2]);
 
 void check_received_keys(SolRec* solrec, vector<TRANSKEY>& keys_to_check_vec,
     vector<int>& keys_status, int iter, int &found);
 
 void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
 
-void delete_extra_nodes(HashTable* El_Table,HashTable* NodeTable);
+void delete_extra_nodes(HashTable* El_Table, HashTable* NodeTable);
 
-void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table,double * allKeyRange);
+void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKeyRange);
+
+void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec);
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);
