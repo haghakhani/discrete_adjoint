@@ -45,41 +45,41 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 //	refinement_report(El_Table);
 
 //	if (refinelist->get_num_elem()) {
-		// start refinement
-		for (int i = 0; i < refinelist->get_num_elem(); ++i) {
-			refine(refinelist->get(i), El_Table, NodeTable, matprops_ptr, 1);
-			(refinelist->get(i))->put_adapted_flag(OLDFATHER);
-			(refinelist->get(i))->put_refined_flag(1);
-		}
+	// start refinement
+	for (int i = 0; i < refinelist->get_num_elem(); ++i) {
+		refine(refinelist->get(i), El_Table, NodeTable, matprops_ptr, 1);
+		(refinelist->get(i))->put_adapted_flag(OLDFATHER);
+		(refinelist->get(i))->put_refined_flag(1);
+	}
 
 //		cout << "2 \n";
 //		refinement_report(El_Table);
 
-		refine_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) refinelist, timeprops_ptr);
+	refine_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) refinelist, timeprops_ptr);
 
 //		cout << "3 \n";
 //		refinement_report(El_Table, myid);
 
-		move_dual_data(meshctx, propctx);
+	move_dual_data(meshctx, propctx);
 
 //		cout << "4 \n";
 //		refinement_report(El_Table);
 
-		int refdel = 0;
-		int hash_size = El_Table->get_no_of_buckets();
-		for (int i = 0; i < hash_size; i++) {
-			HashEntryPtr entryp = *(El_Table->getbucketptr() + i);
-			while (entryp) {
-				Element* EmTemp = (Element*) (entryp->value);
-				entryp = entryp->next;
+	int refdel = 0;
+	int hash_size = El_Table->get_no_of_buckets();
+	for (int i = 0; i < hash_size; i++) {
+		HashEntryPtr entryp = *(El_Table->getbucketptr() + i);
+		while (entryp) {
+			Element* EmTemp = (Element*) (entryp->value);
+			entryp = entryp->next;
 
-				if (EmTemp->get_adapted_flag() == TOBEDELETED) {
-					El_Table->remove(EmTemp->pass_key());
-					delete EmTemp;
-					refdel++;
-				}
+			if (EmTemp->get_adapted_flag() == TOBEDELETED) {
+				El_Table->remove(EmTemp->pass_key());
+				delete EmTemp;
+				refdel++;
 			}
 		}
+	}
 //		cout << "5 \n";
 //		refinement_report(El_Table);
 //		cout << "number of deleted elem after ref " << refdel << "  number of ref list  "
@@ -92,47 +92,56 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 
 //	if (unrefinelist->get_num_elem()) {
 
-		for (int i = 0; i < unrefinelist->get_num_elem(); ++i)
-			if (unrefinelist->get(i)->get_which_son() == 0) {
-				first_son.push_back(unrefinelist->get(i));
+	for (int i = 0; i < unrefinelist->get_num_elem(); ++i)
+		if (unrefinelist->get(i)->get_which_son() == 0) {
+			first_son.push_back(unrefinelist->get(i));
 
-				//we need the the new fathers for future
-				//this is not required but is good for checking purposes
-				new_father.push_back(
-				    make_pair(*(unrefinelist->get(i)->getfather()),
-				        *(unrefinelist->get(i)->getfather() + 1)));
-			}
-
-		//		cout << "6 \n";
-		//		refinement_report(El_Table);
-		int global_f_son_size = 0, size = first_son.size();
-		MPI_Allreduce(&size, &global_f_son_size, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-
-		while (global_f_son_size > 0) {
-
-			for (int i = 0; i < first_son.size(); ++i)
-				first_son[i]->template find_brothers<T>(El_Table, NodeTable, target, myid, matprops_ptr,
-				    &NewFatherList, &OtherProcUpdate, 1);
-
-			unrefine_neigh_update(El_Table, NodeTable, myid, (void*) &NewFatherList);
-
-			unrefine_interp_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &OtherProcUpdate);
-
-			first_son.erase(remove_if(first_son.begin(), first_son.end(), is_old_son), first_son.end());
-
-			for (int k = 0; k < NewFatherList.get_num_elem(); k++)
-				delete_oldsons(El_Table, NodeTable, myid, NewFatherList.get(k));
-
-			reset_newfather_adaption_flag(El_Table);
-
-			move_dual_data(meshctx, propctx);
-
-			NewFatherList.trashlist();
-			OtherProcUpdate.trashlist();
-			size = first_son.size();
-			MPI_Allreduce(&size, &global_f_son_size, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-
+			//we need the the new fathers for future
+			//this is not required but is good for checking purposes
+			new_father.push_back(
+			    make_pair(*(unrefinelist->get(i)->getfather()),
+			        *(unrefinelist->get(i)->getfather() + 1)));
 		}
+
+	//		cout << "6 \n";
+	//		refinement_report(El_Table);
+	int global_f_son_size = 0, size = first_son.size();
+	MPI_Allreduce(&size, &global_f_son_size, 1, MPI_INT, MPI_SUM,
+	MPI_COMM_WORLD);
+
+	int counter = 0;
+
+	while (global_f_son_size > 0) {
+
+		for (int i = 0; i < first_son.size(); ++i)
+//			first_son[i]->template find_brothers<T>(El_Table, NodeTable, target,
+//					myid, matprops_ptr, &NewFatherList, &OtherProcUpdate, 1);
+			first_son[i]->template dual_find_brothers<T>(El_Table, NodeTable, target, myid, matprops_ptr,
+			    &NewFatherList, &OtherProcUpdate, 1);
+
+		unrefine_neigh_update(El_Table, NodeTable, myid, (void*) &NewFatherList);
+
+		unrefine_interp_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &OtherProcUpdate);
+
+		first_son.erase(remove_if(first_son.begin(), first_son.end(), is_old_son), first_son.end());
+
+		for (int k = 0; k < NewFatherList.get_num_elem(); k++)
+			delete_oldsons(El_Table, NodeTable, myid, NewFatherList.get(k));
+
+		reset_newfather_adaption_flag(El_Table);
+
+		move_dual_data(meshctx, propctx);
+
+		NewFatherList.trashlist();
+		OtherProcUpdate.trashlist();
+		size = first_son.size();
+		MPI_Allreduce(&size, &global_f_son_size, 1, MPI_INT, MPI_SUM,
+		MPI_COMM_WORLD);
+		counter++;
+		if (counter > 5)
+			cout << "myid " << myid << " size " << first_son.size() << " counter " << counter << endl;
+
+	}
 //	}
 
 //	calc_d_gravity(El_Table);
@@ -273,7 +282,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 	update_error_grid(solrec, err_meshctx, propctx);
 #endif
 
-	if (timeprops_ptr->ifrepartition() && propctx->adapt_flag && numprocs>1) {
+	if (timeprops_ptr->ifrepartition() && propctx->adapt_flag && numprocs > 1) {
 		dual_repartition(solrec, dual_meshctx, propctx);
 		//		cout<<"in original table"<<endl;
 //		cout<<"has to be refined "<<refinelist->get_num_elem()<<endl;

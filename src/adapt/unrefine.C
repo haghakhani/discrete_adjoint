@@ -252,6 +252,51 @@ int Element::find_brothers(HashTable* El_Table, HashTable* NodeTable, double tar
 	return unrefine_flag;
 }
 
+template<class T>
+int Element::dual_find_brothers(HashTable* El_Table, HashTable* NodeTable, double target, int myid,
+    MatProps* matprops_ptr, void *NFL, void *OPU, int SETLINK) {
+	ElemPtrList<Element>* NewFatherList = (ElemPtrList<Element>*) NFL;
+	ElemPtrList<Element>* OtherProcUpdate = (ElemPtrList<Element>*) OPU;
+
+	int i = 0, j;
+	int unrefine_flag = 1;
+	T* bros[5];
+	if (opposite_brother_flag == 0) {
+		find_opposite_brother(El_Table);
+		if (opposite_brother_flag == 0)
+			return 0;
+	}
+	while (i < 4 && unrefine_flag == 1) {
+		T* EmTemp = (T*) El_Table->lookup(&brothers[i][0]);
+		if (EmTemp == NULL) //|| EmTemp->refined != 0)
+			return 0;
+		else if (EmTemp->adapted != NOTRECADAPTED) //this should be sufficient
+			return 0;
+		bros[i + 1] = EmTemp;
+		if (bros[i + 1]->get_myprocess() != myid)
+			return 0; //should not be necessary because of "adapted" check
+
+		unrefine_flag = EmTemp->check_dual_unrefinement(El_Table, target);
+		i++;
+	}
+
+	if (unrefine_flag) { // we want to unrefine this element...
+
+		bros[0] = new T((bros + 1), NodeTable, El_Table, matprops_ptr, SETLINK);
+		El_Table->add(bros[0]->pass_key(), bros[0]);
+		assert(bros[0]); // a copy of the parent should always be on the same process as the sons
+		NewFatherList->add(bros[0]);
+
+		for (int ineigh = 0; ineigh < 8; ineigh++)
+			if ((bros[0]->neigh_proc[ineigh] >= 0) && (bros[0]->neigh_proc[ineigh] != myid)) {
+				OtherProcUpdate->add(bros[0]);
+				break;
+			}
+	}
+
+	return unrefine_flag;
+}
+
 void Element::for_link_temp() {
 	HashTable *El_Table, *NodeTable;
 	void* voidi;
@@ -264,6 +309,27 @@ void Element::for_link_temp() {
 	dualelem->find_brothers<DualElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi, 0);
 	errelem->find_brothers<ErrorElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi, 0);
 
+	dualelem->dual_find_brothers<DualElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi, 0);
+//	errelem->find_brothers<ErrorElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi, 0);
+
+}
+
+int Element::check_dual_unrefinement(HashTable* El_Table, double target) {
+	int unrefine_flag = 1, i = 0;
+
+	if (adapted != NOTRECADAPTED)
+		//This rules out NEWFATHERs, NEWSONs, BUFFERs, GHOSTs, TOBEDELETEDs, and OLDFATERs
+		//This is a redundant check but is is better to be safe than sorry
+		return (0);
+
+	for (int ineigh = 0; ineigh < 8; ineigh++) {
+		if (/*((neigh_proc[i] != myprocess) && (neigh_proc[i] >= 0) && (generation <= 0))
+		 ||*/(neigh_gen[i] > generation))
+			return (0);
+		i++;
+	}
+
+	return (1);
 }
 
 int Element::check_unrefinement(HashTable* El_Table, double target) {

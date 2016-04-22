@@ -121,8 +121,7 @@ public:
 	//! constructor that creates/restores a saved element during restart
 	Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
 
-	Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr,
-	    int myid);
+	Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
 
 	//! destructor that does nothing except delete boundary condition pointer
 	virtual ~Element() {
@@ -471,6 +470,10 @@ public:
 	int find_brothers(HashTable* El_Table, HashTable* NodeTable, double target, int myid,
 	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int SETLINK);
 
+	template<class T>
+	int dual_find_brothers(HashTable* El_Table, HashTable* NodeTable, double target, int myid,
+	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int SETLINK);
+
 	void for_link_temp();
 
 	void dual_find_brothers(HashTable* El_Table, HashTable* NodeTable, int myid,
@@ -485,6 +488,7 @@ public:
 
 	//! this function is defined in unrefine.C, it is also called in that file and no where else, it prevents refinement when one or more of the brothers does not belong to this processor
 	int check_unrefinement(HashTable *El_Table, double target);
+	int check_dual_unrefinement(HashTable* El_Table, double target);
 
 	//! this function updates this elements neighbor info when one of its neighbors has been unrefined
 	void change_neigh_info(unsigned *fth_key, unsigned *ng_key, int neworder, int ng_gen,
