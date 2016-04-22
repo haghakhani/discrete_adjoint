@@ -112,7 +112,8 @@ int main(int argc, char *argv[]) {
 	Read_data(myid, &matprops, &pileprops, &statprops, &timeprops, &fluxprops, &adaptflag, &viz_flag,
 	    &order_flag, &mapnames, &discharge, &outline, &srctype);
 
-	if (!loadrun(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &solrec, &matprops, &timeprops)) {
+	if (!loadrun(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &solrec, &matprops, &timeprops,
+	    &outline)) {
 		Read_grid(myid, numprocs, &BT_Node_Ptr, &BT_Elem_Ptr, &matprops, &outline, &solrec);
 
 		setup_geoflow(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops);
@@ -309,9 +310,11 @@ int main(int argc, char *argv[]) {
 //		}
 
 		if (timeprops.ifsave()) {
+			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 			save_forward(meshctx, propctx, solrec);
 			solrec->wrtie_sol_to_disk(myid);
 			solrec->delete_jacobians_after_writes();
+			write_alldata_ordered(BT_Elem_Ptr,myid);
 		}
 
 #ifdef PERFTEST

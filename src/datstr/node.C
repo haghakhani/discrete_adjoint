@@ -175,30 +175,31 @@ Node::Node(Node* node) {
 	}
 }
 
-Node::Node(gzFile& myfile, MatProps* matprops_ptr){
+Node::Node(gzFile& myfile, MatProps* matprops_ptr) {
 
-	gzread(myfile, (void*) &(id), sizeof(int));
-	gzread(myfile, (void*) &(info), sizeof(int));
-	gzread(myfile, (void*) (key), sizeof(unsigned) * 2);
-	gzread(myfile, (void*) (coord), sizeof(double) * 2);
+	gzread(myfile, &(id), sizeof(int));
+	gzread(myfile, &(info), sizeof(int));
+	gzread(myfile, (key), sizeof(unsigned) * 2);
+	gzread(myfile, (coord), sizeof(double) * 2);
+	gzread(myfile, &(elevation), sizeof(double));
 
-	double resolution = 0;
-	int i = Get_max_resolution(&resolution);
-	if (i != 0) {
-		printf("error in Get_max_resolution\n");
-		exit(1);
-	}
-	double xcoord = coord[0] * (matprops_ptr->LENGTH_SCALE);
-	double ycoord = coord[1] * (matprops_ptr->LENGTH_SCALE);
-	i = Get_elevation(resolution, xcoord, ycoord, &elevation);
-	if (i != 0) {
-		printf("error in Get_elevation\n");
-		exit(1);
-	}
-	elevation = elevation / matprops_ptr->LENGTH_SCALE;
+//	double resolution = 0;
+//	int i = Get_max_resolution(&resolution);
+//	if (i != 0) {
+//		printf("error in Get_max_resolution\n");
+//		exit(1);
+//	}
+//	double xcoord = coord[0] * (matprops_ptr->LENGTH_SCALE);
+//	double ycoord = coord[1] * (matprops_ptr->LENGTH_SCALE);
+//	i = Get_elevation(resolution, xcoord, ycoord, &elevation);
+//	if (i != 0) {
+//		printf("error in Get_elevation\n");
+//		exit(1);
+//	}
+//	elevation = elevation / matprops_ptr->LENGTH_SCALE;
 
 	zero_flux();
-	num_assoc_elem=0;
+	num_assoc_elem = 0;
 }
 
 void Node::set_parameters(int inf) {
@@ -292,38 +293,6 @@ void Node::save_node(FILE* fp) {
 	fprintf(fpdb,"info=%d\n",info);
 #endif
 
-	/* these are Legacy and are not used
-	 temp4.i=order;
-	 writespace[Itemp++]=temp4.u;
-	 assert(Itemp==9);
-	 #ifdef DEBUG_SAVE_NODE
-	 fprintf(fpdb,"order=%d\n",order);
-	 #endif
-
-	 temp4.i=dof[0];
-	 writespace[Itemp++]=temp4.u;
-	 temp4.i=dof[1];
-	 writespace[Itemp++]=temp4.u;
-	 assert(Itemp==11);
-	 #ifdef DEBUG_SAVE_NODE
-	 fprintf(fpdb,"dof=%d %d\n",dof[0],dof[1]);
-	 #endif
-
-	 temp4.i=glnum;
-	 writespace[Itemp++]=temp4.u;
-	 assert(Itemp==12);
-	 #ifdef DEBUG_SAVE_NODE
-	 fprintf(fpdb,"glnum=%d\n",glnum);
-	 #endif
-
-	 temp4.i=reconstructed;
-	 writespace[Itemp++]=temp4.u;
-	 assert(Itemp==13);
-	 #ifdef DEBUG_SAVE_NODE
-	 fprintf(fpdb,"reconstructed=%d\n",reconstructed);
-	 #endif
-	 */
-
 #ifdef DEBUG_SAVE_NODE
 	fclose(fpdb);
 #endif
@@ -365,25 +334,6 @@ Node::Node(FILE* fp, MatProps* matprops_ptr) {
 	info = temp4.i;
 	assert(Itemp == 8);
 
-	/* these are legacy and are not used
-	 temp4.u=readspace[Itemp++];
-	 order=temp4.i;
-	 assert(Itemp==9);
-
-	 temp4.u=readspace[Itemp++];
-	 dof[0]=temp4.i;
-	 temp4.u=readspace[Itemp++];
-	 dof[1]=temp4.i;
-	 assert(Itemp==11);
-
-	 temp4.u=readspace[Itemp++];
-	 glnum=temp4.i;
-	 assert(Itemp==12);
-
-	 temp4.u=readspace[Itemp++];
-	 reconstructed=temp4.i;
-	 assert(Itemp==13);
-	 */
 	// find the max resolution of the GIS info and then get the elevation at this node
 	double resolution = 0;
 	double xcoord = coord[0] * (matprops_ptr->LENGTH_SCALE);
@@ -403,12 +353,13 @@ Node::Node(FILE* fp, MatProps* matprops_ptr) {
 	return;
 }
 
-void Node::write_node(gzFile myfile){
+void Node::write_node(gzFile myfile) {
 
-	gzwrite(myfile, (void*) &(id), sizeof(int));
-	gzwrite(myfile, (void*) &(info), sizeof(int));
-	gzwrite(myfile, (void*) (key), sizeof(unsigned) * 2);
-	gzwrite(myfile, (void*) (coord), sizeof(double) * 2);
+	gzwrite(myfile, &(id), sizeof(int));
+	gzwrite(myfile, &(info), sizeof(int));
+	gzwrite(myfile, (key), sizeof(unsigned) * 2);
+	gzwrite(myfile, (coord), sizeof(double) * 2);
+	gzwrite(myfile, &(elevation), sizeof(double));
 
 }
 #endif

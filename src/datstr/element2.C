@@ -4163,6 +4163,23 @@ void Element::write_elem(gzFile& myfile) {
 	gzwrite(myfile, &(effect_bedfrict), sizeof(double));
 	gzwrite(myfile, &(effect_tanbedfrict), sizeof(double));
 
+	gzwrite(myfile, &(which_son), sizeof(int));
+	gzwrite(myfile, &(positive_x_side), sizeof(int));
+	gzwrite(myfile, dx, sizeof(double) * 2);
+	gzwrite(myfile, curvature, sizeof(double) * 2);
+	gzwrite(myfile, &elevation, sizeof(double));
+	gzwrite(myfile, gravity, sizeof(double) * 3);
+	gzwrite(myfile, d_gravity, sizeof(double) * 2);
+	gzwrite(myfile, &opposite_brother_flag, sizeof(int));
+
+	gzwrite(myfile, &shortspeed, sizeof(double));
+	gzwrite(myfile, &material, sizeof(int));
+	gzwrite(myfile, &stoppedflags, sizeof(int));
+	gzwrite(myfile, &Awet, sizeof(double));
+	gzwrite(myfile, &Swet, sizeof(double));
+	gzwrite(myfile, &iwetnode, sizeof(int));
+	gzwrite(myfile, &lb_weight, sizeof(double));
+	gzwrite(myfile, &ithelem, sizeof(int));
 }
 
 void Element::save_elem(FILE* fp, FILE *fptxt) {
@@ -4208,11 +4225,32 @@ Element::Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, i
 	gzread(myfile, &(effect_bedfrict), sizeof(double));
 	gzread(myfile, &(effect_tanbedfrict), sizeof(double));
 
-	if (adapted > 0) {
-		calc_which_son();
-		find_positive_x_side(NodeTable);
-		calculate_dx(NodeTable);
-		calc_topo_data(matprops_ptr);
-		calc_gravity_vector(matprops_ptr);
-	}
+	//extra
+	gzread(myfile, &(which_son), sizeof(int));
+	gzread(myfile, &(positive_x_side), sizeof(int));
+	gzread(myfile, dx, sizeof(double) * 2);
+	gzread(myfile, curvature, sizeof(double) * 2);
+	gzread(myfile, &elevation, sizeof(double));
+	gzread(myfile, gravity, sizeof(double) * 3);
+	gzread(myfile, d_gravity, sizeof(double) * 2);
+	gzread(myfile, &opposite_brother_flag, sizeof(int));
+
+	//super extra
+	gzread(myfile, &shortspeed, sizeof(double));
+	gzread(myfile, &material, sizeof(int));
+	gzread(myfile, &stoppedflags, sizeof(int));
+	gzread(myfile, &Awet, sizeof(double));
+	gzread(myfile, &Swet, sizeof(double));
+	gzread(myfile, &iwetnode, sizeof(int));
+	gzread(myfile, &lb_weight, sizeof(double));
+	gzread(myfile, &ithelem, sizeof(int));
+
+
+//	if (adapted > 0) {
+//		calc_which_son();
+//		find_positive_x_side(NodeTable);
+//		calculate_dx(NodeTable);
+//		calc_topo_data(matprops_ptr);
+//		calc_gravity_vector(matprops_ptr);
+//	}
 }

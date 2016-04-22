@@ -16,9 +16,7 @@
  */
 
 #include "../header/hpfem.h"
-//#define DEBUGSAVESPLIT
-//#define DEBUGSAVEHEADER
-#define NUM_CHAR_IN_SAVE_HEADER 16384 //equiv to 4096 integers of space available for save header
+#include <set>
 
 void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec) {
 
@@ -44,7 +42,7 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 
 	NodeTable->write_table(myfile);
 	int numnode = table_members(NodeTable);
-	gzwrite(myfile, (void*) &(numnode), sizeof(int));
+	gzwrite(myfile, &(numnode), sizeof(int));
 	cout << "num node " << numnode << endl;
 
 	int count = 0;
@@ -66,7 +64,7 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 	El_Table->write_table(myfile);
 
 	int numelem = table_members(El_Table);
-	gzwrite(myfile, (void*) &(numelem), sizeof(int));
+	gzwrite(myfile, &(numelem), sizeof(int));
 	cout << "num elem " << numelem << endl;
 
 	count = 0;
@@ -88,10 +86,35 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 	solrec->write_table(myfile);
 
 	gzclose(myfile);
+
+	// now writing outline
+
+	//output maximum flow depth a.k.a. flow outline
+	OutLine outline2;
+	double dxy[2];
+	dxy[0] = outline->dx;
+	dxy[1] = outline->dy;
+	outline2.init2(dxy, outline->xminmax, outline->yminmax);
+	int NxNyout = outline->Nx * outline->Ny;
+	MPI_Allreduce(*(outline->pileheight), *(outline2.pileheight), NxNyout, MPI_DOUBLE,
+	MPI_SUM, MPI_COMM_WORLD);
+
+	// we write every single file to when we want to load can read from the file concurrently
+	sprintf(filename, "outline_%04d", myid);
+	myfile = gzopen(filename, "wb");
+	int nx = outline->Nx, ny = outline->Ny;
+	gzwrite(myfile, dxy, sizeof(double) * 2);
+	gzwrite(myfile, outline->xminmax, sizeof(double) * 2);
+	gzwrite(myfile, outline->yminmax, sizeof(double) * 2);
+	for (int i = 0; i < ny; ++i)
+		gzwrite(myfile, outline2.pileheight[i], sizeof(double) * nx);
+	gzclose(myfile);
+
+	MPI_Barrier(MPI_COMM_WORLD);
 }
 
 int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable, SolRec** solrec,
-    MatProps* matprops_ptr, TimeProps* timeprops_ptr) {
+    MatProps* matprops, TimeProps* timeprops, OutLine* outline) {
 
 	char filename[50];
 	sprintf(filename, "restart_%04d", myid);
@@ -101,7 +124,7 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 	if (myfile == NULL)
 		return (0);
 
-	timeprops_ptr->read_from_file(myfile);
+	timeprops->read_from_file(myfile);
 
 	//recreate the node hashtable
 	*NodeTable = new HashTable(myfile);
@@ -111,7 +134,7 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 
 	//read in all the nodes
 	for (int inode = 0; inode < numnode; inode++) {
-		Node* NodeP = new Node(myfile, matprops_ptr);
+		Node* NodeP = new Node(myfile, matprops);
 		(*NodeTable)->add(NodeP->pass_key(), NodeP);
 	}
 
@@ -125,7 +148,7 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 	int maxgen = 0;
 	Element* ElemP;
 	for (int ielem = 0; ielem < numelem; ielem++) {
-		ElemP = new Element(myfile, *NodeTable, matprops_ptr, myid);
+		ElemP = new Element(myfile, *NodeTable, matprops, myid);
 		(*ElemTable)->add(ElemP->pass_key(), ElemP);
 		if (ElemP->get_gen() > maxgen)
 			maxgen = ElemP->get_gen();
@@ -137,8 +160,7 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 
 	REFINE_LEVEL = ElemP->get_gen()
 	    + ceil(
-	        log(dx * (matprops_ptr->number_of_cells_across_axis) / (matprops_ptr->smallest_axis))
-	            / log(2.0));
+	        log(dx * (matprops->number_of_cells_across_axis) / (matprops->smallest_axis)) / log(2.0));
 
 	if (maxgen > REFINE_LEVEL)
 		REFINE_LEVEL = maxgen;
@@ -150,24 +172,110 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 
 	gzclose(myfile);
 
-	//calc_d_gravity
-	int no_of_elm_buckets = (*ElemTable)->get_no_of_buckets();
+	move_data(numprocs, myid, *ElemTable, *NodeTable, timeprops);
+//	//calc_d_gravity
+//	int no_of_elm_buckets = (*ElemTable)->get_no_of_buckets();
+//	for (int ibucket = 0; ibucket < no_of_elm_buckets; ibucket++) {
+//		HashEntryPtr entryp = *((*ElemTable)->getbucketptr() + ibucket);
+//		while (entryp) {
+//			Element* EmTemp = (Element*) entryp->value;
+//			assert(EmTemp);
+//
+//			if (EmTemp->get_adapted_flag() > 0) {
+////				EmTemp->calc_which_son();
+////				EmTemp->find_positive_x_side(*NodeTable);
+////				EmTemp->calculate_dx(*NodeTable);
+////				EmTemp->calc_topo_data(matprops);
+////				EmTemp->calc_gravity_vector(matprops);
+//				EmTemp->calc_d_gravity(*ElemTable);
+//				EmTemp->find_opposite_brother(*ElemTable);
+//			}
+//			entryp = entryp->next;
+//		}
+//	}
+//
+//	move_data(numprocs, myid, *ElemTable, *NodeTable, timeprops);
+
+	// now reading outline
+
+	sprintf(filename, "outline_%04d", myid);
+	myfile = gzopen(filename, "rb");
+	int nx = outline->Nx, ny = outline->Ny;
+	double dxy[2], xminmax[2], yminmax[2];
+	gzread(myfile, dxy, sizeof(double) * 2);
+	gzread(myfile, xminmax, sizeof(double) * 2);
+	gzread(myfile, yminmax, sizeof(double) * 2);
+	outline->init2(dxy, xminmax, yminmax);
+	for (int i = 0; i < ny; ++i)
+		gzread(myfile, outline->pileheight[i], sizeof(double) * nx);
+	gzclose(myfile);
+
+	MPI_Barrier(MPI_COMM_WORLD);
+
+	return (1);
+}
+
+class Data {
+private:
+	unsigned* key;
+	double* state;
+
+public:
+
+	Data(Element* elem) {
+		key = elem->pass_key();
+		state = elem->get_state_vars();
+	}
+
+	unsigned* get_key() const {
+		return key;
+	}
+
+	double* get_state() const {
+		return state;
+	}
+
+	bool operator<(const Data& rdata) const {
+		if (key[0] < rdata.key[0] || (key[0] == rdata.key[0] && key[1] < rdata.key[1]))
+			return true;
+
+		return false;
+	}
+	;
+};
+
+void write_alldata_ordered(HashTable* El_Table, int myid) {
+
+	set<Data> mydata;
+
+	int no_of_elm_buckets = El_Table->get_no_of_buckets();
 	for (int ibucket = 0; ibucket < no_of_elm_buckets; ibucket++) {
-		HashEntryPtr entryp = *((*ElemTable)->getbucketptr() + ibucket);
+		HashEntryPtr entryp = *(El_Table->getbucketptr() + ibucket);
 		while (entryp) {
 			Element* EmTemp = (Element*) entryp->value;
-			assert(EmTemp);
+			if (EmTemp->get_adapted_flag() > 0)
+				mydata.insert(Data(EmTemp));
 
-			if (EmTemp->get_adapted_flag() > 0) {
-				EmTemp->calc_d_gravity(*ElemTable);
-				EmTemp->find_opposite_brother(*ElemTable);
-			}
 			entryp = entryp->next;
 		}
 	}
 
-	move_data(numprocs, myid, *ElemTable, *NodeTable, timeprops_ptr);
+	char filename[50];
+	sprintf(filename, "ordered_%04d", myid);
+//	gzFile myfile = gzopen(filename, "wb");
+	FILE *fp = fopen(filename, "w");
 
-	return (1);
+	set<Data>::iterator it;
+	for (it = mydata.begin(); it != mydata.end(); ++it) {
+		fprintf(fp, "%u %u %16.10f %16.10f %16.10f \n", it->get_key()[0], it->get_key()[1],
+		    it->get_state()[0], it->get_state()[1], it->get_state()[2]);
+//		gzwrite(myfile, (it->get_key()), sizeof(unsigned) * 2);
+//		gzwrite(myfile, (it->get_state()), sizeof(double) * 3);
+	}
+
+	fclose(fp);
+
+//	gzclose (myfile);
+
 }
 
