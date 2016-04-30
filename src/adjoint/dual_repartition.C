@@ -210,7 +210,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 							    || other_keys_status[i] == 9 || other_keys_status[i] == 12)
 
 								refinelist.add(elm);
-							 else if(other_keys_status[i] != 1)
+							else if (other_keys_status[i] != 1)
 								cerr << "element status is not correct, and repartitioning fails \n";
 
 							component++;
@@ -287,6 +287,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //	    << endl;
 
 	allKeyRange[0] = -1.0;
+	allKeyRange[2 * numprocs - 1] = DBL_MAX;
 
 //	for (int i = 0; i < 2 * numprocs; ++i)
 //		cout << allKeyRange[i] << " , ";
@@ -317,8 +318,8 @@ void set_send_receive_proc(int count, int myid, int numprocs, int& receive_from,
 	int odd = count % 2;
 
 	if (odd) {
-		send_to = (myid - (int) ceil(count / 2.)+ numprocs) % numprocs;
-		receive_from = (myid + (int) ceil(count / 2.) ) % numprocs;
+		send_to = (myid - (int) ceil(count / 2.) + numprocs) % numprocs;
+		receive_from = (myid + (int) ceil(count / 2.)) % numprocs;
 
 	} else {
 		receive_from = (myid - (int) ceil(count / 2.) + numprocs) % numprocs;
@@ -452,16 +453,25 @@ void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKey
 
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
+	//by the following we will adjust the overlap if it exists
+	for (int i = 0; i < numprocs - 1; ++i)
+		if (allKeyRange[2 * i + 1] > allKeyRange[2 * (i + 1)]) {
+			double med = allKeyRange[2 * i + 1];
+			allKeyRange[2 * i + 1] = allKeyRange[2 * (i + 1)];
+			allKeyRange[2 * (i + 1)] = med;
+		}
+
+	vector<Element*> wrong_elem;
+
 	HashEntryPtr * buck = El_Table->getbucketptr();
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
 			HashEntryPtr currentPtr = *(buck + i);
 			while (currentPtr) {
-				DualElem *Curr_El = (DualElem*) (currentPtr->value);
+				Element *Curr_El = (Element*) (currentPtr->value);
 
 				assert(Curr_El);
 				assert(Curr_El->get_adapted_flag()>=NOTRECADAPTED);
-//				num_elem++;
 
 				Curr_El->put_myprocess(myid);
 
@@ -481,9 +491,101 @@ void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKey
 							}
 					}
 
+				double doublekey2 = *(Curr_El->pass_key()) * doubleKeyRange + *(Curr_El->pass_key() + 1);
+
+				if (!(doublekey2 <= allKeyRange[myid * 2 + 1] && doublekey2 >= allKeyRange[myid * 2]))
+					wrong_elem.push_back(Curr_El);
+
 				currentPtr = currentPtr->next;
 			}
 		}
+
+	vector<unsigned> lost_neighb;
+	vector<int> lost_neighb_proc;
+
+	for (int i = 0; i < wrong_elem.size(); ++i) {
+		unsigned *key = wrong_elem[i]->pass_key();
+		for (int neigh = 0; neigh < 8; neigh++) {
+			if (*(wrong_elem[i]->get_neigh_proc() + neigh) >= 0) {
+				unsigned *neigh_key = (wrong_elem[i]->get_neighbors() + neigh * KEYLENGTH);
+				Element *neigh_elem = (Element*) El_Table->lookup(neigh_key);
+
+				if (neigh_elem) {
+					//luckily the neighbor also lives here
+					int side = neigh_elem->which_neighbor(key);
+					assert(side < 8 && side > -1);
+					// we will update its information explicitly
+					neigh_elem->put_neigh_proc(side, myid);
+				} else {
+					//must be updated by communication
+					lost_neighb.push_back(neigh_key[0]);
+					lost_neighb.push_back(neigh_key[1]);
+					lost_neighb.push_back(key[0]);
+					lost_neighb.push_back(key[1]);
+					lost_neighb_proc.push_back(myid);
+				}
+			}
+		}
+	}
+
+//	cout<<"size vec "<<lost_neighb_proc.size()<<endl;
+
+	int sizes[numprocs];
+	int size = lost_neighb_proc.size();
+	MPI_Allgather(&size, 1, MPI_INT, sizes, 1, MPI_INT, MPI_COMM_WORLD);
+
+	int sum = 0;
+	int mystart[numprocs];
+	for (int i = 0; i < numprocs; ++i) {
+		mystart[i] = sum;
+		sum += sizes[i];
+	}
+
+	int *check_lost_proc = new int[sum];
+
+	MPI_Allgatherv(&lost_neighb_proc[0], sizes[myid], MPI_INT, check_lost_proc, sizes, mystart,
+	MPI_INT, MPI_COMM_WORLD);
+
+	for (int i = 0; i < numprocs; ++i) {
+		mystart[i] = 4 * mystart[i];
+		sizes[i] = 4 * sizes[i];
+	}
+
+	unsigned *check_lost = new unsigned[4 * sum];
+	MPI_Allgatherv(&lost_neighb[0], sizes[myid], MPI_UNSIGNED, check_lost, sizes, mystart,
+	MPI_UNSIGNED, MPI_COMM_WORLD);
+	unsigned *check = new unsigned[sum];
+	unsigned *all_check = new unsigned[sum];
+
+	for (int i = 0; i < sum; ++i)
+		all_check[i] = check[i] = 0;
+
+	int start = mystart[myid] / 4, end = (mystart[myid] + size) / 4;
+
+	for (int i = 0; i < sum; ++i) {
+		if (i < start || i >= end) {
+			unsigned neigh_key[] = { check_lost[4 * i], check_lost[4 * i + 1] };
+			Element *neigh_elem = (Element*) El_Table->lookup(neigh_key);
+			if (neigh_elem) {
+				// we found the element
+				unsigned key[] = { check_lost[4 * i + 2], check_lost[4 * i + 3] };
+				int side = neigh_elem->which_neighbor(key);
+				assert(side < 8 && side > -1);
+				neigh_elem->put_neigh_proc(side, check_lost_proc[i]);
+				check[i] = 1;
+				assert(check_lost_proc[i] >= 0 && check_lost_proc[i] < numprocs);
+			}
+		}
+	}
+
+	MPI_Allreduce(check, all_check, sum, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
+	for (int i = 0; i < sum; ++i)
+		assert(all_check[i] == 1);
+
+	delete[] check_lost;
+	delete[] check;
+	delete[] all_check;
+	MPI_Barrier(MPI_COMM_WORLD);
 
 }
 

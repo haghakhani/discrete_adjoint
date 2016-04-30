@@ -18,10 +18,10 @@ SolRec::SolRec(double *doublekeyrangein, int size, int prime, double XR[], doubl
 }
 
 SolRec::SolRec(gzFile& myfile) :
-		HashTable(myfile),range(50) {
+		HashTable(myfile), range(50) {
 
 	gzread(myfile, &(last_solution_time_step), sizeof(int));
-	first_solution_time_step=last_solution_time_step;
+	first_solution_time_step = last_solution_time_step;
 
 }
 
@@ -1116,6 +1116,9 @@ DualElem::DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 			//because of storing all the node but not updating the
 			//info and order if the node was not previously in the subdomain
 			//check if the sfc is screwed
+//			if (fabs((*(node->get_coord()) - elem2->n_coord[i][0]) / *(node->get_coord())) > .01
+//			    || fabs((*(node->get_coord() + 1) != elem2->n_coord[i][1]) / *(node->get_coord() + 1))
+//			        > .01) {
 			if (*(node->get_coord()) != elem2->n_coord[i][0]
 			    || *(node->get_coord() + 1) != elem2->n_coord[i][1]) {
 				printf("myid=%d\n  pack  elem(x,y)=(%20g,%20g)\n exist elem(x,y)=(%20g,%20g)\n\n", myid,
@@ -1230,6 +1233,9 @@ void DualElem::update(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 			//because of storing all the node but not updating the
 			//info and order if the node was not previously in the subdomain
 			//check if the sfc is screwed
+//			if (fabs((*(node->get_coord()) - elem2->n_coord[i][0]) / *(node->get_coord())) > .01
+//			    || fabs((*(node->get_coord() + 1) != elem2->n_coord[i][1]) / *(node->get_coord() + 1))
+//			        > .01) {
 			if (*(node->get_coord()) != elem2->n_coord[i][0]
 			    || *(node->get_coord() + 1) != elem2->n_coord[i][1]) {
 				printf("myid=%d\n  pack  elem(x,y)=(%20g,%20g)\n exist elem(x,y)=(%20g,%20g)\n\n", myid,

@@ -138,8 +138,8 @@ void dual_refine_unrefine(MeshCTX* meshctx, PropCTX* propctx, ElemPtrList<T>* re
 		MPI_Allreduce(&size, &global_f_son_size, 1, MPI_INT, MPI_SUM,
 		MPI_COMM_WORLD);
 		counter++;
-		if (counter > 5)
-			cout << "myid " << myid << " size " << first_son.size() << " counter " << counter << endl;
+//		if (counter > 5)
+//			cout << "myid " << myid << " size " << first_son.size() << " counter " << counter << endl;
 
 	}
 //	}
