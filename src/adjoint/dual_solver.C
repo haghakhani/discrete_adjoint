@@ -187,7 +187,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	for (int iter = maxiter; iter > 0; --iter) {
 
-		set_ithm(Dual_El_Tab);
+//		set_ithm(Dual_El_Tab);
 
 		timeprops_ptr->iter = iter;
 		if (myid == 0)
@@ -284,6 +284,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	delete_hashtables_objects<DualElem>(Dual_El_Tab);
 	delete_hashtables_objects<Node>(NodeTable);
+	close_xdmf_files(myid);
 
 #ifdef Error
 	delete_hashtables_objects<DualElem>(Err_El_Tab);

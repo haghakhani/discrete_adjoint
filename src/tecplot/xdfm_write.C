@@ -70,6 +70,21 @@ double interpolate_elv(HashTable *El_Table, HashTable *NodeTable, T *EmTemp, int
 }
 
 void newXmlfile(char *);
+void close_xdmf_files(int myid){
+
+	/* generate XML file if required */
+	ofstream xmlf;
+	char filename[20];
+	sprintf(filename, "xdmf%03d00000000.xmf", myid);
+
+	xmlf.open(filename, ios::app);
+
+	xmlf << "</Grid>  " << endl;
+	xmlf << "</Domain>" << endl;
+	xmlf << "</Xdmf>  " << endl;
+
+	xmlf.close();
+}
 
 int write_dual_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timeprops_ptr,
     MatProps *matprops_ptr, MapNames *mapnames, const int mode, const int plotflag) {
