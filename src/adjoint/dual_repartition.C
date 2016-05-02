@@ -49,6 +49,9 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			while (currentPtr) {
 				DualElem *Curr_El = (DualElem*) (currentPtr->value);
 
+				// because we may delete the it we first send it to next
+				currentPtr = currentPtr->next;
+
 				if (Curr_El->get_adapted_flag() > 0) {
 
 					Curr_El->dual_check_refine_unrefine_repartition(solrec, El_Table, iter, &refinelist,
@@ -59,8 +62,6 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 					El_Table->remove(Curr_El->pass_key());
 					delete Curr_El;
 				}
-
-				currentPtr = currentPtr->next;
 			}
 		}
 
@@ -583,6 +584,7 @@ void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKey
 		assert(all_check[i] == 1);
 
 	delete[] check_lost;
+	delete[] check_lost_proc;
 	delete[] check;
 	delete[] all_check;
 	MPI_Barrier(MPI_COMM_WORLD);

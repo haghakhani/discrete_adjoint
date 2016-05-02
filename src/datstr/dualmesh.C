@@ -670,14 +670,14 @@ DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], 
 	drypoint[0] = drypoint_in[0];
 	drypoint[1] = drypoint_in[1];
 
-	double myfractionoffather;
-	if ((Awetfather == 0.0) || (Awetfather == 1.0)) {
-		Awet = Awetfather;
-		myfractionoffather = 1.0;
-	} else {
-		Awet = convect_dryline(dx, 0.0); //dx is a dummy stand in for convection speed... value doesn't matter because it's being multiplied by a timestep of zero
-		myfractionoffather = Awet / Awetfather;
-	}
+	double myfractionoffather=1.;
+//	if ((Awetfather == 0.0) || (Awetfather == 1.0)) {
+//		Awet = Awetfather;
+//		myfractionoffather = 1.0;
+//	} else {
+//		Awet = convect_dryline(dx, 0.0); //dx is a dummy stand in for convection speed... value doesn't matter because it's being multiplied by a timestep of zero
+//		myfractionoffather = Awet / Awetfather;
+//	}
 	Swet = 1.0;
 
 	double dxx = coord_in[0] - fthTemp->coord[0];

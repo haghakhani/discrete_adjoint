@@ -246,27 +246,27 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 	/* finished corrector step */
 	calc_stats(El_Table, NodeTable, myid, matprops_ptr, timeprops_ptr, statprops_ptr, discharge, dt);
 
-	double tempin[6], tempout[6];
-	tempin[0] = outflow;    //volume that flew out the boundaries this iteration
-	tempin[1] = eroded;     //volume that was eroded this iteration
-	tempin[2] = deposited;  //volume that is currently deposited
-	tempin[3] = realvolume; //"actual" volume within boundaries
-	tempin[4] = forceint;   //internal friction force
-	tempin[5] = forcebed;   //bed friction force
-
-	MPI_Reduce(tempin, tempout, 6, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-
-	statprops_ptr->outflowvol += tempout[0] * (matprops_ptr->HEIGHT_SCALE)
-	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
-	statprops_ptr->erodedvol += tempout[1] * (matprops_ptr->HEIGHT_SCALE)
-	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
-	statprops_ptr->depositedvol = tempout[2] * (matprops_ptr->HEIGHT_SCALE)
-	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
-	statprops_ptr->realvolume = tempout[3] * (matprops_ptr->HEIGHT_SCALE)
-	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
-
-	statprops_ptr->forceint = tempout[4] / tempout[3] * matprops_ptr->GRAVITY_SCALE;
-	statprops_ptr->forcebed = tempout[5] / tempout[3] * matprops_ptr->GRAVITY_SCALE;
+//	double tempin[6], tempout[6];
+//	tempin[0] = outflow;    //volume that flew out the boundaries this iteration
+//	tempin[1] = eroded;     //volume that was eroded this iteration
+//	tempin[2] = deposited;  //volume that is currently deposited
+//	tempin[3] = realvolume; //"actual" volume within boundaries
+//	tempin[4] = forceint;   //internal friction force
+//	tempin[5] = forcebed;   //bed friction force
+//
+//	MPI_Reduce(tempin, tempout, 6, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+//
+//	statprops_ptr->outflowvol += tempout[0] * (matprops_ptr->HEIGHT_SCALE)
+//	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
+//	statprops_ptr->erodedvol += tempout[1] * (matprops_ptr->HEIGHT_SCALE)
+//	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
+//	statprops_ptr->depositedvol = tempout[2] * (matprops_ptr->HEIGHT_SCALE)
+//	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
+//	statprops_ptr->realvolume = tempout[3] * (matprops_ptr->HEIGHT_SCALE)
+//	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
+//
+//	statprops_ptr->forceint = tempout[4] / tempout[3] * matprops_ptr->GRAVITY_SCALE;
+//	statprops_ptr->forcebed = tempout[5] / tempout[3] * matprops_ptr->GRAVITY_SCALE;
 
 	//calc_volume(El_Table, myid, matprops_ptr, timeprops_ptr, dt, v_star, nz_star);
 

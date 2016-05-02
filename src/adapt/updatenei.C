@@ -2175,8 +2175,13 @@ void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump, in
 		CDeAllocI1(num_send);
 	}
 
+	delete[] request;
 
-
+//	MPI_Status status;
+//	int IfSentRecvd;
+//	for (int procs = 0; procs < nump; procs++) {
+//			MPI_Test(request+procs, &IfSentRecvd, &status);
+//	}
 	/*
 	 if(timeprops_ptr->iter==2389) {
 	 ElemDebugFatherNeigh=ElemDebugFather=NULL;

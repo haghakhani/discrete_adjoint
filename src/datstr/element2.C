@@ -221,20 +221,18 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 	drypoint[1] = drypoint_in[1];
 
 	double myfractionoffather;
-	if ((Awetfather == 0.0) || (Awetfather == 1.0)) {
-		Awet = Awetfather;
-		myfractionoffather = 1.0;
-	} else {
-		Awet = convect_dryline(dx, 0.0); //dx is a dummy stand in for convection speed... value doesn't matter because it's being multiplied by a timestep of zero
-		myfractionoffather = Awet / Awetfather;
-	}
+//	if ((Awetfather == 0.0) || (Awetfather == 1.0)) {
+//		Awet = Awetfather;
+//		myfractionoffather = 1.0;
+//	} else {
+//		Awet = convect_dryline(dx, 0.0); //dx is a dummy stand in for convection speed... value doesn't matter because it's being multiplied by a timestep of zero
+//		myfractionoffather = Awet / Awetfather;
+//	}
+	myfractionoffather=1.0;
 	Swet = 1.0;
 
 	double dxx = coord_in[0] - fthTemp->coord[0];
 	double dyy = coord_in[1] - fthTemp->coord[1];
-
-	if (state_vars[0] < 0.)
-		state_vars[0] = 0.;
 
 	find_positive_x_side(NodeTable);
 	calc_topo_data(matprops_ptr);
@@ -1024,108 +1022,108 @@ void Element::calc_wet_dry_orient(HashTable *El_Table) {
 	int ineigh;
 	Element *EmTemp;
 
-	for (ineigh = 0; ineigh < 4; ineigh++) {
-		if (neigh_proc[ineigh] == -1)
-			//edge of map and cell has same wetness as the cell
-			ifsidewet[ineigh] = (state_vars[0] > GEOFLOW_TINY) ? 1 : 0;
-		else {
-			EmTemp = (Element *) El_Table->lookup(neighbor[ineigh]);
-			if (*(EmTemp->get_state_vars()) > GEOFLOW_TINY)
-				//first neighbor on this side is wet
-				ifsidewet[ineigh] = 1;
-			else if (neigh_proc[ineigh + 4] == -2)
-				//only one neighbor on this side and it's not wet
-				ifsidewet[ineigh] = 0;
-			else {
-				//since first neighbor on this side is not wet,
-				//the edge has the wetness of the second neighbor on this side
-				EmTemp = (Element *) El_Table->lookup(neighbor[ineigh + 4]);
-				ifsidewet[ineigh] = (*(EmTemp->get_state_vars() + 0) > GEOFLOW_TINY) ? 1 : 0;
-			}
-		}
-		numwetsides += ifsidewet[ineigh];
-	}
-
-	if ((ifsidewet[0] == ifsidewet[2]) && (ifsidewet[1] == ifsidewet[3])) {
-		//if opposite sides of the element are the same (both wet or dry)
-		iwetnode = 8;
-		drypoint[0] = drypoint[1] = 0.0;
-		if (state_vars[0] > GEOFLOW_TINY)
-			Awet = Swet = 1.0;
-		else
-			Awet = Swet = 0.0;
-	} else if (numwetsides == 2) {
-		//having exactly 2 adjacent wet edges means it has a diagonal orientation
-
-		Swet = sqrt(2.0 * ((Awet > 0.5) ? 1.0 - Awet : Awet));				//edge length of small triangle
-		drypoint[0] = drypoint[1] = 0.5 * (1.0 - Swet);
-		if (Awet > 0.5)
-			Swet = 1.0 - Swet;					//the small triangle is dry not wet
-
-		if (ifsidewet[3] && ifsidewet[0]) {
-			iwetnode = 0;
-			if (Awet <= 0.5)
-				drypoint[0] = drypoint[1] = -drypoint[0];
-		} else if (ifsidewet[0] && ifsidewet[1]) {
-			iwetnode = 1;
-			if (Awet <= 0.5)
-				drypoint[1] = -drypoint[1];
-			else
-				drypoint[0] = -drypoint[0];
-		} else if (ifsidewet[1] && ifsidewet[2]) {
-			iwetnode = 2;
-			if (Awet > 0.5)
-				drypoint[0] = drypoint[1] = -drypoint[0];
-		} else if (ifsidewet[2] && ifsidewet[3]) {
-			iwetnode = 3;
-			if (Awet > 0.5)
-				drypoint[1] = -drypoint[1];
-			else
-				drypoint[0] = -drypoint[0];
-		}
-	} else {
-		//numwetsides is 1 or 3 i.e. it's a vertical or horizontal orientation
-		if (numwetsides == 1) {
-			//find the one wet side
-			for (ineigh = 0; ineigh < 4; ineigh++)
-				if (ifsidewet[ineigh])
-					break;
-		} else {
-			//find the one dry side
-			for (ineigh = 0; ineigh < 4; ineigh++)
-				if (!ifsidewet[ineigh])
-					break;
-			//find the wet side opposite the one dry side
-			ineigh = (ineigh + 2) % 4;
-		}
-		assert((-1 < ineigh) && (ineigh < 4));
-		Swet = Awet;
-
-		iwetnode = ineigh + 4;
-		switch (iwetnode) {
-			case 4:
-				drypoint[0] = 0.0;
-				drypoint[1] = -0.5 + Swet;
-				break;
-			case 5:
-				drypoint[0] = +0.5 - Swet;
-				drypoint[1] = 0.0;
-				break;
-			case 6:
-				drypoint[0] = 0.0;
-				drypoint[1] = +0.5 - Swet;
-				break;
-			case 7:
-				drypoint[0] = -0.5 + Swet;
-				drypoint[1] = 0.0;
-				break;
-			default:
-				assert(0);
-		}
-	}
-
-	if (iwetnode == 8)
-		Awet = (state_vars[0] > GEOFLOW_TINY) ? 1.0 : 0.0;
+//	for (ineigh = 0; ineigh < 4; ineigh++) {
+//		if (neigh_proc[ineigh] == -1)
+//			//edge of map and cell has same wetness as the cell
+//			ifsidewet[ineigh] = (state_vars[0] > GEOFLOW_TINY) ? 1 : 0;
+//		else {
+//			EmTemp = (Element *) El_Table->lookup(neighbor[ineigh]);
+//			if (*(EmTemp->get_state_vars()) > GEOFLOW_TINY)
+//				//first neighbor on this side is wet
+//				ifsidewet[ineigh] = 1;
+//			else if (neigh_proc[ineigh + 4] == -2)
+//				//only one neighbor on this side and it's not wet
+//				ifsidewet[ineigh] = 0;
+//			else {
+//				//since first neighbor on this side is not wet,
+//				//the edge has the wetness of the second neighbor on this side
+//				EmTemp = (Element *) El_Table->lookup(neighbor[ineigh + 4]);
+//				ifsidewet[ineigh] = (*(EmTemp->get_state_vars() + 0) > GEOFLOW_TINY) ? 1 : 0;
+//			}
+//		}
+//		numwetsides += ifsidewet[ineigh];
+//	}
+//
+//	if ((ifsidewet[0] == ifsidewet[2]) && (ifsidewet[1] == ifsidewet[3])) {
+//		//if opposite sides of the element are the same (both wet or dry)
+//		iwetnode = 8;
+//		drypoint[0] = drypoint[1] = 0.0;
+//		if (state_vars[0] > GEOFLOW_TINY)
+//			Awet = Swet = 1.0;
+//		else
+//			Awet = Swet = 0.0;
+//	} else if (numwetsides == 2) {
+//		//having exactly 2 adjacent wet edges means it has a diagonal orientation
+//
+//		Swet = sqrt(2.0 * ((Awet > 0.5) ? 1.0 - Awet : Awet));				//edge length of small triangle
+//		drypoint[0] = drypoint[1] = 0.5 * (1.0 - Swet);
+//		if (Awet > 0.5)
+//			Swet = 1.0 - Swet;					//the small triangle is dry not wet
+//
+//		if (ifsidewet[3] && ifsidewet[0]) {
+//			iwetnode = 0;
+//			if (Awet <= 0.5)
+//				drypoint[0] = drypoint[1] = -drypoint[0];
+//		} else if (ifsidewet[0] && ifsidewet[1]) {
+//			iwetnode = 1;
+//			if (Awet <= 0.5)
+//				drypoint[1] = -drypoint[1];
+//			else
+//				drypoint[0] = -drypoint[0];
+//		} else if (ifsidewet[1] && ifsidewet[2]) {
+//			iwetnode = 2;
+//			if (Awet > 0.5)
+//				drypoint[0] = drypoint[1] = -drypoint[0];
+//		} else if (ifsidewet[2] && ifsidewet[3]) {
+//			iwetnode = 3;
+//			if (Awet > 0.5)
+//				drypoint[1] = -drypoint[1];
+//			else
+//				drypoint[0] = -drypoint[0];
+//		}
+//	} else {
+//		//numwetsides is 1 or 3 i.e. it's a vertical or horizontal orientation
+//		if (numwetsides == 1) {
+//			//find the one wet side
+//			for (ineigh = 0; ineigh < 4; ineigh++)
+//				if (ifsidewet[ineigh])
+//					break;
+//		} else {
+//			//find the one dry side
+//			for (ineigh = 0; ineigh < 4; ineigh++)
+//				if (!ifsidewet[ineigh])
+//					break;
+//			//find the wet side opposite the one dry side
+//			ineigh = (ineigh + 2) % 4;
+//		}
+//		assert((-1 < ineigh) && (ineigh < 4));
+//		Swet = Awet;
+//
+//		iwetnode = ineigh + 4;
+//		switch (iwetnode) {
+//			case 4:
+//				drypoint[0] = 0.0;
+//				drypoint[1] = -0.5 + Swet;
+//				break;
+//			case 5:
+//				drypoint[0] = +0.5 - Swet;
+//				drypoint[1] = 0.0;
+//				break;
+//			case 6:
+//				drypoint[0] = 0.0;
+//				drypoint[1] = +0.5 - Swet;
+//				break;
+//			case 7:
+//				drypoint[0] = -0.5 + Swet;
+//				drypoint[1] = 0.0;
+//				break;
+//			default:
+//				assert(0);
+//		}
+//	}
+//
+//	if (iwetnode == 8)
+//		Awet = (state_vars[0] > GEOFLOW_TINY) ? 1.0 : 0.0;
 
 	return;
 }
@@ -1765,9 +1763,9 @@ void Element::xdirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 		for (i = 0; i < NUM_STATE_VARS; i++)
 			hfv[0][i] = state_vars[i] + d_state_vars[i] * dz;
 
-		if ((0.0 < Awet) && (Awet < 1.0))
-			for (i = 0; i < NUM_STATE_VARS; i++)
-				hfv[0][i] *= wetnessfactor;
+//		if ((0.0 < Awet) && (Awet < 1.0))
+//			for (i = 0; i < NUM_STATE_VARS; i++)
+//				hfv[0][i] *= wetnessfactor;
 
 		// Solid-phase velocity in x-dir
 		Vel = hfv[0][1] / hfv[0][0];
@@ -1883,9 +1881,9 @@ void Element::ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 		for (i = 0; i < NUM_STATE_VARS; i++)
 			hfv[0][i] = state_vars[i] + d_state_vars[NUM_STATE_VARS + i] * dz;
 
-		if ((0.0 < Awet) && (Awet < 1.0))
-			for (i = 0; i < NUM_STATE_VARS; i++)
-				hfv[0][i] *= wetnessfactor;
+//		if ((0.0 < Awet) && (Awet < 1.0))
+//			for (i = 0; i < NUM_STATE_VARS; i++)
+//				hfv[0][i] *= wetnessfactor;
 
 		// a = speed of sound through the medium
 		a = sqrt(kactxy[1] * hfv[0][0] * gravity[2]);
@@ -1987,28 +1985,28 @@ void Element::zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matp
     int order_flag, int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS],
     Element *EmNeigh, double dt) {
 	double dz = 0.0;
-	int ineigh = which_neighbor(EmNeigh->pass_key());
-
-	if (!((-1 < ineigh) && (ineigh < 8))) {
-		printf("zdirflux: ineigh=%d, dir=%d\n", ineigh, dir);
-		printf("this element******************************\n");
-		ElemBackgroundCheck2(El_Table, NodeTable, this, stdout);
-		fflush(stdout);
-		printf("Neigh element******************************\n");
-		ElemBackgroundCheck2(El_Table, NodeTable, EmNeigh, stdout);
-		fflush(stdout);
-		exit(ineigh);
-	}
-
-	double wetnessfactor = calc_elem_edge_wetness_factor(ineigh, dt);
+//	int ineigh = which_neighbor(EmNeigh->pass_key());
+//
+//	if (!((-1 < ineigh) && (ineigh < 8))) {
+//		printf("zdirflux: ineigh=%d, dir=%d\n", ineigh, dir);
+//		printf("this element******************************\n");
+//		ElemBackgroundCheck2(El_Table, NodeTable, this, stdout);
+//		fflush(stdout);
+//		printf("Neigh element******************************\n");
+//		ElemBackgroundCheck2(El_Table, NodeTable, EmNeigh, stdout);
+//		fflush(stdout);
+//		exit(ineigh);
+//	}
+//
+//	double wetnessfactor = calc_elem_edge_wetness_factor(ineigh, dt);
 
 	if (order_flag == 2)
 		dz = (1.0 + dir % 2 - dir) * 0.5 * dx[dir % 2]; //+ or - 1/2 dx or dy
 
 	if (dir % 2 == 0)
-		xdirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv);
+		xdirflux(matprops_ptr, dz, 1., hfv, hrfv);
 	else if (dir % 2 == 1)
-		ydirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv);
+		ydirflux(matprops_ptr, dz, 1., hfv, hrfv);
 	else {
 		printf("zdirflux: direction %d not known\n", dir);
 		exit(1);
@@ -2320,28 +2318,28 @@ void Element::zdirflux(HashTable* El_Table, HashTable* NodeTable, MatProps* matp
     int order_flag, int dir, double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS],
     Element *EmNeigh, double dt, ResFlag resflag) {
 	double dz = 0.0;
-	int ineigh = which_neighbor(EmNeigh->pass_key());
-
-	if (!((-1 < ineigh) && (ineigh < 8))) {
-		printf("zdirflux: ineigh=%d, dir=%d\n", ineigh, dir);
-		printf("this element******************************\n");
-		ElemBackgroundCheck2(El_Table, NodeTable, this, stdout);
-		fflush(stdout);
-		printf("Neigh element******************************\n");
-		ElemBackgroundCheck2(El_Table, NodeTable, EmNeigh, stdout);
-		fflush(stdout);
-		exit(ineigh);
-	}
-
-	double wetnessfactor = calc_elem_edge_wetness_factor(ineigh, dt);
+//	int ineigh = which_neighbor(EmNeigh->pass_key());
+//
+//	if (!((-1 < ineigh) && (ineigh < 8))) {
+//		printf("zdirflux: ineigh=%d, dir=%d\n", ineigh, dir);
+//		printf("this element******************************\n");
+//		ElemBackgroundCheck2(El_Table, NodeTable, this, stdout);
+//		fflush(stdout);
+//		printf("Neigh element******************************\n");
+//		ElemBackgroundCheck2(El_Table, NodeTable, EmNeigh, stdout);
+//		fflush(stdout);
+//		exit(ineigh);
+//	}
+//
+//	double wetnessfactor = calc_elem_edge_wetness_factor(ineigh, dt);
 
 	if (order_flag == 2)
 		dz = (1.0 + dir % 2 - dir) * 0.5 * dx[dir % 2]; //+ or - 1/2 dx or dy
 
 	if (dir % 2 == 0)
-		xdirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv, resflag);
+		xdirflux(matprops_ptr, dz, 1., hfv, hrfv, resflag);
 	else if (dir % 2 == 1)
-		ydirflux(matprops_ptr, dz, wetnessfactor, hfv, hrfv, resflag);
+		ydirflux(matprops_ptr, dz, 1., hfv, hrfv, resflag);
 	else {
 		printf("zdirflux: direction %d not known\n", dir);
 		exit(1);

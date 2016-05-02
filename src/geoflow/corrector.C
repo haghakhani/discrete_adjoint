@@ -111,7 +111,7 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	double V_avg[DIMENSION];
 	V_avg[0] = Vsolid[0];
 	V_avg[1] = Vsolid[1];
-	EmTemp->convect_dryline(V_avg, dt); //this is necessary
+//	EmTemp->convect_dryline(V_avg, dt); //this is necessary
 
 //	int debuging, ggg = 0;
 //	if (EmTemp->get_ithelem() == 8251 /*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1 */
