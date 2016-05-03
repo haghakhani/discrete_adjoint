@@ -19,6 +19,8 @@ void inspect_element(HashTable* El_Table, unsigned* key);
 
 void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
+	dual_repart.start();
+
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
 
@@ -300,8 +302,11 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	move_dual_data(meshctx, propctx);
 
 //	cout << "after move data \n";
+	dual_repart.stop();
+	dual_adapt.start();
 
 	dual_refine_unrefine<DualElem>(meshctx, propctx, &refinelist, &unrefinelist);
+	dual_adapt.stop();
 
 //	AssertMeshErrorFree(El_Table, NodeTable, numprocs, myid, 1.0);
 

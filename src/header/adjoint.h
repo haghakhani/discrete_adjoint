@@ -189,9 +189,9 @@ void set_ithm(HashTable* El_Table);
 
 extern Mat3x3 ZERO_MATRIX;
 
-extern double min_gen , min_dx[2];
+extern double min_gen, min_dx[2];
 
-void set_mins(HashTable *El_Table) ;
+void set_mins(HashTable *El_Table);
 
 void compute_dx(HashTable *El_Table);
 
@@ -213,6 +213,8 @@ void delete_extra_nodes(HashTable* El_Table, HashTable* NodeTable);
 void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKeyRange);
 
 void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec);
+
+extern Timer dual_vis, jacobian, adjoint_sol, dual_repart, dual_adapt, read_solution, dual_init;
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);

@@ -68,6 +68,10 @@ void delete_hashtables_objects(HashTable* El_Table) {
 	delete El_Table;
 }
 
+Timer dual_vis("dual visualization"), jacobian("jacobian"), adjoint_sol("adjoint solver"),
+    dual_repart("dual repartitioning"), dual_adapt("dual adaption"), read_solution("read solution"),
+    dual_init("dual initialization");
+
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	HashTable* El_Table = meshctx->el_table;
@@ -79,6 +83,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
 	const int maxiter = timeprops_ptr->iter;
+
+	dual_init.start();
 
 	if (myid == 0)
 
@@ -99,10 +105,11 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		cout << "The Adjoint grid has been generated ....\n";
 
 	calc_adjoint(&dual_meshctx, propctx);
-
+	dual_vis.start();
 //	dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 2);
 	write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW, 2);
 //	write_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW);
+	dual_vis.stop();
 
 #ifdef Error
 
@@ -184,6 +191,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 //	refinement_report(Dual_El_Tab, myid);
 //	refine_flag_report(Dual_El_Tab, myid);
+	dual_init.stop();
 
 	for (int iter = maxiter; iter > 0; --iter) {
 
@@ -204,15 +212,16 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //		compute_functional(El_Table, &functional, timeprops_ptr);
 
 //		eleminfo->update_dual_func(functional);
-
+		jacobian.start();
 		calc_jacobian(&dual_meshctx, propctx);
 
 		comminucate_jacobians(&dual_meshctx, propctx);
+		jacobian.stop();
 
 //		cout<<" max jac is: "<<max_jac<<endl;
-
+		adjoint_sol.start();
 		calc_adjoint(&dual_meshctx, propctx);
-
+		adjoint_sol.stop();
 //		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
 
 #ifdef Error
@@ -272,11 +281,12 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 // and we have to compute the error for other time steps.
 
 //		dual_unrefine(meshctx, propctx);
-
+dual_vis.start();
 		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 //			dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 1);
 			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
 			    1);
+		dual_vis.stop();
 //			write_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD);
 	}
 //	write_dual_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_CLOSE, 1);
@@ -292,6 +302,16 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 #endif
 
 	delete_hashtables_objects<Jacobian>(solrec);
+
+	if (myid==0){
+	dual_vis.print();
+	jacobian.print();
+	adjoint_sol.print();
+	dual_repart.print();
+	dual_adapt.print();
+	read_solution.print();
+	dual_init.print();
+	}
 
 //	if (fabs(max_err1) > fabs(max_err2))
 //		cout << "max error occurred in test 1" << max_err1 << "  at iter " << iter_1 << " key is "

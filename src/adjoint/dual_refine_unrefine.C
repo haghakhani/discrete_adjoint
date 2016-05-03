@@ -240,11 +240,12 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 	MatProps* matprops_ptr = propctx->matprops;
 	int myid = propctx->myid, numprocs = propctx->numproc;
 	int iter = propctx->timeprops->iter;
-
+	read_solution.start();
 	if (solrec->get_first_solution() >= iter - 1) {
 //		solrec->free_all_available_sol();
 		solrec->load_new_set_of_solution(myid);
 	}
+	read_solution.stop();
 
 	HashEntryPtr *buck;
 #ifdef Error
@@ -281,7 +282,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 	if (iter != 1)
 	update_error_grid(solrec, err_meshctx, propctx);
 #endif
-
+	//timing inside the function
 	if (timeprops_ptr->ifrepartition() && propctx->adapt_flag && numprocs > 1) {
 		dual_repartition(solrec, dual_meshctx, propctx);
 		//		cout<<"in original table"<<endl;
@@ -290,7 +291,9 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 
 	}
 
-	if (timeprops_ptr->ifrefine() && propctx->adapt_flag) {
+
+	dual_adapt.start();
+	if (timeprops_ptr->ifrefine() && propctx->adapt_flag && !timeprops_ptr->ifrepartition()) {
 
 		ElemPtrList<DualElem> refinelist, unrefinelist;
 
@@ -317,6 +320,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 // inside updating state_vars we also delete the solution that we used
 // since we no longer need it
 	MPI_Barrier(MPI_COMM_WORLD);
+	dual_adapt.stop();
 	update_dual_grid(solrec, dual_meshctx, propctx);
 
 	clear_empty_jacobians(solrec, iter);

@@ -37,9 +37,10 @@ Mat3x3 ZERO_MATRIX;
 double min_gen = 10000., min_dx[] = { 10000., 10000. };
 
 int main(int argc, char *argv[]) {
-	Timer dual("dual"), forward("forward"), stept("step"), adaption("adaption"), io("IO"),
-	    repartition("repartition"), initialization("initialization");
-
+	Timer dual("dual"), forward("primal"), stept("step"), adaption("f_adaption"), visualization("f_visualization"),
+	    write_solution("writing solution"), repartition("f_repartition"), initialization(
+	        "f_initialization"),total("total");
+	total.start();
 	forward.start();
 	initialization.start();
 	MPI_Init(&argc, &argv);
@@ -284,6 +285,7 @@ int main(int argc, char *argv[]) {
 //			set_ithm(BT_Elem_Ptr);
 
 //			print_Elem_Table(BT_Elem_Ptr, BT_Node_Ptr, timeprops.iter, 0);
+		write_solution.start();
 
 		solrec->record_solution(&meshctx, &propctx);
 
@@ -292,12 +294,13 @@ int main(int argc, char *argv[]) {
 //			solrec->wrtie_sol_to_disk_hdf5(myid);
 			solrec->delete_jacobians_after_writes();
 		}
+		write_solution.stop();
 
 		/*
 		 * output results to file
 		 */
 //		if (OUTPUT) {
-		io.start();
+		visualization.start();
 		if (timeprops.ifoutput()/* && OUTPUT*/) {
 			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
@@ -325,7 +328,7 @@ int main(int argc, char *argv[]) {
 				grass_sites_proc_output(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops, &timeprops);
 			}
 		}
-		io.stop();
+		visualization.stop();
 //		}
 
 		if (timeprops.ifsave()) {
@@ -443,16 +446,20 @@ int main(int argc, char *argv[]) {
 	dual.start();
 	dual_solver(solrec, &meshctx, &propctx);
 	dual.stop();
+	total.stop();
 
-	forward.print();
+	if (myid == 0) {
+		forward.print();
+		initialization.print();
+		visualization.print();
+		adaption.print();
+		repartition.print();
+		stept.print();
+		write_solution.print();
 
-	initialization.print();
-	io.print();
-	adaption.print();
-	repartition.print();
-	stept.print();
-
-	dual.print();
+		dual.print();
+		total.print();
+	}
 #ifdef PERFTEST  
 	long m = element_counter, ii;
 
