@@ -37,7 +37,11 @@ Mat3x3 ZERO_MATRIX;
 double min_gen = 10000., min_dx[] = { 10000., 10000. };
 
 int main(int argc, char *argv[]) {
+	Timer dual("dual"), forward("forward"), stept("step"), adaption("adaption"), io("IO"),
+	    repartition("repartition"), initialization("initialization");
 
+	forward.start();
+	initialization.start();
 	MPI_Init(&argc, &argv);
 
 	int i; //-- counters
@@ -203,6 +207,8 @@ int main(int argc, char *argv[]) {
 	 for the colima hazard map runs, otherwise pass ifend() a constant
 	 valued */
 
+	initialization.stop();
+
 	while (!(timeprops.ifend(0)) && !ifstop) //(timeprops.ifend(0.5*statprops.vmean)) && !ifstop)
 	{
 
@@ -225,6 +231,8 @@ int main(int argc, char *argv[]) {
 		}
 
 		if ((adaptflag != 0) && timeprops.ifrefine()) {
+
+			adaption.start();
 			AssertMeshErrorFree(BT_Elem_Ptr, BT_Node_Ptr, numprocs, myid, -2.0);
 
 //				unsigned keyy[2] = { 635356396, 1321528399 };
@@ -246,20 +254,27 @@ int main(int argc, char *argv[]) {
 //			refine_flag_report(BT_Elem_Ptr, myid);
 
 			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
+			adaption.stop();
 
 			if ((numprocs > 1) && timeprops.ifrepartition()) {
+				repartition.start();
 
 				repartition2(BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
 				move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
+				repartition.stop();
 			}
-			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
+//			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
 			calc_d_gravity(BT_Elem_Ptr);
 		}
 
+		stept.start();
+
 		step(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops, &pileprops, &fluxprops,
 		    &statprops, &order_flag, &outline, &discharge, adaptflag);
+
+		stept.stop();
 
 //		refinement_report(BT_Elem_Ptr, myid);
 //		refine_flag_report(BT_Elem_Ptr, myid);
@@ -282,6 +297,7 @@ int main(int argc, char *argv[]) {
 		 * output results to file
 		 */
 //		if (OUTPUT) {
+		io.start();
 		if (timeprops.ifoutput()/* && OUTPUT*/) {
 			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
@@ -309,6 +325,7 @@ int main(int argc, char *argv[]) {
 				grass_sites_proc_output(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops, &timeprops);
 			}
 		}
+		io.stop();
 //		}
 
 		if (timeprops.ifsave()) {
@@ -422,8 +439,20 @@ int main(int argc, char *argv[]) {
 	outline2.dealloc();
 
 	MPI_Barrier(MPI_COMM_WORLD);
+	forward.stop();
+	dual.start();
 	dual_solver(solrec, &meshctx, &propctx);
+	dual.stop();
 
+	forward.print();
+
+	initialization.print();
+	io.print();
+	adaption.print();
+	repartition.print();
+	stept.print();
+
+	dual.print();
 #ifdef PERFTEST  
 	long m = element_counter, ii;
 
