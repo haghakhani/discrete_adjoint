@@ -34,57 +34,40 @@
 #include <time.h>
 #include <chrono>
 #include <iostream>
+#include <string.h>
 typedef chrono::high_resolution_clock Clock;
 
-//struct Timer {
-//	Clock::time_point t1, t2;
-//	Clock::duration zero;
-//	Clock::duration passed;
-//	string name;
-//
-//	Timer(string tname) {
-//		name = tname;
-//		passed=zero;
-//	}
-//	void start() {
-//		t1 = Clock::now();
-//	}
-//	void stop() {
-//		t2=Clock::now();
-//		passed += t2 - t1;
-//	}
-//	void print() {
-//		cout << "Time passed in timer " << name << " is "<<  chrono::duration_cast<chrono::milliseconds>(passed).count()<<" sec" << endl;
-//	}
-//
-//};
+inline string fill_name(const char * name) {
 
-class Timer{
- public:
-  Timer(string namein){
-    startTime=std::chrono::system_clock::now();
-    elapsedTime=startTime-startTime;
-    name=namein;
-  }
+	return string(name) + string(STRING_SIZE - strlen(name), ' ');
+}
 
-  void start(){
-    startTime= std::chrono::system_clock::now();
-  }
+class Timer {
+public:
+	Timer(const char * namein) {
+		startTime = std::chrono::system_clock::now();
+		elapsedTime = startTime - startTime;
+		name = fill_name(namein);
+	}
 
-  void stop(){
-    stopTime = std::chrono::system_clock::now();
-    elapsedTime += stopTime-startTime;
-  }
+	void start() {
+		startTime = std::chrono::system_clock::now();
+	}
 
-  void print(){
-    cout<<"elapsed time in "<<name<<" timer is "<< elapsedTime.count()<<" sec "<<endl;
-  }
+	void stop() {
+		stopTime = std::chrono::system_clock::now();
+		elapsedTime += stopTime - startTime;
+	}
 
- private:
-  std::chrono::time_point<std::chrono::system_clock> startTime;
-  std::chrono::time_point<std::chrono::system_clock> stopTime;
-  std::chrono::duration<double> elapsedTime;
-  string name;
+	void print() {
+		cout << "elapsed time in " << name << " timer is " << elapsedTime.count() << " sec " << endl;
+	}
+
+private:
+	std::chrono::time_point<std::chrono::system_clock> startTime;
+	std::chrono::time_point<std::chrono::system_clock> stopTime;
+	std::chrono::duration<double> elapsedTime;
+	string name;
 };
 
 //! LHS stands for Latin Hypercube Sampling, it is a constrained sampling method whose convergence can be much faster than monte carlo 

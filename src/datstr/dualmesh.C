@@ -2457,6 +2457,7 @@ void DualElem::dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable*
 
 					if (doublekey > myKeyRange[1])
 						myKeyRange[1] = doublekey;
+
 //					double doublekey = son_key[i][0] * doubleKeyRange + son_key[i][1];
 //
 //					if (doublekey < myKeyRange[0])

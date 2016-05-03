@@ -293,7 +293,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 
 
 	dual_adapt.start();
-	if (timeprops_ptr->ifrefine() && propctx->adapt_flag && !timeprops_ptr->ifrepartition()) {
+	if (timeprops_ptr->ifrefine() && propctx->adapt_flag && !(timeprops_ptr->ifrepartition() && numprocs>1)) {
 
 		ElemPtrList<DualElem> refinelist, unrefinelist;
 

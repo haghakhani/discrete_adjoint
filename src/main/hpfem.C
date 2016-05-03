@@ -37,9 +37,11 @@ Mat3x3 ZERO_MATRIX;
 double min_gen = 10000., min_dx[] = { 10000., 10000. };
 
 int main(int argc, char *argv[]) {
-	Timer dual("dual"), forward("primal"), stept("step"), adaption("f_adaption"), visualization("f_visualization"),
-	    write_solution("writing solution"), repartition("f_repartition"), initialization(
-	        "f_initialization"),total("total");
+
+	Timer dual("dual"), forward("primal"), stept("step"), adaption("forward adaption"), visualization(
+	    "forward visualization"), write_solution("writing solution"), repartition(
+	    "forward repartition"), initialization("forward initialization"), total("total");
+
 	total.start();
 	forward.start();
 	initialization.start();
@@ -449,14 +451,16 @@ int main(int argc, char *argv[]) {
 	total.stop();
 
 	if (myid == 0) {
-		forward.print();
+		cout<<"======== TIMING of PRIMAL PROBLOM ========\n";
 		initialization.print();
-		visualization.print();
 		adaption.print();
 		repartition.print();
 		stept.print();
 		write_solution.print();
+		visualization.print();
 
+		cout<<"========  TOTAL TIMING  ========\n";
+		forward.print();
 		dual.print();
 		total.print();
 	}

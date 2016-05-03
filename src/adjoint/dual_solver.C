@@ -304,13 +304,14 @@ dual_vis.start();
 	delete_hashtables_objects<Jacobian>(solrec);
 
 	if (myid==0){
-	dual_vis.print();
+		cout<<"======== TIMING of DUAL PROBLOM ========\n";
+	dual_init.print();
+	dual_adapt.print();
+	dual_repart.print();
 	jacobian.print();
 	adjoint_sol.print();
-	dual_repart.print();
-	dual_adapt.print();
 	read_solution.print();
-	dual_init.print();
+	dual_vis.print();
 	}
 
 //	if (fabs(max_err1) > fabs(max_err2))

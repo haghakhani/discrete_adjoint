@@ -92,6 +92,8 @@ const int FORWARD = 0;
 const int DUAL = 1;
 const int ERROR = 2;
 
+const size_t STRING_SIZE = 25;
+
 const double GEOFLOW_TINY = 1.e-04;
 const double GEOFLOW_SHORT = 3.0e-03;
 
