@@ -34,6 +34,8 @@ int REFINE_LEVEL = 3;
 
 Mat3x3 ZERO_MATRIX;
 
+double min_gen = 10000., min_dx[] = { 10000., 10000. };
+
 int main(int argc, char *argv[]) {
 
 	MPI_Init(&argc, &argv);
@@ -314,7 +316,7 @@ int main(int argc, char *argv[]) {
 			save_forward(meshctx, propctx, solrec);
 			solrec->wrtie_sol_to_disk(myid);
 			solrec->delete_jacobians_after_writes();
-			write_alldata_ordered(BT_Elem_Ptr,myid);
+			write_alldata_ordered(BT_Elem_Ptr, myid);
 		}
 
 #ifdef PERFTEST

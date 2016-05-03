@@ -348,6 +348,8 @@ public:
 	//! this function calculates the lengths of the element in the (global) x and y directions
 	void calculate_dx(HashTable* NodeTable);
 
+	void set_mins(HashTable* NodeTable);
+
 	//! this function assigns the element's coordinates to be its bubble node's coordinates
 	void insert_coord(HashTable* NodeTable);
 

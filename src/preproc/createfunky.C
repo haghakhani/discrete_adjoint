@@ -30,6 +30,12 @@ using namespace std;
 #include "GisApi.h"
 #include "node.h"
 #include "useful_lib.h"
+#include <fenv.h>
+void myround(double *num) {
+	fesetround(FE_TONEAREST);
+	double dummy=rint(*num*1.e8);
+	*num = dummy/1.e8;
+}
 
 #define MIN_NONSEQ_REPART
 
@@ -244,13 +250,17 @@ void createfunky(int NumProc, char *GISDbase, char *location, char *mapset, char
 		//set up corner, side and bubble nodes
 		//first x nodes
 		x = CAllocD1(2 * nx + 1);
-		for (i = 0; i < 2 * nx + 1; i++)
+		for (i = 0; i < 2 * nx + 1; i++){
 			x[i] = xlength * i / (2.0 * nx) + xmin;
+//			myround(&x[i]);
+		}
 
 		//now y nodes
 		y = CAllocD1(2 * ny + 1);
-		for (i = 0; i < 2 * ny + 1; i++)
+		for (i = 0; i < 2 * ny + 1; i++){
 			y[i] = ylength * i / (2.0 * ny) + ymin;
+//			myround(&y[i]);
+		}
 
 		//determine how many nodes, elements, bc's and materials there are
 		*node_count = (2 * nx + 1) * (2 * ny + 1) - nx * ny;

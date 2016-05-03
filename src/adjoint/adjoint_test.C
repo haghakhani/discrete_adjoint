@@ -9,6 +9,7 @@
 # include <config.h>
 #endif
 #include "../header/hpfem.h"
+#include <fenv.h>
 
 double max_err1 = 0., max_err2 = 0.;
 unsigned key1_1, key2_1, iter_1, key1_2, key2_2, iter_2;
@@ -405,5 +406,79 @@ int checkElement(HashTable *El_Table, HashTable *NodeTable, double *max, unsigne
 //		cout << " " << fluxold[3][i];
 
 	return (gg);
+}
+
+void check_elem_size(HashTable *El_Table) {
+
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+//	double min_dx[] = { 10000, 10000 };
+//	int min_gen = 10000;
+//
+//	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+//		if (*(buck + i)) {
+//			currentPtr = *(buck + i);
+//			while (currentPtr) {
+//				Curr_El = (Element*) (currentPtr->value);
+//				if (Curr_El->get_adapted_flag() > 0) {
+//					if (Curr_El->get_gen() < min_gen) {
+//						min_gen = Curr_El->get_gen();
+//						min_dx[0] = Curr_El->get_dx()[0];
+//						min_dx[1] = Curr_El->get_dx()[1];
+//					}
+//
+//				}
+//				currentPtr = currentPtr->next;
+//			}
+//		}
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() > 0) {
+					int gen = Curr_El->get_gen();
+					double dif_gen = gen - min_gen;
+					if (!(Curr_El->get_dx()[0] == min_dx[0] * pow(.5, dif_gen)))
+						cout << "this element does not pass the first test \n";
+					if (!(Curr_El->get_dx()[1] == min_dx[1] * pow(.5, dif_gen)))
+						cout << "this element does not pass the second test \n";
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+
+}
+
+void myround(double *num) {
+	fesetround(FE_TONEAREST);
+	*num = rint(*num * 1.e8) / 1.e8;
+}
+
+void compute_dx(HashTable *El_Table) {
+
+	HashEntryPtr currentPtr;
+	Element *Curr_El;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Curr_El = (Element*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() > 0) {
+					double dif_gen = Curr_El->get_gen() - min_gen;
+					Curr_El->get_dx()[0] = min_dx[0] * pow(.5, dif_gen);
+					Curr_El->get_dx()[1] = min_dx[1] * pow(.5, dif_gen);
+					if (Curr_El->get_dx()[0] == 0. || Curr_El->get_dx()[1] == 0.)
+						cout << "error in dx\n";
+
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
 }
 

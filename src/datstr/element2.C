@@ -939,7 +939,7 @@ void Element::get_slopes(HashTable* El_Table, HashTable* NodeTable, double gamma
 	return;
 }
 
-void Element::calculate_dx(HashTable* NodeTable) {
+void Element::set_mins(HashTable* NodeTable) {
 	int i, j;
 	int xp, xm, yp, ym; //x plus, x minus, y plus, y minus
 	xp = positive_x_side;
@@ -972,16 +972,77 @@ void Element::calculate_dx(HashTable* NodeTable) {
 	nm = (Node*) NodeTable->lookup(node_key[xm + 4]);
 
 	dx[0] = (np->coord[0] - nm->coord[0]) /*(zeta[0]*zeta[0]+1)*/;
+
 	if (dx[0] == 0)
-		printf("np %p,nm %p,dx, np_coord, nm_coord %e %e\n", np, nm, np->coord[0], nm->coord[0]);
+		cout<<"ERROR in dx[0] \n";
+//		printf("np %p,nm %p,dx, np_coord, nm_coord %e %e\n", np, nm, np->coord[0], nm->coord[0]);
 
 	np = (Node*) NodeTable->lookup(node_key[yp + 4]);
 	nm = (Node*) NodeTable->lookup(node_key[ym + 4]);
 
 	dx[1] = (np->coord[1] - nm->coord[1]) /*(zeta[1]*zeta[1]+1)*/;
 
+	min_gen=generation;
+	min_dx[0]=dx[0];
+	min_dx[1]=dx[1];
+
 	if (dx[1] == 0)
-		printf("dy, np_coord, nm_coord %e %e\n", np->coord[1], nm->coord[1]);
+		cout<<"ERROR in dx[1] \n";
+//		printf("dy, np_coord, nm_coord %e %e\n", np->coord[1], nm->coord[1]);
+
+	return;
+}
+
+
+void Element::calculate_dx(HashTable* NodeTable) {
+	int i, j;
+//	int xp, xm, yp, ym; //x plus, x minus, y plus, y minus
+//	xp = positive_x_side;
+//	switch (positive_x_side) {
+//		case 0:
+//			xm = 2;
+//			yp = 1;
+//			ym = 3;
+//			break;
+//		case 1:
+//			xm = 3;
+//			yp = 2;
+//			ym = 0;
+//			break;
+//		case 2:
+//			xm = 0;
+//			yp = 3;
+//			ym = 1;
+//			break;
+//		case 3:
+//			xm = 1;
+//			yp = 0;
+//			ym = 2;
+//			break;
+//	}
+//
+//	Node *np, *nm;
+//
+//	np = (Node*) NodeTable->lookup(node_key[xp + 4]);
+//	nm = (Node*) NodeTable->lookup(node_key[xm + 4]);
+//
+//	dx[0] = (np->coord[0] - nm->coord[0]) /*(zeta[0]*zeta[0]+1)*/;
+	double dif_gen = generation - min_gen;
+	dx[0] = min_dx[0] * pow(.5, dif_gen);
+	dx[1] = min_dx[1] * pow(.5, dif_gen);
+
+	if (dx[0] == 0)
+		cout<<"ERROR in dx[0] \n";
+//		printf("np %p,nm %p,dx, np_coord, nm_coord %e %e\n", np, nm, np->coord[0], nm->coord[0]);
+
+//	np = (Node*) NodeTable->lookup(node_key[yp + 4]);
+//	nm = (Node*) NodeTable->lookup(node_key[ym + 4]);
+//
+//	dx[1] = (np->coord[1] - nm->coord[1]) /*(zeta[1]*zeta[1]+1)*/;
+
+	if (dx[1] == 0)
+		cout<<"ERROR in dx[1] \n";
+//		printf("dy, np_coord, nm_coord %e %e\n", np->coord[1], nm->coord[1]);
 
 	return;
 }

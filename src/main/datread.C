@@ -546,8 +546,10 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 			for (j = 0; j < DIMENSION; j++)
 				freadD(fp, &(coord[j]));
 
-		for (j = 0; j < 2; j++)
+		for (j = 0; j < 2; j++) {
 			coord[j] = coord[j] / matprops_ptr->LENGTH_SCALE;
+//			myround(&coord[j]);
+		}
 		NodeP = new Node(key, coord, matprops_ptr);
 		(*NodeTable)->add(key, NodeP);
 	}
@@ -666,9 +668,12 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 		(*ElemTable)->add(nodes[8], Quad9P);
 
 		Quad9P->find_positive_x_side(*NodeTable);
-		Quad9P->calculate_dx(*NodeTable);
+//		Quad9P->calculate_dx(*NodeTable);
 
 	}
+	Quad9P->set_mins(*NodeTable);
+	compute_dx(*ElemTable);
+//	check_elem_size(*ElemTable);
 
 	/************************************************************/
 	/* need to change this so that smallest cell size is chosen */

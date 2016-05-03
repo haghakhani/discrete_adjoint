@@ -110,6 +110,10 @@ void orgSourceSgn(Element* Curr_El, double frictiny, double* orgSgn);
 
 int checkElement(HashTable *El_Table, HashTable* NodeTable, double *max, unsigned *key);
 
+void check_elem_size(HashTable *El_Table);
+
+void myround(double *num);
+
 int num_nonzero_elem(HashTable *El_Table, int type);
 
 void bilinear_interp(HashTable* El_Table);
@@ -184,6 +188,12 @@ void plot_ithm(HashTable* El_Table);
 void set_ithm(HashTable* El_Table);
 
 extern Mat3x3 ZERO_MATRIX;
+
+extern double min_gen , min_dx[2];
+
+void set_mins(HashTable *El_Table) ;
+
+void compute_dx(HashTable *El_Table);
 
 void usefull_link();
 
