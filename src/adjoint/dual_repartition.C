@@ -17,12 +17,18 @@ double doubleKeyRange;
 
 void inspect_element(HashTable* El_Table, unsigned* key);
 
-void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
+void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx,
+    PropCTX* propctx) {
 
 	dual_repart.start();
 
-	HashTable* El_Table = meshctx->el_table;
-	HashTable* NodeTable = meshctx->nd_table;
+	HashTable* El_Table = dual_meshctx->el_table;
+	HashTable* NodeTable = dual_meshctx->nd_table;
+
+#ifdef Error
+	HashTable* cp_El_Table = err_meshctx->el_table;
+	HashTable* cp_NodeTable = err_meshctx->nd_table;
+#endif
 
 	TimeProps* timeprops_ptr = propctx->timeprops;
 	MapNames* mapname_ptr = propctx->mapnames;
@@ -31,8 +37,6 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	int iter = timeprops_ptr->iter;
 
 	doubleKeyRange = *(El_Table->get_doublekeyrange() + 1);
-
-	unsigned dbg_key[2] = { 1, 2081 };
 
 	//get the first and last key for this proc
 	double myKeyRange[] = { DBL_MAX, -1. };
@@ -73,15 +77,45 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 //	inspect_element(El_Table, dbg_key);
 
+#ifdef Error
+	buck = cp_El_Table->getbucketptr();
+	for (int i = 0; i < cp_El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				ErrorElem *Curr_El = (ErrorElem*) (currentPtr->value);
+
+				// because we may delete the it we first send it to next
+				currentPtr = currentPtr->next;
+
+				if (!(Curr_El->get_adapted_flag() > 0)) {
+					//during repartitioning we delete the GHOST elements as we do in forward run
+					cp_El_Table->remove(Curr_El->pass_key());
+					delete Curr_El;
+				}
+			}
+		}
+
+	delete_extra_nodes(cp_El_Table, cp_NodeTable);
+#endif
+
 	int count = 0, remaining;
 
 	MPI_Status status;
 	MPI_Request* s_request = new MPI_Request[2];
 	MPI_Request* r_request = new MPI_Request[2];
 
+#ifdef Error
+	MPI_Status e_status;
+	MPI_Request e_s_request;
+	MPI_Request e_r_request;
+#endif
+
 	int IfSentRecvd;
 	DualElemPack *receive_array, *send_array;
-
+#ifdef Error
+	ErrElemPack *err_receive_array, *err_send_array;
+#endif
 	do {
 		count++;
 
@@ -126,6 +160,11 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 				receive_array = new DualElemPack[found];
 				MPI_Irecv(receive_array, found, DUALELEMTYPE, receive_from, count, MPI_COMM_WORLD,
 				    &(r_request[1]));
+#ifdef Error
+				err_receive_array = new ErrElemPack[4 * found];
+				MPI_Irecv(err_receive_array, 4 * found, ERRELEMTYPE, receive_from, count, MPI_COMM_WORLD,
+				    &(e_r_request));
+#endif
 			}
 		}
 
@@ -149,17 +188,40 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 					if (to_be_sent) {
 
 						send_array = new DualElemPack[to_be_sent];
-
+#ifdef Error
+						err_send_array = new ErrElemPack[4 * to_be_sent];
+#endif
 						int component = 0;
 						for (int i = 0; i < my_keys_status.size(); ++i)
 							if (my_keys_status[i] > 0) {
 								repart_list[i]->Pack_element((send_array + component), NodeTable, send_to);
+
+#ifdef Error
+								ErrorElem* departing_elem[4];
+								for (int err = 0; err < 4; ++err) {
+									departing_elem[err] = (ErrorElem*) cp_El_Table->lookup(
+									    &(trans_keys_vec[i].key[4 + err * KEYLENGTH]));
+
+									assert(departing_elem[err]);
+
+									departing_elem[err]->Pack_element((err_send_array + err + 4 * component),
+									    cp_NodeTable, send_to);
+								}
+#endif
+
 								component += 1;
 //								cout << "status[" << i << "] " << my_keys_status[i] << endl;
 								if (my_keys_status[i] == 1 || my_keys_status[i] == 2 || my_keys_status[i] == 12) {
 
 									El_Table->remove(repart_list[i]->pass_key());
 									delete repart_list[i];
+
+#ifdef Error
+									for (int err = 0; err < 4; ++err) {
+										cp_El_Table->remove(departing_elem[err]->pass_key());
+										delete departing_elem[err];
+									}
+#endif
 
 								} else
 									cerr << " it is not good, but my sibling is far from me since my status is:"
@@ -172,6 +234,14 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 						    &(s_request[1]));
 
 						delete_extra_nodes(El_Table, NodeTable);
+
+#ifdef Error
+						MPI_Isend(err_send_array, 4 * to_be_sent, ERRELEMTYPE, send_to, count, MPI_COMM_WORLD,
+						    &(e_s_request));
+
+						delete_extra_nodes(cp_El_Table, cp_NodeTable);
+#endif
+
 					}
 //					cout << to_be_sent << endl;
 				}
@@ -225,6 +295,38 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			} while (IfSentRecvd != 1);
 		}
 
+#ifdef Error
+		if (found) {
+//			cout << found << endl;
+			do {
+				MPI_Test(&(e_r_request), &IfSentRecvd, &status);
+				if (IfSentRecvd) {
+					int component = 0;
+					for (int i = 0; i < other_keys_status.size(); ++i) {
+						if (other_keys_status[i] > 0) {
+							ErrorElem* elm[4];
+							for (int err = 0; err < 4; ++err) {
+
+								elm[err] = (ErrorElem*) El_Table->lookup(
+								    err_receive_array[4 * component + err].key);
+								assert(elm[err] == NULL);
+//							cout << component << endl;
+
+								elm[err] = new ErrorElem((err_receive_array + 4 * component + err), cp_NodeTable, myid);
+
+								cp_El_Table->add(elm[err]->pass_key(), elm);
+							}
+
+							component++;
+						}
+					}
+					delete[] err_receive_array;
+				}
+
+			} while (IfSentRecvd != 1);
+		}
+
+#endif
 //		cout << " found passed " << endl;
 
 		if (to_be_sent) {
@@ -261,6 +363,14 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 			} while (IfSentRecvd != 1);
 
+			do {
+
+				MPI_Test(&(e_s_request), &IfSentRecvd, &status);
+				if (IfSentRecvd)
+					delete[] err_send_array;
+
+			} while (IfSentRecvd != 1);
+
 		}
 
 //		cout << " second send passed \n";
@@ -277,6 +387,10 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //	cout << " out of while loop \n";
 
 	delete_extra_nodes(El_Table, NodeTable);
+
+#ifdef Error
+	delete_extra_nodes(cp_El_Table, cp_NodeTable);
+#endif
 
 //	cout << " extra node deleted \n";
 
@@ -297,17 +411,31 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	update_neighbor_proc(propctx, El_Table, allKeyRange);
 
+#ifdef Error
+	update_neighbor_proc(propctx, cp_El_Table, allKeyRange);
+#endif
+
 //	cout << " after update neighb proc \n";
 
-	move_dual_data(meshctx, propctx);
+	move_dual_data(dual_meshctx, propctx);
+
+#ifdef Error
+	move_err_data(dual_meshctx, propctx);
+#endif
 
 //	cout << "after move data \n";
 	dual_repart.stop();
 	dual_adapt.start();
 
-	dual_refine_unrefine<DualElem>(meshctx, propctx, &refinelist, &unrefinelist);
+	dual_refine_unrefine<DualElem>(dual_meshctx, propctx, &refinelist, &unrefinelist);
 	dual_adapt.stop();
 
+#ifdef Error
+	ElemPtrList<ErrorElem> err_refinelist, err_unrefinelist;
+	make_refine_unrefine_list_from_father(dual_meshctx, err_meshctx, &refinelist, &unrefinelist,
+	    &err_refinelist, &err_unrefinelist);
+	dual_refine_unrefine<ErrorElem>(err_meshctx, propctx, &err_refinelist, &err_unrefinelist);
+#endif
 //	AssertMeshErrorFree(El_Table, NodeTable, numprocs, myid, 1.0);
 
 //	cout << "after ref and unref \n";
@@ -317,6 +445,7 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	delete[] allKeyRange;
 
 	calc_d_gravity(El_Table);
+	calc_d_gravity(cp_El_Table);
 }
 
 void set_send_receive_proc(int count, int myid, int numprocs, int& receive_from, int& send_to) {
@@ -612,4 +741,40 @@ void inspect_element(HashTable* El_Table, unsigned* key) {
 				currentPtr = currentPtr->next;
 			}
 		}
+}
+
+void make_refine_unrefine_list_from_father(MeshCTX* dual_meshctx, MeshCTX* err_meshctx,
+    ElemPtrList<DualElem> *refinelist, ElemPtrList<DualElem> *unrefinelist,
+    ElemPtrList<ErrorElem> *err_refinelist, ElemPtrList<ErrorElem> *err_unrefinelist) {
+
+	HashTable* El_Table = dual_meshctx->el_table;
+	HashTable* NodeTable = dual_meshctx->nd_table;
+
+	HashTable* cp_El_Table = err_meshctx->el_table;
+	HashTable* cp_NodeTable = err_meshctx->nd_table;
+
+	for (int i = 0; i < refinelist->get_num_elem(); ++i) {
+		unsigned son_key[4][2];
+		refinelist->get(i)->gen_my_sons_key(El_Table, son_key);
+
+		for (int j = 0; j < 4; ++j) {
+			ErrorElem* errelem = (ErrorElem*) cp_El_Table->lookup(son_key[j]);
+			assert(errelem);
+			err_refinelist->add(errelem);
+
+		}
+	}
+
+	for (int i = 0; i < unrefinelist->get_num_elem(); ++i) {
+		unsigned son_key[4][2];
+		unrefinelist->get(i)->gen_my_sons_key(El_Table, son_key);
+
+		for (int j = 0; j < 4; ++j) {
+			ErrorElem* errelem = (ErrorElem*) cp_El_Table->lookup(son_key[j]);
+			assert(errelem);
+			err_unrefinelist->add(errelem);
+
+		}
+	}
+
 }

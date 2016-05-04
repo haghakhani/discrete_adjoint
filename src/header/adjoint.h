@@ -9,9 +9,12 @@
 #define SRC_HEADER_ADJOINT_H_
 
 #include <vector>
+#define Error
 
 //! this function transfers information during events such as ghost element data exchange and repartitioning
 void move_dual_data(MeshCTX* meshctx, PropCTX* propctx);
+
+void move_err_data(MeshCTX* meshctx, PropCTX* propctx);
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
 
@@ -208,6 +211,9 @@ void check_received_keys(SolRec* solrec, vector<TRANSKEY>& keys_to_check_vec,
 
 void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
 
+void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx,
+    PropCTX* propctx);
+
 void delete_extra_nodes(HashTable* El_Table, HashTable* NodeTable);
 
 void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKeyRange);
@@ -215,6 +221,10 @@ void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKey
 void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec);
 
 extern Timer dual_vis, jacobian, adjoint_sol, dual_repart, dual_adapt, read_solution, dual_init;
+
+void make_refine_unrefine_list_from_father(MeshCTX* dual_meshctx, MeshCTX* err_meshctx,
+    ElemPtrList<DualElem> *refinelist, ElemPtrList<DualElem> *unrefinelist,
+    ElemPtrList<ErrorElem> *err_refinelist, ElemPtrList<ErrorElem> *err_unrefinelist);
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);

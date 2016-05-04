@@ -26,6 +26,8 @@ void update_bilinear_error_grid(MeshCTX* meshctx, PropCTX* propctx) {
 
 	slopes(El_Table, NodeTable, matprops_ptr, 2);
 
+	move_err_data(meshctx, propctx);
+
 	HashEntryPtr *buck = El_Table->getbucketptr();
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -43,6 +45,8 @@ void update_bilinear_error_grid(MeshCTX* meshctx, PropCTX* propctx) {
 				currentPtr = currentPtr->next;
 			}
 		}
+
+	move_err_data(meshctx, propctx);
 
 	calc_edge_states<ErrorElem>(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &yek,
 	    &outflow);
@@ -77,7 +81,6 @@ void update_error_grid(SolRec* solrec, MeshCTX* cp_meshctx, PropCTX* propctx) {
 			}
 		}
 }
-
 
 void set_new_fathers(HashTable* El_Table, vector<pair<unsigned, unsigned> >& new_father) {
 
@@ -162,8 +165,9 @@ void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab, int 
 						ErrorElem* err_El = error_el[j];
 
 						for (int k = 0; k < NUM_STATE_VARS; ++k) {
-							if (!last)
-								*(err_El->get_state_vars() + k) = *(dual_el->get_prev_state_vars() + k);
+//							if (!last)
+							*(err_El->get_prev_state_vars() + k) = *(dual_el->get_prev_state_vars() + k);
+							*(err_El->get_state_vars() + k) = *(dual_el->get_state_vars() + k);
 							*(err_El->get_adjoint() + k) = *(dual_el->get_adjoint() + k);
 
 						}
@@ -195,5 +199,4 @@ void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab, int 
 
 		}
 }
-
 

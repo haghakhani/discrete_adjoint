@@ -670,7 +670,7 @@ DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], 
 	drypoint[0] = drypoint_in[0];
 	drypoint[1] = drypoint_in[1];
 
-	double myfractionoffather=1.;
+	double myfractionoffather = 1.;
 //	if ((Awetfather == 0.0) || (Awetfather == 1.0)) {
 //		Awet = Awetfather;
 //		myfractionoffather = 1.0;
@@ -2621,6 +2621,8 @@ ErrorElem::ErrorElem(Element* element) {
 		residual[i] = 0.;
 
 		bilin_state[i] = 0.;
+
+		bilin_prev_state[i]=0.;
 	}
 
 	correction = 0.;
@@ -3094,6 +3096,129 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 	}
 }
 
+
+ErrorElem::ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
+
+	Node* node;
+	int i, j;
+	myprocess = myid;
+	generation = elem2->generation;
+	opposite_brother_flag = elem2->opposite_brother_flag;
+	material = elem2->material;
+
+	for (i = 0; i < 8; i++) {
+		neigh_proc[i] = elem2->neigh_proc[i];
+		neigh_gen[i] = elem2->neigh_gen[i];
+	}
+
+	refined = elem2->refined;
+	adapted = elem2->adapted;
+	which_son = elem2->which_son;
+	new_old = elem2->new_old;
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < KEYLENGTH; j++)
+			brothers[i][j] = elem2->brothers[i][j];
+
+	for (i = 0; i < KEYLENGTH; i++)
+		key[i] = elem2->key[i];
+
+	for (i = 0; i < 8; i++)
+		for (int j = 0; j < KEYLENGTH; j++) {
+			node_key[i][j] = elem2->node_key[i][j];
+			neighbor[i][j] = elem2->neighbor[i][j];
+			if (i < 4)
+				son[i][j] = elem2->son[i][j];
+
+		}
+	for (i = 0; i < EQUATIONS; i++) {
+		el_error[i] = elem2->el_error[i];
+	}
+
+	//and the node info -- ignore some info if this is just getting a parent from another processor...
+	for (i = 0; i < 8; i++) {
+		if (elem2->n_coord[i][0] * elem2->n_coord[i][1] == 0) {
+			printf(
+			    "myid=%d elem2->key={%u,%u} elem2->coord=(%20g,%20g) inode=%d node->key={%u,%u} node->coord=(%20g,%20g)\n",
+			    myid, elem2->key[0], elem2->key[1], elem2->n_coord[8][0], elem2->n_coord[8][1], i,
+			    elem2->node_key[i][0], elem2->node_key[i][1], elem2->n_coord[i][0], elem2->n_coord[i][1]);
+		}
+
+		node = (Node*) HT_Node_Ptr->lookup(elem2->node_key[i]);
+		if (!node) {
+			node = new Node(elem2->node_key[i], elem2->n_coord[i], elem2->n_info[i],
+			    elem2->node_elevation[i], i);
+
+			HT_Node_Ptr->add(elem2->node_key[i], node);
+		} else {
+			//because of storing all the node but not updating the
+			//info and order if the node was not previously in the subdomain
+			//check if the sfc is screwed
+//			if (fabs((*(node->get_coord()) - elem2->n_coord[i][0]) / *(node->get_coord())) > .01
+//			    || fabs((*(node->get_coord() + 1) != elem2->n_coord[i][1]) / *(node->get_coord() + 1))
+//			        > .01) {
+			if (*(node->get_coord()) != elem2->n_coord[i][0]
+			    || *(node->get_coord() + 1) != elem2->n_coord[i][1]) {
+				printf("myid=%d\n  pack  elem(x,y)=(%20g,%20g)\n exist elem(x,y)=(%20g,%20g)\n\n", myid,
+				    elem2->n_coord[i][0], elem2->n_coord[i][1], *(node->get_coord()),
+				    *(node->get_coord() + 1));
+				fflush(stdout);
+				int screwd = 0;
+				assert(screwd);
+			}
+			if (refined == 0)  // only update if this is from an active element
+				node->set_parameters(elem2->n_info[i]);
+		}
+	}
+
+	node = (Node*) HT_Node_Ptr->lookup(elem2->key);
+	if (!node) {
+		node = new Node(elem2->key, elem2->n_coord[8], elem2->n_info[8], elem2->node_elevation[8], 8);
+
+		HT_Node_Ptr->add(elem2->key, node);
+	} else if (refined != 0) // only update if this is from an active element
+		node->set_parameters(elem2->n_info[8]);
+
+	//geoflow stuff
+	positive_x_side = elem2->positive_x_side;
+	elevation = elem2->elevation;
+	for (i = 0; i < DIMENSION; i++) {
+		coord[i] = elem2->n_coord[8][i];
+		dx[i] = elem2->dx[i];
+		eigenvxymax[i] = elem2->eigenvxymax[i];
+		kactxy[i] = elem2->kactxy[i];
+		zeta[i] = elem2->zeta[i];
+		curvature[i] = elem2->curvature[i];
+		d_gravity[i] = elem2->d_gravity[i];
+	}
+	for (i = 0; i < NUM_STATE_VARS; i++) {
+		state_vars[i] = elem2->state_vars[i];
+		prev_state_vars[i] = elem2->prev_state_vars[i];
+		Influx[i] = elem2->Influx[i];
+		adjoint[i] = elem2->adjoint[i];
+	}
+	for (i = 0; i < 3; i++)
+		gravity[i] = elem2->gravity[i];
+	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
+		d_state_vars[i] = elem2->d_state_vars[i];
+	shortspeed = elem2->shortspeed;
+	lb_weight = elem2->lb_weight;
+	elm_loc[0] = elem2->elm_loc[0];
+	elm_loc[1] = elem2->elm_loc[1];
+
+	iwetnode = elem2->iwetnode;
+	Awet = elem2->Awet;
+	Swet = elem2->Swet;
+	drypoint[0] = elem2->drypoint[0];
+	drypoint[1] = elem2->drypoint[1];
+
+	for (i = 0; i < NUM_STATE_VARS; i++) {
+		bilin_adj[i] = elem2->bilin_adj[i];
+		bilin_state[i] = elem2->bilin_state[i];
+		bilin_prev_state[i] = elem2->bilin_prev_state[i];
+	}
+
+}
+
 void ErrorElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double gamma) {
 	int j = 0, bc = 0;
 	/* check to see if this is a boundary */
@@ -3228,7 +3353,7 @@ void ErrorElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, doubl
 
 void ErrorElem::error_update_state(SolRec* solrec, int iter) {
 
-	Solution* prev_sol = solrec->lookup(this->getfather(), iter - 2);
+	Solution* prev_sol = solrec->lookup(this->getfather(), iter - 1);
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		prev_state_vars[i] = *(prev_sol->get_solution() + i);
@@ -3332,5 +3457,224 @@ void ErrorElem::ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor
 		for (j = 0; j < NUM_STATE_VARS; j++)
 			if (isnan(hfv[i][j]))
 				cout << "flux is NAN" << endl;
+}
+
+void ErrorElem::Pack_element(ErrElemPack* elem, HashTable* HT_Node_Ptr, int destination_proc) {
+	int j, i = 0;
+
+	Node* node;
+
+	elem->myprocess = destination_proc;
+	elem->generation = generation;
+	elem->opposite_brother_flag = opposite_brother_flag;
+	elem->material = material;
+
+	for (i = 0; i < 8; i++) {
+		elem->neigh_proc[i] = neigh_proc[i];
+		elem->neigh_gen[i] = neigh_gen[i];
+	}
+
+	elem->refined = refined;
+	elem->adapted = adapted;
+	elem->which_son = which_son;
+	elem->new_old = new_old;
+
+	for (i = 0; i < KEYLENGTH; i++)
+		elem->key[i] = key[i];
+
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < KEYLENGTH; j++)
+			elem->brothers[i][j] = brothers[i][j];
+
+	for (i = 0; i < 8; i++)
+		for (j = 0; j < KEYLENGTH; j++) {
+			elem->node_key[i][j] = node_key[i][j];
+			elem->neighbor[i][j] = neighbor[i][j];
+			if (i < 4)
+				elem->son[i][j] = son[i][j];
+		}
+	for (i = 0; i < EQUATIONS; i++) {
+		elem->el_error[i] = el_error[i];
+
+	}
+
+	//and the node info:
+	for (i = 0; i < 8; i++) {
+		node = (Node*) HT_Node_Ptr->lookup(elem->node_key[i]);
+		assert(node);
+		elem->n_info[i] = node->info;
+		for (j = 0; j < 2; j++)
+			elem->n_coord[i][j] = node->coord[j];
+		elem->node_elevation[i] = node->elevation;
+	}
+
+	node = (Node*) HT_Node_Ptr->lookup(elem->key);
+	assert(node);
+	elem->n_info[8] = node->info;
+	for (j = 0; j < 2; j++)
+		elem->n_coord[8][j] = node->coord[j];
+	elem->node_elevation[8] = node->elevation;
+
+	//geoflow stuff
+	elem->positive_x_side = positive_x_side;
+	elem->elevation = elevation;
+	for (i = 0; i < DIMENSION; i++) {
+		elem->dx[i] = dx[i];
+		elem->eigenvxymax[i] = eigenvxymax[i];
+		elem->kactxy[i] = kactxy[i];
+		elem->zeta[i] = zeta[i];
+		elem->curvature[i] = curvature[i];
+		elem->d_gravity[i] = d_gravity[i];
+	}
+	for (i = 0; i < NUM_STATE_VARS; i++) {
+		elem->state_vars[i] = state_vars[i];
+		elem->prev_state_vars[i] = prev_state_vars[i];
+		elem->Influx[i] = Influx[i];
+		elem->adjoint[i] = adjoint[i];
+	}
+	for (i = 0; i < 3; i++)
+		elem->gravity[i] = gravity[i];
+
+	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
+		elem->d_state_vars[i] = d_state_vars[i];
+
+	elem->shortspeed = shortspeed;
+	elem->lb_weight = lb_weight;
+	elem->elm_loc[0] = elm_loc[0];
+	elem->elm_loc[1] = elm_loc[1];
+
+	elem->iwetnode = iwetnode;
+	elem->Awet = Awet;
+	elem->Swet = Swet;
+	elem->drypoint[0] = drypoint[0];
+	elem->drypoint[1] = drypoint[1];
+
+	for (int i = 0; i < NUM_STATE_VARS; ++i) {
+		elem->bilin_adj[i] = bilin_adj[i];
+		elem->bilin_state[i] = bilin_state[i];
+		elem->bilin_prev_state[i] = bilin_prev_state[i];
+	}
+}
+
+void ErrorElem::update(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
+
+	Node* node;
+	int i, j;
+	myprocess = myid;
+	generation = elem2->generation;
+	opposite_brother_flag = elem2->opposite_brother_flag;
+	material = elem2->material;
+
+	for (i = 0; i < 8; i++) {
+		neigh_proc[i] = elem2->neigh_proc[i];
+		neigh_gen[i] = elem2->neigh_gen[i];
+	}
+
+	refined = elem2->refined;
+	adapted = elem2->adapted;
+	which_son = elem2->which_son;
+	new_old = elem2->new_old;
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < KEYLENGTH; j++)
+			brothers[i][j] = elem2->brothers[i][j];
+
+	for (i = 0; i < KEYLENGTH; i++)
+		key[i] = elem2->key[i];
+
+	for (i = 0; i < 8; i++)
+		for (int j = 0; j < KEYLENGTH; j++) {
+			node_key[i][j] = elem2->node_key[i][j];
+			neighbor[i][j] = elem2->neighbor[i][j];
+			if (i < 4)
+				son[i][j] = elem2->son[i][j];
+
+		}
+	for (i = 0; i < EQUATIONS; i++) {
+		el_error[i] = elem2->el_error[i];
+	}
+
+	//and the node info -- ignore some info if this is just getting a parent from another processor...
+	for (i = 0; i < 8; i++) {
+		if (elem2->n_coord[i][0] * elem2->n_coord[i][1] == 0) {
+			printf(
+			    "myid=%d elem2->key={%u,%u} elem2->coord=(%20g,%20g) inode=%d node->key={%u,%u} node->coord=(%20g,%20g)\n",
+			    myid, elem2->key[0], elem2->key[1], elem2->n_coord[8][0], elem2->n_coord[8][1], i,
+			    elem2->node_key[i][0], elem2->node_key[i][1], elem2->n_coord[i][0], elem2->n_coord[i][1]);
+		}
+
+		node = (Node*) HT_Node_Ptr->lookup(elem2->node_key[i]);
+		if (!node) {
+			node = new Node(elem2->node_key[i], elem2->n_coord[i], elem2->n_info[i],
+			    elem2->node_elevation[i], i);
+
+			HT_Node_Ptr->add(elem2->node_key[i], node);
+		} else {
+			//because of storing all the node but not updating the
+			//info and order if the node was not previously in the subdomain
+			//check if the sfc is screwed
+//			if (fabs((*(node->get_coord()) - elem2->n_coord[i][0]) / *(node->get_coord())) > .01
+//			    || fabs((*(node->get_coord() + 1) != elem2->n_coord[i][1]) / *(node->get_coord() + 1))
+//			        > .01) {
+			if (*(node->get_coord()) != elem2->n_coord[i][0]
+			    || *(node->get_coord() + 1) != elem2->n_coord[i][1]) {
+				printf("myid=%d\n  pack  elem(x,y)=(%20g,%20g)\n exist elem(x,y)=(%20g,%20g)\n\n", myid,
+				    elem2->n_coord[i][0], elem2->n_coord[i][1], *(node->get_coord()),
+				    *(node->get_coord() + 1));
+				fflush(stdout);
+				int screwd = 0;
+				assert(screwd);
+			}
+			if (refined == 0)  // only update if this is from an active element
+				node->set_parameters(elem2->n_info[i]);
+		}
+	}
+
+	node = (Node*) HT_Node_Ptr->lookup(elem2->key);
+	if (!node) {
+		node = new Node(elem2->key, elem2->n_coord[8], elem2->n_info[8], elem2->node_elevation[8], 8);
+
+		HT_Node_Ptr->add(elem2->key, node);
+	} else if (refined != 0) // only update if this is from an active element
+		node->set_parameters(elem2->n_info[8]);
+
+	//geoflow stuff
+	positive_x_side = elem2->positive_x_side;
+	elevation = elem2->elevation;
+	for (i = 0; i < DIMENSION; i++) {
+		coord[i] = elem2->n_coord[8][i];
+		dx[i] = elem2->dx[i];
+		eigenvxymax[i] = elem2->eigenvxymax[i];
+		kactxy[i] = elem2->kactxy[i];
+		zeta[i] = elem2->zeta[i];
+		curvature[i] = elem2->curvature[i];
+		d_gravity[i] = elem2->d_gravity[i];
+	}
+	for (i = 0; i < NUM_STATE_VARS; i++) {
+		state_vars[i] = elem2->state_vars[i];
+		prev_state_vars[i] = elem2->prev_state_vars[i];
+		Influx[i] = elem2->Influx[i];
+		adjoint[i] = elem2->adjoint[i];
+	}
+	for (i = 0; i < 3; i++)
+		gravity[i] = elem2->gravity[i];
+	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
+		d_state_vars[i] = elem2->d_state_vars[i];
+	shortspeed = elem2->shortspeed;
+	lb_weight = elem2->lb_weight;
+	elm_loc[0] = elem2->elm_loc[0];
+	elm_loc[1] = elem2->elm_loc[1];
+
+	iwetnode = elem2->iwetnode;
+	Awet = elem2->Awet;
+	Swet = elem2->Swet;
+	drypoint[0] = elem2->drypoint[0];
+	drypoint[1] = elem2->drypoint[1];
+
+	for (i = 0; i < NUM_STATE_VARS; i++) {
+		bilin_adj[i] = elem2->bilin_adj[i];
+		bilin_state[i] = elem2->bilin_state[i];
+		bilin_prev_state[i] = elem2->bilin_prev_state[i];
+	}
+
 }
 

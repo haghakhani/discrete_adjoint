@@ -228,6 +228,9 @@ int write_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timeprops_p
 int write_dual_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timeprops_ptr,
     MatProps *matprops_ptr, MapNames *mapnames, const int mode, const int plotflag);
 
+int write_err_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timeprops_ptr,
+    MatProps *matprops_ptr, MapNames *mapnames, const int mode, const int plotflag);
+
 void close_xdmf_files(int myid);
 
 //! this is Amrita's output function, Keith wrote it to her specifications, it is for use with the gmfg viewer, which Daniel rewrote during the summer of 2006 to remove a lot dependencies and use basically only opengl calls.  This makes the viewer compatible with almost every linux machine and a lot easier (read as possible) to install

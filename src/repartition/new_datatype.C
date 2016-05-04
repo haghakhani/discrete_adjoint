@@ -26,6 +26,7 @@
 
 MPI_Datatype ELEMTYPE;
 MPI_Datatype DUALELEMTYPE;
+MPI_Datatype ERRELEMTYPE;
 MPI_Datatype JACTYPE;
 MPI_Datatype TRANSKEYS;
 MPI_Datatype NEIGHTYPE;
@@ -37,6 +38,7 @@ MPI_Datatype LB_VERT_TYPE;
 struct Pointer_Holder {
 	ElemPack* elem;
 	DualElemPack* dualelem;
+	ErrElemPack* errelem;
 	JacPack* jacelem;
 	NeighborPack* neigh;
 	refined_neighbor_pack* fine;
@@ -101,7 +103,30 @@ MPI_Datatype LB_VERT_TYPE;*/
 	MPI_Type_struct(3, blockcounts_d, displs_d, types_d, &DUALELEMTYPE);
 	MPI_Type_commit(&DUALELEMTYPE);
 
-	//create the 3nd new d_type
+	//create the 3rd new d_type
+
+	int blockcounts_e[3] = { 37, 25 * KEYLENGTH, 78 };
+	MPI_Datatype types_e[3];
+	MPI_Aint displs_e[3];
+	int de;
+	ErrElemPack* errelem = new ErrElemPack;
+	pholder.errelem = errelem;
+
+	MPI_Address(&(errelem->myprocess), &displs_e[0]);
+	MPI_Address(&(errelem->key[0]), &displs_e[1]);
+	MPI_Address(&(errelem->elevation), &displs_e[2]);
+
+	types_e[0] = MPI_INT;
+	types_e[1] = MPI_UNSIGNED;
+	types_e[2] = MPI_DOUBLE;
+
+	for (de = 2; de >= 0; de--)
+		displs_e[de] -= displs_e[0];
+
+	MPI_Type_struct(3, blockcounts_e, displs_e, types_e, &ERRELEMTYPE);
+	MPI_Type_commit(&ERRELEMTYPE);
+
+	//create the 4th new d_type
 
 	int blockcounts_j[2] = { 2 * KEYLENGTH, 9 };
 	MPI_Datatype types_j[2];
@@ -121,12 +146,12 @@ MPI_Datatype LB_VERT_TYPE;*/
 	MPI_Type_struct(2, blockcounts_j, displs_j, types_j, &JACTYPE);
 	MPI_Type_commit(&JACTYPE);
 
-	//create the 4th new d_type
+	//create the 5th new d_type
 
 	MPI_Type_contiguous(12, MPI_UNSIGNED, &TRANSKEYS);
 	MPI_Type_commit(&TRANSKEYS);
 
-	//create the 5th new d_type
+	//create the 6th new d_type
 
 	int blockcounts2[2] = { 2, 2 * KEYLENGTH };
 	MPI_Datatype types2[2];
@@ -147,7 +172,7 @@ MPI_Datatype LB_VERT_TYPE;*/
 	MPI_Type_struct(2, blockcounts2, displs2, types2, &NEIGHTYPE);
 	MPI_Type_commit(&NEIGHTYPE);
 
-	//create the 6th new d_type
+	//create the 7th new d_type
 
 	int blockcounts3[2] = { 1, 4 * KEYLENGTH };
 	MPI_Datatype types3[2] = { MPI_INT, MPI_UNSIGNED };
@@ -165,7 +190,7 @@ MPI_Datatype LB_VERT_TYPE;*/
 	MPI_Type_struct(2, blockcounts3, displs3, types3, &REFINED_INFO);
 	MPI_Type_commit(&REFINED_INFO);
 
-	//create the 7th new d_type
+	//create the 8th new d_type
 	// for getting the neighbor solution in the new error estimator, when the neighbor is in diff subdomain
 
 	int blockcounts5[3] = { 6, KEYLENGTH, 260 };
@@ -216,6 +241,7 @@ void free_mpi_types() {
 
 	MPI_Type_free(&ELEMTYPE);
 	MPI_Type_free(&DUALELEMTYPE);
+	MPI_Type_free(&ERRELEMTYPE);
 	MPI_Type_free(&JACTYPE);
 	MPI_Type_free(&NEIGHTYPE);
 	MPI_Type_free(&REFINED_INFO);
@@ -225,6 +251,7 @@ void free_mpi_types() {
 
 
 	delete (pholder.dualelem);
+	delete (pholder.errelem);
 	delete (pholder.elem);
 	delete (pholder.fine);
 	delete (pholder.jacelem);

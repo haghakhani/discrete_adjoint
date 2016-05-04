@@ -451,7 +451,7 @@ int main(int argc, char *argv[]) {
 	total.stop();
 
 	if (myid == 0) {
-		cout<<"======== TIMING of PRIMAL PROBLOM ========\n";
+		cout<<"\n======== TIMING of PRIMAL PROBLOM ========\n";
 		initialization.print();
 		adaption.print();
 		repartition.print();
@@ -459,7 +459,7 @@ int main(int argc, char *argv[]) {
 		write_solution.print();
 		visualization.print();
 
-		cout<<"========  TOTAL TIMING  ========\n";
+		cout<<"\n=============  TOTAL TIMING  =============\n";
 		forward.print();
 		dual.print();
 		total.print();

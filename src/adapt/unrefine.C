@@ -310,6 +310,7 @@ void Element::for_link_temp() {
 	errelem->find_brothers<ErrorElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi, 0);
 
 	dualelem->dual_find_brothers<DualElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi, 0);
+	errelem->dual_find_brothers<ErrorElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi, 0);
 //	errelem->find_brothers<ErrorElem>(El_Table, NodeTable, .1, 1, matprops, voidi, voidi, 0);
 
 }

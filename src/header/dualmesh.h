@@ -232,6 +232,10 @@ public:
 	ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr,
 	    int SETLINK);
 
+	ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid);
+
+	void update(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid);
+
 	void get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double gamma);
 
 	void error_update_state(SolRec* solrec, int iter);
@@ -260,6 +264,8 @@ public:
 
 	void ydirflux(MatProps* matprops_ptr, double dz, double wetnessfactor,
 	    double hfv[3][NUM_STATE_VARS], double hrfv[3][NUM_STATE_VARS]);
+
+	void Pack_element(ErrElemPack* elem, HashTable* HT_Node_Ptr, int destination_proc);
 
 private:
 

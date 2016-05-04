@@ -105,10 +105,9 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		cout << "The Adjoint grid has been generated ....\n";
 
 	calc_adjoint(&dual_meshctx, propctx);
+
 	dual_vis.start();
-//	dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 2);
 	write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW, 2);
-//	write_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW);
 	dual_vis.stop();
 
 #ifdef Error
@@ -122,17 +121,15 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	MeshCTX error_meshctx;
 	error_meshctx.el_table = Err_El_Tab;
 	error_meshctx.nd_table = Err_Nod_Tab;
+	if (myid == 0)
+		cout << "The Error grid has been generated ....\n";
 
 #endif
 
 	delete_hashtables_objects<Element>(El_Table);
 
-	if (myid == 0) {
-
-		cout << "The Error grid has been generated ....\n";
-
+	if (myid == 0)
 		cout << "computing ADJOINT time step " << maxiter << endl;
-	}
 
 #ifdef Error
 
@@ -149,53 +146,15 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	error_compute(&error_meshctx, propctx);
 
-	errorplotter(Err_El_Tab, Err_Nod_Tab, matprops_ptr, timeprops_ptr,
-			mapname_ptr, maxiter);
+	write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW, 2);
 
 #else
 	MeshCTX error_meshctx;
 #endif
 
-//	set_ithm(El_Table);
-//
-//	plot_ithm(El_Table);
-
-//	cout << "elements number of original grid " << num_nonzero_elem(El_Table) << endl;
-//	cout << "elements number of refined grid " << num_nonzero_elem(cp_El_Table) << endl;
-
-//	print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 0);
-//
-//	print_Elem_Table(cp_El_Table, cp_NodeTable, timeprops_ptr->iter, 1);
-
-//	int tecflag = 2;
-
-//	set_ithm(El_Table);
-//	plot_ithm(El_Table);
-
-//	reset_adaption_flag(Dual_El_Tab);
-
-//	refinement_report(El_Table);
-//
-//	refinement_report(cp_El_Table);
-
-//	this function reconstruct bilinear interpolation
-//	set_ithm(cp_El_Table);
-//	plot_ithm(cp_El_Table);
-//	cout<<num_nonzero_elem(El_Table)<<endl;
-//	cout<<num_nonzero_elem(cp_El_Table)<<endl;
-//
-//	timeprops_ptr->iter--;
-//	meshplotter(cp_El_Table, cp_NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 0., tecflag);
-
-//	setup_geoflow(El_Table, NodeTable, myid, numprocs, matprops_ptr, timeprops_ptr);
-
-//	refinement_report(Dual_El_Tab, myid);
-//	refine_flag_report(Dual_El_Tab, myid);
 	dual_init.stop();
 
 	for (int iter = maxiter; iter > 0; --iter) {
-
-//		set_ithm(Dual_El_Tab);
 
 		timeprops_ptr->iter = iter;
 		if (myid == 0)
@@ -225,20 +184,18 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
 
 #ifdef Error
-		if (iter > 1) {
+//		if (iter > 1) {
 
-			send_from_dual_to_error(Dual_El_Tab, Err_El_Tab, 0);
+		send_from_dual_to_error(Dual_El_Tab, Err_El_Tab, 0);
 
-			bilinear_interp(Err_El_Tab);
+		bilinear_interp(Err_El_Tab);
 
-			update_bilinear_error_grid(&error_meshctx, propctx);
+		update_bilinear_error_grid(&error_meshctx, propctx);
 
-			error_compute(&error_meshctx, propctx);
-			if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-
-			errorplotter(Err_El_Tab, Err_Nod_Tab, matprops_ptr, timeprops_ptr,
-					mapname_ptr, iter - 1);
-		}
+		error_compute(&error_meshctx, propctx);
+//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+		write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD, 1);
+//		}
 #endif
 
 //		if (iter - 1 == 1)
@@ -281,12 +238,12 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 // and we have to compute the error for other time steps.
 
 //		dual_unrefine(meshctx, propctx);
-dual_vis.start();
-		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-//			dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 1);
-			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
-			    1);
-		dual_vis.stop();
+//		dual_vis.start();
+//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+////			dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 1);
+//			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
+//			    1);
+//		dual_vis.stop();
 //			write_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD);
 	}
 //	write_dual_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_CLOSE, 1);
@@ -303,15 +260,15 @@ dual_vis.start();
 
 	delete_hashtables_objects<Jacobian>(solrec);
 
-	if (myid==0){
-		cout<<"======== TIMING of DUAL PROBLOM ========\n";
-	dual_init.print();
-	dual_adapt.print();
-	dual_repart.print();
-	jacobian.print();
-	adjoint_sol.print();
-	read_solution.print();
-	dual_vis.print();
+	if (myid == 0) {
+		cout << "\n========== TIMING of DUAL PROBLOM ==========\n";
+		dual_init.print();
+		dual_adapt.print();
+		dual_repart.print();
+		jacobian.print();
+		adjoint_sol.print();
+		read_solution.print();
+		dual_vis.print();
 	}
 
 //	if (fabs(max_err1) > fabs(max_err2))

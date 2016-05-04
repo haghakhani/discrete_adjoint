@@ -116,6 +116,57 @@ struct DualElemPack {
 
 };
 
+// this structures is exactly same as ElemPack but has some more data
+struct ErrElemPack {
+	//see ../repartition/new_datatype.C blockcounts[3]={37,25*KEYLENGTH,78}
+	int myprocess;                                              //  1
+	int generation;                                             //  2
+	int material;/*flag added by andrew*/                       //  3
+	int neigh_proc[8];                                          // 11
+	int neigh_gen[8];                                           // 19
+	int refined;                                                // 20
+	int adapted;                                                // 21
+	int which_son;                                              // 22
+	int new_old;                                                // 23
+	int positive_x_side;                                        // 24
+	int elm_loc[2];                                             // 26
+	int opposite_brother_flag;                                  // 27
+	int iwetnode;                                               // 28
+	int n_info[9];                                              // 37
+
+	unsigned key[KEYLENGTH];/*contains the 9th node key*/   //  1
+	unsigned node_key[8][KEYLENGTH];                        //  9
+	unsigned neighbor[8][KEYLENGTH];                        // 17
+	unsigned son[4][KEYLENGTH];                             // 21
+	unsigned brothers[4][KEYLENGTH];                        // 25 * KEYLENGTH
+
+	/*NODE DEF*/
+	double elevation;                                   //  1
+	double n_coord[9][2];                               // 19
+	double el_error[EQUATIONS];                         // 21
+	double state_vars[NUM_STATE_VARS];                  // 24
+	double prev_state_vars[NUM_STATE_VARS];             // 27
+	double adjoint[NUM_STATE_VARS];                     // 30
+	double d_state_vars[NUM_STATE_VARS * DIMENSION];    // 36
+	double shortspeed;                                  // 37
+	double dx[DIMENSION];                               // 39
+	double eigenvxymax[DIMENSION];                      // 41
+	double kactxy[DIMENSION];                           // 43
+	double zeta[DIMENSION];                             // 45
+	double curvature[DIMENSION];                        // 47
+	double gravity[NUM_STATE_VARS];                     // 50
+	double d_gravity[DIMENSION];                        // 52
+	double lb_weight;                                   // 53
+	double node_elevation[9];                           // 62
+	double Influx[NUM_STATE_VARS];                      // 65
+	double Awet;                                        // 66
+	double Swet;                                        // 67
+	double drypoint[DIMENSION];                         // 69
+	double bilin_adj[NUM_STATE_VARS];                   // 72
+	double bilin_state[NUM_STATE_VARS];                 // 75
+	double bilin_prev_state[NUM_STATE_VARS];            // 78
+};
+
 //see ../repartition/new_datatype.C blockcounts[2]={2*KEYLENGTH,9}
 struct JacPack {
 	unsigned key_send[KEYLENGTH];

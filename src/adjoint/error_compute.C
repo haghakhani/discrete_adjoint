@@ -59,7 +59,7 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 					double *bilin_adj = Curr_El->get_bilin_adj();
 					double *adjoint = Curr_El->get_adjoint();
 					double *correction = Curr_El->get_correction();
-					double dt = timeprops_ptr->dt.at(iter - 2); // if we have n iter size of dt vector is n-1
+					double dt = timeprops_ptr->dt.at(iter - 1); // if we have n iter size of dt vector is n-1
 					double dtdx = dt / dx[0];
 					double dtdy = dt / dx[1];
 					double tiny = GEOFLOW_TINY;
