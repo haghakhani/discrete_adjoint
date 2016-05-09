@@ -236,7 +236,7 @@ int main(int argc, char *argv[]) {
 		if ((adaptflag != 0) && timeprops.ifrefine()) {
 
 			adaption.start();
-			AssertMeshErrorFree(BT_Elem_Ptr, BT_Node_Ptr, numprocs, myid, -2.0);
+//			AssertMeshErrorFree(BT_Elem_Ptr, BT_Node_Ptr, numprocs, myid, -2.0);
 
 //				unsigned keyy[2] = { 635356396, 1321528399 };
 //				if (checkElement(BT_Elem_Ptr, NULL, keyy))

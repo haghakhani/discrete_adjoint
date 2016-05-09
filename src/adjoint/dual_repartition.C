@@ -97,6 +97,7 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 		}
 
 	delete_extra_nodes(cp_El_Table, cp_NodeTable);
+	vector<ErrorElem*> imported_elem;
 #endif
 
 	int count = 0, remaining;
@@ -304,17 +305,26 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 					int component = 0;
 					for (int i = 0; i < other_keys_status.size(); ++i) {
 						if (other_keys_status[i] > 0) {
-							ErrorElem* elm[4];
+
 							for (int err = 0; err < 4; ++err) {
 
-								elm[err] = (ErrorElem*) El_Table->lookup(
+								ErrorElem* elm_err = (ErrorElem*) El_Table->lookup(
 								    err_receive_array[4 * component + err].key);
-								assert(elm[err] == NULL);
+								assert(elm_err == NULL);
 //							cout << component << endl;
 
-								elm[err] = new ErrorElem((err_receive_array + 4 * component + err), cp_NodeTable, myid);
+								elm_err = new ErrorElem((err_receive_array + 4 * component + err), cp_NodeTable,
+								    myid);
 
-								cp_El_Table->add(elm[err]->pass_key(), elm);
+								cp_El_Table->add(elm_err->pass_key(), elm_err);
+
+								imported_elem.push_back(elm_err);
+
+								assert(elm_err);
+								elm_err->calc_which_son();
+								assert(elm_err->getfather());
+								DualElem* check_elem = (DualElem*) El_Table->lookup(elm_err->getfather());
+								assert(check_elem);
 							}
 
 							component++;
@@ -363,6 +373,8 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 
 			} while (IfSentRecvd != 1);
 
+#ifdef Error
+
 			do {
 
 				MPI_Test(&(e_s_request), &IfSentRecvd, &status);
@@ -370,6 +382,7 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 					delete[] err_send_array;
 
 			} while (IfSentRecvd != 1);
+#endif
 
 		}
 
@@ -386,12 +399,15 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 
 //	cout << " out of while loop \n";
 
+//	check_the_list(imported_elem,El_Table);
+
 	delete_extra_nodes(El_Table, NodeTable);
 
 #ifdef Error
 	delete_extra_nodes(cp_El_Table, cp_NodeTable);
 #endif
 
+//	check_the_list(imported_elem,El_Table);
 //	cout << " extra node deleted \n";
 
 	// we need this because we still have not refined and unrefined
@@ -410,31 +426,41 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 //		cout << allKeyRange[i] << " , ";
 
 	update_neighbor_proc(propctx, El_Table, allKeyRange);
+//	check_the_list(imported_elem,El_Table);
 
 #ifdef Error
 	update_neighbor_proc(propctx, cp_El_Table, allKeyRange);
 #endif
 
+//	check_the_list(imported_elem,El_Table);
 //	cout << " after update neighb proc \n";
 
 	move_dual_data(dual_meshctx, propctx);
 
-#ifdef Error
-	move_err_data(dual_meshctx, propctx);
-#endif
+//	check_the_list(imported_elem,El_Table);
 
+#ifdef Error
+	move_err_data(err_meshctx, propctx);
+//	check_the_list(imported_elem,El_Table);
+	ElemPtrList<ErrorElem> err_refinelist, err_unrefinelist;
+	make_refine_unrefine_list_from_father(dual_meshctx, err_meshctx, &refinelist, &unrefinelist,
+	    &err_refinelist, &err_unrefinelist);
+#endif
+//	check_the_list(imported_elem,El_Table);
 //	cout << "after move data \n";
 	dual_repart.stop();
 	dual_adapt.start();
 
 	dual_refine_unrefine<DualElem>(dual_meshctx, propctx, &refinelist, &unrefinelist);
 	dual_adapt.stop();
-
+//	check_the_list(imported_elem,El_Table);
 #ifdef Error
-	ElemPtrList<ErrorElem> err_refinelist, err_unrefinelist;
-	make_refine_unrefine_list_from_father(dual_meshctx, err_meshctx, &refinelist, &unrefinelist,
-	    &err_refinelist, &err_unrefinelist);
+//	cout << "size refine " << err_refinelist.get_num_elem() << " size unrefine "
+//	    << err_unrefinelist.get_num_elem() << endl;
 	dual_refine_unrefine<ErrorElem>(err_meshctx, propctx, &err_refinelist, &err_unrefinelist);
+//	check_the_list(imported_elem,El_Table);
+	correct_dual_err_link(err_meshctx, dual_meshctx, imported_elem);
+	calc_d_gravity(cp_El_Table);
 #endif
 //	AssertMeshErrorFree(El_Table, NodeTable, numprocs, myid, 1.0);
 
@@ -445,7 +471,6 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 	delete[] allKeyRange;
 
 	calc_d_gravity(El_Table);
-	calc_d_gravity(cp_El_Table);
 }
 
 void set_send_receive_proc(int count, int myid, int numprocs, int& receive_from, int& send_to) {

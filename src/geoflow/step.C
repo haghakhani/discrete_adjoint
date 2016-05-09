@@ -189,7 +189,8 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 					double *dxy = Curr_El->get_dx();
 					// if calculations are first-order, predict is never called
 					// ... so we need to update prev_states
-//					void *Curr_El_out = (void *) Curr_El;	//I believe it's because we need correct function be a friend function of node class, but we do not want to add element header to node.h
+//					void *Curr_El_out = (void *) Curr_El;
+					//I believe it's because we need correct function be a friend function of node class, but we do not want to add element header to node.h
 					if (*order_flag == 1)
 						Curr_El->update_prev_state_vars();
 

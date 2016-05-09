@@ -65,7 +65,7 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 					double tiny = GEOFLOW_TINY;
 					double *d_state_vars = Curr_El->get_d_state_vars();
 
-					if (timeprops_ptr->iter < 52)
+					if (timeprops_ptr->iter < 51)
 						matprops_ptr->frict_tiny = 0.1;
 					else
 						matprops_ptr->frict_tiny = 0.000000001;

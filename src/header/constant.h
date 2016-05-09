@@ -17,16 +17,10 @@
 
 #ifndef CONSTANTS
 #define CONSTANTS
+
 const int KEYLENGTH = 2;
-
-//const   NODE_TABLE_SIZE=6000;
-//const   EL_TABLE_SIZE=2000;
-
 const int MAX_PROCS = 2056;
 
-const int ZERO = '0';
-const int NONZERO = 111;
-//const   NBUCKETS  = 2000;        //every hashtable posseses 5000 entries.
 const int PRIME = 2017;        //used for creating hash key
 const int DIMENSION = 2;
 const int EQUATIONS = 2; /* be careful EQUATIONS and NUM_STATE_VARS
@@ -39,29 +33,14 @@ const int EQUATIONS = 2; /* be careful EQUATIONS and NUM_STATE_VARS
  Finite difference/volume version of
  titan.  Just leave it at 2 and otherwise
  ignore it. */
-const int POWER = 1;
-const int MAX_ORDER = 6;
 
 const double PI = 3.1415926;
 
-const int BCTYPE = 3;
-
-const float C = 1.5;
-
-const int NODEINIT = 0x0000;
-const int CORNER = 0x0002;        //--corner dof
-const int BUBBLE = 0x0006;
-const int SIDE = 0x0004;        //--side dof
-const int CONSTRAINED = 0x0001;
-const int S_C_CON = 0x0007;        //--side dof
-const int S_S_CON = 0x0005;        //--no dof
-const int ASSIGNED = 1;
-const int UNASSIGNED = 0;
-
-const double UN_CONSTRAINED = -999999.0;/*for the unconstrained dof*/
-
-const int ON = 1;
-const int OFF = 0;
+const int CORNER = 2;//node is in corner of cells
+const int BUBBLE = 6;//node is in center of cell
+const int SIDE = 4;//node is in side of the cell and neighbor cell is in same generation, or when the cell is adjucent to the boundary
+const int S_C_CON = 7;//node is corner of one cell and side of another cell, neighbor cells are not in same generation
+const int S_S_CON = 5;//node is in side of both neighbor cells, neighbor cells are not in same generation
 
 const int NEW = 1;
 const int OLD = 0;
@@ -70,14 +49,6 @@ const int INIT = -1;
 const int ONE_SIDE_NEIGH = -2;
 const int MUST_BE_CORRECTED = -3;
 
-const float MAX_X = 1.0;
-const float MAX_Y = 1.0;
-const float MIN_X = -1.0;
-const float MIN_Y = -1.0;
-
-const float SMALL = 1.0e-5;
-const float XBC = -1.0;
-const float YBC = -1.0;
 const float LOAD_BALANCE_TOLERANCE = 1.0001;
 
 extern void fhsfc3d(double*, unsigned*, unsigned*);
@@ -103,9 +74,6 @@ const int GHOST = -9876; //"refined" GHOST CELL FLAG
 const double INCREMENT = 1.49e-08;
 
 //The magnitude of the "adapted" flag indicates whether the cell is NEWSON, NEWFATHER, NOTRECADAPTED, or TOBEDELETED.  A postive value indicates it's on this processor, a negative sign indicates a GHOST cell.
-//#define DUALREG        8  // for a regular element in
-//#define DUALUNREF      7  // for an element that has to be unrefined on nest step in dual solution
-//#define DUALREF        6  // for an element that has to berefined on next step in dual solution
 #define NEWBUFFER      5  //NEWBUFFER elements have at least one current buffer element as a neighbor, a temporary marking needed for building the buffer layer, to be remarked as BUFFER elements
 #define BUFFER         4  //Do not refine or unrefine elements in the buffer layer, has to be a separate flag from NEWSON because of triggered refinement
 #define NEWSON         3  //Do not refine or unrefine new son elements

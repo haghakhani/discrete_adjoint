@@ -88,11 +88,10 @@ public:
 	DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
 	    int elm_loc_in[], int gen_neigh[], int mat, DualElem *fthTemp, double *coord_in,
 	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
-	    int iwetnodefather, double Awetfather, double *drypoint_in, int SETLINK);
+	    int iwetnodefather, double Awetfather, double *drypoint_in);
 
 	//used for unrefinement
-	DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr,
-	    int SETLINK);
+	DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr);
 
 	DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid);
 
@@ -144,7 +143,7 @@ public:
 
 	void calc_func_sens(const void * ctx);
 
-	vector<ErrorElem*>& get_son_addresses();
+	ErrorElem** get_son_addresses();
 
 	void dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable* El_Table, int iter,
 	    ElemPtrList<DualElem>* refinelist, ElemPtrList<DualElem>* unrefinelist,
@@ -179,7 +178,7 @@ private:
 	// actually we just need to keep the address for 4 sons and 16 is just for the cases
 	// that the four element in error grid has been refined but still the element in dual grid
 	//
-	vector<ErrorElem*> son_address;
+	ErrorElem* mysons[4];
 };
 
 inline double* DualElem::get_adjoint() {
@@ -211,8 +210,8 @@ inline Matrix<double, 2, 5>& DualElem::get_hslope_sens() {
 	return hslope_sens;
 }
 
-inline vector<ErrorElem*>& DualElem::get_son_addresses() {
-	return son_address;
+inline ErrorElem** DualElem::get_son_addresses() {
+	return mysons;
 }
 ;
 
@@ -226,11 +225,10 @@ public:
 	ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
 	    int elm_loc_in[], int gen_neigh[], int mat, ErrorElem *fthTemp, double *coord_in,
 	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
-	    int iwetnodefather, double Awetfather, double *drypoint_in, int SETLINK);
+	    int iwetnodefather, double Awetfather, double *drypoint_in);
 
 	//used for unrefinement
-	ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr,
-	    int SETLINK);
+	ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr);
 
 	ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid);
 
@@ -290,7 +288,7 @@ private:
 	// this is to keep the address of his father in Dual grid
 	// keeping this address let us to avoid calling lookup function
 	// for many times
-	DualElem* father_address;
+	DualElem* myfather;
 
 };
 
@@ -325,12 +323,12 @@ inline double* ErrorElem::get_adjoint() {
 ;
 
 inline DualElem* ErrorElem::get_father_address() {
-	return father_address;
+	return myfather;
 }
 ;
 
 inline void ErrorElem::put_father_address(DualElem* fth) {
-	father_address = fth;
+	myfather = fth;
 	return;
 }
 ;

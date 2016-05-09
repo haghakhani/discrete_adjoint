@@ -81,6 +81,11 @@ class Element {
 	friend void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, int myid,
 	    double* e_error);
 
+	friend void uniform_refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump, int myid, void* RL,
+	    TimeProps* timeprops_ptr);
+
+	friend void adjust_node_info(MeshCTX* meshctx, PropCTX* propctx);
+
 public:
 
 	//! default constructor, does nothing except set stoppedflags=2, this should never be used
@@ -112,11 +117,10 @@ public:
 	Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
 	    int elm_loc_in[], int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
 	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
-	    int iwetnodefather, double Awetfather, double *drypoint_in, int SETLINK = 0);
+	    int iwetnodefather, double Awetfather, double *drypoint_in);
 
 	//! constructor that creates a father element from its four sons during unrefinement
-	Element(Element *sons[], HashTable *NodeTable, HashTable *El_Table, MatProps *matprops_ptr,
-	    int SETLINK = 0);
+	Element(Element *sons[], HashTable *NodeTable, HashTable *El_Table, MatProps *matprops_ptr);
 
 	//! constructor that creates/restores a saved element during restart
 	Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
@@ -470,11 +474,11 @@ public:
 	//! this function is defined in unrefine.C, it is also called in that file, it finds this element's brothers
 	template<class T>
 	int find_brothers(HashTable* El_Table, HashTable* NodeTable, double target, int myid,
-	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int SETLINK);
+	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate);
 
 	template<class T>
 	int dual_find_brothers(HashTable* El_Table, HashTable* NodeTable, double target, int myid,
-	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int SETLINK);
+	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate);
 
 	void for_link_temp();
 

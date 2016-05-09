@@ -74,6 +74,15 @@ void make_dual_err_link(HashTable *Dual_El_Tab, HashTable *Err_El_Tab);
 
 void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab, int last);
 
+void set_link(ErrorElem* son0, HashTable* Dual_Table, HashTable* Err_Table);
+
+void check_link(MeshCTX* err_meshctx, MeshCTX* dual_meshctx) ;
+
+void correct_dual_err_link(MeshCTX* err_meshctx, MeshCTX* dual_meshctx);
+
+void correct_dual_err_link(MeshCTX* err_meshctx, MeshCTX* dual_meshctx,
+    vector<ErrorElem*>& imported_elem);
+
 void update_dual_err_link(HashTable *Dual_El_Tab, HashTable *Err_El_Tab);
 
 void adjoint_init(HashTable* BT_Elem_Ptr, HashTable* BT_Node_Ptr);
@@ -225,6 +234,15 @@ extern Timer dual_vis, jacobian, adjoint_sol, dual_repart, dual_adapt, read_solu
 void make_refine_unrefine_list_from_father(MeshCTX* dual_meshctx, MeshCTX* err_meshctx,
     ElemPtrList<DualElem> *refinelist, ElemPtrList<DualElem> *unrefinelist,
     ElemPtrList<ErrorElem> *err_refinelist, ElemPtrList<ErrorElem> *err_unrefinelist);
+
+void uniform_refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump, int myid,
+    void* RL, TimeProps* timeprops_ptr);
+
+void adjust_node_info(MeshCTX* meshctx, PropCTX* propctx);
+
+unsigned* makekey(unsigned k1, unsigned k2);
+
+void check_the_list(vector<ErrorElem*> imported_elem,HashTable* El_Table);
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);

@@ -37,7 +37,7 @@ void unrefine(HashTable* El_Table, HashTable* NodeTable, double target, int myid
     TimeProps* timeprops_ptr, MatProps* matprops_ptr, int rescomp);
 
 template<typename T>
-void refine(T*, HashTable*, HashTable*, MatProps* matprops_ptr, int SETLINK);
+void refine(T*, HashTable*, HashTable*, MatProps* matprops_ptr);
 
 void delete_oldsons(HashTable* El_Table, HashTable* NodeTable, int myid, void *EmFather);
 

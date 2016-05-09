@@ -348,7 +348,7 @@ int ifCheckNode(HashTable* El_Table, HashTable* NodeTable, int NdDebugInfo, int 
 void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable, int numprocs, int myid,
     double loc) {
 
-	return;
+//	return;
 
 	char filename[256];
 	sprintf(filename, "AssertMeshErrorFree%04d.debug", myid);
@@ -394,7 +394,7 @@ void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable, int numprocs
 			El_Table_entry_ptr = El_Table_entry_ptr->next;
 			assert(EmTemp);
 			assert(EmTemp->generation>=MIN_GENERATION);
-			assert(EmTemp->generation <= REFINE_LEVEL);
+			assert(EmTemp->generation <= REFINE_LEVEL + 1);
 
 			assert((EmTemp->get_refined_flag() >= 0) || (EmTemp->get_refined_flag() == GHOST));
 
@@ -754,9 +754,13 @@ void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable, int numprocs
 			assert(NdTemp);
 
 			//check to see if node is of an allowed type
-			assert(
-			    (NdTemp->info == CORNER) || (NdTemp->info == SIDE) || (NdTemp->info == S_S_CON)
-			        || (NdTemp->info == BUBBLE) || (NdTemp->info == S_C_CON));
+			if (!((NdTemp->info == CORNER) || (NdTemp->info == SIDE) || (NdTemp->info == S_S_CON)
+			    || (NdTemp->info == BUBBLE) || (NdTemp->info == S_C_CON)))
+				cout<<" not allowed node \n";
+
+				assert(
+				    (NdTemp->info == CORNER) || (NdTemp->info == SIDE) || (NdTemp->info == S_S_CON)
+				        || (NdTemp->info == BUBBLE) || (NdTemp->info == S_C_CON));
 
 			/*
 			 if(!(NdTemp->num_assoc_elem>=1)){

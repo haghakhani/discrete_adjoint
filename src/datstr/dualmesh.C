@@ -595,7 +595,7 @@ DualElem::DualElem(Element* element) {
 DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[],
     int gen, int elm_loc_in[], int gen_neigh[], int mat, DualElem *fthTemp, double *coord_in,
     HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr, int iwetnodefather,
-    double Awetfather, double *drypoint_in, int SETLINK) {
+    double Awetfather, double *drypoint_in) {
 	counted = 0; //for debugging only
 
 	adapted = NEWSON;
@@ -710,33 +710,13 @@ DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], 
 		Influx[i] = 0.;
 
 	}
-
-	if (SETLINK) {
-
-		// correcting the links
-		vector<ErrorElem*>& errel_vec = fthTemp->get_son_addresses();
-
-		for (int j = 0; j < errel_vec.size(); ++j) {
-
-//			assert(errel_vec[j]->get_father_address() == fthTemp);
-
-			unsigned* father_key = errel_vec[j]->getfather();
-
-			if (compare_key(father_key, key)) {
-				errel_vec[j]->put_father_address(this);
-				son_address.push_back(errel_vec[j]);
-
-			}
-		}
-	}
-
 }
 
 /*********************************
  making a father element from its sons
  *****************************************/
 DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
-    MatProps* matprops_ptr, int SETLINK) {
+    MatProps* matprops_ptr) {
 	counted = 0; //for debugging only
 
 	adapted = NEWFATHER;
@@ -1035,29 +1015,14 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 	kactxy[0] = effect_kactxy[0] = 0.0;
 	kactxy[1] = effect_kactxy[1] = 0.0;
 
-	for (j = 0; j < 4; j++) {
-//		for (i = 0; i < EQUATIONS; i++) {
-//			kactxy[i] += *(sons[j]->get_kactxy() + i) * 0.25;
-//			effect_kactxy[i] += *(sons[j]->get_effect_kactxy() + i) * 0.25;
-//			el_error[i] += *(sons[j]->get_el_error() + i) * 0.25;
-//		}
-
-	}
-	if (SETLINK) {
-		// correcting the links
-		for (int i = 0; i < 4; ++i) {
-			vector<ErrorElem*>& errel_vec = sons[i]->get_son_addresses();
-
-			for (int j = 0; j < errel_vec.size(); ++j) {
-
-				assert(errel_vec[j]->get_father_address() == sons[i]);
-				errel_vec[j]->put_father_address(this);
-				son_address.push_back(errel_vec[j]);
-
-			}
-		}
-	}
-
+//	for (j = 0; j < 4; j++) {
+////		for (i = 0; i < EQUATIONS; i++) {
+////			kactxy[i] += *(sons[j]->get_kactxy() + i) * 0.25;
+////			effect_kactxy[i] += *(sons[j]->get_effect_kactxy() + i) * 0.25;
+////			el_error[i] += *(sons[j]->get_el_error() + i) * 0.25;
+////		}
+//
+//	}
 }
 
 DualElem::DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
@@ -2622,12 +2587,12 @@ ErrorElem::ErrorElem(Element* element) {
 
 		bilin_state[i] = 0.;
 
-		bilin_prev_state[i]=0.;
+		bilin_prev_state[i] = 0.;
 	}
 
 	correction = 0.;
 
-	father_address = NULL;
+	myfather = NULL;
 
 }
 
@@ -2635,7 +2600,7 @@ ErrorElem::ErrorElem(Element* element) {
 ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[],
     int gen, int elm_loc_in[], int gen_neigh[], int mat, ErrorElem *fthTemp, double *coord_in,
     HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr, int iwetnodefather,
-    double Awetfather, double *drypoint_in, int SETLINK) {
+    double Awetfather, double *drypoint_in) {
 
 	counted = 0; //for debugging only
 
@@ -2703,14 +2668,14 @@ ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH]
 	drypoint[0] = drypoint_in[0];
 	drypoint[1] = drypoint_in[1];
 
-	double myfractionoffather;
-	if ((Awetfather == 0.0) || (Awetfather == 1.0)) {
-		Awet = Awetfather;
-		myfractionoffather = 1.0;
-	} else {
-		Awet = convect_dryline(dx, 0.0); //dx is a dummy stand in for convection speed... value doesn't matter because it's being multiplied by a timestep of zero
-		myfractionoffather = Awet / Awetfather;
-	}
+	double myfractionoffather = 1.;
+//	if ((Awetfather == 0.0) || (Awetfather == 1.0)) {
+//		Awet = Awetfather;
+//		myfractionoffather = 1.0;
+//	} else {
+//		Awet = convect_dryline(dx, 0.0); //dx is a dummy stand in for convection speed... value doesn't matter because it's being multiplied by a timestep of zero
+//		myfractionoffather = Awet / Awetfather;
+//	}
 	Swet = 1.0;
 
 	double dxx = coord_in[0] - fthTemp->coord[0];
@@ -2737,49 +2702,23 @@ ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH]
 	effect_kactxy[0] = fthTemp->effect_kactxy[0];
 	effect_kactxy[1] = fthTemp->effect_kactxy[1];
 	for (int i = 0; i < NUM_STATE_VARS; i++) {
-		state_vars[i] = fthTemp->state_vars[i] * myfractionoffather;
-		prev_state_vars[i] = fthTemp->prev_state_vars[i] * myfractionoffather;
+		state_vars[i] = fthTemp->state_vars[i];
+		prev_state_vars[i] = fthTemp->prev_state_vars[i];
+		bilin_state[i] = fthTemp->bilin_state[i];
+		bilin_prev_state[i] = fthTemp->bilin_prev_state[i];
 		adjoint[i] = 0.25 * fthTemp->adjoint[i];
 		bilin_adj[i] = 0.25 * fthTemp->adjoint[i];
 		Influx[i] = 0.;
 		residual[i] = 0.;
 	}
 
-	int aa = 1, bb = 0;
-	if (fthTemp->key[0] == 3897323835 && fthTemp->key[1] == 330382099)
-		aa = bb;
-
-	if (SETLINK) {
-
-		father_address = fthTemp->father_address;
-
-		// we just do that for the son 0
-		int count = 0;
-		if (which_son == 0) { // first deleting the old links
-			vector<ErrorElem*>& mysons = father_address->get_son_addresses();
-			vector<ErrorElem*>::iterator it = mysons.begin();
-
-			while (it != mysons.end())
-				if (*it == fthTemp) {
-					mysons.erase(it);
-					count++;
-				} else
-					++it;
-		}
-
-		if (which_son == 0)
-			assert(count == 1);
-
-		// now adding the new link
-		(father_address->get_son_addresses()).push_back(this);
-	}
 }
 
 /*********************************
  making a father element from its sons
  *****************************************/
 ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Table,
-    MatProps* matprops_ptr, int SETLINK) {
+    MatProps* matprops_ptr) {
 	counted = 0; //for debugging only
 
 	adapted = NEWFATHER;
@@ -3033,14 +2972,27 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 	calc_d_gravity(El_Table);
 
 	for (int i = 0; i < NUM_STATE_VARS; i++) {
-		state_vars[i] = 0.;
-		prev_state_vars[i] = 0.;
 		Influx[i] = 0.;
-		adjoint[i] = 0.;
 		bilin_adj[i] = 0.;
 		Influx[i] = 0.;
 		residual[i] = 0.;
 		d_state_vars[i] = d_state_vars[NUM_STATE_VARS + i] = 0.;
+	}
+
+	for (i = 0; i < NUM_STATE_VARS; i++) {
+		state_vars[i] = 0.;
+		prev_state_vars[i] = 0.;
+		adjoint[i] = 0.;
+		bilin_prev_state[i] = 0.;
+		bilin_state[i] = 0.;
+
+		for (j = 0; j < 4; j++) {
+			state_vars[i] += *(sons[j]->get_state_vars() + i) * 0.25;
+			prev_state_vars[i] += *(sons[j]->get_prev_state_vars() + i) * 0.25;
+			bilin_prev_state[i] += *(sons[j]->get_bilin_prev_state() + i) * 0.25;
+			bilin_state[i] += *(sons[j]->get_bilin_state() + i) * 0.25;
+			adjoint[i] += *(sons[j]->get_adjoint() + i);
+		}
 	}
 
 	Awet = 0.0;
@@ -3067,35 +3019,7 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 	for (i = 0; i < EQUATIONS; i++)
 		el_error[i] = 0.;
 
-	if (SETLINK) {
-		// correcting the link
-
-		for (i = 1; i < 4; i++)
-			assert(sons[i]->get_father_address() == sons[0]->get_father_address());
-
-		father_address = sons[0]->get_father_address();
-
-		// first deleting the old links
-		vector<ErrorElem*>& mysons = father_address->get_son_addresses();
-
-		int count = 0;
-		for (int j = 0; j < 4; ++j) {
-			vector<ErrorElem*>::iterator it = mysons.begin();
-			while (it != mysons.end())
-				if (*it == sons[j]) {
-					mysons.erase(it);
-					count++;
-				} else
-					++it;
-		}
-
-		assert(count == 4);
-
-		// now adding the new link
-		(father_address->get_son_addresses()).push_back(this);
-	}
 }
-
 
 ErrorElem::ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 
@@ -3349,6 +3273,10 @@ void ErrorElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, doubl
 		d_state_vars[j + NUM_STATE_VARS] = .5 * (c_sgn(dp) + c_sgn(dm)) * min_slopes;
 
 	}
+
+	for (int i = 0; i < 2 * NUM_STATE_VARS; ++i)
+		if (isnan(d_state_vars[i]) || isinf(d_state_vars[i]))
+			cout << " This is not correct \n";
 }
 
 void ErrorElem::error_update_state(SolRec* solrec, int iter) {

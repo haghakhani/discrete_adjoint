@@ -183,7 +183,7 @@ void bilinear_interp(HashTable* cp_El_Table) {
 							// it is very important to point that we actually need the father of these elements
 							// but we retrieve the father information from them. Because state, prev_state and adjoint
 							// of the sons are same as father (from constant reconstruction), and the coord of
-							// the father can be computed by knowing the corrd of son and knowing which son it is
+							// the father can be computed by knowing the coord of son and knowing which son it is
 							case 0: {
 								// this condition means that 10 and 6 are same elements
 								if (neighbors[6] && neighbors[10] && neighbors[6] == neighbors[10])
@@ -546,6 +546,11 @@ void bilinear_interp_elem(ErrorElem *elem11, ErrorElem *elem21, ErrorElem *elem1
 			cout << "ERROR IN BILINEAR INTERPOLATION " << endl;
 			break;
 
+	}
+
+	for (int i=0;i<NUM_STATE_VARS;++i){
+		assert(!isinf(bi_state_vars[i]) && !isinf(bi_prev_state_vars[i]) && !isinf(bi_adjoint[i]));
+		assert(!isnan(bi_state_vars[i]) && !isnan(bi_prev_state_vars[i]) && !isnan(bi_adjoint[i]));
 	}
 }
 

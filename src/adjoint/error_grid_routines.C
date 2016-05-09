@@ -117,28 +117,10 @@ void make_dual_err_link(HashTable *Dual_El_Tab, HashTable *Err_El_Tab) {
 			currentPtr = *(buck + i);
 			while (currentPtr) {
 
-				ErrorElem *son[4];
+				ErrorElem *son0 = (ErrorElem*) (currentPtr->value);
 
-				son[0] = (ErrorElem*) (currentPtr->value);
+				set_link(son0, Dual_El_Tab, Err_El_Tab);
 
-				son[0]->calc_which_son();
-
-				if (son[0]->get_adapted_flag() > 0 && son[0]->get_which_son() == 0) {
-
-					unsigned* father_key = son[0]->getfather();
-
-					DualElem* father = (DualElem*) Dual_El_Tab->lookup(father_key);
-
-					vector<ErrorElem*>& mysons = father->get_son_addresses();
-
-					for (int j = 1; j < 4; ++j)
-						son[j] = (ErrorElem*) Err_El_Tab->lookup(son[0]->get_brothers() + j * KEYLENGTH);
-
-					for (int j = 0; j < 4; ++j) {
-						mysons.push_back(son[j]);
-						son[j]->put_father_address(father);
-					}
-				}
 				currentPtr = currentPtr->next;
 			}
 		}
@@ -159,16 +141,16 @@ void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab, int 
 
 				if (dual_el->get_adapted_flag() > 0) {
 
-					vector<ErrorElem*>& error_el = dual_el->get_son_addresses();
+					ErrorElem** error_el = dual_el->get_son_addresses();
 
-					for (int j = 0; j < error_el.size(); ++j) {
+					for (int j = 0; j < 4; ++j) {
 						ErrorElem* err_El = error_el[j];
 
 						for (int k = 0; k < NUM_STATE_VARS; ++k) {
 //							if (!last)
-							*(err_El->get_prev_state_vars() + k) = *(dual_el->get_prev_state_vars() + k);
-							*(err_El->get_state_vars() + k) = *(dual_el->get_state_vars() + k);
-							*(err_El->get_adjoint() + k) = *(dual_el->get_adjoint() + k);
+							*(error_el[j]->get_prev_state_vars() + k) = *(dual_el->get_prev_state_vars() + k);
+							*(error_el[j]->get_state_vars() + k) = *(dual_el->get_state_vars() + k);
+							*(error_el[j]->get_adjoint() + k) = *(dual_el->get_adjoint() + k);
 
 						}
 
@@ -200,3 +182,123 @@ void send_from_dual_to_error(HashTable *Dual_El_Tab, HashTable *Err_El_Tab, int 
 		}
 }
 
+void correct_dual_err_link(MeshCTX* err_meshctx, MeshCTX* dual_meshctx) {
+
+	HashTable* Dual_Table = dual_meshctx->el_table;
+	HashTable* Err_Table = err_meshctx->el_table;
+
+	HashEntryPtr *buck = Err_Table->getbucketptr();
+	HashEntryPtr currentPtr;
+
+	for (int i = 0; i < Err_Table->get_no_of_buckets(); ++i)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+
+				ErrorElem *son0 = (ErrorElem*) (currentPtr->value);
+				if (son0->get_adapted_flag() == NEWFATHER || son0->get_adapted_flag() == NEWSON)
+					set_link(son0, Dual_Table, Err_Table);
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+}
+
+void correct_dual_err_link(MeshCTX* err_meshctx, MeshCTX* dual_meshctx,
+    vector<ErrorElem*>& imported_elem) {
+
+	HashTable* Dual_Table = dual_meshctx->el_table;
+	HashTable* Err_Table = err_meshctx->el_table;
+
+	correct_dual_err_link(err_meshctx, dual_meshctx);
+
+	for (int i = 0; i < imported_elem.size(); ++i) {
+		if (imported_elem[i])
+			set_link(imported_elem[i], Dual_Table, Err_Table);
+	}
+
+}
+
+void set_link(ErrorElem* son0, HashTable* Dual_Table, HashTable* Err_Table) {
+
+	son0->calc_which_son();
+
+	if (son0->get_adapted_flag() > 0 && son0->get_which_son() == 0) {
+
+		DualElem* father = (DualElem*) Dual_Table->lookup(son0->getfather());
+
+		ErrorElem** mysons = father->get_son_addresses();
+
+		mysons[0] = son0;
+
+		assert(mysons[0]);
+
+		for (int j = 1; j < 4; ++j) {
+			mysons[j] = (ErrorElem*) Err_Table->lookup(son0->get_brothers() + j * KEYLENGTH);
+			assert(mysons[j]);
+		}
+
+		for (int j = 0; j < 4; ++j)
+			mysons[j]->put_father_address(father);
+
+	}
+
+}
+
+void check_link(MeshCTX* err_meshctx, MeshCTX* dual_meshctx) {
+
+	HashTable* Dual_Table = dual_meshctx->el_table;
+	HashTable* Err_Table = err_meshctx->el_table;
+
+	HashEntryPtr *buck = Err_Table->getbucketptr();
+	HashEntryPtr currentPtr;
+
+	for (int i = 0; i < Err_Table->get_no_of_buckets(); ++i)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+
+				ErrorElem *son0 = (ErrorElem*) (currentPtr->value);
+				if (son0->get_adapted_flag() > 0) {
+					DualElem* father = son0->get_father_address();
+					if (!father)
+						cout << "this is strange\n";
+					assert(father);
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	buck = Dual_Table->getbucketptr();
+
+	for (int i = 0; i < Dual_Table->get_no_of_buckets(); ++i)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+
+				DualElem *father = (DualElem*) (currentPtr->value);
+				if (father->get_adapted_flag() > 0) {
+					ErrorElem** sons = father->get_son_addresses();
+					for (int j = 0; j < 4; ++j)
+						assert(sons[j]);
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+}
+
+void check_the_list(vector<ErrorElem*> imported_elem, HashTable* El_Table) {
+
+	for (int i = 0; i < imported_elem.size(); ++i) {
+
+		assert(imported_elem[i]);
+		imported_elem[i]->calc_which_son();
+		assert(imported_elem[i]->getfather());
+		DualElem* check_elem = (DualElem*) El_Table->lookup(imported_elem[i]->getfather());
+		assert(check_elem);
+	}
+}

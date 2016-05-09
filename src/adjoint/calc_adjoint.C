@@ -219,9 +219,16 @@ void calc_func_sens_hmax(MeshCTX* meshctx, PropCTX* propctx) {
 				if (Curr_El->get_adapted_flag() > 0 && hmax == *(Curr_El->get_state_vars())) {
 					*(Curr_El->get_func_sens()) = 1.;
 				}
+
+				for (int i = 0; i < NUM_STATE_VARS; i++)
+					if (isnan(*(Curr_El->get_func_sens()+i)) || isinf(*(Curr_El->get_func_sens() + i)))
+						cout << "it is incorrect  " << endl;
+
 				currentPtr = currentPtr->next;
 			}
 		}
+
+
 
 }
 

@@ -607,3 +607,9 @@ void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatPr
 		fluxold[3][ivar] = nym->flux[ivar];
 	}
 }
+
+unsigned* makekey(unsigned k1,unsigned k2){
+	 unsigned *key=new unsigned[2];
+	 key[0]=k1;key[1]=k2;
+	 return key;
+}

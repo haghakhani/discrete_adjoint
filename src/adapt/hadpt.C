@@ -375,7 +375,7 @@ void refinewrapper(HashTable*HT_Elem_Ptr, HashTable*HT_Node_Ptr, MatProps* matpr
 		if (ifg)
 			for (ielem = 0; ielem < RefinedList->get_num_elem(); ielem++)
 				if (!((RefinedList->get(ielem))->get_refined_flag())) {
-					refine(RefinedList->get(ielem), HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr, 0);
+					refine(RefinedList->get(ielem), HT_Elem_Ptr, HT_Node_Ptr, matprops_ptr);
 					(RefinedList->get(ielem))->put_adapted_flag(OLDFATHER);
 					(RefinedList->get(ielem))->put_refined_flag(1);
 				}

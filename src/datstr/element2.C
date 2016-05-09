@@ -152,7 +152,7 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
     int elm_loc_in[], int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
     HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr, int iwetnodefather,
-    double Awetfather, double *drypoint_in, int SETLINK) {
+    double Awetfather, double *drypoint_in) {
 	counted = 0; //for debugging only
 
 	adapted = NEWSON;
@@ -257,8 +257,7 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 /*********************************
  making a father element from its sons
  *****************************************/
-Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr,
-    int SETLINK) {
+Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr) {
 	counted = 0; //for debugging only
 
 	adapted = NEWFATHER;
