@@ -138,15 +138,19 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	make_dual_err_link(Dual_El_Tab, Err_El_Tab);
 
-	check_link(&error_meshctx, &dual_meshctx);
-
-	AssertMeshErrorFree(Dual_El_Tab, NodeTable, numprocs, myid, -1);
-
-	AssertMeshErrorFree(Err_El_Tab, Err_Nod_Tab, numprocs, myid, 1.);
+//	check_link(&error_meshctx, &dual_meshctx);
+//
+//	AssertMeshErrorFree(Dual_El_Tab, NodeTable, numprocs, myid, -1);
+//
+//	AssertMeshErrorFree(Err_El_Tab, Err_Nod_Tab, numprocs, myid, 1.);
 
 	send_from_dual_to_error(Dual_El_Tab, Err_El_Tab, 1);
 
+	move_err_data(&error_meshctx, propctx);
+
 	bilinear_interp(Err_El_Tab);
+
+	move_err_data(&error_meshctx, propctx);
 
 	update_bilinear_error_grid(&error_meshctx, propctx);
 
@@ -174,7 +178,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 #endif
 //		AssertMeshErrorFree(Dual_El_Tab, NodeTable, numprocs, myid, 0);
 
-		AssertMeshErrorFree(Err_El_Tab, Err_Nod_Tab, numprocs, myid, 0);
+//		AssertMeshErrorFree(Err_El_Tab, Err_Nod_Tab, numprocs, myid, 0);
 
 //		cout << "elements number of original grid " << num_nonzero_elem(El_Table) << endl;
 //		cout << "elements number of refined grid " << num_nonzero_elem(cp_El_Table) << endl;
@@ -201,7 +205,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 		send_from_dual_to_error(Dual_El_Tab, Err_El_Tab, 0);
 
-//		move_err_data(&error_meshctx, propctx);
+		move_err_data(&error_meshctx, propctx);
 
 		bilinear_interp(Err_El_Tab);
 
@@ -209,7 +213,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 		update_bilinear_error_grid(&error_meshctx, propctx);
 
-		move_err_data(&error_meshctx, propctx);
+//		move_err_data(&error_meshctx, propctx);
 
 		error_compute(&error_meshctx, propctx);
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)

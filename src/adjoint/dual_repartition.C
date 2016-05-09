@@ -97,7 +97,7 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 		}
 
 	delete_extra_nodes(cp_El_Table, cp_NodeTable);
-	vector<ErrorElem*> imported_elem;
+	vector<pair<unsigned, unsigned> > imported_elem;
 #endif
 
 	int count = 0, remaining;
@@ -318,13 +318,8 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 
 								cp_El_Table->add(elm_err->pass_key(), elm_err);
 
-								imported_elem.push_back(elm_err);
+								imported_elem.push_back(make_pair(elm_err->pass_key()[0], elm_err->pass_key()[1]));
 
-								assert(elm_err);
-								elm_err->calc_which_son();
-								assert(elm_err->getfather());
-								DualElem* check_elem = (DualElem*) El_Table->lookup(elm_err->getfather());
-								assert(check_elem);
 							}
 
 							component++;

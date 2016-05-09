@@ -26,7 +26,7 @@ void update_bilinear_error_grid(MeshCTX* meshctx, PropCTX* propctx) {
 
 	slopes(El_Table, NodeTable, matprops_ptr, 2);
 
-	move_err_data(meshctx, propctx);
+//	move_err_data(meshctx, propctx);
 
 	HashEntryPtr *buck = El_Table->getbucketptr();
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
@@ -46,7 +46,7 @@ void update_bilinear_error_grid(MeshCTX* meshctx, PropCTX* propctx) {
 			}
 		}
 
-	move_err_data(meshctx, propctx);
+//	move_err_data(meshctx, propctx);
 
 	calc_edge_states<ErrorElem>(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, &yek,
 	    &outflow);
@@ -206,7 +206,7 @@ void correct_dual_err_link(MeshCTX* err_meshctx, MeshCTX* dual_meshctx) {
 }
 
 void correct_dual_err_link(MeshCTX* err_meshctx, MeshCTX* dual_meshctx,
-    vector<ErrorElem*>& imported_elem) {
+    vector<pair<unsigned,unsigned> >& imported_elem) {
 
 	HashTable* Dual_Table = dual_meshctx->el_table;
 	HashTable* Err_Table = err_meshctx->el_table;
@@ -214,8 +214,10 @@ void correct_dual_err_link(MeshCTX* err_meshctx, MeshCTX* dual_meshctx,
 	correct_dual_err_link(err_meshctx, dual_meshctx);
 
 	for (int i = 0; i < imported_elem.size(); ++i) {
-		if (imported_elem[i])
-			set_link(imported_elem[i], Dual_Table, Err_Table);
+		unsigned key[]={imported_elem[i].first,imported_elem[i].second};
+		ErrorElem* Curr_El=(ErrorElem*) Err_Table->lookup(key);
+		if (Curr_El)
+			set_link(Curr_El, Dual_Table, Err_Table);
 	}
 
 }

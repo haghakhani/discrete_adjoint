@@ -81,7 +81,7 @@ void check_link(MeshCTX* err_meshctx, MeshCTX* dual_meshctx) ;
 void correct_dual_err_link(MeshCTX* err_meshctx, MeshCTX* dual_meshctx);
 
 void correct_dual_err_link(MeshCTX* err_meshctx, MeshCTX* dual_meshctx,
-    vector<ErrorElem*>& imported_elem);
+    vector<pair<unsigned,unsigned> >& imported_elem);
 
 void update_dual_err_link(HashTable *Dual_El_Tab, HashTable *Err_El_Tab);
 

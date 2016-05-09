@@ -62,7 +62,7 @@ void update_dual_grid(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 // we need this term to compute jacobian of elements
 	slopes(El_Table, NodeTable, matprops_ptr, 1);
 
-	move_dual_data(meshctx, propctx);
+//	move_dual_data(meshctx, propctx);
 
 	double tiny = GEOFLOW_TINY;
 	buck = El_Table->getbucketptr();
@@ -83,7 +83,7 @@ void update_dual_grid(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			}
 		}
 
-	move_dual_data(meshctx, propctx);
+//	move_dual_data(meshctx, propctx);
 
 // this function computes fluxes based on prev_state_vars (we need for dual problem),
 // and jacobian of fluxes and store the in elements
