@@ -310,7 +310,8 @@ int write_err_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timepro
 
 	//if Need to have generic form, do vector of vectors
 	vector<double> pheight, xmom, ymom, correction, error, bilinear_h, bilinear_p, bilinear_q, adj1,
-	    adj2, adj3, bilinear_adj1, bilinear_adj2, bilinear_adj3, xcoord, ycoord, zcoord;
+	    adj2, adj3, bilinear_adj1, bilinear_adj2, bilinear_adj3, residual1, residual2, residual3,
+	    xcoord, ycoord, zcoord;
 	vector<int> C1, C2, C3, C4;
 	int num_nodes = 0, num_elm = 0;
 	int i, j, k;
@@ -365,7 +366,10 @@ int write_err_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timepro
 				bilinear_adj2.push_back(bilinear_adj[1] * adjoint_scale[1]);
 				bilinear_adj3.push_back(bilinear_adj[2] * adjoint_scale[2]);
 				correction.push_back(*(EmTemp->get_correction()) * functional_scale);
-				error.push_back(*(EmTemp->get_el_error()) * functional_scale);
+				error.push_back(*(EmTemp->get_el_error() + 1) * functional_scale);
+				residual1.push_back(*(EmTemp->get_residual()) * residual_scale[0]);
+				residual2.push_back(*(EmTemp->get_residual() + 1) * residual_scale[1]);
+				residual3.push_back(*(EmTemp->get_residual() + 2) * residual_scale[2]);
 
 				num_elm++;
 				nodes = EmTemp->getNode();
@@ -487,6 +491,18 @@ int write_err_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timepro
 	//ERROR
 	copy(error.begin(), error.end(), vars);
 	GH5_write_state_vars(h5fid, num_elm, vars, "ERROR");
+
+	//RESIDUAL1
+	copy(residual1.begin(), residual1.end(), vars);
+	GH5_write_state_vars(h5fid, num_elm, vars, "RESIDUAL1");
+
+	//RESIDUAL2
+	copy(residual2.begin(), residual2.end(), vars);
+	GH5_write_state_vars(h5fid, num_elm, vars, "RESIDUAL2");
+
+	//RESIDUAL3
+	copy(residual3.begin(), residual3.end(), vars);
+	GH5_write_state_vars(h5fid, num_elm, vars, "RESIDUAL3");
 
 	delete[] vars;
 	GH5_closefile(h5fid);
@@ -613,6 +629,27 @@ int write_err_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timepro
 	xmlf << "<DataItem DataType=\"Float\" Precision=\"8\" ";
 	xmlf << "Dimensions=\"" << num_elm << " 1\" Format=\"HDF\">" << endl;
 	xmlf << "\t\t" << hdf5file << ":/Properties/ERROR" << endl;
+	xmlf << "</DataItem>" << endl;
+	xmlf << "</Attribute>" << endl;
+	// RESIDUAL1
+	xmlf << "<Attribute Type=\"Scalar\" Center=\"Cell\" Name=\"RESIDUAL1\">" << endl;
+	xmlf << "<DataItem DataType=\"Float\" Precision=\"8\" ";
+	xmlf << "Dimensions=\"" << num_elm << " 1\" Format=\"HDF\">" << endl;
+	xmlf << "\t\t" << hdf5file << ":/Properties/RESIDUAL1" << endl;
+	xmlf << "</DataItem>" << endl;
+	xmlf << "</Attribute>" << endl;
+	// RESIDUAL2
+	xmlf << "<Attribute Type=\"Scalar\" Center=\"Cell\" Name=\"RESIDUAL2\">" << endl;
+	xmlf << "<DataItem DataType=\"Float\" Precision=\"8\" ";
+	xmlf << "Dimensions=\"" << num_elm << " 1\" Format=\"HDF\">" << endl;
+	xmlf << "\t\t" << hdf5file << ":/Properties/RESIDUAL2" << endl;
+	xmlf << "</DataItem>" << endl;
+	xmlf << "</Attribute>" << endl;
+	// RESIDUAL2
+	xmlf << "<Attribute Type=\"Scalar\" Center=\"Cell\" Name=\"RESIDUAL3\">" << endl;
+	xmlf << "<DataItem DataType=\"Float\" Precision=\"8\" ";
+	xmlf << "Dimensions=\"" << num_elm << " 1\" Format=\"HDF\">" << endl;
+	xmlf << "\t\t" << hdf5file << ":/Properties/RESIDUAL3" << endl;
 	xmlf << "</DataItem>" << endl;
 	xmlf << "</Attribute>" << endl;
 	xmlf << "</Grid>" << endl;
