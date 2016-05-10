@@ -32,10 +32,8 @@
 #include<vector>
 #include "zlib.h"
 #include <time.h>
-#include <chrono>
 #include <iostream>
 #include <string.h>
-typedef chrono::high_resolution_clock Clock;
 
 inline string fill_name(const char * name) {
 
@@ -45,28 +43,29 @@ inline string fill_name(const char * name) {
 class Timer {
 public:
 	Timer(const char * namein) {
-		startTime = std::chrono::system_clock::now();
-		elapsedTime = startTime - startTime;
+		elapsedTime = 0.;
+		startTime = 0.;
+		stopTime = 0.;
 		name = fill_name(namein);
 	}
 
 	void start() {
-		startTime = std::chrono::system_clock::now();
+		startTime = clock();
 	}
 
 	void stop() {
-		stopTime = std::chrono::system_clock::now();
-		elapsedTime += stopTime - startTime;
+		stopTime = clock();
+		elapsedTime += (stopTime - startTime) / (double) CLOCKS_PER_SEC;
 	}
 
 	void print() {
-		cout <<name << " "<<elapsedTime.count() << " sec " << endl;
+		cout << name << " " << elapsedTime << " sec " << endl;
 	}
 
 private:
-	std::chrono::time_point<std::chrono::system_clock> startTime;
-	std::chrono::time_point<std::chrono::system_clock> stopTime;
-	std::chrono::duration<double> elapsedTime;
+	clock_t startTime;
+	clock_t stopTime;
+	double elapsedTime;
 	string name;
 };
 
