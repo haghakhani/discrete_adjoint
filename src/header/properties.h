@@ -60,7 +60,7 @@ public:
 	}
 
 	void print() {
-		cout << "elapsed time in " << name << " "<<elapsedTime.count() << " sec " << endl;
+		cout <<name << " "<<elapsedTime.count() << " sec " << endl;
 	}
 
 private:

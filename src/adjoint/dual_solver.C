@@ -293,14 +293,14 @@ bool must_write(MemUse* memuse_ptr, int myid) {
 void print_timings(int myid) {
 
 	if (myid == 0) {
-		cout << "\n======== TIMING of PRIMAL PROBLOM ========\n";
+		cout << "\n=========== TIMING of PRIMAL PROBLOM =========\n";
 		initialization_f.print();
 		adaption.print();
 		repartition_f.print();
 		stept.print();
 		write_solution.print();
 		visualization.print();
-		cout << "\n========== TIMING of DUAL PROBLOM ==========\n";
+		cout << "\n============ TIMING of DUAL PROBLOM ==========\n";
 		dual_init.print();
 		dual_adapt.print();
 		dual_repart.print();
@@ -309,7 +309,7 @@ void print_timings(int myid) {
 		adjoint_sol.print();
 		read_solution.print();
 		dual_vis.print();
-		cout << "\n========== TIMING of ERROR PROBLOM ==========\n";
+		cout << "\n=========== TIMING of ERROR PROBLOM ==========\n";
 		error_init.print();
 		error_adapt.print();
 		error_repart.print();
@@ -319,7 +319,7 @@ void print_timings(int myid) {
 		bilin_interp.print();
 		error_comp.print();
 		error_vis.print();
-		cout << "\n=============  TOTAL TIMING  =============\n";
+		cout << "\n===============  TOTAL TIMING  ===============\n";
 		primal.print();
 		dual.print();
 		error.print();

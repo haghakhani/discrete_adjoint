@@ -408,7 +408,7 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 	error_neigh_update.start();
 	update_neighbor_proc(propctx, cp_El_Table, allKeyRange);
 	move_err_data(err_meshctx, propctx);
-	error_neigh_update.start();
+	error_neigh_update.stop();
 	error_repart.start();
 	ElemPtrList<ErrorElem> err_refinelist, err_unrefinelist;
 	make_refine_unrefine_list_from_father(dual_meshctx, err_meshctx, &refinelist, &unrefinelist,
