@@ -25,12 +25,6 @@
 #endif
 
 #define DEBUG1
-//#define Error
-
-#define KEY0   3920807148
-#define KEY1   1321528399
-#define ITER   10
-#define J      0
 
 template<typename T1, typename T2>
 void copy_hashtables_objects(HashTable* El_Table, HashTable* cp_El_Table) {
@@ -68,9 +62,20 @@ void delete_hashtables_objects(HashTable* El_Table) {
 	delete El_Table;
 }
 
-Timer dual_vis("dual visualization"), jacobian("jacobian"), adjoint_sol("adjoint solver"),
-    dual_repart("dual repartitioning"), dual_adapt("dual adaption"), read_solution("read solution"),
-    dual_init("dual initialization");
+//Timers for dual, dual_init, dual_adapt and dual_repart have been set such that their timings include the error
+//part as well, so to compute the timing for dual itself for these timing the error part has to be considered
+
+Timer dual("dual"), dual_vis("dual visualization"), jacobian("jacobian"), adjoint_sol(
+    "adjoint solver"), dual_repart("dual repartitioning"), dual_adapt("dual adaption"),
+    read_solution("read solution"), dual_init("dual initialization"), dual_neigh_update(
+        "dual repart. neighbor update");
+
+#ifdef Error
+Timer error("error"), error_init("error initialization"), error_repart("error repartitioning"),
+    error_adapt("error adaption"), bilin_interp("bilinear interpolation"), error_comp(
+        "error computation"), read_dual("read from dual"), update_error("updating error grid"),
+    error_vis("error visualization"), error_neigh_update("error repart. neighbor update");
+#endif
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
@@ -111,6 +116,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	dual_vis.stop();
 
 #ifdef Error
+	error.start();
+	error_init.start();
 
 	HashTable *Err_El_Tab = new HashTable(El_Table);
 	HashTable *Err_Nod_Tab = new HashTable(NodeTable);
@@ -124,6 +131,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	if (myid == 0)
 		cout << "The Error grid has been generated ....\n";
 
+	error_init.stop();
+	error.stop();
 #endif
 
 	delete_hashtables_objects<Element>(El_Table);
@@ -131,38 +140,43 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	if (myid == 0)
 		cout << "computing ADJOINT time step " << maxiter << endl;
 
+	dual_init.stop();
 #ifdef Error
-
+	error.start();
 	// this function refines and do constant reconstruction
+	error_init.start();
 	uinform_refine(&error_meshctx, propctx);
 
 	make_dual_err_link(Dual_El_Tab, Err_El_Tab);
+	error_init.stop();
 
-//	check_link(&error_meshctx, &dual_meshctx);
-//
-//	AssertMeshErrorFree(Dual_El_Tab, NodeTable, numprocs, myid, -1);
-//
-//	AssertMeshErrorFree(Err_El_Tab, Err_Nod_Tab, numprocs, myid, 1.);
-
+	read_dual.start();
 	send_from_dual_to_error(Dual_El_Tab, Err_El_Tab, 1);
 
 	move_err_data(&error_meshctx, propctx);
+	read_dual.stop();
 
+	bilin_interp.start();
 	bilinear_interp(Err_El_Tab);
 
 	move_err_data(&error_meshctx, propctx);
+	bilin_interp.stop();
 
+	update_error.start();
 	update_bilinear_error_grid(&error_meshctx, propctx);
+	update_error.stop();
 
+	error_comp.start();
 	error_compute(&error_meshctx, propctx);
+	error_comp.stop();
 
+	error_vis.start();
 	write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW, 2);
-
+	error_vis.stop();
+	error.stop();
 #else
 	MeshCTX error_meshctx;
 #endif
-
-	dual_init.stop();
 
 	for (int iter = maxiter; iter > 0; --iter) {
 
@@ -172,135 +186,76 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		timeprops_ptr->adjiter++;
 
 		setup_dual_flow(solrec, &dual_meshctx, &error_meshctx, propctx);
-#ifdef Error
-
-		check_link(&error_meshctx, &dual_meshctx);
-#endif
-//		AssertMeshErrorFree(Dual_El_Tab, NodeTable, numprocs, myid, 0);
-
-//		AssertMeshErrorFree(Err_El_Tab, Err_Nod_Tab, numprocs, myid, 0);
-
-//		cout << "elements number of original grid " << num_nonzero_elem(El_Table) << endl;
-//		cout << "elements number of refined grid " << num_nonzero_elem(cp_El_Table) << endl;
 
 		timeprops_ptr->adjoint_time(iter - 1);
 
-//		compute_functional(El_Table, &functional, timeprops_ptr);
-
-//		eleminfo->update_dual_func(functional);
 		jacobian.start();
 		calc_jacobian(&dual_meshctx, propctx);
 
 		comminucate_jacobians(&dual_meshctx, propctx);
 		jacobian.stop();
 
-//		cout<<" max jac is: "<<max_jac<<endl;
 		adjoint_sol.start();
 		calc_adjoint(&dual_meshctx, propctx);
 		adjoint_sol.stop();
 //		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
 
 #ifdef Error
-//		if (iter > 1) {
+		error.start();
 
+		read_dual.start();
 		send_from_dual_to_error(Dual_El_Tab, Err_El_Tab, 0);
 
 		move_err_data(&error_meshctx, propctx);
+		read_dual.stop();
 
+		bilin_interp.start();
 		bilinear_interp(Err_El_Tab);
 
 		move_err_data(&error_meshctx, propctx);
+		bilin_interp.stop();
 
+		update_error.start();
 		update_bilinear_error_grid(&error_meshctx, propctx);
+		update_error.stop();
 
-//		move_err_data(&error_meshctx, propctx);
-
+		error_comp.start();
 		error_compute(&error_meshctx, propctx);
+		error_comp.stop();
+
+		error_vis.start();
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 		write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD, 1);
+		error_vis.stop();
 //		}
+		error.stop();
+#else
+		dual_vis.start();
+		write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD, 1);
+		dual_vis.stop();
 #endif
-
-//		if (iter - 1 == 1)
-//		cout << "test of adjoint: " << simple_test(El_Table, timeprops_ptr, matprops_ptr) << endl;
-
-//		map<int, Vec_Mat<9>> jac_code;
-
-//		copy_jacobian(El_Table, jac_code);
-
-//		calc_jacobian_old(meshctx, propctx);
-
-//		map<int, Vec_Mat<9>> jac_diff;
-
-//		copy_jacobian(El_Table, jac_diff);
-
-//		compare_jacobians(jac_code, jac_diff);
-
-//		clean_jacobian(El_Table);
-
-//		print_Elem_Table(El_Table, NodeTable, timeprops_ptr->iter, 1);
-
-//		check_state_vars_with_record(El_Table, solrec, iter);
-
-//		print_jacobian(El_Table, iter);
-
-//		if (eleminfo->iter == iter - 1)
-//			fill_pertelem_info(El_Table, eleminfo);
-
 //for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
 //sensitivity w.r.t to parameters
-
-//		uinform_refine(meshctx, propctx);
-
-//		error_compute(meshctx, propctx, iter);
 
 // in dual weighted error estimation if solver performs n step, we'll have n+1
 // solution and n+1 adjoint solution, but we'll have just n residual and as a
 // result n error estimate. The point is that at initial step (0'th step),
 // we know the solution from initial condition  so the error of 0th step is zero,
 // and we have to compute the error for other time steps.
-
-//		dual_unrefine(meshctx, propctx);
-//		dual_vis.start();
-//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-////			dualplotter(Dual_El_Tab, NodeTable, matprops_ptr, timeprops_ptr, mapname_ptr, 1);
-//			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
-//			    1);
-//		dual_vis.stop();
-//			write_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD);
 	}
-//	write_dual_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_CLOSE, 1);
-//	write_xdmf(El_Table, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_CLOSE);
 
 	delete_hashtables_objects<DualElem>(Dual_El_Tab);
 	delete_hashtables_objects<Node>(NodeTable);
 	close_xdmf_files(myid);
 
 #ifdef Error
+	error.start();
 	delete_hashtables_objects<ErrorElem>(Err_El_Tab);
 	delete_hashtables_objects<Node>(Err_Nod_Tab);
+	error.stop();
 #endif
 
 	delete_hashtables_objects<Jacobian>(solrec);
-
-	if (myid == 0) {
-		cout << "\n========== TIMING of DUAL PROBLOM ==========\n";
-		dual_init.print();
-		dual_adapt.print();
-		dual_repart.print();
-		jacobian.print();
-		adjoint_sol.print();
-		read_solution.print();
-		dual_vis.print();
-	}
-
-//	if (fabs(max_err1) > fabs(max_err2))
-//		cout << "max error occurred in test 1" << max_err1 << "  at iter " << iter_1 << " key is "
-//		    << key1_1 << " , " << key2_1 << endl;
-//	else
-//		cout << "max error occurred in test 2" << max_err2 << "  at iter " << iter_2 << " key is "
-//		    << key1_2 << " , " << key2_2 << endl;
-
 }
 
 bool must_write(MemUse* memuse_ptr, int myid) {
@@ -333,4 +288,41 @@ bool must_write(MemUse* memuse_ptr, int myid) {
 
 	return false;
 
+}
+
+void print_timings(int myid) {
+
+	if (myid == 0) {
+		cout << "\n======== TIMING of PRIMAL PROBLOM ========\n";
+		initialization_f.print();
+		adaption.print();
+		repartition_f.print();
+		stept.print();
+		write_solution.print();
+		visualization.print();
+		cout << "\n========== TIMING of DUAL PROBLOM ==========\n";
+		dual_init.print();
+		dual_adapt.print();
+		dual_repart.print();
+		dual_neigh_update.print();
+		jacobian.print();
+		adjoint_sol.print();
+		read_solution.print();
+		dual_vis.print();
+		cout << "\n========== TIMING of ERROR PROBLOM ==========\n";
+		error_init.print();
+		error_adapt.print();
+		error_repart.print();
+		error_neigh_update.print();
+		update_error.print();
+		read_dual.print();
+		bilin_interp.print();
+		error_comp.print();
+		error_vis.print();
+		cout << "\n=============  TOTAL TIMING  =============\n";
+		primal.print();
+		dual.print();
+		error.print();
+		total.print();
+	}
 }

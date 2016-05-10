@@ -73,11 +73,8 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 
 	delete_extra_nodes(El_Table, NodeTable);
 
-//	AssertMeshErrorFree(El_Table, NodeTable, numprocs, myid, 2.0);
-
-//	inspect_element(El_Table, dbg_key);
-
 #ifdef Error
+	error_repart.start();
 	buck = cp_El_Table->getbucketptr();
 	for (int i = 0; i < cp_El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -98,6 +95,7 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 
 	delete_extra_nodes(cp_El_Table, cp_NodeTable);
 	vector<pair<unsigned, unsigned> > imported_elem;
+	error_repart.stop();
 #endif
 
 	int count = 0, remaining;
@@ -106,17 +104,18 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 	MPI_Request* s_request = new MPI_Request[2];
 	MPI_Request* r_request = new MPI_Request[2];
 
+
+	int IfSentRecvd;
+	DualElemPack *receive_array, *send_array;
+
 #ifdef Error
 	MPI_Status e_status;
 	MPI_Request e_s_request;
 	MPI_Request e_r_request;
-#endif
-
-	int IfSentRecvd;
-	DualElemPack *receive_array, *send_array;
-#ifdef Error
 	ErrElemPack *err_receive_array, *err_send_array;
 #endif
+
+
 	do {
 		count++;
 
@@ -138,9 +137,6 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 			MPI_Irecv(&my_keys_status[0], send, MPI_INT, send_to, count, MPI_COMM_WORLD, &(r_request[0]));
 		}
 
-//		cout << "proc " << myid << " send " << send << " receive_size " << receive_size << " send to "
-//		    << send_to << " receive_from " << receive_from << endl;
-
 		if (receive_size > 0) {
 
 			keys_to_check_vec.resize(receive_size);
@@ -152,8 +148,6 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 			found = 0;
 			check_received_keys(solrec, keys_to_check_vec, other_keys_status, iter, found);
 
-//			update_my_key_range_receiving_elements(keys_to_check_vec, other_keys_status, myKeyRange);
-
 			MPI_Isend(&other_keys_status[0], receive_size, MPI_INT, receive_from, count, MPI_COMM_WORLD,
 			    &(s_request[0]));
 
@@ -162,14 +156,15 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 				MPI_Irecv(receive_array, found, DUALELEMTYPE, receive_from, count, MPI_COMM_WORLD,
 				    &(r_request[1]));
 #ifdef Error
+				error_repart.start();
 				err_receive_array = new ErrElemPack[4 * found];
 				MPI_Irecv(err_receive_array, 4 * found, ERRELEMTYPE, receive_from, count, MPI_COMM_WORLD,
 				    &(e_r_request));
+				error_repart.stop();
 #endif
 			}
 		}
 
-//		cout << "receive_size passed and " << found << " found \n";
 		int to_be_sent = 0;
 
 		if (send > 0) {
@@ -190,7 +185,9 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 
 						send_array = new DualElemPack[to_be_sent];
 #ifdef Error
+						error_repart.start();
 						err_send_array = new ErrElemPack[4 * to_be_sent];
+						error_repart.stop();
 #endif
 						int component = 0;
 						for (int i = 0; i < my_keys_status.size(); ++i)
@@ -198,6 +195,7 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 								repart_list[i]->Pack_element((send_array + component), NodeTable, send_to);
 
 #ifdef Error
+								error_repart.start();
 								ErrorElem* departing_elem[4];
 								for (int err = 0; err < 4; ++err) {
 									departing_elem[err] = (ErrorElem*) cp_El_Table->lookup(
@@ -208,20 +206,22 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 									departing_elem[err]->Pack_element((err_send_array + err + 4 * component),
 									    cp_NodeTable, send_to);
 								}
+								error_repart.stop();
 #endif
 
 								component += 1;
-//								cout << "status[" << i << "] " << my_keys_status[i] << endl;
 								if (my_keys_status[i] == 1 || my_keys_status[i] == 2 || my_keys_status[i] == 12) {
 
 									El_Table->remove(repart_list[i]->pass_key());
 									delete repart_list[i];
 
 #ifdef Error
+									error_repart.start();
 									for (int err = 0; err < 4; ++err) {
 										cp_El_Table->remove(departing_elem[err]->pass_key());
 										delete departing_elem[err];
 									}
+									error_repart.stop();
 #endif
 
 								} else
@@ -237,22 +237,20 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 						delete_extra_nodes(El_Table, NodeTable);
 
 #ifdef Error
+						error_repart.start();
 						MPI_Isend(err_send_array, 4 * to_be_sent, ERRELEMTYPE, send_to, count, MPI_COMM_WORLD,
 						    &(e_s_request));
 
 						delete_extra_nodes(cp_El_Table, cp_NodeTable);
+						error_repart.stop();
 #endif
 
 					}
-//					cout << to_be_sent << endl;
 				}
 			} while (IfSentRecvd != 1);
 		}
 
-//		cout << "send passed \n";
-
 		if (found) {
-//			cout << found << endl;
 			do {
 				MPI_Test(&(r_request[1]), &IfSentRecvd, &status);
 				if (IfSentRecvd) {
@@ -262,7 +260,6 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 
 							DualElem* elm = (DualElem*) El_Table->lookup(receive_array[component].key);
 							assert(elm == NULL);
-//							cout << component << endl;
 
 							elm = new DualElem((receive_array + component), NodeTable, myid);
 
@@ -297,8 +294,8 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 		}
 
 #ifdef Error
+		error_repart.start();
 		if (found) {
-//			cout << found << endl;
 			do {
 				MPI_Test(&(e_r_request), &IfSentRecvd, &status);
 				if (IfSentRecvd) {
@@ -311,7 +308,6 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 								ErrorElem* elm_err = (ErrorElem*) El_Table->lookup(
 								    err_receive_array[4 * component + err].key);
 								assert(elm_err == NULL);
-//							cout << component << endl;
 
 								elm_err = new ErrorElem((err_receive_array + 4 * component + err), cp_NodeTable,
 								    myid);
@@ -330,9 +326,9 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 
 			} while (IfSentRecvd != 1);
 		}
+		error_repart.stop();
 
 #endif
-//		cout << " found passed " << endl;
 
 		if (to_be_sent) {
 			vector<TRANSKEY> cp_trans_keys_vec;
@@ -369,7 +365,7 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 			} while (IfSentRecvd != 1);
 
 #ifdef Error
-
+			error_repart.start();
 			do {
 
 				MPI_Test(&(e_s_request), &IfSentRecvd, &status);
@@ -377,95 +373,74 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 					delete[] err_send_array;
 
 			} while (IfSentRecvd != 1);
+			error_repart.stop();
 #endif
 
 		}
-
-//		cout << " second send passed \n";
 
 		int nsize = trans_keys_vec.size();
 
 		MPI_Allreduce(&nsize, &remaining, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-//		cout << "nsize " << nsize << " remaining  " << remaining << endl;
-
-		// or when there is no missing element anymore
 	} while (count < numprocs - 1 && remaining > 0);
 
-//	cout << " out of while loop \n";
-
-//	check_the_list(imported_elem,El_Table);
-
 	delete_extra_nodes(El_Table, NodeTable);
+	dual_repart.stop();
+	dual_neigh_update.start();
 
-#ifdef Error
-	delete_extra_nodes(cp_El_Table, cp_NodeTable);
-#endif
-
-//	check_the_list(imported_elem,El_Table);
-//	cout << " extra node deleted \n";
-
-	// we need this because we still have not refined and unrefined
-	//	adjust_range(El_Table, refinelist, unrefinelist, myKeyRange);
 	double *allKeyRange = new double[2 * numprocs];
 
 	MPI_Allgather(myKeyRange, 2, MPI_DOUBLE, allKeyRange, 2, MPI_DOUBLE, MPI_COMM_WORLD);
 
-//	cout << "after all gather my range is " << fixed << myKeyRange[0] << " , " << myKeyRange[1]
-//	    << endl;
-
 	allKeyRange[0] = -1.0;
 	allKeyRange[2 * numprocs - 1] = DBL_MAX;
 
-//	for (int i = 0; i < 2 * numprocs; ++i)
-//		cout << allKeyRange[i] << " , ";
-
 	update_neighbor_proc(propctx, El_Table, allKeyRange);
-//	check_the_list(imported_elem,El_Table);
-
-#ifdef Error
-	update_neighbor_proc(propctx, cp_El_Table, allKeyRange);
-#endif
-
-//	check_the_list(imported_elem,El_Table);
-//	cout << " after update neighb proc \n";
 
 	move_dual_data(dual_meshctx, propctx);
 
-//	check_the_list(imported_elem,El_Table);
+	dual_neigh_update.stop();
 
 #ifdef Error
+	error_repart.start();
+	delete_extra_nodes(cp_El_Table, cp_NodeTable);
+	error_repart.stop();
+	error_neigh_update.start();
+	update_neighbor_proc(propctx, cp_El_Table, allKeyRange);
 	move_err_data(err_meshctx, propctx);
-//	check_the_list(imported_elem,El_Table);
+	error_neigh_update.start();
+	error_repart.start();
 	ElemPtrList<ErrorElem> err_refinelist, err_unrefinelist;
 	make_refine_unrefine_list_from_father(dual_meshctx, err_meshctx, &refinelist, &unrefinelist,
 	    &err_refinelist, &err_unrefinelist);
+	error_repart.stop();
 #endif
-//	check_the_list(imported_elem,El_Table);
-//	cout << "after move data \n";
-	dual_repart.stop();
+
+
 	dual_adapt.start();
 
 	dual_refine_unrefine<DualElem>(dual_meshctx, propctx, &refinelist, &unrefinelist);
-	dual_adapt.stop();
-//	check_the_list(imported_elem,El_Table);
-#ifdef Error
-//	cout << "size refine " << err_refinelist.get_num_elem() << " size unrefine "
-//	    << err_unrefinelist.get_num_elem() << endl;
-	dual_refine_unrefine<ErrorElem>(err_meshctx, propctx, &err_refinelist, &err_unrefinelist);
-//	check_the_list(imported_elem,El_Table);
-	correct_dual_err_link(err_meshctx, dual_meshctx, imported_elem);
-	calc_d_gravity(cp_El_Table);
-#endif
-//	AssertMeshErrorFree(El_Table, NodeTable, numprocs, myid, 1.0);
 
-//	cout << "after ref and unref \n";
+	calc_d_gravity(El_Table);
+
+	dual_adapt.stop();
+
+#ifdef Error
+	error_adapt.start();
+
+	dual_refine_unrefine<ErrorElem>(err_meshctx, propctx, &err_refinelist, &err_unrefinelist);
+
+	correct_dual_err_link(err_meshctx, dual_meshctx, imported_elem);
+
+	calc_d_gravity(cp_El_Table);
+
+	error_adapt.stop();
+#endif
+
 
 	delete[] s_request;
 	delete[] r_request;
 	delete[] allKeyRange;
-
-	calc_d_gravity(El_Table);
 }
 
 void set_send_receive_proc(int count, int myid, int numprocs, int& receive_from, int& send_to) {

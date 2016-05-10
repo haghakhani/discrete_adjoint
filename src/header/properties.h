@@ -39,7 +39,7 @@ typedef chrono::high_resolution_clock Clock;
 
 inline string fill_name(const char * name) {
 
-	return string(name) + string(STRING_SIZE - strlen(name), ' ');
+	return string(name) + string(STRING_SIZE - strlen(name), '.');
 }
 
 class Timer {
@@ -60,7 +60,7 @@ public:
 	}
 
 	void print() {
-		cout << "elapsed time in " << name << " timer is " << elapsedTime.count() << " sec " << endl;
+		cout << "elapsed time in " << name << " "<<elapsedTime.count() << " sec " << endl;
 	}
 
 private:

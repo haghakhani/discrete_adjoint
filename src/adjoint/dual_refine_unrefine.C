@@ -175,7 +175,6 @@ void dual_refine_unrefine<ErrorElem>(MeshCTX* meshctx, PropCTX* propctx,
 	vector<ErrorElem*> first_son;
 	vector<pair<unsigned, unsigned> > new_father;
 
-
 	reset_adaption_flag(El_Table);
 
 //	delete_unused_elements_nodes(El_Table, NodeTable, myid);
@@ -377,52 +376,17 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 	HashTable* cp_El_Table = err_meshctx->el_table;
 	HashTable* cp_NodeTable = err_meshctx->nd_table;
 #endif
+
 	TimeProps* timeprops_ptr = propctx->timeprops;
 	MapNames* mapname_ptr = propctx->mapnames;
 	MatProps* matprops_ptr = propctx->matprops;
 	int myid = propctx->myid, numprocs = propctx->numproc;
 	int iter = propctx->timeprops->iter;
-	read_solution.start();
-	if (solrec->get_first_solution() >= iter - 1) {
-//		solrec->free_all_available_sol();
-		solrec->load_new_set_of_solution(myid);
-	}
-	read_solution.stop();
 
-	HashEntryPtr *buck;
-//#ifdef Error
-//	if (iter % 5 == 0 && propctx->adapt_flag) {
-//
-//		ElemPtrList<ErrorElem> refinelist, unrefinelist;
-//
-//		buck = cp_El_Table->getbucketptr();
-//
-//		for (int i = 0; i < cp_El_Table->get_no_of_buckets(); i++)
-//			if (*(buck + i)) {
-//				HashEntryPtr currentPtr = *(buck + i);
-//				while (currentPtr) {
-//					ErrorElem *Curr_El = (ErrorElem*) (currentPtr->value);
-//
-//					if (Curr_El->get_adapted_flag() > 0)
-//						Curr_El->error_check_refine_unrefine(solrec, cp_El_Table, iter, &refinelist,
-//						    &unrefinelist);
-//
-//					currentPtr = currentPtr->next;
-//				}
-//			}
-////		cout<<"in refined table"<<endl;
-////		cout<<"has to be refined "<<refinelist->get_num_elem()<<endl;
-////		cout<<"has to be unrefined "<<unrefinelist->get_num_elem()<<endl;
-//
-//		dual_refine_unrefine<ErrorElem>(err_meshctx, propctx, &refinelist, &unrefinelist);
-//
-//		calc_d_gravity(cp_El_Table);
-//
-//	}
-//
-//	if (iter != 1)
-//		update_error_grid(solrec, err_meshctx, propctx);
-//#endif
+	read_solution.start();
+	if (solrec->get_first_solution() >= iter - 1)
+		solrec->load_new_set_of_solution(myid);
+	read_solution.stop();
 
 	//timing inside the function
 	if (timeprops_ptr->ifrepartition() && propctx->adapt_flag && numprocs > 1) {
@@ -431,7 +395,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 
 	ElemPtrList<DualElem> refinelist, unrefinelist;
 	ElemPtrList<ErrorElem> err_refinelist, err_unrefinelist;
-
+	HashEntryPtr *buck;
 	dual_adapt.start();
 	if (timeprops_ptr->ifrefine() && propctx->adapt_flag
 	    && !(timeprops_ptr->ifrepartition() && numprocs > 1)) {
@@ -450,21 +414,25 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 				}
 			}
 #ifdef Error
+		error_adapt.start();
 		make_refine_unrefine_list_from_father(dual_meshctx, err_meshctx, &refinelist, &unrefinelist,
 		    &err_refinelist, &err_unrefinelist);
+		error_adapt.stop();
 #endif
+
 		dual_refine_unrefine<DualElem>(dual_meshctx, propctx, &refinelist, &unrefinelist);
 
 		calc_d_gravity(El_Table);
 
 	}
-	dual_adapt.stop();
+
 	update_dual_grid(solrec, dual_meshctx, propctx);
 // inside updating state_vars we also delete the solution that we used
 // since we no longer need it
 	MPI_Barrier(MPI_COMM_WORLD);
 
 #ifdef Error
+	error_adapt.start();
 	if (timeprops_ptr->ifrefine() && propctx->adapt_flag
 	    && !(timeprops_ptr->ifrepartition() && numprocs > 1)) {
 
@@ -474,9 +442,9 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 
 		calc_d_gravity(cp_El_Table);
 	}
-//	update_error_grid(solrec, err_meshctx, propctx);
+	error_adapt.stop();
 #endif
 
 	clear_empty_jacobians(solrec, iter);
-
+	dual_adapt.stop();
 }

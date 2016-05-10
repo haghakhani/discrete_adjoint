@@ -36,15 +36,15 @@ Mat3x3 ZERO_MATRIX;
 
 double min_gen = 10000., min_dx[] = { 10000., 10000. };
 
+Timer primal("primal"), stept("step"), adaption("forward adaption"), visualization(
+    "forward visualization"), write_solution("writing solution"), repartition_f(
+    "forward repartition"), initialization_f("forward initialization"), total("total");
+
 int main(int argc, char *argv[]) {
 
-	Timer dual("dual"), forward("primal"), stept("step"), adaption("forward adaption"), visualization(
-	    "forward visualization"), write_solution("writing solution"), repartition(
-	    "forward repartition"), initialization("forward initialization"), total("total");
-
 	total.start();
-	forward.start();
-	initialization.start();
+	primal.start();
+	initialization_f.start();
 	MPI_Init(&argc, &argv);
 
 	int i; //-- counters
@@ -210,7 +210,7 @@ int main(int argc, char *argv[]) {
 	 for the colima hazard map runs, otherwise pass ifend() a constant
 	 valued */
 
-	initialization.stop();
+	initialization_f.stop();
 
 	while (!(timeprops.ifend(0)) && !ifstop) //(timeprops.ifend(0.5*statprops.vmean)) && !ifstop)
 	{
@@ -236,38 +236,25 @@ int main(int argc, char *argv[]) {
 		if ((adaptflag != 0) && timeprops.ifrefine()) {
 
 			adaption.start();
-//			AssertMeshErrorFree(BT_Elem_Ptr, BT_Node_Ptr, numprocs, myid, -2.0);
-
-//				unsigned keyy[2] = { 635356396, 1321528399 };
-//				if (checkElement(BT_Elem_Ptr, NULL, keyy))
-//					cout << "I found the suspecious element \n";
-
-//			refinement_report(BT_Elem_Ptr);
 
 			H_adapt(BT_Elem_Ptr, BT_Node_Ptr, h_count, TARGET, &matprops, &fluxprops, &timeprops, 5);
-
-//			refinement_report(BT_Elem_Ptr, myid);
-//			refine_flag_report(BT_Elem_Ptr, myid);
 
 			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
 			unrefine(BT_Elem_Ptr, BT_Node_Ptr, UNREFINE_TARGET, myid, numprocs, &timeprops, &matprops,
 			    rescomp);
-//			refinement_report(BT_Elem_Ptr, myid);
-//			refine_flag_report(BT_Elem_Ptr, myid);
 
 			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
 			adaption.stop();
 
 			if ((numprocs > 1) && timeprops.ifrepartition()) {
-				repartition.start();
+				repartition_f.start();
 
 				repartition2(BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
 				move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
-				repartition.stop();
+				repartition_f.stop();
 			}
-//			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
 			calc_d_gravity(BT_Elem_Ptr);
 		}
@@ -279,14 +266,6 @@ int main(int argc, char *argv[]) {
 
 		stept.stop();
 
-//		refinement_report(BT_Elem_Ptr, myid);
-//		refine_flag_report(BT_Elem_Ptr, myid);
-
-//		cout<<"elements number: "<<num_nonzero_elem(BT_Elem_Ptr)<<endl;
-
-//			set_ithm(BT_Elem_Ptr);
-
-//			print_Elem_Table(BT_Elem_Ptr, BT_Node_Ptr, timeprops.iter, 0);
 		write_solution.start();
 
 		solrec->record_solution(&meshctx, &propctx);
@@ -377,37 +356,7 @@ int main(int argc, char *argv[]) {
 
 	if (myid == 0)
 		output_summary(&timeprops, &statprops, savefileflag);
-//	return (0);
 
-	//printf("hpfem.C 1: xcen=%g\n",statprops.xcen);
-	/*
-	 if (viz_flag & 1)
-	 tecplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames,
-	 statprops.vstar, adjflag);
-	 //printf("hpfem.C 2: xcen=%g\n",statprops.xcen);
-	 MPI_Barrier(MPI_COMM_WORLD);
-
-	 if (viz_flag & 2)
-	 meshplotter(BT_Elem_Ptr, BT_Node_Ptr, &matprops, &timeprops, &mapnames,
-	 statprops.vstar);
-	 MPI_Barrier(MPI_COMM_WORLD);
-
-	 #ifdef HAVE_HDF5
-	 if(viz_flag&8)
-	 xdmerr=write_xdmf(BT_Elem_Ptr,BT_Node_Ptr,&timeprops,&matprops,&mapnames,XDMF_CLOSE);
-	 MPI_Barrier(MPI_COMM_WORLD);
-	 #endif
-
-	 if (viz_flag & 16) {
-	 if (myid == 0)
-	 grass_sites_header_output(&timeprops);
-	 grass_sites_proc_output(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops,
-	 &timeprops);
-	 }*/
-//	MPI_Barrier(MPI_COMM_WORLD);
-//	solrec->wrtie_sol_to_disk();
-//	solrec->delete_jacobians_after_writes();
-//	write_xdmf(BT_Elem_Ptr,BT_Node_Ptr,&timeprops,&matprops,&mapnames,XDMF_CLOSE);
 	MPI_Barrier(MPI_COMM_WORLD);
 	// write out ending warning, maybe flow hasn't finished moving
 	sim_end_warning(BT_Elem_Ptr, &matprops, &timeprops, statprops.vstar);
@@ -444,27 +393,15 @@ int main(int argc, char *argv[]) {
 	outline2.dealloc();
 
 	MPI_Barrier(MPI_COMM_WORLD);
-	forward.stop();
+	primal.stop();
 	dual.start();
 	dual_solver(solrec, &meshctx, &propctx);
 	dual.stop();
 	total.stop();
 
-	if (myid == 0) {
-		cout<<"\n======== TIMING of PRIMAL PROBLOM ========\n";
-		initialization.print();
-		adaption.print();
-		repartition.print();
-		stept.print();
-		write_solution.print();
-		visualization.print();
+	print_timings(myid);
 
-		cout<<"\n=============  TOTAL TIMING  =============\n";
-		forward.print();
-		dual.print();
-		total.print();
-	}
-#ifdef PERFTEST  
+#ifdef PERFTEST
 	long m = element_counter, ii;
 
 	MPI_Allreduce ( &element_counter, &ii, 1,
@@ -485,3 +422,4 @@ int main(int argc, char *argv[]) {
 	return (0);
 
 }
+
