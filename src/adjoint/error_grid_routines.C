@@ -236,8 +236,12 @@ void set_link(ErrorElem* son0, HashTable* Dual_Table, HashTable* Err_Table) {
 
 		assert(mysons[0]);
 
+		unsigned sonkeys[4][2];
+
+		father->gen_my_sons_key(Dual_Table,sonkeys);
+
 		for (int j = 1; j < 4; ++j) {
-			mysons[j] = (ErrorElem*) Err_Table->lookup(son0->get_brothers() + j * KEYLENGTH);
+			mysons[j] = (ErrorElem*) Err_Table->lookup(sonkeys[j]);
 			assert(mysons[j]);
 		}
 
