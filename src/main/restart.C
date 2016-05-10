@@ -43,7 +43,7 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 	NodeTable->write_table(myfile);
 	int numnode = table_members(NodeTable);
 	gzwrite(myfile, &(numnode), sizeof(int));
-	cout << "num node " << numnode << endl;
+//	cout << "num node " << numnode << endl;
 
 	int count = 0;
 	HashEntryPtr * buck = NodeTable->getbucketptr();
@@ -59,13 +59,13 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 			}
 		}
 
-	assert(count == numnode);
+//	assert(count == numnode);
 
 	El_Table->write_table(myfile);
 
 	int numelem = table_members(El_Table);
 	gzwrite(myfile, &(numelem), sizeof(int));
-	cout << "num elem " << numelem << endl;
+//	cout << "num elem " << numelem << endl;
 
 	count = 0;
 	buck = El_Table->getbucketptr();
@@ -81,7 +81,7 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 			}
 		}
 
-	assert(count == numelem);
+//	assert(count == numelem);
 
 	solrec->write_table(myfile);
 

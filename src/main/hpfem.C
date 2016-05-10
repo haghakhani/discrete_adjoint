@@ -282,7 +282,7 @@ int main(int argc, char *argv[]) {
 		 */
 //		if (OUTPUT) {
 		visualization.start();
-		if (timeprops.ifoutput()/* && OUTPUT*/) {
+		if (timeprops.ifoutput() && OUTPUT) {
 			move_data(numprocs, myid, BT_Elem_Ptr, BT_Node_Ptr, &timeprops);
 
 			output_discharge(&matprops, &timeprops, &discharge, myid);
