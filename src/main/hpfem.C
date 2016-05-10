@@ -317,7 +317,7 @@ int main(int argc, char *argv[]) {
 			save_forward(meshctx, propctx, solrec);
 			solrec->wrtie_sol_to_disk(myid);
 			solrec->delete_jacobians_after_writes();
-			write_alldata_ordered(BT_Elem_Ptr, myid);
+//			write_alldata_ordered(BT_Elem_Ptr, myid);
 		}
 
 #ifdef PERFTEST

@@ -48,6 +48,10 @@ c     if there is no yielding...
             kactx = 1.d0
             kacty = 1.d0
          endif
+         if (kactx.lt.0.d0) then
+            kactx=0.d0
+            kacty=0.d0
+         endif
       else
          vel = 0.d0
          kactx = 1.d0
