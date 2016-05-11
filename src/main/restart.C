@@ -38,6 +38,12 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 	sprintf(filename, "restart_%04d", myid);
 	gzFile myfile = gzopen(filename, "wb");
 
+	gzwrite(myfile, &(min_dx[0]), sizeof(double));
+
+	gzwrite(myfile, &(min_dx[1]), sizeof(double));
+
+	gzwrite(myfile, &(min_gen), sizeof(int));
+
 	timeprops->wrtie_to_file(myfile);
 
 	NodeTable->write_table(myfile);
@@ -123,6 +129,11 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 
 	if (myfile == NULL)
 		return (0);
+
+	gzread(myfile, (void*) &(min_dx[0]), sizeof(double));
+	gzread(myfile, (void*) &(min_dx[1]), sizeof(double));
+	gzread(myfile, (void*) &(min_gen), sizeof(int));
+
 
 	timeprops->read_from_file(myfile);
 
