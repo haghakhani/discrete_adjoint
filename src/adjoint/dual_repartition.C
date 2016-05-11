@@ -104,7 +104,6 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 	MPI_Request* s_request = new MPI_Request[2];
 	MPI_Request* r_request = new MPI_Request[2];
 
-
 	int IfSentRecvd;
 	DualElemPack *receive_array, *send_array;
 
@@ -114,7 +113,6 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 	MPI_Request e_r_request;
 	ErrElemPack *err_receive_array, *err_send_array;
 #endif
-
 
 	do {
 		count++;
@@ -416,7 +414,6 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 	error_repart.stop();
 #endif
 
-
 	dual_adapt.start();
 
 	dual_refine_unrefine<DualElem>(dual_meshctx, propctx, &refinelist, &unrefinelist);
@@ -436,7 +433,6 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 
 	error_adapt.stop();
 #endif
-
 
 	delete[] s_request;
 	delete[] r_request;

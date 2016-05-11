@@ -72,9 +72,9 @@ Timer dual("dual"), dual_vis("dual visualization"), jacobian("jacobian"), adjoin
 
 #ifdef Error
 Timer error("error"), error_init("error initialization"), error_repart("error repartitioning"),
-    error_adapt("error adaption"), bilin_interp("bilinear interpolation"), error_comp(
-        "error computation"), read_dual("read from dual"), update_error("updating error grid"),
-    error_vis("error visualization"), error_neigh_update("error repart. neighbor update");
+error_adapt("error adaption"), bilin_interp("bilinear interpolation"), error_comp(
+		"error computation"), read_dual("read from dual"), update_error("updating error grid"),
+error_vis("error visualization"), error_neigh_update("error repart. neighbor update");
 #endif
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
@@ -129,7 +129,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	error_meshctx.el_table = Err_El_Tab;
 	error_meshctx.nd_table = Err_Nod_Tab;
 	if (myid == 0)
-		cout << "The Error grid has been generated ....\n";
+	cout << "The Error grid has been generated ....\n";
 
 	error_init.stop();
 	error.stop();
@@ -224,14 +224,16 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		error_comp.stop();
 
 		error_vis.start();
-		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 		write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD, 1);
 		error_vis.stop();
 //		}
 		error.stop();
 #else
 		dual_vis.start();
-		write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD, 1);
+//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
+			    1);
 		dual_vis.stop();
 #endif
 //for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
@@ -309,6 +311,7 @@ void print_timings(int myid) {
 		adjoint_sol.print();
 		read_solution.print();
 		dual_vis.print();
+#ifdef Error
 		cout << "\n=========== TIMING of ERROR PROBLOM ==========\n";
 		error_init.print();
 		error_adapt.print();
@@ -319,10 +322,13 @@ void print_timings(int myid) {
 		bilin_interp.print();
 		error_comp.print();
 		error_vis.print();
+#endif
 		cout << "\n===============  TOTAL TIMING  ===============\n";
 		primal.print();
 		dual.print();
+#ifdef Error
 		error.print();
+#endif
 		total.print();
 	}
 }

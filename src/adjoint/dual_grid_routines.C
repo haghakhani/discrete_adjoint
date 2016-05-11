@@ -83,7 +83,8 @@ void update_dual_grid(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 			}
 		}
 
-//	move_dual_data(meshctx, propctx);
+	// this is very necessary for ghost element jacobian computation
+	move_dual_data(meshctx, propctx);
 
 // this function computes fluxes based on prev_state_vars (we need for dual problem),
 // and jacobian of fluxes and store the in elements
