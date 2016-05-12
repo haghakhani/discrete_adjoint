@@ -519,7 +519,7 @@ void MaxH_Functional::report_error_results(HashTable* El_Table, PropCTX* propctx
 	HashEntryPtr currentPtr;
 
 	ofstream myfile;
-	myfile.open ("final_output");
+	myfile.open("final_output", ios::app);
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -532,8 +532,9 @@ void MaxH_Functional::report_error_results(HashTable* El_Table, PropCTX* propctx
 				    && Curr_El->get_coord()[1] < ymax) {
 
 					if (Curr_El->get_el_error()[1] != 0.)
-						myfile << "short results at the pont of interest is:\n" << "Error = "
-						    << Curr_El->get_el_error()[1] * propctx->matprops->HEIGHT_SCALE
+						myfile << "\nAt x: " << Curr_El->get_coord()[0] * propctx->matprops->LENGTH_SCALE
+						    << ", y: " << Curr_El->get_coord()[1] * propctx->matprops->LENGTH_SCALE
+						    << "is:\nError = " << Curr_El->get_el_error()[1] * propctx->matprops->HEIGHT_SCALE
 						    << "\nNormalized error = " << Curr_El->get_el_error()[1] / hmax << "\nH_max="
 						    << hmax * propctx->matprops->HEIGHT_SCALE << " that happen at time step " << iter
 						    << endl;
