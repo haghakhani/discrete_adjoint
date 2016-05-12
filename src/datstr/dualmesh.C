@@ -1874,7 +1874,7 @@ void DualElem::calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<DualE
 	zm = (zp + 2) % 4;
 	np = (Node*) NodeTable->lookup(&node_key[zp + 4][0]);
 
-	if (neigh_proc[zp] == -1) {
+	if (neigh_proc[zp] == INIT) {
 
 		elem_list->push_back(this);
 
@@ -2118,7 +2118,7 @@ void DualElem::calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<DualE
 
 	if (neigh_proc[zm] != myid) {
 
-		if (neigh_proc[zm] == -1) {
+		if (neigh_proc[zm] == INIT) {
 
 			elem_list->push_back(this);
 			// we have to remove them in another function
@@ -2194,9 +2194,9 @@ void DualElem::calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<DualE
 
 			//*** in this section elem1 & elem2 are ghost element, and we do not need to update them here
 			// here the element elm1 must be a ghost element
-//			elm1->set_fluxjac(side, 1, 0, jac_neigh1);
-//			elm1->set_fluxjac(side, 1, 1, jac);
-//			elm1->set_fluxjac(side, 1, 2, jac_zero);
+//			(elm1->get_flx_jac_cont()).set(side, 1, 0, jac_neigh1);
+//			(elm1->get_flx_jac_cont()).set(side, 1, 1, jac);
+//			(elm1->get_flx_jac_cont()).set(side, 1, 2, ZERO_MATRIX);
 
 			elm2 = (DualElem*) El_Table->lookup(&neighbor[zm + 4][0]);
 			assert(elm2);
@@ -2234,7 +2234,6 @@ void DualElem::calc_flux(HashTable* El_Table, HashTable* NodeTable, vector<DualE
 					flx_jac_cont.set(side, 0, 2, jac_neigh2, ZERO_MATRIX);
 				}
 			}
-
 		}
 	}
 }
