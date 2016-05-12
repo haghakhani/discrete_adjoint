@@ -518,6 +518,9 @@ void MaxH_Functional::report_error_results(HashTable* El_Table, PropCTX* propctx
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
 
+	ofstream myfile;
+	myfile.open ("final_output");
+
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
@@ -529,7 +532,7 @@ void MaxH_Functional::report_error_results(HashTable* El_Table, PropCTX* propctx
 				    && Curr_El->get_coord()[1] < ymax) {
 
 					if (Curr_El->get_el_error()[1] != 0.)
-						cout << "short results at the pont of interest is:\n" << "Error = "
+						myfile << "short results at the pont of interest is:\n" << "Error = "
 						    << Curr_El->get_el_error()[1] * propctx->matprops->HEIGHT_SCALE
 						    << "\nNormalized error = " << Curr_El->get_el_error()[1] / hmax << "\nH_max="
 						    << hmax * propctx->matprops->HEIGHT_SCALE << " that happen at time step " << iter
@@ -538,5 +541,6 @@ void MaxH_Functional::report_error_results(HashTable* El_Table, PropCTX* propctx
 				currentPtr = currentPtr->next;
 			}
 		}
+	myfile.close();
 }
 
