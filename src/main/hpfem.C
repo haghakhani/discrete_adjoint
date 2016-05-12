@@ -36,6 +36,8 @@ Mat3x3 ZERO_MATRIX;
 
 double min_gen = 10000., min_dx[] = { 10000., 10000. };
 
+MaxH_Functional maxh_func;
+
 Timer primal("primal"), stept("step"), adaption("forward adaption"), visualization(
     "forward visualization"), write_solution("writing solution"), repartition_f(
     "forward repartition"), initialization_f("forward initialization"), total("total");
@@ -189,6 +191,11 @@ int main(int argc, char *argv[]) {
 		grass_sites_proc_output(BT_Elem_Ptr, BT_Node_Ptr, myid, &matprops, &timeprops);
 	}
 
+	double range[] = { min_dx[0] * pow(0.5, REFINE_LEVEL - min_gen), min_dx[1]
+	    * pow(0.5, REFINE_LEVEL - min_gen) };
+	maxh_func.set(643449, 2.15622e6, range, &matprops);
+//	maxh_func.set(644675, 2.15745e6, range, &matprops);
+
 	/*
 	 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 	 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -263,6 +270,7 @@ int main(int argc, char *argv[]) {
 
 		step(BT_Elem_Ptr, BT_Node_Ptr, myid, numprocs, &matprops, &timeprops, &pileprops, &fluxprops,
 		    &statprops, &order_flag, &outline, &discharge, adaptflag);
+		maxh_func.check_maxh(BT_Elem_Ptr, timeprops.iter);
 
 		stept.stop();
 

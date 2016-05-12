@@ -34,8 +34,6 @@ void calc_func_sens_hmax(MeshCTX* meshctx, PropCTX* propctx);
 
 void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 
-	calc_func_sens(meshctx, propctx);
-
 	HashTable* El_Table = meshctx->el_table;
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
@@ -45,6 +43,10 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 
 //	if (propctx->timeprops->adjiter == 0)
 //		calc_func_sens_hmax(meshctx, propctx);
+
+//	calc_func_sens(meshctx, propctx);
+
+	maxh_func.clac_func_sens(El_Table, iter);
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
@@ -413,5 +415,128 @@ void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, DualElem* eff_el, int 
 			func_sens[k] += dt * dx[0] * flux_jac(1, 1, 0)(0, k);
 	}
 
+}
+
+MaxH_Functional::MaxH_Functional() :
+		XSET(0.), YSET(0.), iter(0), hmax(0.), xmin(0.), xmax(0.), ymin(0.), ymax(0.) {
+
+}
+
+MaxH_Functional::MaxH_Functional(double xset, double yset, double *range, MatProps* matprops) :
+		XSET(xset / matprops->LENGTH_SCALE), YSET(yset / matprops->LENGTH_SCALE), iter(0), hmax(0.), xmin(
+		    xset - range[0]), xmax(xset + range[0]), ymin(yset - range[1]), ymax(yset + range[1]) {
+}
+
+void MaxH_Functional::set(double xset, double yset, double *range, MatProps* matprops) {
+
+	XSET = (xset / matprops->LENGTH_SCALE);
+	YSET = (yset / matprops->LENGTH_SCALE);
+	iter = (0);
+	hmax = (0.);
+	xmin = (XSET - range[0]);
+	xmax = (XSET + range[0]);
+	ymin = (YSET - range[1]);
+	ymax = (YSET + range[1]);
+
+}
+
+void MaxH_Functional::check_maxh(HashTable* El_Table, int iterin) {
+
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashEntryPtr currentPtr;
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Element* Curr_El = (Element*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0 && Curr_El->get_coord()[0] > xmin
+				    && Curr_El->get_coord()[0] < xmax && Curr_El->get_coord()[1] > ymin
+				    && Curr_El->get_coord()[1] < ymax && Curr_El->get_state_vars()[0] > hmax) {
+					hmax = Curr_El->get_state_vars()[0];
+					iter = iterin;
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+}
+
+void MaxH_Functional::clac_func_sens(HashTable* El_Table, int iterin) {
+
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashEntryPtr currentPtr;
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0 && Curr_El->get_coord()[0] > xmin
+				    && Curr_El->get_coord()[0] < xmax && Curr_El->get_coord()[1] > ymin
+				    && Curr_El->get_coord()[1] < ymax && iter == iterin) {
+
+					Curr_El->get_func_sens()[0] = 1.;
+					Curr_El->get_func_sens()[1] = 0.;
+					Curr_El->get_func_sens()[2] = 0.;
+
+				} else {
+					for (int i = 0; i < NUM_STATE_VARS; ++i)
+						Curr_El->get_func_sens()[i] = 0.;
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
+}
+
+void MaxH_Functional::update(PropCTX* propctx) {
+
+	double h[propctx->numproc];
+	int iters[propctx->numproc];
+	MPI_Allgather(&hmax, 1, MPI_DOUBLE, h, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+	MPI_Allgather(&iter, 1, MPI_INT, iters, 1, MPI_INT, MPI_COMM_WORLD);
+
+	double hgmax = 0.;
+	int proc = 0;
+	for (int i = 0; i < propctx->numproc; ++i) {
+		if (hgmax < h[i]) {
+			hgmax = h[i];
+			proc = i;
+		}
+	}
+
+	hmax = hgmax;
+	iter = iters[proc];
+}
+
+void MaxH_Functional::report_error_results(HashTable* El_Table, PropCTX* propctx) {
+
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashEntryPtr currentPtr;
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				ErrorElem* Curr_El = (ErrorElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0 && Curr_El->get_coord()[0] > xmin
+				    && Curr_El->get_coord()[0] < xmax && Curr_El->get_coord()[1] > ymin
+				    && Curr_El->get_coord()[1] < ymax) {
+
+					if (Curr_El->get_el_error()[1] != 0.)
+						cout << "short results at the pont of interest is:\n" << "Error = "
+						    << Curr_El->get_el_error()[1] * propctx->matprops->HEIGHT_SCALE
+						    << "\nNormalized error = " << Curr_El->get_el_error()[1] / hmax << "\nH_max="
+						    << hmax * propctx->matprops->HEIGHT_SCALE << " that happen at time step " << iter
+						    << endl;
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
 }
 

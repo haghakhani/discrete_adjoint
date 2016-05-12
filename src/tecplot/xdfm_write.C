@@ -328,7 +328,7 @@ int write_err_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timepro
 
 	double residual_scale[] = { hscale, momentum_scale, momentum_scale };
 	double error_scale, correction_scale, functional_scale;
-	error_scale = functional_scale = correction_scale = hscale * lscale * lscale;
+	error_scale = functional_scale = correction_scale = hscale ;//* lscale * lscale;
 	double adjoint_scale[3] = { functional_scale / hscale, functional_scale / momentum_scale,
 	    functional_scale / momentum_scale };
 

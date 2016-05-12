@@ -265,4 +265,27 @@ int check_elem_exist(HashTable *El_Table, unsigned *key);
 
 void fill_pertelem_info(HashTable* El_Table, PertElemInfo* eleminfo);
 
+//==========================================================================
+
+class MaxH_Functional {
+
+public:
+	MaxH_Functional();
+	MaxH_Functional(double xset, double yset, double *range, MatProps* matprops);
+	void set(double xset, double yset, double *range, MatProps* matprops);
+	void check_maxh(HashTable* El_Table, int iterin);
+	void clac_func_sens(HashTable* El_Table, int iterin);
+	int get_iter() {
+		return iter;
+	}
+	void update(PropCTX* propctx);
+	void report_error_results(HashTable* Err_El_Tab, PropCTX* propctx);
+
+private:
+
+	int iter;
+	double hmax, xmin, xmax, ymin, ymax, XSET, YSET;
+};
+
+extern MaxH_Functional maxh_func;
 #endif /* SRC_HEADER_ADJOINT_H_ */

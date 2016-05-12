@@ -71,7 +71,7 @@ Timer dual("dual"), dual_vis("dual visualization"), jacobian("jacobian"), adjoin
         "dual repart. neighbor update");
 
 #ifdef Error
-Timer  error("error"), error_init("error initialization"), error_repart("error repartitioning"),
+Timer error("error"), error_init("error initialization"), error_repart("error repartitioning"),
     error_adapt("error adaption"), bilin_interp("bilinear interpolation"), error_comp(
         "error computation"), read_dual("read from dual"), update_error("updating error grid"),
     error_vis("error visualization"), error_neigh_update("error repart. neighbor update");
@@ -178,7 +178,12 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	MeshCTX error_meshctx;
 #endif
 
+	maxh_func.update(propctx);
+
 	for (int iter = maxiter; iter > 0; --iter) {
+
+		if (iter < maxh_func.get_iter())
+			break;
 
 		timeprops_ptr->iter = iter;
 		if (myid == 0)
@@ -189,54 +194,58 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 		timeprops_ptr->adjoint_time(iter - 1);
 
-		jacobian.start();
-		calc_jacobian(&dual_meshctx, propctx);
+		if (iter == maxh_func.get_iter()) {
 
-		comminucate_jacobians(&dual_meshctx, propctx);
-		jacobian.stop();
+			jacobian.start();
+			calc_jacobian(&dual_meshctx, propctx);
 
-		adjoint_sol.start();
-		calc_adjoint(&dual_meshctx, propctx);
-		adjoint_sol.stop();
+			comminucate_jacobians(&dual_meshctx, propctx);
+			jacobian.stop();
+
+			adjoint_sol.start();
+			calc_adjoint(&dual_meshctx, propctx);
+			adjoint_sol.stop();
 //		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
 
 #ifdef Error
-		error.start();
+			error.start();
 
-		read_dual.start();
-		send_from_dual_to_error(Dual_El_Tab, Err_El_Tab, 0);
+			read_dual.start();
+			send_from_dual_to_error(Dual_El_Tab, Err_El_Tab, 0);
 
-		move_err_data(&error_meshctx, propctx);
-		read_dual.stop();
+			move_err_data(&error_meshctx, propctx);
+			read_dual.stop();
 
-		bilin_interp.start();
-		bilinear_interp(Err_El_Tab);
+			bilin_interp.start();
+			bilinear_interp(Err_El_Tab);
 
-		move_err_data(&error_meshctx, propctx);
-		bilin_interp.stop();
+			move_err_data(&error_meshctx, propctx);
+			bilin_interp.stop();
 
-		update_error.start();
-		update_bilinear_error_grid(&error_meshctx, propctx);
-		update_error.stop();
+			update_error.start();
+			update_bilinear_error_grid(&error_meshctx, propctx);
+			update_error.stop();
 
-		error_comp.start();
-		error_compute(&error_meshctx, propctx);
-		error_comp.stop();
+			error_comp.start();
+			error_compute(&error_meshctx, propctx);
+			error_comp.stop();
 
-		error_vis.start();
-		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-			write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
-			    1);
-		error_vis.stop();
+			error_vis.start();
+			if ((/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+			    || maxh_func.get_iter() == iter)
+				write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
+				    1);
+			error_vis.stop();
 //		}
-		error.stop();
+			error.stop();
 #else
-		dual_vis.start();
+			dual_vis.start();
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-		write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
-				1);
-		dual_vis.stop();
+			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
+					1);
+			dual_vis.stop();
 #endif
+		}
 //for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
 //sensitivity w.r.t to parameters
 
@@ -246,6 +255,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 // we know the solution from initial condition  so the error of 0th step is zero,
 // and we have to compute the error for other time steps.
 	}
+
+	maxh_func.report_error_results(Err_El_Tab, propctx);
 
 	delete_hashtables_objects<DualElem>(Dual_El_Tab);
 	delete_hashtables_objects<Node>(NodeTable);
@@ -333,3 +344,4 @@ void print_timings(int myid) {
 		total.print();
 	}
 }
+
