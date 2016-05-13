@@ -278,6 +278,15 @@ public:
 	int get_iter() {
 		return iter;
 	}
+	double get_hmax() {
+		return hmax;
+	}
+	void set_iter(int iterin){
+		iter=iterin;
+	}
+	void set_hmax(double hmaxin){
+		hmax=hmaxin;
+	}
 	void update(PropCTX* propctx);
 	void report_error_results(HashTable* Err_El_Tab, PropCTX* propctx);
 

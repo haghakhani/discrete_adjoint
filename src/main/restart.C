@@ -38,9 +38,16 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 	sprintf(filename, "restart_%04d", myid);
 	gzFile myfile = gzopen(filename, "wb");
 
+	//Writing date for dx calculation
 	gzwrite(myfile, &(min_dx[0]), sizeof(double));
 	gzwrite(myfile, &(min_dx[1]), sizeof(double));
 	gzwrite(myfile, &(min_gen), sizeof(double));
+
+	//writing maxh_func
+	int iter = maxh_func.get_iter();
+	double hmax = maxh_func.get_hmax();
+	gzwrite(myfile, &(iter), sizeof(int));
+	gzwrite(myfile, &(hmax), sizeof(double));
 
 	timeprops->wrtie_to_file(myfile);
 
@@ -132,6 +139,13 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 	gzread(myfile, (void*) &(min_dx[1]), sizeof(double));
 	gzread(myfile, (void*) &(min_gen), sizeof(double));
 
+	//reading maxh_func
+	double hmax;
+	int iter;
+	gzread(myfile, &(iter), sizeof(int));
+	gzread(myfile, &(hmax), sizeof(double));
+	maxh_func.set_iter(iter);
+	maxh_func.set_hmax(hmax);
 
 	timeprops->read_from_file(myfile);
 
@@ -205,7 +219,7 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 //
 //	move_data(numprocs, myid, *ElemTable, *NodeTable, timeprops);
 
-	// now reading outline
+// now reading outline
 
 	sprintf(filename, "outline_%04d", myid);
 	myfile = gzopen(filename, "rb");
