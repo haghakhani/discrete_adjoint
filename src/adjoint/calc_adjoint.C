@@ -519,7 +519,9 @@ void MaxH_Functional::report_error_results(HashTable* El_Table, PropCTX* propctx
 	HashEntryPtr currentPtr;
 
 	ofstream myfile;
-	myfile.open("final_output", ios::app);
+	char filename[20];
+	sprintf(filename,"hmax_func%04d",propctx->myid);
+	myfile.open(filename, ios::app);
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
