@@ -167,6 +167,7 @@ int main(int argc, char *argv[]) {
 	propctx.numproc = numprocs;
 	propctx.myid = myid;
 	propctx.adapt_flag = adaptflag;
+	propctx.discharge = &discharge;
 
 	if (myid == 0)
 		output_summary(&timeprops, &statprops, savefileflag);

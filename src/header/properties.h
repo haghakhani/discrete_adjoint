@@ -1133,6 +1133,184 @@ struct DISCHARGE {
 		return;
 	}
 
+	//! this function computes the sensitivity of the flux through the discharge planes w.r.t state variables
+	void discharge_sens(double nodes[9][2], double *statevars, double dt, double* sensitivity) {
+		//FILE* fp=fopen("dischargedebug","a");
+
+		double doubleswap1, doubleswap2, doubleswap3;
+		double nearestpoint[2], intersectpoint[2][2];
+		int iplane, iintersect, icorner1, icorner2;
+		double dxnode[4], dynode[4];
+		double dist2nearest2;
+
+		sensitivity[0] = sensitivity[1] = sensitivity[2] = 0.;
+
+		double halfsidelength = //assumes grid is not slanted
+		    (fabs(nodes[6][0] - nodes[4][0]) + fabs(nodes[6][1] - nodes[4][1])
+		        + fabs(nodes[7][0] - nodes[5][0]) + fabs(nodes[7][1] - nodes[5][1])) * 0.25;
+		double halfsidelength2 = halfsidelength * halfsidelength;
+		double err = halfsidelength / pow(2.0, 19.0);
+
+		for (icorner1 = 0; icorner1 < 4; icorner1++) {
+			icorner2 = (icorner1 + 1) % 4;
+			dxnode[icorner1] = nodes[icorner2][0] - nodes[icorner1][0];
+			dynode[icorner1] = nodes[icorner2][1] - nodes[icorner1][1];
+		}
+
+		for (iplane = 0; iplane < num_planes; iplane++) {
+			/* nearest x & y along line (not necessaryly on line segment) a and b
+			 and the elements center node
+			 x=(-(yb-ya)*(ya*(xb-xa)-xa*(yb-ya))+(xb-xa)*(y8*(yb-ya)+x8*(xb-xa)))/
+			 ((xb-xa)^2+(yb-ya)^2);
+			 y=( (xb-xa)*(ya*(xb-xa)-xa*(yb-ya))+(yb-ya)*(y8*(yb-ya)+x8*(xb-xa)))/
+			 ((xb-xa)^2+(yb-ya)^2);
+			 */
+			doubleswap1 = nodes[8][1] * planes[iplane][5] + nodes[8][0] * planes[iplane][4];
+			//         =y8         *(yb-ya)          +x8         *(xb-xa)
+			nearestpoint[0] = (-planes[iplane][5] * planes[iplane][7] + planes[iplane][4] * doubleswap1)
+			    / planes[iplane][6];
+			nearestpoint[1] = (+planes[iplane][4] * planes[iplane][7] + planes[iplane][5] * doubleswap1)
+			    / planes[iplane][6];
+
+			dist2nearest2 = (nodes[8][0] - nearestpoint[0]) * (nodes[8][0] - nearestpoint[0])
+			    + (nodes[8][1] - nearestpoint[1]) * (nodes[8][1] - nearestpoint[1]);
+
+			//check if line interesects with cell (not counting a single corner)
+			if (dist2nearest2 < halfsidelength2 * planes[iplane][8]) {
+				/* fprintf(fp,"nodecoord=(%8f,%8f) nearestpoint=(%8f,%8f)",
+				 nodes[8][0],nodes[8][1],nearestpoint[0],nearestpoint[1]);
+				 */
+
+				//it does intersect... if not terminated by endpoints
+				iintersect = 0; //stop when you have 2 unique "intersections"
+				//(the end of a discharge plane line segment is considered to
+				//be an "intersection")
+				for (icorner1 = 0; icorner1 < 4; icorner1++) {
+					doubleswap1 = nodes[icorner1][1] * dxnode[icorner1]
+					    - nodes[icorner1][0] * dynode[icorner1];
+					doubleswap2 = dxnode[icorner1] * planes[iplane][5] - dynode[icorner1] * planes[iplane][4];
+
+					if ((doubleswap2 < 0) || (doubleswap2 > 0)) {
+
+						intersectpoint[iintersect][0] = (planes[iplane][4] * doubleswap1
+						    - dxnode[icorner1] * planes[iplane][7]) / doubleswap2;
+						intersectpoint[iintersect][1] = (planes[iplane][5] * doubleswap1
+						    - dynode[icorner1] * planes[iplane][7]) / doubleswap2;
+
+						int ifprint = 0;
+						if (((intersectpoint[iintersect][0] < planes[iplane][0] - err)
+						    && (planes[iplane][0] < planes[iplane][1]))
+						    || ((intersectpoint[iintersect][0] > planes[iplane][0] + err)
+						        && (planes[iplane][0] > planes[iplane][1]))
+						    || ((intersectpoint[iintersect][1] < planes[iplane][2] - err)
+						        && (planes[iplane][2] < planes[iplane][3]))
+						    || ((intersectpoint[iintersect][1] > planes[iplane][2] + err)
+						        && (planes[iplane][2] > planes[iplane][3]))) {
+							intersectpoint[iintersect][0] = planes[iplane][0];
+							intersectpoint[iintersect][1] = planes[iplane][2];
+						} else if (((intersectpoint[iintersect][0] < planes[iplane][1] - err)
+						    && (planes[iplane][1] < planes[iplane][0]))
+						    || ((intersectpoint[iintersect][0] > planes[iplane][1] + err)
+						        && (planes[iplane][1] > planes[iplane][0]))
+						    || ((intersectpoint[iintersect][1] < planes[iplane][3] - err)
+						        && (planes[iplane][3] < planes[iplane][2]))
+						    || ((intersectpoint[iintersect][1] > planes[iplane][3] + err)
+						        && (planes[iplane][3] > planes[iplane][2]))) {
+							intersectpoint[iintersect][0] = planes[iplane][1];
+							intersectpoint[iintersect][1] = planes[iplane][3];
+						}
+
+						if (((((intersectpoint[iintersect][0] - intersectpoint[0][0])
+						    * (intersectpoint[iintersect][0] - intersectpoint[0][0])
+						    + (intersectpoint[iintersect][1] - intersectpoint[0][1])
+						        * (intersectpoint[iintersect][1] - intersectpoint[0][1]))
+						    > (halfsidelength / 512.0)) || (iintersect == 0)) && (doubleswap2 != 0.0))
+							iintersect++;
+
+						if (iintersect == 2) {
+
+							if ((intersectpoint[1][0] - intersectpoint[0][0])
+							    * (planes[iplane][1] - planes[iplane][0])
+							    + (intersectpoint[1][1] - intersectpoint[0][1])
+							        * (planes[iplane][3] - planes[iplane][2]) < 0.0) {
+								doubleswap3 = intersectpoint[0][0];
+								intersectpoint[0][0] = intersectpoint[1][0];
+								intersectpoint[1][0] = doubleswap3;
+								doubleswap3 = intersectpoint[0][1];
+								intersectpoint[0][1] = intersectpoint[1][1];
+								intersectpoint[1][1] = doubleswap3;
+							}
+
+							break; //we've got both intersection points
+						}
+					}
+				} // for(icorner1=0;icorner1<4;icorner1++)
+
+				if (iintersect == 1) {
+					//a plane end point is in this cell
+
+					doubleswap1 = //dist from center node to 1st plane endpoint
+					    (nodes[8][0] - planes[iplane][0]) * (nodes[8][0] - planes[iplane][0])
+					        + (nodes[8][1] - planes[iplane][2]) * (nodes[8][1] - planes[iplane][2]);
+
+					doubleswap2 = //dist from center node to 2nd plane endpoint
+					    (nodes[8][0] - planes[iplane][1]) * (nodes[8][0] - planes[iplane][1])
+					        + (nodes[8][1] - planes[iplane][3]) * (nodes[8][1] - planes[iplane][3]);
+
+					if (doubleswap1 <= doubleswap2) { //it's the 1st end point
+						intersectpoint[1][0] = planes[iplane][0];
+						intersectpoint[1][1] = planes[iplane][2];
+					} else { //it's the 2nd end point
+						intersectpoint[1][0] = planes[iplane][1];
+						intersectpoint[1][1] = planes[iplane][3];
+					}
+
+					iintersect = 2; //we consider plane end point to be an "intersection"
+				}
+
+				if (iintersect == 2) {
+
+					/*
+					 if((intersectpoint[0][0]>intersectpoint[1][0])||
+					 ((intersectpoint[0][0]==intersectpoint[1][0])&&
+					 (intersectpoint[0][1]>intersectpoint[1][1]))) {
+					 //need to reorder the intersection points to have correct sign
+					 //of discharge
+
+					 //swap x
+					 doubleswap1=intersectpoint[0][0];
+					 intersectpoint[0][0]=intersectpoint[1][0];
+					 intersectpoint[1][0]=doubleswap1;
+
+					 //swap y
+					 doubleswap1=intersectpoint[0][1];
+					 intersectpoint[0][1]=intersectpoint[1][1];
+					 intersectpoint[1][1]=doubleswap1;
+					 }
+					 */
+
+//					//discharge += dt*(hVx*dy-hVy*dx)
+//					planes[iplane][9] += dt
+//					    * (statevars[1] * (intersectpoint[1][1] - intersectpoint[0][1])
+//					        - statevars[2] * (intersectpoint[1][0] - intersectpoint[0][0]));
+
+					if (statevars[0] != 0.)
+						sensitivity[0] += dt
+						    * (statevars[1] * (intersectpoint[1][1] - intersectpoint[0][1])
+						        - statevars[2] * (intersectpoint[1][0] - intersectpoint[0][0])) / statevars[0];
+
+					sensitivity[1] += dt * (intersectpoint[1][1] - intersectpoint[0][1]);
+					sensitivity[2] += -dt * (intersectpoint[1][0] - intersectpoint[0][0]);
+
+				} // if(iintersect==2)
+
+			} //if(halfsidelength*(absdy+absdx)>=absdx*absdx+absdy*absdy)
+
+		} //for(iplane=0;iplane<num_planes;iplane++)
+
+		return;
+	}
+
 	//! this function deallocates the array holding the information about the discharge planes
 	void dealloc() {
 		num_planes = 0;
@@ -1438,6 +1616,7 @@ struct PropCTX {
 	TimeProps* timeprops;
 	MapNames* mapnames;
 	OutLine* outline;
+	DISCHARGE* discharge;
 	int numproc;
 	int myid;
 	int adapt_flag;
