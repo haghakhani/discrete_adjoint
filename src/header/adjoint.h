@@ -18,6 +18,8 @@ void move_err_data(MeshCTX* meshctx, PropCTX* propctx);
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
 
+void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, PropCTX* propctx);
+
 void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, MatProps* matprops_ptr,
     int effelement, int j, int myid, double increment);
 
@@ -228,6 +230,9 @@ void delete_extra_nodes(HashTable* El_Table, HashTable* NodeTable);
 void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKeyRange);
 
 void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec);
+
+void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX* propctx,
+    SolRec *solrec);
 
 extern Timer dual, dual_vis, jacobian, adjoint_sol, dual_repart, dual_adapt, read_solution,
     dual_init, dual_neigh_update;

@@ -619,7 +619,7 @@ public:
 
 	int check_state(SolRec* solrec, HashTable* El_Table, int iter);
 
-	void write_elem_info(HashTable* NodeTable, char* filename, int iter, double dt);
+	virtual void write_elem_info(HashTable* NodeTable, char* filename, int iter, double dt);
 
 	void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int myid,
 	    double dt, int* order_flag, double *outflow, ResFlag lresflag, ResFlag rresflag);

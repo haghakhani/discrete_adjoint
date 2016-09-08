@@ -456,6 +456,24 @@ struct TimeProps {
 			return 0;
 	}
 
+	void update_savetime() {
+		isave--;
+		ndnextsave = ((isave + 1) * timesave) / TIME_SCALE;
+	}
+
+	//! checks if the restart file should be saved now
+	int ifsave_adj() {
+		// don't save if nobody asked you to do it
+//		if (timesave < 1.0E-06)
+//			return 0;
+		if (fabs(time - ndnextsave) < 1.0E-06 && time > 0.) {
+			isave--; //using isave eliminates roundoff
+			ndnextsave = ((isave + 1) * timesave) / TIME_SCALE;
+			return (1);
+		} else
+			return 0;
+	}
+
 	//! checks if the output files should be written now
 	int ifoutput() {
 		if (time >= ndnextoutput) {
@@ -1293,7 +1311,6 @@ struct DISCHARGE {
 //					planes[iplane][9] += dt
 //					    * (statevars[1] * (intersectpoint[1][1] - intersectpoint[0][1])
 //					        - statevars[2] * (intersectpoint[1][0] - intersectpoint[0][0]));
-
 					if (statevars[0] != 0.)
 						sensitivity[0] += dt
 						    * (statevars[1] * (intersectpoint[1][1] - intersectpoint[0][1])

@@ -61,7 +61,6 @@ const int EFF_ELL = 9;
 
 const int FORWARD = 0;
 const int DUAL = 1;
-const int ERROR = 2;
 
 const size_t STRING_SIZE = 30;
 

@@ -71,7 +71,7 @@ Timer dual("dual"), dual_vis("dual visualization"), jacobian("jacobian"), adjoin
         "dual repart. neighbor update");
 
 #ifdef Error
-Timer  error("error"), error_init("error initialization"), error_repart("error repartitioning"),
+Timer error("error"), error_init("error initialization"), error_repart("error repartitioning"),
     error_adapt("error adaption"), bilin_interp("bilinear interpolation"), error_comp(
         "error computation"), read_dual("read from dual"), update_error("updating error grid"),
     error_vis("error visualization"), error_neigh_update("error repart. neighbor update");
@@ -88,6 +88,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
 	const int maxiter = timeprops_ptr->iter;
+	timeprops_ptr->update_savetime();
 
 	dual_init.start();
 
@@ -199,6 +200,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		calc_adjoint(&dual_meshctx, propctx);
 		adjoint_sol.stop();
 //		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
+		if (iter == 20)
+			write_alldualdata_ordered(Dual_El_Tab, myid);
 
 #ifdef Error
 		error.start();
@@ -237,6 +240,11 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 				1);
 		dual_vis.stop();
 #endif
+		if (timeprops_ptr->ifsave_adj()) {
+			move_dual_data(&dual_meshctx, propctx);
+			move_err_data(&error_meshctx, propctx);
+			save_dual(&dual_meshctx, &error_meshctx, propctx, solrec);
+		}
 //for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
 //sensitivity w.r.t to parameters
 
@@ -259,6 +267,113 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 #endif
 
 	delete_hashtables_objects<Jacobian>(solrec);
+}
+
+void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, PropCTX* propctx) {
+
+	HashTable* Dual_El_Tab = dual_meshctx->el_table;
+	HashTable* NodeTable = dual_meshctx->nd_table;
+
+	HashTable* Err_El_Tab = error_meshctx->el_table;
+	HashTable* Err_Nod_Tab = error_meshctx->nd_table;
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
+	int myid = propctx->myid, numprocs = propctx->numproc;
+
+	const int maxiter = timeprops_ptr->iter-1;
+
+	for (int iter = maxiter; iter > 0; --iter) {
+
+		timeprops_ptr->iter = iter;
+		if (myid == 0)
+			cout << "computing ADJOINT time step " << iter - 1 << endl;
+		timeprops_ptr->adjiter++;
+
+		setup_dual_flow(solrec, dual_meshctx, error_meshctx, propctx);
+
+		timeprops_ptr->adjoint_time(iter - 1);
+
+		jacobian.start();
+		calc_jacobian(dual_meshctx, propctx);
+
+		comminucate_jacobians(dual_meshctx, propctx);
+		jacobian.stop();
+
+		adjoint_sol.start();
+		calc_adjoint(dual_meshctx, propctx);
+		adjoint_sol.stop();
+//		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
+
+		if (iter == 20)
+			write_alldualdata_ordered(Dual_El_Tab, myid);
+
+#ifdef Error
+		error.start();
+
+		read_dual.start();
+		send_from_dual_to_error(Dual_El_Tab, Err_El_Tab, 0);
+
+		move_err_data(error_meshctx, propctx);
+		read_dual.stop();
+
+		bilin_interp.start();
+		bilinear_interp(Err_El_Tab);
+
+		move_err_data(error_meshctx, propctx);
+		bilin_interp.stop();
+
+		update_error.start();
+		update_bilinear_error_grid(error_meshctx, propctx);
+		update_error.stop();
+
+		error_comp.start();
+		error_compute(error_meshctx, propctx);
+		error_comp.stop();
+
+		error_vis.start();
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+			write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
+			    1);
+		error_vis.stop();
+//		}
+		error.stop();
+#else
+		dual_vis.start();
+//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+		write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
+				1);
+		dual_vis.stop();
+#endif
+		if (timeprops_ptr->ifsave_adj()) {
+			move_dual_data(dual_meshctx, propctx);
+			move_err_data(error_meshctx, propctx);
+			save_dual(dual_meshctx, error_meshctx, propctx, solrec);
+		}
+//for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
+//sensitivity w.r.t to parameters
+
+// in dual weighted error estimation if solver performs n step, we'll have n+1
+// solution and n+1 adjoint solution, but we'll have just n residual and as a
+// result n error estimate. The point is that at initial step (0'th step),
+// we know the solution from initial condition  so the error of 0th step is zero,
+// and we have to compute the error for other time steps.
+	}
+
+	delete_hashtables_objects<DualElem>(Dual_El_Tab);
+	delete_hashtables_objects<Node>(NodeTable);
+	close_xdmf_files(myid);
+
+#ifdef Error
+	error.start();
+	delete_hashtables_objects<ErrorElem>(Err_El_Tab);
+	delete_hashtables_objects<Node>(Err_Nod_Tab);
+	error.stop();
+#endif
+
+	delete_hashtables_objects<Jacobian>(solrec);
+
 }
 
 bool must_write(MemUse* memuse_ptr, int myid) {
