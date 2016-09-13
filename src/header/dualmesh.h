@@ -34,6 +34,8 @@ public:
 
 	SolRec(gzFile& myfile);
 
+	SolRec(gzFile& myfile, const int iter, const int myid);
+
 	// this function records the solution of last time step
 	void record_solution(MeshCTX* meshctx, PropCTX* propctx);
 
@@ -74,7 +76,7 @@ public:
 
 	Solution* lookup(unsigned* key, int iter);
 
-	void write_table(gzFile& myfile,const int status=0);
+	void write_table(gzFile& myfile);
 
 };
 
@@ -154,6 +156,10 @@ public:
 
 	void write_elem(gzFile& myfile);
 
+	double* get_pint_sens();
+
+	double* get_phi_sens();
+
 private:
 
 	//! adjoint vector
@@ -183,6 +189,10 @@ private:
 	// that the four element in error grid has been refined but still the element in dual grid
 	//
 	ErrorElem* mysons[4];
+
+	double phi_sens[3];
+
+	double pint_sens[3];
 };
 
 inline double* DualElem::get_adjoint() {
@@ -216,6 +226,17 @@ inline Matrix<double, 2, 5>& DualElem::get_hslope_sens() {
 
 inline ErrorElem** DualElem::get_son_addresses() {
 	return mysons;
+}
+;
+
+inline double* DualElem::get_pint_sens() {
+	return pint_sens;
+}
+;
+
+inline double* DualElem::get_phi_sens() {
+
+	return phi_sens;
 }
 ;
 

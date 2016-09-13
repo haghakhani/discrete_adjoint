@@ -25,16 +25,28 @@ SolRec::SolRec(gzFile& myfile) :
 
 }
 
-void SolRec::write_table(gzFile& myfile,const int status) {
+SolRec::SolRec(gzFile& myfile, const int iter, const int myid) :
+		HashTable(myfile), range(50) {
+
+	last_solution_time_step = iter - 2;
+
+	int count = 0;
+
+	do {
+		read_sol_from_disk(myid, last_solution_time_step - count);
+		count++;
+
+	} while (!(last_solution_time_step - count < 0) && count < range);
+
+	first_solution_time_step = last_solution_time_step - count + 1;
+
+}
+
+void SolRec::write_table(gzFile& myfile) {
 
 	HashTable::write_table(myfile);
 
-	int record_time_step=last_solution_time_step;
-
-	if(status==DUAL)
-		record_time_step++;
-
-	gzwrite(myfile, &record_time_step, sizeof(int));
+	gzwrite(myfile, &last_solution_time_step, sizeof(int));
 
 }
 
@@ -1068,7 +1080,7 @@ DualElem::DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 		el_error[i] = elem2->el_error[i];
 	}
 
-	//and the node info -- ignore some info if this is just getting a parent from another processor...
+//and the node info -- ignore some info if this is just getting a parent from another processor...
 	for (i = 0; i < 8; i++) {
 		if (elem2->n_coord[i][0] * elem2->n_coord[i][1] == 0) {
 			printf(
@@ -1112,7 +1124,7 @@ DualElem::DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 	} else if (refined != 0) // only update if this is from an active element
 		node->set_parameters(elem2->n_info[8]);
 
-	//geoflow stuff
+//geoflow stuff
 	positive_x_side = elem2->positive_x_side;
 	elevation = elem2->elevation;
 	for (i = 0; i < DIMENSION; i++) {
@@ -1194,7 +1206,7 @@ void DualElem::update(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 		el_error[i] = elem2->el_error[i];
 	}
 
-	//and the node info -- ignore some info if this is just getting a parent from another processor...
+//and the node info -- ignore some info if this is just getting a parent from another processor...
 	for (i = 0; i < 8; i++) {
 		if (elem2->n_coord[i][0] * elem2->n_coord[i][1] == 0) {
 			printf(
@@ -1238,7 +1250,7 @@ void DualElem::update(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 	} else if (refined != 0) // only update if this is from an active element
 		node->set_parameters(elem2->n_info[8]);
 
-	//geoflow stuff
+//geoflow stuff
 	positive_x_side = elem2->positive_x_side;
 	elevation = elem2->elevation;
 	for (i = 0; i < DIMENSION; i++) {
@@ -1352,7 +1364,7 @@ void DualElem::Pack_element(DualElemPack* elem, HashTable* HT_Node_Ptr, int dest
 
 	}
 
-	//and the node info:
+//and the node info:
 	for (i = 0; i < 8; i++) {
 		node = (Node*) HT_Node_Ptr->lookup(elem->node_key[i]);
 		assert(node);
@@ -1369,7 +1381,7 @@ void DualElem::Pack_element(DualElemPack* elem, HashTable* HT_Node_Ptr, int dest
 		elem->n_coord[8][j] = node->coord[j];
 	elem->node_elevation[8] = node->elevation;
 
-	//geoflow stuff
+//geoflow stuff
 	elem->positive_x_side = positive_x_side;
 	elem->elevation = elevation;
 	for (i = 0; i < DIMENSION; i++) {
@@ -2383,15 +2395,15 @@ void DualElem::dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable*
     vector<TRANSKEY>& trans_keys_vec, vector<int>& trans_keys_status,
     vector<DualElem*>& repart_list, double* myKeyRange) {
 
-	// trans_keys_status is a vector that holds the status of the element that are being transfered
-	// the number of elements that are being transfered is equal to number of TRANSKEYS that are stored
-	// in the trans_keys_vec and is equal to the size of trans_keys_status vector
-	// TRANSKEY is a simple structure that holds 6x2 unsigned which is equal to 6 keys
-	// the first key is for element itself, the second key is for element's father and the next four
-	// key are for element's sons
-	// status of a must_be_transfered element is as following:
-	// status=0 it has to be transfered and if it is refined in the next step non of his sons have been found in the current procs
-	// status=1
+// trans_keys_status is a vector that holds the status of the element that are being transfered
+// the number of elements that are being transfered is equal to number of TRANSKEYS that are stored
+// in the trans_keys_vec and is equal to the size of trans_keys_status vector
+// TRANSKEY is a simple structure that holds 6x2 unsigned which is equal to 6 keys
+// the first key is for element itself, the second key is for element's father and the next four
+// key are for element's sons
+// status of a must_be_transfered element is as following:
+// status=0 it has to be transfered and if it is refined in the next step non of his sons have been found in the current procs
+// status=1
 
 	Solution* prev_sol = solrec->lookup(key, iter - 1);
 
@@ -3082,7 +3094,7 @@ ErrorElem::ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 		el_error[i] = elem2->el_error[i];
 	}
 
-	//and the node info -- ignore some info if this is just getting a parent from another processor...
+//and the node info -- ignore some info if this is just getting a parent from another processor...
 	for (i = 0; i < 8; i++) {
 		if (elem2->n_coord[i][0] * elem2->n_coord[i][1] == 0) {
 			printf(
@@ -3126,7 +3138,7 @@ ErrorElem::ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 	} else if (refined != 0) // only update if this is from an active element
 		node->set_parameters(elem2->n_info[8]);
 
-	//geoflow stuff
+//geoflow stuff
 	positive_x_side = elem2->positive_x_side;
 	elevation = elem2->elevation;
 	for (i = 0; i < DIMENSION; i++) {
@@ -3457,7 +3469,7 @@ void ErrorElem::Pack_element(ErrElemPack* elem, HashTable* HT_Node_Ptr, int dest
 
 	}
 
-	//and the node info:
+//and the node info:
 	for (i = 0; i < 8; i++) {
 		node = (Node*) HT_Node_Ptr->lookup(elem->node_key[i]);
 		assert(node);
@@ -3474,7 +3486,7 @@ void ErrorElem::Pack_element(ErrElemPack* elem, HashTable* HT_Node_Ptr, int dest
 		elem->n_coord[8][j] = node->coord[j];
 	elem->node_elevation[8] = node->elevation;
 
-	//geoflow stuff
+//geoflow stuff
 	elem->positive_x_side = positive_x_side;
 	elem->elevation = elevation;
 	for (i = 0; i < DIMENSION; i++) {
@@ -3552,7 +3564,7 @@ void ErrorElem::update(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 		el_error[i] = elem2->el_error[i];
 	}
 
-	//and the node info -- ignore some info if this is just getting a parent from another processor...
+//and the node info -- ignore some info if this is just getting a parent from another processor...
 	for (i = 0; i < 8; i++) {
 		if (elem2->n_coord[i][0] * elem2->n_coord[i][1] == 0) {
 			printf(
@@ -3596,7 +3608,7 @@ void ErrorElem::update(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 	} else if (refined != 0) // only update if this is from an active element
 		node->set_parameters(elem2->n_info[8]);
 
-	//geoflow stuff
+//geoflow stuff
 	positive_x_side = elem2->positive_x_side;
 	elevation = elem2->elevation;
 	for (i = 0; i < DIMENSION; i++) {

@@ -474,6 +474,14 @@ struct TimeProps {
 			return 0;
 	}
 
+	void adjust_save_time(){
+
+		if (ndnextsave>ndmaxtime){
+			isave-=2;
+			ndnextsave=((isave + 1) * timesave) / TIME_SCALE;
+		}
+	}
+
 	//! checks if the output files should be written now
 	int ifoutput() {
 		if (time >= ndnextoutput) {

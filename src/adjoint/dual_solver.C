@@ -26,6 +26,8 @@
 
 #define DEBUG1
 
+double FUNC_VAR[] = { 0., 0. };
+
 template<typename T1, typename T2>
 void copy_hashtables_objects(HashTable* El_Table, HashTable* cp_El_Table) {
 
@@ -87,6 +89,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	MatProps* matprops_ptr = propctx->matprops;
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
+	timeprops_ptr->adjust_save_time();
+
 	const int maxiter = timeprops_ptr->iter;
 	timeprops_ptr->update_savetime();
 
@@ -111,6 +115,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		cout << "The Adjoint grid has been generated ....\n";
 
 	calc_adjoint(&dual_meshctx, propctx);
+
+//	compute_functional_variation(&dual_meshctx, propctx);
 
 	dual_vis.start();
 	write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW, 2);
@@ -200,8 +206,9 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		calc_adjoint(&dual_meshctx, propctx);
 		adjoint_sol.stop();
 //		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
-		if (iter == 20)
-			write_alldualdata_ordered(Dual_El_Tab, myid);
+
+		compute_param_sens(&dual_meshctx, propctx);
+		compute_functional_variation(&dual_meshctx, propctx);
 
 #ifdef Error
 		error.start();
@@ -227,9 +234,11 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		error_comp.stop();
 
 		error_vis.start();
-		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 			write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
 			    1);
+			print_func_var(propctx);
+		}
 		error_vis.stop();
 //		}
 		error.stop();
@@ -282,7 +291,7 @@ void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, 
 	MatProps* matprops_ptr = propctx->matprops;
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
-	const int maxiter = timeprops_ptr->iter-1;
+	const int maxiter = timeprops_ptr->iter - 1;
 
 	for (int iter = maxiter; iter > 0; --iter) {
 
@@ -306,8 +315,8 @@ void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, 
 		adjoint_sol.stop();
 //		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
 
-		if (iter == 20)
-			write_alldualdata_ordered(Dual_El_Tab, myid);
+		compute_param_sens(dual_meshctx, propctx);
+		compute_functional_variation(dual_meshctx, propctx);
 
 #ifdef Error
 		error.start();
@@ -333,9 +342,11 @@ void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, 
 		error_comp.stop();
 
 		error_vis.start();
-		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 			write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
 			    1);
+			print_func_var(propctx);
+		}
 		error_vis.stop();
 //		}
 		error.stop();
@@ -448,3 +459,81 @@ void print_timings(int myid) {
 		total.print();
 	}
 }
+
+void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
+
+	HashTable* El_Table = dual_meshctx->el_table;
+	HashTable* NodeTable = dual_meshctx->nd_table;
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
+	int myid = propctx->myid, numprocs = propctx->numproc;
+
+	HashEntryPtr currentPtr;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() > 0) {
+
+					double* adjoint = Curr_El->get_adjoint();
+					double* phi_sens = Curr_El->get_phi_sens();
+					double* pint_sens = Curr_El->get_pint_sens();
+
+					// the minus sign comes from the adjoint equation
+					FUNC_VAR[0] += -(adjoint[1] * phi_sens[1] + adjoint[2] * phi_sens[2]);
+
+					FUNC_VAR[1] += -(adjoint[1] * pint_sens[1] + adjoint[2] * pint_sens[2]);
+
+//					int cc = 0, bb = 1;
+//					for (int j = 0; j < 2; ++j)
+//						if (isnan(FUNC_VAR[j]))
+//							bb = cc;
+
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	double global_funcvar[2];
+
+	MPI_Allreduce(&FUNC_VAR[0], &global_funcvar[0], 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+	if (numprocs > 1)
+		for (int i = 0; i < 2; ++i)
+			FUNC_VAR[i] = global_funcvar[i];
+}
+
+void print_func_var(PropCTX* propctx) {
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
+	int myid = propctx->myid, numprocs = propctx->numproc;
+
+//	double hscale = matprops_ptr->HEIGHT_SCALE;
+//	double lscale = matprops_ptr->LENGTH_SCALE;
+//	double tscale = timeprops_ptr->TIME_SCALE;
+//	double gsacel = matprops_ptr->GRAVITY_SCALE;
+//
+//	double velocity_scale = sqrt(lscale * gsacel); // scaling factor for the velocities
+//	double momentum_scale = hscale * velocity_scale; // scaling factor for the momentums
+
+	char filename[50] = "func_var.out";
+
+	FILE *file = fopen(filename, "a");
+
+	double functional_scale = (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE)
+	    * (matprops_ptr->HEIGHT_SCALE);
+
+	fprintf(file, "%d %8.8f %8.8f %8.8f\n", timeprops_ptr->iter,
+	    timeprops_ptr->time * timeprops_ptr->TIME_SCALE, FUNC_VAR[0] * functional_scale,
+	    FUNC_VAR[1] * functional_scale);
+
+	fclose(file);
+}
+

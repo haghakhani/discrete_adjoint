@@ -11,6 +11,8 @@
 #include <vector>
 #define Error
 
+extern double FUNC_VAR[2];
+
 //! this function transfers information during events such as ghost element data exchange and repartitioning
 void move_dual_data(MeshCTX* meshctx, PropCTX* propctx);
 
@@ -257,6 +259,14 @@ void adjust_node_info(MeshCTX* meshctx, PropCTX* propctx);
 unsigned* makekey(unsigned k1, unsigned k2);
 
 void check_the_list(vector<ErrorElem*> imported_elem, HashTable* El_Table);
+
+void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx);
+
+void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx);
+
+void print_func_var(PropCTX* propctx);
+
+double tiny_sgn(double num, double tiny);
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);

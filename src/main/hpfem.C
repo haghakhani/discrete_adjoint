@@ -286,32 +286,32 @@ int main(int argc, char *argv[]) {
 			 */
 //		if (OUTPUT) {
 			visualization.start();
-			if (timeprops.ifoutput() && OUTPUT) {
+			if (timeprops.ifoutput() /* && OUTPUT*/) {
 				move_data(numprocs, myid, El_Table, Node_Table, &timeprops);
 
 				output_discharge(&matprops, &timeprops, &discharge, myid);
 
-				if (myid == 0) {
-					output_summary(&timeprops, &statprops, savefileflag);
-				}
-
-				if (viz_flag & 1)
-					tecplotter(El_Table, Node_Table, &matprops, &timeprops, &mapnames, statprops.vstar,
-					    adjflag);
-
-				if (viz_flag & 2)
-					meshplotter(El_Table, Node_Table, &matprops, &timeprops, &mapnames, statprops.vstar);
-
-#ifdef HAVE_HDF5
-				if(viz_flag&8)
-				xdmerr=write_xdmf(El_Table,Node_Table,&timeprops,&matprops,&mapnames,XDMF_OLD);
-#endif
-
-				if (viz_flag & 16) {
-					if (myid == 0)
-						grass_sites_header_output(&timeprops);
-					grass_sites_proc_output(El_Table, Node_Table, myid, &matprops, &timeprops);
-				}
+//				if (myid == 0) {
+//					output_summary(&timeprops, &statprops, savefileflag);
+//				}
+//
+//				if (viz_flag & 1)
+//					tecplotter(El_Table, Node_Table, &matprops, &timeprops, &mapnames, statprops.vstar,
+//					    adjflag);
+//
+//				if (viz_flag & 2)
+//					meshplotter(El_Table, Node_Table, &matprops, &timeprops, &mapnames, statprops.vstar);
+//
+//#ifdef HAVE_HDF5
+//				if(viz_flag&8)
+//				xdmerr=write_xdmf(El_Table,Node_Table,&timeprops,&matprops,&mapnames,XDMF_OLD);
+//#endif
+//
+//				if (viz_flag & 16) {
+//					if (myid == 0)
+//						grass_sites_header_output(&timeprops);
+//					grass_sites_proc_output(El_Table, Node_Table, myid, &matprops, &timeprops);
+//				}
 			}
 			visualization.stop();
 //		}

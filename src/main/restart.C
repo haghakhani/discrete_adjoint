@@ -147,6 +147,8 @@ void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX
 	gzwrite(myfile, &(min_dx[1]), sizeof(double));
 	gzwrite(myfile, &(min_gen), sizeof(double));
 
+	gzwrite(myfile, &(FUNC_VAR[0]), 2 * sizeof(double));
+
 	timeprops->wrtie_to_file(myfile);
 
 	//Writing error node table
@@ -168,8 +170,8 @@ void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX
 				currentPtr = currentPtr->next;
 			}
 		}
-	unsigned check = 1111;
-	gzwrite(myfile, &(check), sizeof(unsigned));
+//	unsigned check = 1111;
+//	gzwrite(myfile, &(check), sizeof(unsigned));
 
 #ifdef Error
 	//Writing error node table
@@ -190,8 +192,8 @@ void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX
 				currentPtr = currentPtr->next;
 			}
 		}
-	check = 2222;
-	gzwrite(myfile, &(check), sizeof(unsigned));
+//	check = 2222;
+//	gzwrite(myfile, &(check), sizeof(unsigned));
 
 //	assert(count == numnode);
 #endif
@@ -216,8 +218,8 @@ void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX
 				currentPtr = currentPtr->next;
 			}
 		}
-	check = 3333;
-	gzwrite(myfile, &(check), sizeof(unsigned));
+//	check = 3333;
+//	gzwrite(myfile, &(check), sizeof(unsigned));
 
 #ifdef Error
 	//write error element table
@@ -241,15 +243,15 @@ void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX
 			}
 		}
 
-	check = 4444;
-	gzwrite(myfile, &(check), sizeof(unsigned));
+//	check = 4444;
+//	gzwrite(myfile, &(check), sizeof(unsigned));
 //	assert(count == numelem);
 #endif
 
-	solrec->write_table(myfile, DUAL);
+	solrec->write_table(myfile);
 
-	check = 5555;
-	gzwrite(myfile, &(check), sizeof(unsigned));
+//	check = 5555;
+//	gzwrite(myfile, &(check), sizeof(unsigned));
 
 	gzclose(myfile);
 
@@ -352,6 +354,8 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 		gzread(myfile, (void*) &(min_dx[1]), sizeof(double));
 		gzread(myfile, (void*) &(min_gen), sizeof(double));
 
+		gzread(myfile, (void*) &(FUNC_VAR[0]), 2 * sizeof(double));
+
 		timeprops->read_from_file(myfile);
 
 		//recreate the node hashtable
@@ -366,9 +370,9 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 			(*NodeTable)->add(NodeP->pass_key(), NodeP);
 		}
 
-		unsigned check;
-		gzread(myfile, &(check), sizeof(unsigned));
-		assert(check == 1111);
+//		unsigned check;
+//		gzread(myfile, &(check), sizeof(unsigned));
+//		assert(check == 1111);
 
 #ifdef Error
 		//recreate error node hashtable
@@ -382,8 +386,8 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 			(*Err_NodeTable)->add(NodeP->pass_key(), NodeP);
 		}
 
-		gzread(myfile, &(check), sizeof(unsigned));
-		assert(check == 2222);
+//		gzread(myfile, &(check), sizeof(unsigned));
+//		assert(check == 2222);
 
 #endif
 
@@ -404,8 +408,8 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 				maxgen = ElemP->get_gen();
 		}
 
-		gzread(myfile, &(check), sizeof(unsigned));
-		assert(check == 3333);
+//		gzread(myfile, &(check), sizeof(unsigned));
+//		assert(check == 3333);
 
 		double dx = *(ElemP->get_dx() + 0), dy = *(ElemP->get_dx() + 1);
 		if (dx < dy)
@@ -448,8 +452,8 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 			(*Err_ElemTable)->add(ElemPe->pass_key(), ElemPe);
 		}
 
-		gzread(myfile, &(check), sizeof(unsigned));
-		assert(check == 4444);
+//		gzread(myfile, &(check), sizeof(unsigned));
+//		assert(check == 4444);
 
 		MeshCTX errmesh;
 		errmesh.el_table = *Err_ElemTable;
@@ -471,10 +475,10 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 
 #endif
 
-		*solrec = new SolRec(myfile);
+		*solrec = new SolRec(myfile, timeprops->iter, myid);
 
-		gzread(myfile, &(check), sizeof(unsigned));
-		assert(check == 5555);
+//		gzread(myfile, &(check), sizeof(unsigned));
+//		assert(check == 5555);
 
 		gzclose(myfile);
 
@@ -512,12 +516,13 @@ public:
 	;
 };
 
-class DualData:public Data{
+class DualData: public Data {
 private:
 	double *adjoint;
 
 public:
-	DualData(DualElem* elem):Data(elem){
+	DualData(DualElem* elem) :
+			Data(elem) {
 		adjoint = elem->get_adjoint();
 	}
 
@@ -584,8 +589,8 @@ void write_alldualdata_ordered(HashTable* El_Table, int myid) {
 
 	set<DualData>::iterator it;
 	for (it = mydata.begin(); it != mydata.end(); ++it) {
-		fprintf(fp, "%u %u %16.10f %16.10f %16.10f %16.10f %16.10f %16.10f\n", it->get_key()[0], it->get_key()[1],
-		    it->get_state()[0], it->get_state()[1], it->get_state()[2],
+		fprintf(fp, "%u %u %16.10f %16.10f %16.10f %16.10f %16.10f %16.10f\n", it->get_key()[0],
+		    it->get_key()[1], it->get_state()[0], it->get_state()[1], it->get_state()[2],
 		    it->get_adjoint()[0], it->get_adjoint()[1], it->get_adjoint()[2]);
 //		gzwrite(myfile, (it->get_key()), sizeof(unsigned) * 2);
 //		gzwrite(myfile, (it->get_state()), sizeof(double) * 3);

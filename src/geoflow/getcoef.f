@@ -37,10 +37,12 @@ c     COEFFICIENTS
 c         tttest = sgn(vel, tiny)
          vel=(dUdx(2)/uvec(1) - uvec(2)*dudx(1)/uvec(1)**2.d0+
      1        dUdy(3)/uvec(1) - uvec(3)*dudy(1)/uvec(1)**2.d0)
-         Kactx=(2.d0/cosphi**2)*(1.d0-sgn(vel,tiny)*
-     1        dsqrt(dabs(1.d0-(1.d0+tandel**2)*cosphi**2) )) -1.d0
-         Kacty=(2.d0/cosphi**2)*(1.d0-sgn(vel,tiny)*
-     1        dsqrt(dabs(1.d0-(1.d0+tandel**2)*cosphi**2) )) -1.d0
+c         Kactx=(2.d0/cosphi**2)*(1.d0-sgn(vel,tiny)*
+c     1        dsqrt(dabs(1.d0-(1.d0+tandel**2)*cosphi**2) )) -1.d0
+c         Kacty=(2.d0/cosphi**2)*(1.d0-sgn(vel,tiny)*
+c     1        dsqrt(dabs(1.d0-(1.d0+tandel**2)*cosphi**2) )) -1.d0
+         Kactx=1.d0
+         Kacty=1.d0
 
 c     if there is no yielding...
          if(dabs(uvec(2)/uvec(1)) .lt. tiny .and.
