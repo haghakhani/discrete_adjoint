@@ -839,6 +839,9 @@ void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx) {
 	MatProps* matprops_ptr = propctx->matprops;
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
+	int iter = timeprops_ptr->iter;
+	double dt = timeprops_ptr->dt.at(iter - 1);
+
 	HashEntryPtr* buck = El_Table->getbucketptr();
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
@@ -848,9 +851,6 @@ void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx) {
 				DualElem* Curr_El = (DualElem*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0 && *(Curr_El->get_prev_state_vars()) > GEOFLOW_TINY) {
-
-					double tan_sq_bed_fric = (Curr_El->get_effect_bedfrict())
-					    * (Curr_El->get_effect_bedfrict());
 
 					double* prev_state_vars = Curr_El->get_prev_state_vars();
 
@@ -866,6 +866,10 @@ void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx) {
 					double* d_state_vars_y = (Curr_El->get_prev_state_vars() + NUM_STATE_VARS);
 
 					double* dgdx = Curr_El->get_d_gravity();
+
+					double tan_bed_fric = tan((Curr_El->get_effect_bedfrict()));
+
+					double tan_sq_bed_fric = tan_bed_fric * tan_bed_fric;
 
 					double cos_int_fric = cos(matprops_ptr->intfrict);
 
@@ -894,21 +898,21 @@ void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 					phi_sens[0] = 0.;
 
-					phi_sens[1] = OrgSgn[2] * (1 + tan_sq_bed_fric)
+					phi_sens[1] = dt * OrgSgn[2] * (1 + tan_sq_bed_fric)
 					    * max(
 					        gravity[2] * prev_state_vars[0] + velocity[0] * prev_state_vars[1] * curvature[0],
 					        0.0);
-					phi_sens[2] = OrgSgn[3] * (1 + tan_sq_bed_fric)
+					phi_sens[2] = dt * OrgSgn[3] * (1 + tan_sq_bed_fric)
 					    * max(
 					        gravity[2] * prev_state_vars[0] + velocity[1] * prev_state_vars[2] * curvature[1],
 					        0.0);
 
 					pint_sens[0] = 0.;
 
-					pint_sens[1] = OrgSgn[0] * prev_state_vars[0] * kactxy[0]
+					pint_sens[1] = dt * OrgSgn[0] * prev_state_vars[0] * kactxy[0]
 					    * (gravity[2] * d_state_vars_y[0] + dgdx[1] * prev_state_vars[0]) * cos_int_fric;
 
-					pint_sens[2] = OrgSgn[1] * prev_state_vars[0] * kactxy[0]
+					pint_sens[2] = dt * OrgSgn[1] * prev_state_vars[0] * kactxy[0]
 					    * (gravity[2] * d_state_vars_x[0] + dgdx[0] * prev_state_vars[0]) * cos_int_fric;
 
 //					int bb = 1, cc = 0;

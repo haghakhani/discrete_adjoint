@@ -491,9 +491,9 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 					double* pint_sens = Curr_El->get_pint_sens();
 
 					// the minus sign comes from the adjoint equation
-					FUNC_VAR[0] += -(adjoint[1] * phi_sens[1] + adjoint[2] * phi_sens[2]);
+					FUNC_VAR[0] += adjoint[1] * phi_sens[1] + adjoint[2] * phi_sens[2];
 
-					FUNC_VAR[1] += -(adjoint[1] * pint_sens[1] + adjoint[2] * pint_sens[2]);
+					FUNC_VAR[1] += adjoint[1] * pint_sens[1] + adjoint[2] * pint_sens[2];
 
 //					int cc = 0, bb = 1;
 //					for (int j = 0; j < 2; ++j)

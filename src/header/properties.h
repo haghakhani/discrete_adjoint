@@ -1319,10 +1319,10 @@ struct DISCHARGE {
 //					planes[iplane][9] += dt
 //					    * (statevars[1] * (intersectpoint[1][1] - intersectpoint[0][1])
 //					        - statevars[2] * (intersectpoint[1][0] - intersectpoint[0][0]));
-					if (statevars[0] != 0.)
-						sensitivity[0] += dt
-						    * (statevars[1] * (intersectpoint[1][1] - intersectpoint[0][1])
-						        - statevars[2] * (intersectpoint[1][0] - intersectpoint[0][0])) / statevars[0];
+//					if (statevars[0] != 0.)
+//						sensitivity[0] += dt
+//						    * (statevars[1] * (intersectpoint[1][1] - intersectpoint[0][1])
+//						        - statevars[2] * (intersectpoint[1][0] - intersectpoint[0][0])) / statevars[0];
 
 					sensitivity[1] += dt * (intersectpoint[1][1] - intersectpoint[0][1]);
 					sensitivity[2] += -dt * (intersectpoint[1][0] - intersectpoint[0][0]);
