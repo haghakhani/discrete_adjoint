@@ -856,8 +856,6 @@ void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 					double* phi_sens = Curr_El->get_phi_sens();
 
-					double* pint_sens = Curr_El->get_pint_sens();
-
 					double* gravity = Curr_El->get_gravity();
 
 					double* kactxy = Curr_El->get_kactxy();
@@ -870,8 +868,6 @@ void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx) {
 					double tan_bed_fric = tan((Curr_El->get_effect_bedfrict()));
 
 					double tan_sq_bed_fric = tan_bed_fric * tan_bed_fric;
-
-					double cos_int_fric = cos(matprops_ptr->intfrict);
 
 					double velocity[2];
 
@@ -907,28 +903,13 @@ void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx) {
 					        gravity[2] * prev_state_vars[0] + velocity[1] * prev_state_vars[2] * curvature[1],
 					        0.0);
 
-					pint_sens[0] = 0.;
-
-					pint_sens[1] = dt * OrgSgn[0] * prev_state_vars[0] * kactxy[0]
-					    * (gravity[2] * d_state_vars_y[0] + dgdx[1] * prev_state_vars[0]) * cos_int_fric;
-
-					pint_sens[2] = dt * OrgSgn[1] * prev_state_vars[0] * kactxy[0]
-					    * (gravity[2] * d_state_vars_x[0] + dgdx[0] * prev_state_vars[0]) * cos_int_fric;
-
-//					int bb = 1, cc = 0;
-//					for (int j = 0; j < NUM_STATE_VARS; ++j)
-//						if (isnan(phi_sens[j]) || isnan(pint_sens[j]))
-//							bb = cc;
 
 				} else if (Curr_El->get_adapted_flag() > 0) {
 
 					double* phi_sens = Curr_El->get_phi_sens();
 
-					double* pint_sens = Curr_El->get_pint_sens();
-
 					for (int j = 0; j < NUM_STATE_VARS; ++j) {
 						phi_sens[j] = 0.;
-						pint_sens[j] = 0.;
 					}
 
 				}

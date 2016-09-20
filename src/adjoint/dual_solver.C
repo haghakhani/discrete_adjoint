@@ -74,9 +74,9 @@ Timer dual("dual"), dual_vis("dual visualization"), jacobian("jacobian"), adjoin
 
 #ifdef Error
 Timer error("error"), error_init("error initialization"), error_repart("error repartitioning"),
-error_adapt("error adaption"), bilin_interp("bilinear interpolation"), error_comp(
-		"error computation"), read_dual("read from dual"), update_error("updating error grid"),
-error_vis("error visualization"), error_neigh_update("error repart. neighbor update");
+    error_adapt("error adaption"), bilin_interp("bilinear interpolation"), error_comp(
+        "error computation"), read_dual("read from dual"), update_error("updating error grid"),
+    error_vis("error visualization"), error_neigh_update("error repart. neighbor update");
 #endif
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
@@ -136,7 +136,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	error_meshctx.el_table = Err_El_Tab;
 	error_meshctx.nd_table = Err_Nod_Tab;
 	if (myid == 0)
-	cout << "The Error grid has been generated ....\n";
+		cout << "The Error grid has been generated ....\n";
 
 	error_init.stop();
 	error.stop();
@@ -236,7 +236,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		error_vis.start();
 		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 			write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
-					1);
+			    1);
 			print_func_var(propctx);
 		}
 		error_vis.stop();
@@ -247,14 +247,19 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
-			    1);
+					1);
 			print_func_var(propctx);
 		}
 		dual_vis.stop();
 #endif
+
 		if (timeprops_ptr->ifsave_adj()) {
 			move_dual_data(&dual_meshctx, propctx);
+
+#ifdef Error
 			move_err_data(&error_meshctx, propctx);
+#endif
+
 			save_dual(&dual_meshctx, &error_meshctx, propctx, solrec);
 		}
 //for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
@@ -266,6 +271,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 // we know the solution from initial condition  so the error of 0th step is zero,
 // and we have to compute the error for other time steps.
 	}
+
+	compute_init_location_variation(&dual_meshctx, propctx);
 
 	delete_hashtables_objects<DualElem>(Dual_El_Tab);
 	delete_hashtables_objects<Node>(NodeTable);
@@ -347,7 +354,7 @@ void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, 
 		error_vis.start();
 		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 			write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
-					1);
+			    1);
 			print_func_var(propctx);
 		}
 		error_vis.stop();
@@ -358,14 +365,18 @@ void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, 
 		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
-			    1);
+					1);
 			print_func_var(propctx);
 		}
 		dual_vis.stop();
 #endif
+
 		if (timeprops_ptr->ifsave_adj()) {
 			move_dual_data(dual_meshctx, propctx);
+
+#ifdef Error
 			move_err_data(error_meshctx, propctx);
+#endif
 			save_dual(dual_meshctx, error_meshctx, propctx, solrec);
 		}
 //for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
@@ -377,6 +388,8 @@ void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, 
 // we know the solution from initial condition  so the error of 0th step is zero,
 // and we have to compute the error for other time steps.
 	}
+
+	compute_init_location_variation(dual_meshctx, propctx);
 
 	delete_hashtables_objects<DualElem>(Dual_El_Tab);
 	delete_hashtables_objects<Node>(NodeTable);
@@ -488,12 +501,9 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 					double* adjoint = Curr_El->get_adjoint();
 					double* phi_sens = Curr_El->get_phi_sens();
-					double* pint_sens = Curr_El->get_pint_sens();
 
 					// the minus sign comes from the adjoint equation
 					FUNC_VAR[0] += adjoint[1] * phi_sens[1] + adjoint[2] * phi_sens[2];
-
-					FUNC_VAR[1] += adjoint[1] * pint_sens[1] + adjoint[2] * pint_sens[2];
 
 //					int cc = 0, bb = 1;
 //					for (int j = 0; j < 2; ++j)
@@ -514,6 +524,51 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 			FUNC_VAR[i] = global_funcvar[i];
 }
 
+void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
+
+	HashTable* El_Table = dual_meshctx->el_table;
+	HashTable* NodeTable = dual_meshctx->nd_table;
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
+	int myid = propctx->myid, numprocs = propctx->numproc;
+
+	HashEntryPtr currentPtr;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() > 0) {
+
+					double* adjoint = Curr_El->get_adjoint();
+					double* hint_sens = Curr_El->get_hint_sens();
+					double* prev_state_vars = Curr_El->get_prev_state_vars();
+
+					Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
+
+					for (int effelement = 0; effelement < EFF_ELL; effelement++)
+						for (int j = 0; j < NUM_STATE_VARS; ++j)
+							FUNC_VAR[1] += jacobianmat(effelement, j, 0) * adjoint[j];
+
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	double global_funcvar;
+
+	MPI_Allreduce(&FUNC_VAR[1], &global_funcvar, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+	if (numprocs > 1)
+			FUNC_VAR[1] = global_funcvar;
+
+	print_func_var(propctx);
+}
+
 void print_func_var(PropCTX* propctx) {
 
 	TimeProps* timeprops_ptr = propctx->timeprops;
@@ -521,7 +576,7 @@ void print_func_var(PropCTX* propctx) {
 	MatProps* matprops_ptr = propctx->matprops;
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
-//	double hscale = matprops_ptr->HEIGHT_SCALE;
+	double hscale = matprops_ptr->HEIGHT_SCALE;
 //	double lscale = matprops_ptr->LENGTH_SCALE;
 //	double tscale = timeprops_ptr->TIME_SCALE;
 //	double gsacel = matprops_ptr->GRAVITY_SCALE;
@@ -538,7 +593,7 @@ void print_func_var(PropCTX* propctx) {
 
 	fprintf(file, "%d %8.8f %8.8f %8.8f\n", timeprops_ptr->iter,
 	    timeprops_ptr->time * timeprops_ptr->TIME_SCALE, FUNC_VAR[0] * functional_scale,
-	    FUNC_VAR[1] * functional_scale);
+	    FUNC_VAR[1] * functional_scale/hscale);
 
 	fclose(file);
 }

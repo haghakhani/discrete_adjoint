@@ -268,6 +268,8 @@ void print_func_var(PropCTX* propctx);
 
 double tiny_sgn(double num, double tiny);
 
+void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx);
+
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);
 

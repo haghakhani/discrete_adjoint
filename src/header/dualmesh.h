@@ -156,7 +156,7 @@ public:
 
 	void write_elem(gzFile& myfile);
 
-	double* get_pint_sens();
+	double* get_hint_sens();
 
 	double* get_phi_sens();
 
@@ -192,7 +192,7 @@ private:
 
 	double phi_sens[3];
 
-	double pint_sens[3];
+	double hint_sens[3];
 };
 
 inline double* DualElem::get_adjoint() {
@@ -229,8 +229,8 @@ inline ErrorElem** DualElem::get_son_addresses() {
 }
 ;
 
-inline double* DualElem::get_pint_sens() {
-	return pint_sens;
+inline double* DualElem::get_hint_sens() {
+	return hint_sens;
 }
 ;
 
