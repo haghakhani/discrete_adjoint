@@ -790,6 +790,11 @@ void print_func_var(PropCTX* propctx) {
 //
 //	double velocity_scale = sqrt(lscale * gsacel); // scaling factor for the velocities
 //	double momentum_scale = hscale * velocity_scale; // scaling factor for the momentums
+
+	double global_sens[] = { 0., 0., 0. };
+
+	MPI_Reduce(matprops_ptr->sensitivity, global_sens, 3, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
 	if (myid == 0) {
 
 		FILE *file = fopen("func_var.out", "a");
@@ -797,9 +802,6 @@ void print_func_var(PropCTX* propctx) {
 		double functional_scale = (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE)
 		    * (matprops_ptr->HEIGHT_SCALE);
 
-		double global_sens[] = { 0., 0., 0. };
-
-		MPI_Reduce(matprops_ptr->sensitivity, global_sens, 3, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
 		fprintf(file, "%d %8.8f %8.8f %8.8f %8.8f\n", timeprops_ptr->iter,
 		    timeprops_ptr->time * timeprops_ptr->TIME_SCALE, global_sens[0] * functional_scale,
