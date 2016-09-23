@@ -96,7 +96,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 //		Curr_El->calc_func_sens((void*) propctx);
 
 		for (int i = 0; i < NUM_STATE_VARS; ++i)
-			adjoint[i] = - *(Curr_El->get_func_sens() + i);
+			adjoint[i] = -*(Curr_El->get_func_sens() + i);
 
 	} else {
 
@@ -137,7 +137,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 		}
 
 		for (int j = 0; j < NUM_STATE_VARS; j++)
-			adjoint[j] = - *(Curr_El->get_func_sens() + j) - adjcontr[j];
+			adjoint[j] = -*(Curr_El->get_func_sens() + j) - adjcontr[j];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
@@ -235,47 +235,62 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
 	TimeProps* timeprops = propctx->timeprops;
-	HashEntryPtr* buck = El_Table->getbucketptr();
+
 	HashEntryPtr currentPtr;
 	int numproc = propctx->numproc;
 	int myid = propctx->myid;
 	int iter = timeprops->iter;
 	double dt = timeprops->dt.at(iter - 1);
 
-	DISCHARGE* discharge = propctx->discharge;
+	if (propctx->timeprops->adjiter == 0) {
+		HashEntryPtr* buck = El_Table->getbucketptr();
+		for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+			if (*(buck + i)) {
+				currentPtr = *(buck + i);
+				while (currentPtr) {
+					DualElem* Curr_El = (DualElem*) (currentPtr->value);
 
-	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
-		if (*(buck + i)) {
-			currentPtr = *(buck + i);
-			while (currentPtr) {
-				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+					if (Curr_El->get_adapted_flag() > 0)
+						for (int j = 0; j < NUM_STATE_VARS; ++j)
+							Curr_El->get_func_sens()[j] = 0.;
 
-				if (Curr_El->get_adapted_flag() > 0) {
+					currentPtr = currentPtr->next;
+				}
+			}
+	} else {
 
-					double* state_vars = Curr_El->get_state_vars();
+		DISCHARGE* discharge = propctx->discharge;
+		HashEntryPtr* buck = El_Table->getbucketptr();
+		for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+			if (*(buck + i)) {
+				currentPtr = *(buck + i);
+				while (currentPtr) {
+					DualElem* Curr_El = (DualElem*) (currentPtr->value);
 
-					unsigned *nodes = Curr_El->getNode();
-					double nodescoord[9][2], *coord;
-					Node* node;
+					if (Curr_El->get_adapted_flag() > 0) {
 
-					for (int inode = 0; inode < 8; inode++) {
-						node = (Node*) NodeTable->lookup(nodes + 2 * inode);
-						coord = node->get_coord();
+						unsigned *nodes = Curr_El->getNode();
+						double nodescoord[9][2], *coord;
+						Node* node;
 
-						nodescoord[inode][0] = coord[0];
-						nodescoord[inode][1] = coord[1];
+						for (int inode = 0; inode < 8; inode++) {
+							node = (Node*) NodeTable->lookup(nodes + 2 * inode);
+							coord = node->get_coord();
+
+							nodescoord[inode][0] = coord[0];
+							nodescoord[inode][1] = coord[1];
+
+						}
+						nodescoord[8][0] = *(Curr_El->get_coord());
+						nodescoord[8][1] = *(Curr_El->get_coord() + 1);
+
+						discharge->discharge_sens(nodescoord, dt, Curr_El->get_func_sens());
 
 					}
-					nodescoord[8][0] = *(Curr_El->get_coord());
-					nodescoord[8][1] = *(Curr_El->get_coord() + 1);
-
-					discharge->discharge_sens(nodescoord, state_vars, dt, Curr_El->get_func_sens());
-
+					currentPtr = currentPtr->next;
 				}
-				currentPtr = currentPtr->next;
 			}
-		}
-
+	}
 }
 
 int get_jacind(int effelement) {
@@ -327,5 +342,41 @@ void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, DualElem* eff_el, int 
 			func_sens[k] += dt * dx[0] * flux_jac(1, 1, 0)(0, k);
 	}
 
+}
+
+void update_discharge(HashTable* El_Table, HashTable* NodeTable, DISCHARGE* discharge, double dt) {
+
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashEntryPtr currentPtr;
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				Element* Curr_El = (DualElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0) {
+					unsigned *nodes = Curr_El->getNode();
+					double nodescoord[9][2], *coord;
+					Node* node;
+
+					for (int inode = 0; inode < 8; inode++) {
+						node = (Node*) NodeTable->lookup(nodes + 2 * inode);
+						coord = node->get_coord();
+
+						nodescoord[inode][0] = coord[0];
+						nodescoord[inode][1] = coord[1];
+
+					}
+					nodescoord[8][0] = *(Curr_El->get_coord());
+					nodescoord[8][1] = *(Curr_El->get_coord() + 1);
+
+					discharge->update(nodescoord, Curr_El->get_prev_state_vars(), dt);
+
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
 }
 

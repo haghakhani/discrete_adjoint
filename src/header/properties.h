@@ -1000,7 +1000,7 @@ struct DISCHARGE {
 	}
 
 	//! this function updates the flux through the discharge planes
-	void update(double nodes[9][2], double *statevars, double dt) {
+	void update(double nodes[9][2], double *prev_statevars, double dt) {
 		//FILE* fp=fopen("dischargedebug","a");
 
 		double doubleswap1, doubleswap2, doubleswap3;
@@ -1154,8 +1154,8 @@ struct DISCHARGE {
 
 					//discharge += dt*(hVx*dy-hVy*dx)
 					planes[iplane][9] += dt
-					    * (statevars[1] * (intersectpoint[1][1] - intersectpoint[0][1])
-					        - statevars[2] * (intersectpoint[1][0] - intersectpoint[0][0]));
+					    * (prev_statevars[1] * (intersectpoint[1][1] - intersectpoint[0][1])
+					        - prev_statevars[2] * (intersectpoint[1][0] - intersectpoint[0][0]));
 				} // if(iintersect==2)
 
 			} //if(halfsidelength*(absdy+absdx)>=absdx*absdx+absdy*absdy)
@@ -1166,7 +1166,7 @@ struct DISCHARGE {
 	}
 
 	//! this function computes the sensitivity of the flux through the discharge planes w.r.t state variables
-	void discharge_sens(double nodes[9][2], double *statevars, double dt, double* sensitivity) {
+	void discharge_sens(double nodes[9][2], double dt, double* sensitivity) {
 		//FILE* fp=fopen("dischargedebug","a");
 
 		double doubleswap1, doubleswap2, doubleswap3;

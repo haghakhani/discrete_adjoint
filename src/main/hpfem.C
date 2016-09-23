@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		MPI_Barrier(MPI_COMM_WORLD);
-		calc_stats(El_Table, Node_Table, myid, &matprops, &timeprops, &statprops, &discharge, 0.0);
+		calc_stats(El_Table, Node_Table, myid, &matprops, &timeprops, &statprops, 0.0);
 
 		output_discharge(&matprops, &timeprops, &discharge, myid);
 

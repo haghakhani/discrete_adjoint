@@ -29,7 +29,7 @@ using namespace std;
 #define STAT_VOL_FRAC 0.95
 
 void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* matprops,
-    TimeProps* timeprops, StatProps* statprops, DISCHARGE* discharge, double d_time) {
+    TimeProps* timeprops, StatProps* statprops, double d_time) {
 	int i, iproc;
 	double area = 0.0, max_height = 0.0;
 	double cutoffvolume; /* the desired volume of material to take
@@ -115,31 +115,6 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 				if ((Curr_El->get_adapted_flag() > 0) && (myid == Curr_El->get_myprocess())) {
 
 					double* state_vars = Curr_El->get_state_vars();
-
-					//calculate volume passing through "discharge planes"
-					unsigned *nodes = Curr_El->getNode();
-					double nodescoord[9][2], *coord;
-					Node* node;
-
-					for (int inode = 0; inode < 8; inode++) {
-						node = (Node*) NodeTable->lookup(nodes + 2 * inode);
-						coord = node->get_coord();
-						if ((timeprops->iter == 291) && (inode == 8)) {
-							printf("coord=(%g,%g) node=%u  ", coord[0], coord[1], node);
-							fflush(stdout);
-						}
-						nodescoord[inode][0] = coord[0];
-						nodescoord[inode][1] = coord[1];
-						if ((timeprops->iter == 291) && (inode >= 8)) {
-							printf("inode=%d node=%u", inode, node);
-							fflush(stdout);
-						}
-					}
-					nodescoord[8][0] = *(Curr_El->get_coord());
-					nodescoord[8][1] = *(Curr_El->get_coord() + 1);
-
-					discharge->update(nodescoord, state_vars, d_time);
-
 					// rule out non physical fast moving thin layers
 					if (state_vars[0] > min_height) {
 						if (state_vars[0] > max_height)

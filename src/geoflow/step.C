@@ -244,8 +244,10 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 		}
 	}
 
+	update_discharge(El_Table, NodeTable,  discharge, dt);
+
 	/* finished corrector step */
-	calc_stats(El_Table, NodeTable, myid, matprops_ptr, timeprops_ptr, statprops_ptr, discharge, dt);
+	calc_stats(El_Table, NodeTable, myid, matprops_ptr, timeprops_ptr, statprops_ptr, dt);
 
 //	double tempin[6], tempout[6];
 //	tempin[0] = outflow;    //volume that flew out the boundaries this iteration
