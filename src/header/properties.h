@@ -615,6 +615,8 @@ struct MatProps {
 	//! coeficient of Navier-Slip with friction
 	double navslip_coef;
 
+	double sensitivity[3];
+
 	/*! this constructor allocates initial properties unfortunately the properties
 	 *  aren't known at the time this is called so dummy values are fed in instead
 	 *  for many if not all of these
@@ -648,6 +650,10 @@ struct MatProps {
 		LENGTH_SCALE = lscale;
 		HEIGHT_SCALE = hscale;
 		GRAVITY_SCALE = gscale;
+
+		for (int i=0;i<NUM_STATE_VARS;++i)
+			sensitivity[i]=0.;
+
 	}
 
 	//! this destructor deallocates the arrays of bed friction angles and their tangents

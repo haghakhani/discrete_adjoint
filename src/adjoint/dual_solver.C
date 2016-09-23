@@ -26,8 +26,6 @@
 
 #define DEBUG1
 
-double FUNC_VAR[] = { 0., 0., 0. };
-
 template<typename T1, typename T2>
 void copy_hashtables_objects(HashTable* El_Table, HashTable* cp_El_Table) {
 
@@ -492,8 +490,6 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 	HashEntryPtr currentPtr;
 	HashEntryPtr *buck = El_Table->getbucketptr();
 
-	double sum = 0.;
-
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
@@ -506,7 +502,7 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 					double* phi_sens = Curr_El->get_phi_sens();
 
 					// the minus sign comes from the adjoint equation
-					sum += adjoint[1] * phi_sens[1] + adjoint[2] * phi_sens[2];
+					matprops_ptr->sensitivity[0] += adjoint[1] * phi_sens[1] + adjoint[2] * phi_sens[2];
 
 //					int cc = 0, bb = 1;
 ////					for (int j = 0; j < 2; ++j)
@@ -517,15 +513,6 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 				currentPtr = currentPtr->next;
 			}
 		}
-
-	double global_funcvar = 0.;
-
-	MPI_Allreduce(&sum, &global_funcvar, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-	if (numprocs > 1)
-		FUNC_VAR[0] += global_funcvar;
-	else
-		FUNC_VAR[0] += sum;
 
 }
 
@@ -543,9 +530,6 @@ void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 	HashEntryPtr *buck;
 
 	HashTable* new_hashtab = new HashTable(El_Table);
-
-	FUNC_VAR[1] = FUNC_VAR[2] = 0.;
-	double funcvar[] = { 0., 0. };
 
 	buck = El_Table->getbucketptr();
 	//first we save everything
@@ -671,7 +655,7 @@ void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 				for (int i = 0; i < NUM_STATE_VARS; ++i) {
 					sens[i] = (Curr_El->get_state_vars()[i] - container->get_state()[i]) / INCREMENT;
-					funcvar[0] += sens[i] * container->get_adjoint()[i];
+					matprops_ptr->sensitivity[1] += sens[i] * container->get_adjoint()[i];
 				}
 				currentPtr = currentPtr->next;
 			}
@@ -781,23 +765,11 @@ void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 				for (int i = 0; i < NUM_STATE_VARS; ++i) {
 					sens[i] = (Curr_El->get_state_vars()[i] - container->get_state()[i]) / INCREMENT;
-					funcvar[1] += sens[i] * container->get_adjoint()[i];
+					matprops_ptr->sensitivity[2] += sens[i] * container->get_adjoint()[i];
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
-
-	double global_funcvar[] = { 0., 0. };
-
-	MPI_Allreduce(&funcvar[0], &global_funcvar[0], 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-	if (numprocs > 1) {
-		FUNC_VAR[1] = global_funcvar[0];
-		FUNC_VAR[2] = global_funcvar[1];
-	} else {
-		FUNC_VAR[1] = funcvar[0];
-		FUNC_VAR[2] = funcvar[1];
-	}
 
 	print_func_var(propctx);
 
@@ -820,21 +792,18 @@ void print_func_var(PropCTX* propctx) {
 //	double momentum_scale = hscale * velocity_scale; // scaling factor for the momentums
 	if (myid == 0) {
 
-		char filename[50] = "func_var.out";
-
-		FILE *file = fopen(filename, "a");
+		FILE *file = fopen("func_var.out", "a");
 
 		double functional_scale = (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE)
 		    * (matprops_ptr->HEIGHT_SCALE);
 
-		int cc = 0, bb = 1;
-//					for (int j = 0; j < 2; ++j)
-		if (isnan(FUNC_VAR[0]) || isinf(FUNC_VAR[0]) || fabs(FUNC_VAR[0]) > 1e6)
-			bb = cc;
+		double global_sens[] = { 0., 0., 0. };
+
+		MPI_Reduce(matprops_ptr->sensitivity, global_sens, 3, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
 		fprintf(file, "%d %8.8f %8.8f %8.8f %8.8f\n", timeprops_ptr->iter,
-		    timeprops_ptr->time * timeprops_ptr->TIME_SCALE, FUNC_VAR[0] /* functional_scale*/,
-		    FUNC_VAR[1] * functional_scale / lscale, FUNC_VAR[2] * functional_scale / lscale);
+		    timeprops_ptr->time * timeprops_ptr->TIME_SCALE, global_sens[0] * functional_scale,
+		    global_sens[1] * functional_scale / lscale, global_sens[2] * functional_scale / lscale);
 
 		fclose(file);
 	}

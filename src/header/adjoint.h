@@ -11,8 +11,6 @@
 #include <vector>
 //#define Error
 
-extern double FUNC_VAR[3];
-
 //! this function transfers information during events such as ghost element data exchange and repartitioning
 void move_dual_data(MeshCTX* meshctx, PropCTX* propctx);
 

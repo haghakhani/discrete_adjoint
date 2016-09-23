@@ -124,6 +124,7 @@ void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX
     SolRec *solrec) {
 
 	TimeProps* timeprops = propctx->timeprops;
+	MatProps* matprops = propctx->matprops;
 
 	int numprocs = propctx->numproc;
 	int myid = propctx->myid;
@@ -147,7 +148,7 @@ void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX
 	gzwrite(myfile, &(min_dx[1]), sizeof(double));
 	gzwrite(myfile, &(min_gen), sizeof(double));
 
-	gzwrite(myfile, &(FUNC_VAR[0]), 3 * sizeof(double));
+	gzwrite(myfile, &(matprops->sensitivity[0]), 3 * sizeof(double));
 
 	timeprops->wrtie_to_file(myfile);
 
@@ -182,16 +183,16 @@ void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX
 	count = 0;
 	buck = Err_NodeTable->getbucketptr();
 	for (int i = 0; i < Err_NodeTable->get_no_of_buckets(); i++)
-		if (*(buck + i)) {
-			HashEntryPtr currentPtr = *(buck + i);
-			while (currentPtr) {
-				Node *Curr_Node = (Node*) (currentPtr->value);
+	if (*(buck + i)) {
+		HashEntryPtr currentPtr = *(buck + i);
+		while (currentPtr) {
+			Node *Curr_Node = (Node*) (currentPtr->value);
 
-				Curr_Node->write_node(myfile);
-				count++;
-				currentPtr = currentPtr->next;
-			}
+			Curr_Node->write_node(myfile);
+			count++;
+			currentPtr = currentPtr->next;
 		}
+	}
 //	check = 2222;
 //	gzwrite(myfile, &(check), sizeof(unsigned));
 
@@ -232,16 +233,16 @@ void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX
 	count = 0;
 	buck = Err_El_Table->getbucketptr();
 	for (int i = 0; i < Err_El_Table->get_no_of_buckets(); i++)
-		if (*(buck + i)) {
-			HashEntryPtr currentPtr = *(buck + i);
-			while (currentPtr) {
-				ErrorElem *Curr_El = (ErrorElem*) (currentPtr->value);
+	if (*(buck + i)) {
+		HashEntryPtr currentPtr = *(buck + i);
+		while (currentPtr) {
+			ErrorElem *Curr_El = (ErrorElem*) (currentPtr->value);
 
-				Curr_El->write_elem(myfile);
-				count++;
-				currentPtr = currentPtr->next;
-			}
+			Curr_El->write_elem(myfile);
+			count++;
+			currentPtr = currentPtr->next;
 		}
+	}
 
 //	check = 4444;
 //	gzwrite(myfile, &(check), sizeof(unsigned));
@@ -354,7 +355,7 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 		gzread(myfile, (void*) &(min_dx[1]), sizeof(double));
 		gzread(myfile, (void*) &(min_gen), sizeof(double));
 
-		gzread(myfile, (void*) &(FUNC_VAR[0]), 3 * sizeof(double));
+		gzread(myfile, (void*) &(matprops->sensitivity[0]), 3 * sizeof(double));
 
 		timeprops->read_from_file(myfile);
 
@@ -463,15 +464,15 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 
 		HashEntryPtr *buck = (*Err_ElemTable)->getbucketptr();
 		for (int i = 0; i < (*Err_ElemTable)->get_no_of_buckets(); i++)
-			if (*(buck + i)) {
-				HashEntryPtr currentPtr = *(buck + i);
-				while (currentPtr) {
-					ErrorElem *Curr_El = (ErrorElem*) (currentPtr->value);
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				ErrorElem *Curr_El = (ErrorElem*) (currentPtr->value);
 
-					set_link(Curr_El, *ElemTable, *Err_ElemTable);
-					currentPtr = currentPtr->next;
-				}
+				set_link(Curr_El, *ElemTable, *Err_ElemTable);
+				currentPtr = currentPtr->next;
 			}
+		}
 
 #endif
 

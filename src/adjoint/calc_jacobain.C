@@ -877,9 +877,7 @@ void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 					double *curvature = Curr_El->get_curvature();
 
-					double h_inv = 0.;
-
-					h_inv = 1. / prev_state_vars[0];
+					double h_inv = 1. / prev_state_vars[0];
 
 					double tmp = h_inv * (d_state_vars_y[1] - velocity[0] * d_state_vars_y[0]);
 
