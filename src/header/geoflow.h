@@ -147,6 +147,9 @@ inline double dabs(double dd) {
 	return dd;
 }
 
+void elliptical_pile_height(HashTable* HT_Node_Ptr, Element *EmTemp, MatProps* matprops_ptr,
+    PileProps* pileprops_ptr);
+
 /* fortran calls */
 #ifdef SUNOS 
 //! the actual calculation of k active passive is done by a fortran call this should be ripped out and rewritten as a C++ Element member function

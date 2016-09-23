@@ -26,7 +26,7 @@
 
 #define DEBUG1
 
-double FUNC_VAR[] = { 0., 0. };
+double FUNC_VAR[] = { 0., 0., 0. };
 
 template<typename T1, typename T2>
 void copy_hashtables_objects(HashTable* El_Table, HashTable* cp_El_Table) {
@@ -74,9 +74,9 @@ Timer dual("dual"), dual_vis("dual visualization"), jacobian("jacobian"), adjoin
 
 #ifdef Error
 Timer error("error"), error_init("error initialization"), error_repart("error repartitioning"),
-    error_adapt("error adaption"), bilin_interp("bilinear interpolation"), error_comp(
-        "error computation"), read_dual("read from dual"), update_error("updating error grid"),
-    error_vis("error visualization"), error_neigh_update("error repart. neighbor update");
+error_adapt("error adaption"), bilin_interp("bilinear interpolation"), error_comp(
+		"error computation"), read_dual("read from dual"), update_error("updating error grid"),
+error_vis("error visualization"), error_neigh_update("error repart. neighbor update");
 #endif
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
@@ -136,7 +136,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	error_meshctx.el_table = Err_El_Tab;
 	error_meshctx.nd_table = Err_Nod_Tab;
 	if (myid == 0)
-		cout << "The Error grid has been generated ....\n";
+	cout << "The Error grid has been generated ....\n";
 
 	error_init.stop();
 	error.stop();
@@ -236,7 +236,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		error_vis.start();
 		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 			write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
-			    1);
+					1);
 			print_func_var(propctx);
 		}
 		error_vis.stop();
@@ -247,7 +247,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
-					1);
+			    1);
 			print_func_var(propctx);
 		}
 		dual_vis.stop();
@@ -354,7 +354,7 @@ void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, 
 		error_vis.start();
 		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 			write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
-			    1);
+					1);
 			print_func_var(propctx);
 		}
 		error_vis.stop();
@@ -365,7 +365,7 @@ void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, 
 		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
-					1);
+			    1);
 			print_func_var(propctx);
 		}
 		dual_vis.stop();
@@ -492,6 +492,8 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 	HashEntryPtr currentPtr;
 	HashEntryPtr *buck = El_Table->getbucketptr();
 
+	double sum = 0.;
+
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
@@ -499,29 +501,32 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 				DualElem* Curr_El = (DualElem*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) {
 
-					double* adjoint = Curr_El->get_adjoint();
+					// note that at time step n adjoint_prev is for time step n+1 and adjoint is at time step n
+					double* adjoint = Curr_El->get_prev_adjoint();
 					double* phi_sens = Curr_El->get_phi_sens();
 
 					// the minus sign comes from the adjoint equation
-					FUNC_VAR[0] += adjoint[1] * phi_sens[1] + adjoint[2] * phi_sens[2];
+					sum += adjoint[1] * phi_sens[1] + adjoint[2] * phi_sens[2];
 
 //					int cc = 0, bb = 1;
-//					for (int j = 0; j < 2; ++j)
-//						if (isnan(FUNC_VAR[j]))
-//							bb = cc;
+////					for (int j = 0; j < 2; ++j)
+//					if (isnan(FUNC_VAR[0]) || isinf(FUNC_VAR[0]) || fabs(FUNC_VAR[0]) > 1e6)
+//						bb = cc;
 
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 
-	double global_funcvar[2];
+	double global_funcvar = 0.;
 
-	MPI_Allreduce(&FUNC_VAR[0], &global_funcvar[0], 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	MPI_Allreduce(&sum, &global_funcvar, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
 	if (numprocs > 1)
-		for (int i = 0; i < 2; ++i)
-			FUNC_VAR[i] = global_funcvar[i];
+		FUNC_VAR[0] += global_funcvar;
+	else
+		FUNC_VAR[0] += sum;
+
 }
 
 void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
@@ -535,8 +540,15 @@ void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
 	HashEntryPtr currentPtr;
-	HashEntryPtr *buck = El_Table->getbucketptr();
+	HashEntryPtr *buck;
 
+	HashTable* new_hashtab = new HashTable(El_Table);
+
+	FUNC_VAR[1] = FUNC_VAR[2] = 0.;
+	double funcvar[] = { 0., 0. };
+
+	buck = El_Table->getbucketptr();
+	//first we save everything
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
 			currentPtr = *(buck + i);
@@ -545,28 +557,251 @@ void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 				if (Curr_El->get_adapted_flag() > 0) {
 
 					double* adjoint = Curr_El->get_adjoint();
-					double* hint_sens = Curr_El->get_hint_sens();
-					double* prev_state_vars = Curr_El->get_prev_state_vars();
+					double* state_vars = Curr_El->get_state_vars();
+					unsigned* key = Curr_El->pass_key();
 
-					Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
-
-					for (int effelement = 0; effelement < EFF_ELL; effelement++)
-						for (int j = 0; j < NUM_STATE_VARS; ++j)
-							FUNC_VAR[1] += jacobianmat(effelement, j, 0) * adjoint[j];
-
+					Container* contain = new Container(Curr_El);
+					new_hashtab->add(key, contain);
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 
-	double global_funcvar;
+	//then we perturb initial location in x_dir
+	PileProps* pileprops = propctx->pileprops;
+	pileprops->xCen[0] += INCREMENT;
 
-	MPI_Allreduce(&FUNC_VAR[1], &global_funcvar, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	buck = El_Table->getbucketptr();
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() > 0)
+					elliptical_pile_height(NodeTable, Curr_El, matprops_ptr, pileprops);
 
-	if (numprocs > 1)
-			FUNC_VAR[1] = global_funcvar;
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	move_dual_data(dual_meshctx, propctx);
+
+	calc_d_gravity(El_Table);
+
+	slopes(El_Table, NodeTable, matprops_ptr, 1);
+
+	double tiny = GEOFLOW_TINY;
+	buck = El_Table->getbucketptr();
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem * Curr_El = (DualElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0)
+					gmfggetcoef_(Curr_El->get_prev_state_vars(), Curr_El->get_d_state_vars(),
+					    (Curr_El->get_d_state_vars() + NUM_STATE_VARS), Curr_El->get_dx(),
+					    &(matprops_ptr->bedfrict[Curr_El->get_material()]), &(matprops_ptr->intfrict),
+					    (Curr_El->get_kactxy()), (Curr_El->get_kactxy() + 1), &tiny,
+					    &(matprops_ptr->epsilon));
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	move_dual_data(dual_meshctx, propctx);
+
+	calc_flux(dual_meshctx, propctx);
+
+	move_dual_data(dual_meshctx, propctx);
+
+	buck = El_Table->getbucketptr();
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem * Curr_El = (DualElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0) {
+
+					double *prev_state_vars = Curr_El->get_prev_state_vars();
+					double *state_vars = Curr_El->get_state_vars();
+					double *d_state_vars = Curr_El->get_d_state_vars();
+					double *gravity = Curr_El->get_gravity();
+					double *d_gravity = Curr_El->get_d_gravity();
+					double *curvature = Curr_El->get_curvature();
+					Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
+					double bedfrict = Curr_El->get_effect_bedfrict();
+					double *dx = Curr_El->get_dx();
+
+					double flux[4][NUM_STATE_VARS];
+					get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
+					int iter = timeprops_ptr->iter;
+					double dt = timeprops_ptr->dt.at(iter - 1);
+					double dtdx = dt / dx[0];
+					double dtdy = dt / dx[1];
+
+					int stop[DIMENSION] = { 0, 0 };
+					double orgSrcSgn[4] = { 0., 0., 0., 0. };
+
+					update_states(state_vars, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy,
+					    dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, matprops_ptr->intfrict,
+					    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), matprops_ptr->frict_tiny,
+					    stop, orgSrcSgn);
+
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+//	 now we can compute the sensitivities w.r.t x perturbation
+
+	buck = new_hashtab->getbucketptr();
+	for (int i = 0; i < new_hashtab->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+
+				Container * container = (Container*) (currentPtr->value);
+
+				DualElem* Curr_El = (DualElem*) El_Table->lookup(container->pass_key());
+
+				double sens[] = { 0., 0., 0. };
+
+				for (int i = 0; i < NUM_STATE_VARS; ++i) {
+					sens[i] = (Curr_El->get_state_vars()[i] - container->get_state()[i]) / INCREMENT;
+					funcvar[0] += sens[i] * container->get_adjoint()[i];
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	//now we can compute the sens w.r.t y perturb
+
+	pileprops->xCen[0] -= INCREMENT;
+	pileprops->yCen[0] += INCREMENT;
+
+	buck = El_Table->getbucketptr();
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() > 0)
+					elliptical_pile_height(NodeTable, Curr_El, matprops_ptr, pileprops);
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	move_dual_data(dual_meshctx, propctx);
+
+	calc_d_gravity(El_Table);
+
+	slopes(El_Table, NodeTable, matprops_ptr, 1);
+
+	buck = El_Table->getbucketptr();
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem * Curr_El = (DualElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0)
+					gmfggetcoef_(Curr_El->get_prev_state_vars(), Curr_El->get_d_state_vars(),
+					    (Curr_El->get_d_state_vars() + NUM_STATE_VARS), Curr_El->get_dx(),
+					    &(matprops_ptr->bedfrict[Curr_El->get_material()]), &(matprops_ptr->intfrict),
+					    (Curr_El->get_kactxy()), (Curr_El->get_kactxy() + 1), &tiny,
+					    &(matprops_ptr->epsilon));
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	move_dual_data(dual_meshctx, propctx);
+
+	calc_flux(dual_meshctx, propctx);
+
+	move_dual_data(dual_meshctx, propctx);
+
+	buck = El_Table->getbucketptr();
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem * Curr_El = (DualElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0) {
+
+					double *prev_state_vars = Curr_El->get_prev_state_vars();
+					double *state_vars = Curr_El->get_state_vars();
+					double *d_state_vars = Curr_El->get_d_state_vars();
+					double *gravity = Curr_El->get_gravity();
+					double *d_gravity = Curr_El->get_d_gravity();
+					double *curvature = Curr_El->get_curvature();
+					Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
+					double bedfrict = Curr_El->get_effect_bedfrict();
+					double *dx = Curr_El->get_dx();
+
+					double flux[4][NUM_STATE_VARS];
+					get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
+					int iter = timeprops_ptr->iter;
+					double dt = timeprops_ptr->dt.at(iter - 1);
+					double dtdx = dt / dx[0];
+					double dtdy = dt / dx[1];
+
+					int stop[DIMENSION] = { 0, 0 };
+					double orgSrcSgn[4] = { 0., 0., 0., 0. };
+
+					update_states(state_vars, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy,
+					    dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, matprops_ptr->intfrict,
+					    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), matprops_ptr->frict_tiny,
+					    stop, orgSrcSgn);
+
+				}
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	//	 now we can compute the sensitivities w.r.t y perturbation
+
+	buck = new_hashtab->getbucketptr();
+	for (int i = 0; i < new_hashtab->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+
+				Container * container = (Container*) (currentPtr->value);
+
+				DualElem* Curr_El = (DualElem*) El_Table->lookup(container->pass_key());
+
+				double sens[] = { 0., 0., 0. };
+
+				for (int i = 0; i < NUM_STATE_VARS; ++i) {
+					sens[i] = (Curr_El->get_state_vars()[i] - container->get_state()[i]) / INCREMENT;
+					funcvar[1] += sens[i] * container->get_adjoint()[i];
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	double global_funcvar[] = { 0., 0. };
+
+	MPI_Allreduce(&funcvar[0], &global_funcvar[0], 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+	if (numprocs > 1) {
+		FUNC_VAR[1] = global_funcvar[0];
+		FUNC_VAR[2] = global_funcvar[1];
+	} else {
+		FUNC_VAR[1] = funcvar[0];
+		FUNC_VAR[2] = funcvar[1];
+	}
 
 	print_func_var(propctx);
+
+	delete_hashtables_objects<Container>(new_hashtab);
 }
 
 void print_func_var(PropCTX* propctx) {
@@ -577,24 +812,31 @@ void print_func_var(PropCTX* propctx) {
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
 	double hscale = matprops_ptr->HEIGHT_SCALE;
-//	double lscale = matprops_ptr->LENGTH_SCALE;
+	double lscale = matprops_ptr->LENGTH_SCALE;
 //	double tscale = timeprops_ptr->TIME_SCALE;
 //	double gsacel = matprops_ptr->GRAVITY_SCALE;
 //
 //	double velocity_scale = sqrt(lscale * gsacel); // scaling factor for the velocities
 //	double momentum_scale = hscale * velocity_scale; // scaling factor for the momentums
+	if (myid == 0) {
 
-	char filename[50] = "func_var.out";
+		char filename[50] = "func_var.out";
 
-	FILE *file = fopen(filename, "a");
+		FILE *file = fopen(filename, "a");
 
-	double functional_scale = (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE)
-	    * (matprops_ptr->HEIGHT_SCALE);
+		double functional_scale = (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE)
+		    * (matprops_ptr->HEIGHT_SCALE);
 
-	fprintf(file, "%d %8.8f %8.8f %8.8f\n", timeprops_ptr->iter,
-	    timeprops_ptr->time * timeprops_ptr->TIME_SCALE, FUNC_VAR[0] * functional_scale,
-	    FUNC_VAR[1] * functional_scale/hscale);
+		int cc = 0, bb = 1;
+//					for (int j = 0; j < 2; ++j)
+		if (isnan(FUNC_VAR[0]) || isinf(FUNC_VAR[0]) || fabs(FUNC_VAR[0]) > 1e6)
+			bb = cc;
 
-	fclose(file);
+		fprintf(file, "%d %8.8f %8.8f %8.8f %8.8f\n", timeprops_ptr->iter,
+		    timeprops_ptr->time * timeprops_ptr->TIME_SCALE, FUNC_VAR[0] /* functional_scale*/,
+		    FUNC_VAR[1] * functional_scale / lscale, FUNC_VAR[2] * functional_scale / lscale);
+
+		fclose(file);
+	}
 }
 

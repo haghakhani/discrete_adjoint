@@ -147,7 +147,7 @@ void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX
 	gzwrite(myfile, &(min_dx[1]), sizeof(double));
 	gzwrite(myfile, &(min_gen), sizeof(double));
 
-	gzwrite(myfile, &(FUNC_VAR[0]), 2 * sizeof(double));
+	gzwrite(myfile, &(FUNC_VAR[0]), 3 * sizeof(double));
 
 	timeprops->wrtie_to_file(myfile);
 
@@ -354,7 +354,7 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 		gzread(myfile, (void*) &(min_dx[1]), sizeof(double));
 		gzread(myfile, (void*) &(min_gen), sizeof(double));
 
-		gzread(myfile, (void*) &(FUNC_VAR[0]), 2 * sizeof(double));
+		gzread(myfile, (void*) &(FUNC_VAR[0]), 3 * sizeof(double));
 
 		timeprops->read_from_file(myfile);
 

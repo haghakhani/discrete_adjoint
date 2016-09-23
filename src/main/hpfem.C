@@ -153,6 +153,7 @@ int main(int argc, char *argv[]) {
 	propctx.myid = myid;
 	propctx.adapt_flag = adaptflag;
 	propctx.discharge = &discharge;
+	propctx.pileprops=&pileprops;
 
 	if (runcond != 2) {
 

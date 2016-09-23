@@ -62,9 +62,6 @@ void print_grid(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps* matpro
 	return;
 }
 
-void elliptical_pile_height(HashTable* HT_Node_Ptr, Element *EmTemp, MatProps* matprops_ptr,
-    PileProps* pileprops_ptr);
-
 void init_piles(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid, int numprocs,
     int adaptflag, MatProps* matprops, TimeProps* timeprops_ptr, MapNames* mapnames,
     PileProps* pileprops, FluxProps *fluxprops, StatProps* statprops) {

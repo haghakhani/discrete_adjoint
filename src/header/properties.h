@@ -1642,6 +1642,7 @@ struct PropCTX {
 	MapNames* mapnames;
 	OutLine* outline;
 	DISCHARGE* discharge;
+	PileProps* pileprops;
 	int numproc;
 	int myid;
 	int adapt_flag;

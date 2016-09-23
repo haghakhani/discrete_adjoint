@@ -9,9 +9,9 @@
 #define SRC_HEADER_ADJOINT_H_
 
 #include <vector>
-#define Error
+//#define Error
 
-extern double FUNC_VAR[2];
+extern double FUNC_VAR[3];
 
 //! this function transfers information during events such as ghost element data exchange and repartitioning
 void move_dual_data(MeshCTX* meshctx, PropCTX* propctx);
@@ -269,6 +269,37 @@ void print_func_var(PropCTX* propctx);
 double tiny_sgn(double num, double tiny);
 
 void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx);
+
+class Container {
+	private:
+		double state[3];
+		double adjoint[3];
+		unsigned key[2];
+
+	public:
+		Container(DualElem* elem) {
+
+			for (int i = 0; i < DIMENSION; ++i)
+				key[i] = elem->pass_key()[i];
+
+			for (int i = 0; i < NUM_STATE_VARS; ++i) {
+				state[i] = elem->get_state_vars()[i];
+				// note that at time step n adjoint_prev is for time step n+1 and adjoint is at time step n
+				adjoint[i] = elem->get_prev_adjoint()[i];
+			}
+
+		}
+		double* get_state() {
+			return state;
+		}
+		double* get_adjoint() {
+			return adjoint;
+		}
+		unsigned* pass_key() {
+			return key;
+		}
+
+	};
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);
