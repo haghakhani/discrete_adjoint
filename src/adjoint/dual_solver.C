@@ -205,8 +205,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		adjoint_sol.stop();
 //		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
 
-		compute_param_sens(&dual_meshctx, propctx);
-		compute_functional_variation(&dual_meshctx, propctx);
+//		compute_param_sens(&dual_meshctx, propctx);
+//		compute_functional_variation(&dual_meshctx, propctx);
 
 #ifdef Error
 		error.start();
@@ -271,6 +271,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	}
 
 	compute_init_location_variation(&dual_meshctx, propctx);
+	compute_init_volume_variation(&dual_meshctx, propctx);
 
 	delete_hashtables_objects<DualElem>(Dual_El_Tab);
 	delete_hashtables_objects<Node>(NodeTable);
@@ -323,8 +324,8 @@ void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, 
 		adjoint_sol.stop();
 //		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
 
-		compute_param_sens(dual_meshctx, propctx);
-		compute_functional_variation(dual_meshctx, propctx);
+//		compute_param_sens(dual_meshctx, propctx);
+//		compute_functional_variation(dual_meshctx, propctx);
 
 #ifdef Error
 		error.start();
@@ -387,7 +388,8 @@ void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, 
 // and we have to compute the error for other time steps.
 	}
 
-	compute_init_location_variation(dual_meshctx, propctx);
+//	compute_init_location_variation(dual_meshctx, propctx);
+	compute_init_volume_variation(dual_meshctx, propctx);
 
 	delete_hashtables_objects<DualElem>(Dual_El_Tab);
 	delete_hashtables_objects<Node>(NodeTable);
@@ -489,6 +491,7 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 	HashEntryPtr currentPtr;
 	HashEntryPtr *buck = El_Table->getbucketptr();
+	int elem = 0;
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -506,8 +509,13 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 //					int cc = 0, bb = 1;
 ////					for (int j = 0; j < 2; ++j)
-//					if (isnan(FUNC_VAR[0]) || isinf(FUNC_VAR[0]) || fabs(FUNC_VAR[0]) > 1e6)
-//						bb = cc;
+//					if (isnan(matprops_ptr->sensitivity[0]) || isinf(matprops_ptr->sensitivity[0])
+//					    || fabs(matprops_ptr->sensitivity[0]) > 1e6)
+//						cout << "func_var " << matprops_ptr->sensitivity[0] << " adjoint [1] " << adjoint[1]
+//						    << " adjoint[2] " << adjoint[2] << " phi_sens[1] " << phi_sens[1]
+//						    << "  phi_sens[2] " << phi_sens[2] << "  elem " << elem << "iter "
+//						    << timeprops_ptr->iter << endl;
+//					elem++;
 
 				}
 				currentPtr = currentPtr->next;
@@ -802,12 +810,100 @@ void print_func_var(PropCTX* propctx) {
 		double functional_scale = (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE)
 		    * (matprops_ptr->HEIGHT_SCALE);
 
-
-		fprintf(file, "%d %8.8f %8.8f %8.8f %8.8f\n", timeprops_ptr->iter,
+		fprintf(file, "%d %f %e %e %e\n", timeprops_ptr->iter,
 		    timeprops_ptr->time * timeprops_ptr->TIME_SCALE, global_sens[0] * functional_scale,
 		    global_sens[1] * functional_scale / lscale, global_sens[2] * functional_scale / lscale);
 
 		fclose(file);
 	}
+}
+
+void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
+
+	HashTable* El_Table = dual_meshctx->el_table;
+	HashTable* NodeTable = dual_meshctx->nd_table;
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
+	int myid = propctx->myid, numprocs = propctx->numproc;
+
+	int iter = timeprops_ptr->iter;
+	double dt = timeprops_ptr->dt.at(iter - 1);
+
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashTable* new_hashtab = new HashTable(El_Table);
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0 && *(Curr_El->get_prev_state_vars()) > GEOFLOW_TINY) {
+
+					Container* contain = new Container(Curr_El);
+					new_hashtab->add(Curr_El->pass_key(), contain);
+
+					for (int effelement = 0; effelement < EFF_ELL; ++effelement) {
+
+						if (effelement == 0) {
+							double* adjoint = Curr_El->get_prev_adjoint();
+
+							Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
+
+							for (int l = 0; l < NUM_STATE_VARS; ++l)
+								*(contain->get_sens()) += adjoint[l] * jacobianmat(effelement, l, 0);
+
+						} else if (effelement <= 4
+						    || (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) > -2)) {
+
+							//basically we are checking all neighbor elements, and start from xp neighbor
+							DualElem * neigh_elem = (DualElem*) (El_Table->lookup(
+							    Curr_El->get_neighbors() + (effelement - 1) * KEYLENGTH));
+
+							if (neigh_elem) {
+
+								double* adjoint = neigh_elem->get_prev_adjoint();
+								Vec_Mat<9>& jacobianmat = neigh_elem->get_jacobian();
+
+								int jacind = neigh_elem->which_neighbor(Curr_El->pass_key());
+								// because we have to consider the element itself which is in jacind=0
+								jacind++;
+
+								for (int l = 0; l < NUM_STATE_VARS; ++l)
+									*(contain->get_sens()) += adjoint[l] * jacobianmat(jacind, l, 0);
+
+							}
+						}
+					}
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+	}
+
+	char filename[50];
+	sprintf(filename, "func_var_%4d", myid);
+
+	FILE *file = fopen(filename, "a");
+	fprintf(file, "X,Y,h_o,sensitivity");
+
+	buck = new_hashtab->getbucketptr();
+	for (int i = 0; i < new_hashtab->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+
+				Container * container = (Container*) (currentPtr->value);
+
+				fprintf(file, "%f,%f,%f,%e\n", container->get_coord()[0], container->get_coord()[1],
+				    container->get_state()[0], *(container->get_sens()));
+
+				currentPtr = currentPtr->next;
+			}
+		}
+	fclose(file);
+
 }
 

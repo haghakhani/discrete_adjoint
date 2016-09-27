@@ -268,36 +268,49 @@ double tiny_sgn(double num, double tiny);
 
 void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx);
 
+void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx);
+
 class Container {
-	private:
-		double state[3];
-		double adjoint[3];
-		unsigned key[2];
+private:
+	double state[3];
+	double adjoint[3];
+	unsigned key[2];
+	double sens;
+	double position[2];
 
-	public:
-		Container(DualElem* elem) {
+public:
+	Container(DualElem* elem) {
 
-			for (int i = 0; i < DIMENSION; ++i)
-				key[i] = elem->pass_key()[i];
-
-			for (int i = 0; i < NUM_STATE_VARS; ++i) {
-				state[i] = elem->get_state_vars()[i];
-				// note that at time step n adjoint_prev is for time step n+1 and adjoint is at time step n
-				adjoint[i] = elem->get_prev_adjoint()[i];
-			}
-
-		}
-		double* get_state() {
-			return state;
-		}
-		double* get_adjoint() {
-			return adjoint;
-		}
-		unsigned* pass_key() {
-			return key;
+		for (int i = 0; i < DIMENSION; ++i) {
+			key[i] = elem->pass_key()[i];
+			position[i] = elem->get_coord()[i];
 		}
 
-	};
+		sens = 0.;
+		for (int i = 0; i < NUM_STATE_VARS; ++i) {
+			state[i] = elem->get_prev_state_vars()[i];
+			// note that at time step n adjoint_prev is for time step n+1 and adjoint is at time step n
+			adjoint[i] = elem->get_prev_adjoint()[i];
+		}
+
+	}
+	double* get_state() {
+		return state;
+	}
+	double* get_adjoint() {
+		return adjoint;
+	}
+	double* get_sens() {
+		return &sens;
+	}
+	unsigned* pass_key() {
+		return key;
+	}
+	double* get_coord(){
+		return position;
+	}
+
+};
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);
