@@ -268,6 +268,8 @@ double tiny_sgn(double num, double tiny);
 
 void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx);
 
+void write_jacobian_to_compute_eigen(MeshCTX* dual_meshctx, PropCTX* propctx);
+
 void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx);
 
 class Container {
