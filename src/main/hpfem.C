@@ -269,9 +269,6 @@ int main(int argc, char *argv[]) {
 			step(El_Table, Node_Table, myid, numprocs, &matprops, &timeprops, &pileprops, &fluxprops,
 			    &statprops, &order_flag, &outline, &discharge, adaptflag);
 
-			if (timeprops.iter==1)
-				write_alldata_ordered(El_Table,  myid);
-
 			stept.stop();
 
 			write_solution.start();

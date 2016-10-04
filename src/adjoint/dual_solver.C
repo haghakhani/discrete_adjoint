@@ -197,10 +197,6 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		jacobian.start();
 		calc_jacobian(&dual_meshctx, propctx);
 
-		int res=1;
-		if (timeprops_ptr->iter==1)
-			write_alldata_ordered(Dual_El_Tab,  res);
-
 		comminucate_jacobians(&dual_meshctx, propctx);
 		jacobian.stop();
 
@@ -248,12 +244,12 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		error.stop();
 #else
 		dual_vis.start();
-//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
 			    1);
 //			print_func_var(propctx);
-//		}
+		}
 		dual_vis.stop();
 #endif
 
