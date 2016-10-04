@@ -69,8 +69,9 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 
 					Jacobian *jacobian = (Jacobian *) lookup(Curr_El->pass_key());
 					if (jacobian) {
-						if (*(Curr_El->get_prev_state_vars()) > 0.) {
-							Solution *solution = new Solution(Curr_El->get_prev_state_vars());
+						if (*(Curr_El->get_prev_state_vars()) > 0. || *(Curr_El->get_pre3_state_vars()) > 0.) {
+							Solution *solution = new Solution(Curr_El->get_prev_state_vars(),
+							    Curr_El->get_pre3_state_vars());
 							jacobian->put_solution(solution, timeptr->iter - 1);
 
 						} else
@@ -80,8 +81,9 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 						jacobian = new Jacobian(Curr_El->pass_key());
 						add(jacobian->get_key(), jacobian);
 
-						if (*(Curr_El->get_prev_state_vars()) > 0.) {
-							Solution *solution = new Solution(Curr_El->get_prev_state_vars());
+						if (*(Curr_El->get_prev_state_vars()) > 0. || *(Curr_El->get_pre3_state_vars()) > 0.) {
+							Solution *solution = new Solution(Curr_El->get_prev_state_vars(),
+							    Curr_El->get_pre3_state_vars());
 							jacobian->put_solution(solution, timeptr->iter - 1);
 
 						} else
@@ -152,6 +154,7 @@ void SolRec::wrtie_sol_to_disk(int myid) {
 		for (int i = 0; i < size_non_zero; ++i) {
 			gzwrite(myfile, non_zero_key[i], sizeof(unsigned) * 2);
 			gzwrite(myfile, non_zero_sol[i]->get_solution(), sizeof(double) * 3);
+			gzwrite(myfile, non_zero_sol[i]->get_pre3_solution(), sizeof(double) * 3);
 			delete non_zero_sol[i];
 		}
 
@@ -173,7 +176,7 @@ void SolRec::wrtie_sol_to_disk_hdf5(int myid) {
 	for (int step = first_solution_time_step; step < last_solution_time_step; ++step) {
 		int count = 0;
 		vector<unsigned> zero_key, non_zero_key;
-		vector<double> non_zero_sol;
+		vector<double> non_zero_sol, non_zero_pre_sol;
 
 		for (int i = 0; i < NBUCKETS; ++i)
 			if (*(bucket + i)) {
@@ -191,6 +194,9 @@ void SolRec::wrtie_sol_to_disk_hdf5(int myid) {
 							non_zero_sol.push_back(*(sol->get_solution()));
 							non_zero_sol.push_back(*(sol->get_solution() + 1));
 							non_zero_sol.push_back(*(sol->get_solution() + 2));
+							non_zero_pre_sol.push_back(*(sol->get_pre3_solution()));
+							non_zero_pre_sol.push_back(*(sol->get_pre3_solution() + 1));
+							non_zero_pre_sol.push_back(*(sol->get_pre3_solution() + 2));
 							non_zero_key.push_back(*(jacobian->get_key()));
 							non_zero_key.push_back(*(jacobian->get_key() + 1));
 							delete sol;
@@ -210,7 +216,8 @@ void SolRec::wrtie_sol_to_disk_hdf5(int myid) {
 		hid_t h5fid = GH5_open_zip_sol_file(hdf5file, 'n');
 
 		GH5_write_zero_keys(h5fid, zero_key.size() / 2, zero_key);
-		GH5_write_non_zero_keys_sol(h5fid, non_zero_key.size() / 2, non_zero_key, non_zero_sol);
+		GH5_write_non_zero_keys_sol(h5fid, non_zero_key.size() / 2, non_zero_key, non_zero_sol,
+		    non_zero_pre_sol);
 		GH5_closefile(h5fid);
 
 		if (myid == 0)
@@ -253,7 +260,8 @@ void SolRec::read_sol_from_disk(int myid, int iter) {
 
 	gzFile myfile;
 	char filename[50];
-	double state_vars[NUM_STATE_VARS] = { 0., 0., 0. };
+	double state_vars[] = { 0., 0., 0. };
+	double pre3_state[] = { 0., 0., 0. };
 
 	unsigned key[DIMENSION] = { 0, 0 };
 	Solution * solution;
@@ -293,8 +301,9 @@ void SolRec::read_sol_from_disk(int myid, int iter) {
 
 		gzread(myfile, key, sizeof(unsigned) * 2);
 		gzread(myfile, state_vars, sizeof(double) * 3);
+		gzread(myfile, pre3_state, sizeof(double) * 3);
 
-		solution = new Solution(state_vars);
+		solution = new Solution(state_vars, pre3_state);
 		Jacobian *jacobian = (Jacobian *) lookup(key);
 		if (jacobian)
 			jacobian->put_solution(solution, iter);
@@ -366,12 +375,20 @@ void SolRec::read_sol_from_disk_hdf5(int myid, int iter) {
 	hid_t dcpl1 = H5Dget_create_plist(dset1);
 	hid_t dspace1 = H5Dget_space(dset1);
 	status = H5Sget_simple_extent_dims(dspace1, dims, NULL);
+
+	hid_t dset2 = H5Dopen(gz_id, "PRE_SOLUTIONS");
+	hid_t dcpl2 = H5Dget_create_plist(dset2);
+	hid_t dspace2 = H5Dget_space(dset2);
+	status = H5Sget_simple_extent_dims(dspace2, dims, NULL);
+
 	double* state_vars = new double[3 * dims[0]];
+	double* pre3_state = new double[3 * dims[0]];
 	status = H5Dread(dset1, H5T_NATIVE_DOUBLE, H5P_DEFAULT, dspace1, H5P_DEFAULT, state_vars);
+	status = H5Dread(dset2, H5T_NATIVE_DOUBLE, H5P_DEFAULT, dspace2, H5P_DEFAULT, pre3_state);
 
 	for (int i = 0; i < dims[0]; ++i) {
 
-		solution = new Solution(state_vars + 3 * i);
+		solution = new Solution(state_vars + 3 * i, pre3_state + 3 * i);
 		Jacobian *jacobian = (Jacobian *) lookup(keys + 2 * i);
 		if (jacobian)
 			jacobian->put_solution(solution, iter);
@@ -539,6 +556,10 @@ DualElem::DualElem(Element* element) {
 
 		prev_state_vars[i] = element->prev_state_vars[i];
 
+		pre2_state_vars[i] = element->pre2_state_vars[i];
+
+		pre3_state_vars[i] = element->pre3_state_vars[i];
+
 		gravity[i] = element->gravity[i];
 
 		Influx[i] = element->Influx[i];
@@ -604,6 +625,10 @@ DualElem::DualElem(Element* element) {
 		adjoint[i] = 0.;
 
 		prev_adjoint[i] = 0.;
+
+		pre2_adjoint[i]=0.;
+
+		pre3_adjoint[i]=0.;
 
 		func_sens[i] = 0.;
 	}
@@ -723,8 +748,12 @@ DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], 
 	for (int i = 0; i < NUM_STATE_VARS; i++) {
 		state_vars[i] = fthTemp->state_vars[i] * myfractionoffather;
 		prev_state_vars[i] = fthTemp->prev_state_vars[i] * myfractionoffather;
+		pre2_state_vars[i] = fthTemp->pre2_state_vars[i] * myfractionoffather;
+		pre3_state_vars[i] = fthTemp->pre3_state_vars[i] * myfractionoffather;
 		adjoint[i] = 0.25 * fthTemp->adjoint[i];
 		prev_adjoint[i] = 0.25 * fthTemp->prev_adjoint[i];
+		pre2_adjoint[i] = 0.25 * fthTemp->pre2_adjoint[i];
+		pre3_adjoint[i] = 0.25 * fthTemp->pre3_adjoint[i];
 		Influx[i] = 0.;
 
 	}
@@ -1001,14 +1030,22 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 	for (i = 0; i < NUM_STATE_VARS; i++) {
 		state_vars[i] = 0.;
 		prev_state_vars[i] = 0.;
+		pre2_state_vars[i] = 0.;
+		pre3_state_vars[i] = 0.;
 		adjoint[i] = 0.;
 		prev_adjoint[i] = 0.;
+		pre2_adjoint[i] = 0.;
+		pre3_adjoint[i] = 0.;
 
 		for (j = 0; j < 4; j++) {
 			state_vars[i] += *(sons[j]->get_state_vars() + i) * 0.25;
 			prev_state_vars[i] += *(sons[j]->get_prev_state_vars() + i) * 0.25;
+			pre2_state_vars[i] += *(sons[j]->get_pre2_state_vars() + i) * 0.25;
+			pre3_state_vars[i] += *(sons[j]->get_pre3_state_vars() + i) * 0.25;
 			adjoint[i] += *(sons[j]->get_adjoint() + i);
 			prev_adjoint[i] += *(sons[j]->get_prev_adjoint() + i);
+			pre2_adjoint[i] += *(sons[j]->get_pre2_adjoint() + i);
+			pre3_adjoint[i] += *(sons[j]->get_pre3_adjoint() + i);
 
 		}
 	}
@@ -1164,7 +1201,9 @@ DualElem::DualElem(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr,
 		Element(myfile, NodeTable, matprops_ptr, myid) {
 
 	gzread(myfile, (adjoint), sizeof(double) * 3);
-//	gzread(myfile, (prev_adjoint), sizeof(double) * 3);
+	gzread(myfile, (prev_adjoint), sizeof(double) * 3);
+	gzread(myfile, (pre2_adjoint), sizeof(double) * 3);
+	gzread(myfile, (pre3_adjoint), sizeof(double) * 3);
 //	gzread(myfile, (func_sens), sizeof(double) * 3);
 
 }
@@ -2353,6 +2392,9 @@ void DualElem::update_state(SolRec* solrec, HashTable* El_Table, int iter) {
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i) {
 		prev_state_vars[i] = *(prev_sol->get_solution() + i);
+		pre3_state_vars[i] = *(prev_sol->get_pre3_solution() + i);
+		pre3_adjoint[i] = pre2_adjoint[i];
+		pre2_adjoint[i] = prev_adjoint[i];
 		prev_adjoint[i] = adjoint[i];
 	}
 
@@ -2498,6 +2540,9 @@ void DualElem::write_elem(gzFile& myfile) {
 	Element::write_elem(myfile);
 
 	gzwrite(myfile, (adjoint), sizeof(double) * 3);
+	gzwrite(myfile, (prev_adjoint), sizeof(double) * 3);
+	gzwrite(myfile, (pre2_adjoint), sizeof(double) * 3);
+	gzwrite(myfile, (pre3_adjoint), sizeof(double) * 3);
 //	gzwrite(myfile, (prev_adjoint), sizeof(double) * 3);
 //	gzwrite(myfile, (func_sens), sizeof(double) * 3);
 
@@ -2552,6 +2597,10 @@ ErrorElem::ErrorElem(Element* element) {
 		state_vars[i] = element->state_vars[i];
 
 		prev_state_vars[i] = element->prev_state_vars[i];
+
+		pre2_state_vars[i] = element->pre2_state_vars[i];
+
+		pre3_state_vars[i] = element->pre3_state_vars[i];
 
 		gravity[i] = element->gravity[i];
 
@@ -2740,6 +2789,8 @@ ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH]
 	for (int i = 0; i < NUM_STATE_VARS; i++) {
 		state_vars[i] = fthTemp->state_vars[i];
 		prev_state_vars[i] = fthTemp->prev_state_vars[i];
+		pre2_state_vars[i] = fthTemp->pre2_state_vars[i];
+		pre3_state_vars[i] = fthTemp->pre3_state_vars[i];
 		bilin_state[i] = fthTemp->bilin_state[i];
 		bilin_prev_state[i] = fthTemp->bilin_prev_state[i];
 		adjoint[i] = 0.25 * fthTemp->adjoint[i];
@@ -3018,6 +3069,8 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 	for (i = 0; i < NUM_STATE_VARS; i++) {
 		state_vars[i] = 0.;
 		prev_state_vars[i] = 0.;
+		pre2_state_vars[i] = 0.;
+		pre3_state_vars[i] = 0.;
 		adjoint[i] = 0.;
 		bilin_prev_state[i] = 0.;
 		bilin_state[i] = 0.;
@@ -3025,6 +3078,8 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 		for (j = 0; j < 4; j++) {
 			state_vars[i] += *(sons[j]->get_state_vars() + i) * 0.25;
 			prev_state_vars[i] += *(sons[j]->get_prev_state_vars() + i) * 0.25;
+			pre2_state_vars[i] += *(sons[j]->get_pre2_state_vars() + i) * 0.25;
+			pre3_state_vars[i] += *(sons[j]->get_pre3_state_vars() + i) * 0.25;
 			bilin_prev_state[i] += *(sons[j]->get_bilin_prev_state() + i) * 0.25;
 			bilin_state[i] += *(sons[j]->get_bilin_state() + i) * 0.25;
 			adjoint[i] += *(sons[j]->get_adjoint() + i);

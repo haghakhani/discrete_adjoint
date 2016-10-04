@@ -30,18 +30,13 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
     TimeProps* timeprops_ptr, PileProps *pileprops_ptr, FluxProps *fluxprops,
     StatProps* statprops_ptr, int* order_flag, OutLine* outline_ptr, DISCHARGE* discharge,
     int adaptflag) {
-	/*
-	 * PREDICTOR-CORRECTED based on Davis' Simplified Godunov Method
-	 */
 
-	/* pass off proc data here (really only need state_vars for off-proc neighbors) */
 	move_data(nump, myid, El_Table, NodeTable, timeprops_ptr);
 
 	slopes(El_Table, NodeTable, matprops_ptr, 0);
 
 	// get coefficients, eigenvalues, hmax and calculate the time step
 	double dt = get_coef_and_eigen(El_Table, NodeTable, matprops_ptr, fluxprops, timeprops_ptr, 0);
-	// here we store the required data (solution and functional sensitivity) for the 0 time step
 
 	timeprops_ptr->incrtime(&dt); //also reduces dt if necessary
 
@@ -49,100 +44,6 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 	// current time step refine and re-mark cells
 	adapt_fluxsrc_region(El_Table, NodeTable, matprops_ptr, pileprops_ptr, fluxprops, timeprops_ptr,
 	    dt, myid, adaptflag);
-
-	int i;
-	HashEntryPtr* buck = El_Table->getbucketptr();
-	HashEntryPtr currentPtr;
-	Element* Curr_El;
-
-	double dt2 = .5 * dt; // dt2 is set as dt/2 !
-
-	/*
-	 *  predictor step
-	 */
-	int j, k, counter;
-	double tiny = GEOFLOW_TINY;
-	double flux_src_coef = 0;
-
-#ifdef SECOND_ORDER
-	//-------------------go through all the elements of the subdomain and
-	//-------------------calculate the state variables at time .5*delta_t
-	/* mdj 2007-04 */
-	int IF_STOPPED;
-	double curr_time,influx[3],*d_uvec; //VxVy[2];
-	double VxVy[2];
-	Node* nd;
-#pragma omp parallel for                                                \
-  private(currentPtr,Curr_El,IF_STOPPED,influx,j,k,curr_time,flux_src_coef,VxVy)
-	for(i=0; i<El_Table->get_no_of_buckets(); i++)
-	if(*(buck+i))
-	{
-		currentPtr = *(buck+i);
-		while(currentPtr) {
-
-			Curr_El=(Element*)(currentPtr->value);
-
-			influx[3];
-			influx[0]=*(Curr_El->get_influx()+0);
-			influx[1]=*(Curr_El->get_influx()+1);
-			influx[2]=*(Curr_El->get_influx()+2);
-
-			if(!(influx[0]>=0.0)) {
-				printf("negative influx=%g\n",influx[0]);
-				assert(0);
-			}
-
-			if(Curr_El->get_adapted_flag()>0) {
-
-				d_uvec = Curr_El->get_d_state_vars();
-				nd = (Node*) NodeTable->lookup(Curr_El->pass_key());
-
-				// -- calc contribution of flux source
-				flux_src_coef=0;
-				curr_time=(timeprops_ptr->time)*(timeprops_ptr->TIME_SCALE);
-
-				//VxVy[2];
-				if(*(Curr_El->get_state_vars()+0)>GEOFLOW_TINY) {
-					VxVy[0]=*(Curr_El->get_state_vars()+1)/ *(Curr_El->get_state_vars()+0);
-					VxVy[1]=*(Curr_El->get_state_vars()+2)/ *(Curr_El->get_state_vars()+0);
-				}
-				else
-				VxVy[0]=VxVy[1]=0.0;
-
-#ifdef STOPCRIT_CHANGE_SOURCE
-				IF_STOPPED=Curr_El->get_stoppedflags();
-#else
-				IF_STOPPED=!(!(Curr_El->get_stoppedflags()));
-#endif
-
-				predict_(Curr_El->get_state_vars(), d_uvec, (d_uvec+NUM_STATE_VARS),
-						Curr_El->get_prev_state_vars(), &tiny,
-						Curr_El->get_kactxy(), &dt2, Curr_El->get_gravity(),
-						Curr_El->get_curvature(),
-						&(matprops_ptr->bedfrict[Curr_El->get_material()]),
-						&(matprops_ptr->intfrict),
-						Curr_El->get_d_gravity(), &(matprops_ptr->frict_tiny),
-						order_flag, VxVy,
-						&IF_STOPPED,influx);
-
-				/* apply bc's */
-#ifdef APPLY_BC
-				for(j=0;j<4;j++)
-				if(*(Curr_El->get_neigh_proc()+j) == INIT)   // this is a boundary!
-				for(k=0;k<NUM_STATE_VARS;k++)
-				*(Curr_El->get_state_vars()+k) = 0;
-#endif
-			}
-			currentPtr=currentPtr->next;
-		}
-	}
-	/* finished predictor step */
-	/* really only need to share dudx, state_vars, and kactxy */
-	move_data(nump, myid, El_Table, NodeTable,timeprops_ptr);
-
-	/* calculate the slopes for the new (half-time step) state variables */
-	slopes(El_Table, NodeTable, matprops_ptr);
-#endif  //SECOND_ORDER
 
 	/* really only need to share dudx, state_vars, and kactxy */
 	move_data(nump, myid, El_Table, NodeTable, timeprops_ptr);
@@ -154,8 +55,7 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 	/*
 	 * calculate edge states
 	 */
-	double outflow = 0.0; //shouldn't need the =0.0 assignment but just being cautious.
-	//printf("step: before calc_edge_states\n"); fflush(stdout);
+	double outflow = 0.;
 
 	calc_edge_states<Element>(El_Table, NodeTable, matprops_ptr, timeprops_ptr, myid, order_flag,
 	    &outflow);
@@ -165,66 +65,28 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 	 * corrector step and b.c.s
 	 */
 
-	//for comparison of magnitudes of forces in slumping piles
-	double forceint = 0.0, elemforceint;
-	double forcebed = 0.0, elemforcebed;
-	double eroded = 0.0, elemeroded;
-	double deposited = 0.0, elemdeposited;
-	double realvolume = 0.0;
+	HashEntryPtr* buck = El_Table->getbucketptr();
 
-	buck = El_Table->getbucketptr();
-
-	// mdj 2007-04 this loop has pretty much defeated me - there is
-	//             a dependency in the Element class that causes incorrect
-	//             results
-	//
-
-	for (i = 0; i < El_Table->get_no_of_buckets(); i++)
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
 			HashEntryPtr currentPtr = *(buck + i);
 			while (currentPtr) {
 				Element* Curr_El = (Element*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) { //if this is a refined element don't involve!!!
 
-					double *dxy = Curr_El->get_dx();
-					// if calculations are first-order, predict is never called
-					// ... so we need to update prev_states
-//					void *Curr_El_out = (void *) Curr_El;
-					//I believe it's because we need correct function be a friend function of node class, but we do not want to add element header to node.h
-					if (*order_flag == 1)
-						Curr_El->update_prev_state_vars();
+					Curr_El->update_prev_state_vars();
 
-					//if (*(Curr_El->pass_key())==2151461179 && *(Curr_El->pass_key()+1)==330382099 /*&& timeprops->iter == 9 */)
-					//  cout<<"step is cheking the element"<<endl;
-
-					correct(NodeTable, El_Table, dt, matprops_ptr, fluxprops, timeprops_ptr, Curr_El,
-					    &elemforceint, &elemforcebed, &elemeroded, &elemdeposited);
-
-					forceint += fabs(elemforceint);
-					forcebed += fabs(elemforcebed);
-					realvolume += dxy[0] * dxy[1] * *(Curr_El->get_state_vars());
-					eroded += elemeroded;
-					deposited += elemdeposited;
-
-					double *coord = Curr_El->get_coord();
-					//update the record of maximum pileheight in the area covered by this element
-					double hheight = *(Curr_El->get_state_vars());
-
-//					int ind = Curr_El->get_sol_rec_ind();
-//					jacobian = solHyst->at(ind);
+					correct(NodeTable, El_Table, dt, matprops_ptr, fluxprops, timeprops_ptr, Curr_El);
 
 #ifdef MAX_DEPTH_MAP
+					double *coord = Curr_El->get_coord();
+					double *dxy = Curr_El->get_dx();
+					//update the record of maximum pileheight in the area covered by this element
+					double hheight = *(Curr_El->get_state_vars());
 					double pfheight[6];
 					outline_ptr->update(coord[0] - 0.5 * dxy[0], coord[0] + 0.5 * dxy[0],
 					    coord[1] - 0.5 * dxy[1], coord[1] + 0.5 * dxy[1], hheight, pfheight);
 #endif
-
-//#ifdef APPLY_BC
-//					for (j = 0; j < 4; j++)
-//						if (*(Curr_El->get_neigh_proc() + j) == INIT) // this is a boundary!
-//							for (k = 0; k < NUM_STATE_VARS; k++)
-//								*(Curr_El->get_state_vars() + k) = 0;
-//#endif
 
 				}
 				currentPtr = currentPtr->next;
@@ -234,7 +96,7 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 	//update the orientation of the "dryline" (divides partially wetted cells
 	//into wet and dry parts solely based on which neighbors currently have
 	//pileheight greater than GEOFLOW_TINY
-	for (i = 0; i < El_Table->get_no_of_buckets(); i++) {
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		HashEntryPtr currentPtr = *(buck + i);
 		while (currentPtr) {
 			Element* Curr_El = (Element*) (currentPtr->value);
@@ -244,34 +106,9 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 		}
 	}
 
-	update_discharge(El_Table, NodeTable,  discharge, dt);
+	update_discharge(El_Table, NodeTable, discharge, dt);
 
-	/* finished corrector step */
 	calc_stats(El_Table, NodeTable, myid, matprops_ptr, timeprops_ptr, statprops_ptr, dt);
-
-//	double tempin[6], tempout[6];
-//	tempin[0] = outflow;    //volume that flew out the boundaries this iteration
-//	tempin[1] = eroded;     //volume that was eroded this iteration
-//	tempin[2] = deposited;  //volume that is currently deposited
-//	tempin[3] = realvolume; //"actual" volume within boundaries
-//	tempin[4] = forceint;   //internal friction force
-//	tempin[5] = forcebed;   //bed friction force
-//
-//	MPI_Reduce(tempin, tempout, 6, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-//
-//	statprops_ptr->outflowvol += tempout[0] * (matprops_ptr->HEIGHT_SCALE)
-//	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
-//	statprops_ptr->erodedvol += tempout[1] * (matprops_ptr->HEIGHT_SCALE)
-//	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
-//	statprops_ptr->depositedvol = tempout[2] * (matprops_ptr->HEIGHT_SCALE)
-//	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
-//	statprops_ptr->realvolume = tempout[3] * (matprops_ptr->HEIGHT_SCALE)
-//	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
-//
-//	statprops_ptr->forceint = tempout[4] / tempout[3] * matprops_ptr->GRAVITY_SCALE;
-//	statprops_ptr->forcebed = tempout[5] / tempout[3] * matprops_ptr->GRAVITY_SCALE;
-
-	//calc_volume(El_Table, myid, matprops_ptr, timeprops_ptr, dt, v_star, nz_star);
 
 	return;
 }

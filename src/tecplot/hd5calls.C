@@ -289,7 +289,7 @@ void GH5_write_zero_keys(hid_t h5fid, int size_zero, vector<unsigned>& key) {
 }
 
 void GH5_write_non_zero_keys_sol(hid_t h5fid, int size, vector<unsigned>& key,
-    vector<double>& state) {
+    vector<double>& state, vector<double>& pre_state) {
 
 	hsize_t key_dim[2] = { size, 2 };
 	hsize_t sol_dim[2] = { size, 3 };
@@ -319,16 +319,21 @@ void GH5_write_non_zero_keys_sol(hid_t h5fid, int size, vector<unsigned>& key,
 	    plist_k, H5P_DEFAULT);
 	hid_t sol_dataid = H5Dcreate2(non_zero_cell, "SOLUTIONS", H5T_NATIVE_DOUBLE, sol_spc, H5P_DEFAULT,
 	    plist_s, H5P_DEFAULT);
+	hid_t pre_sol_dataid = H5Dcreate2(non_zero_cell, "PRE_SOLUTIONS", H5T_NATIVE_DOUBLE, sol_spc,
+	    H5P_DEFAULT, plist_s, H5P_DEFAULT);
 
 //write data
 	status = H5Dwrite(key_dataid, H5T_NATIVE_UINT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &key[0]);
 	status = H5Dwrite(sol_dataid, H5T_NATIVE_DOUBLE_g, H5S_ALL, H5S_ALL, H5P_DEFAULT, &state[0]);
+	status = H5Dwrite(pre_sol_dataid, H5T_NATIVE_DOUBLE_g, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+	    &pre_state[0]);
 
 	//close dataset and dataspcae
 	status = H5Pclose(plist_k);
 	status = H5Pclose(plist_s);
 	status = H5Dclose(key_dataid);
 	status = H5Dclose(sol_dataid);
+	status = H5Dclose(pre_sol_dataid);
 	status = H5Sclose(key_spc);
 	status = H5Sclose(sol_spc);
 

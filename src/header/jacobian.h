@@ -26,9 +26,11 @@ class Solution {
 
 public:
 
-	Solution(double* curr_sol);
+	Solution(double* curr_sol, double* pre3_sol);
 
 	double* get_solution();
+
+	double* get_pre3_solution();
 
 	double get_kact();
 
@@ -41,11 +43,18 @@ protected:
 	Solution();
 
 	double states[NUM_STATE_VARS]; //to save the solution
+	double pre3_state[NUM_STATE_VARS];
 };
 
 inline double* Solution::get_solution() {
 	return states;
 }
+;
+
+inline double* Solution::get_pre3_solution(){
+	return pre3_state;
+}
+;
 
 class Jacobian {
 	//friend functions and classes

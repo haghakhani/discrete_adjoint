@@ -81,8 +81,8 @@ class Element {
 	friend void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, int myid,
 	    double* e_error);
 
-	friend void uniform_refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump, int myid, void* RL,
-	    TimeProps* timeprops_ptr);
+	friend void uniform_refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump,
+	    int myid, void* RL, TimeProps* timeprops_ptr);
 
 	friend void adjust_node_info(MeshCTX* meshctx, PropCTX* propctx);
 
@@ -314,6 +314,10 @@ public:
 
 	//! this function returns the vector of state variables
 	double* get_state_vars();
+
+	double* get_pre2_state_vars();
+
+	double* get_pre3_state_vars();
 
 	//! this function returns the vector of adjoint
 	double* get_adjoint();
@@ -763,8 +767,10 @@ protected:
 	//! when an element edge is partially wet and partially dry... Swet is the fraction of a cell edge that is partially wet, because it can only be horizontal, vertical, or parallel to either diagonal, all of one element's partially wet sides are have the same fraction of wetness.  The state variables (used to compute the physical fluxes) at the element/cell edge are adjusted to be the weighted by wetness average over an element/cell edge.  As such physical fluxes through completely dry edges of partially wet elements/cells are zeroed, while physical fluxes through completely wet edges are left unchanged.  Because of the definition as "wetness weighted average" physical fluxes through a partially wet edge shared with a neighbor of the same generation is also left left unchanged but, when a partially wet edge is shared with two more refined neighbors the total mass and momentum at the edge is split between the two neighbors in proportion to how much of their boundary shared with this element is wet.  This "scaling" of the physical fluxes is the "adjustment of fluxes in partially wetted cells" facet of our multifaceted thin-layer problem mitigation approach.  And it has been shown to significantly reduce the area covered by a thin layer of material.  Keith wrote this May 2007.
 	double Swet;
 
-//	//! Drag-force
-//	double drag[DIMENSION];
+	double pre2_state_vars[NUM_STATE_VARS];
+
+	double pre3_state_vars[NUM_STATE_VARS];
+
 };
 
 inline int Element::get_ithelem() const {
@@ -823,9 +829,9 @@ inline int Element::get_opposite_brother_flag() {
 ;
 
 inline void Element::put_height_mom(double pile_height, double volf, double xmom, double ymom) {
-	prev_state_vars[0] = state_vars[0] = pile_height;
-	prev_state_vars[1] = state_vars[1] = xmom;
-	prev_state_vars[2] = state_vars[2] = ymom;
+	pre3_state_vars[0] = pre2_state_vars[0] = prev_state_vars[0] = state_vars[0] = pile_height;
+	pre3_state_vars[1] = pre2_state_vars[1] = prev_state_vars[1] = state_vars[1] = xmom;
+	pre3_state_vars[2] = pre2_state_vars[2] = prev_state_vars[2] = state_vars[2] = ymom;
 
 	if (pile_height > GEOFLOW_TINY) {
 		shortspeed = sqrt(xmom * xmom + ymom * ymom) / (pile_height);
@@ -844,6 +850,16 @@ inline void Element::put_height(double pile_height) {
 
 inline double* Element::get_state_vars() {
 	return state_vars;
+}
+;
+
+inline double* Element::get_pre2_state_vars() {
+	return pre2_state_vars;
+}
+;
+
+inline double* Element::get_pre3_state_vars() {
+	return pre3_state_vars;
 }
 ;
 
@@ -868,8 +884,11 @@ inline double* Element::get_prev_state_vars() {
 ;
 
 inline void Element::update_prev_state_vars() {
-	for (int i = 0; i < NUM_STATE_VARS; i++)
+	for (int i = 0; i < NUM_STATE_VARS; i++) {
+		pre3_state_vars[i] = pre2_state_vars[i];
+		pre2_state_vars[i] = prev_state_vars[i];
 		prev_state_vars[i] = state_vars[i];
+	}
 }
 
 inline double* Element::get_eigenvxymax() {

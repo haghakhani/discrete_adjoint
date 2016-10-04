@@ -36,8 +36,7 @@ class Node {
 	friend class ErrorElem;
 
 	friend void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* matprops_ptr,
-	    FluxProps *fluxprops, TimeProps *timeprops, Element *EmTemp, double *forceint,
-	    double *forcebed, double *eroded, double *deposited);
+	    FluxProps *fluxprops, TimeProps *timeprops, Element *EmTemp);
 
 	friend void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx);
 

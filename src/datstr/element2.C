@@ -134,6 +134,9 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 	if (prev_state_vars[0] != 0)
 		prev_state_vars[1] = prev_state_vars[2] = 0.0001;
 
+	for (i = 0; i < NUM_STATE_VARS; ++i)
+		pre2_state_vars[i] = pre3_state_vars[i] = 0.;
+
 	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
 		d_state_vars[i] = 0;
 	for (i = 0; i < NUM_STATE_VARS; i++)
@@ -228,7 +231,7 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 //		Awet = convect_dryline(dx, 0.0); //dx is a dummy stand in for convection speed... value doesn't matter because it's being multiplied by a timestep of zero
 //		myfractionoffather = Awet / Awetfather;
 //	}
-	myfractionoffather=1.0;
+	myfractionoffather = 1.0;
 	Swet = 1.0;
 
 	double dxx = coord_in[0] - fthTemp->coord[0];
@@ -249,6 +252,8 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 	for (int i = 0; i < NUM_STATE_VARS; i++) {
 		state_vars[i] = fthTemp->state_vars[i] * myfractionoffather;
 		prev_state_vars[i] = fthTemp->prev_state_vars[i] * myfractionoffather;
+		pre2_state_vars[i] = fthTemp->pre2_state_vars[i] * myfractionoffather;
+		pre3_state_vars[i] = fthTemp->pre3_state_vars[i] * myfractionoffather;
 		shortspeed = fthTemp->shortspeed;
 	}
 
@@ -257,14 +262,14 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 /*********************************
  making a father element from its sons
  *****************************************/
-Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr) {
+Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table,
+    MatProps* matprops_ptr) {
 	counted = 0; //for debugging only
 
 	adapted = NEWFATHER;
 
 	for (int i = 0; i < NUM_STATE_VARS; i++) {
 		prev_state_vars[i] = 0.;
-		Influx[i] = 0.;
 		Influx[i] = 0.;
 		d_state_vars[i] = d_state_vars[NUM_STATE_VARS + i] = 0.;
 	}
@@ -526,9 +531,13 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 	for (i = 0; i < NUM_STATE_VARS; i++) {
 		state_vars[i] = 0.;
 		prev_state_vars[i] = 0.;
+		pre2_state_vars[i] = 0.;
+		pre3_state_vars[i] = 0.;
 		for (j = 0; j < 4; j++) {
 			state_vars[i] += *(sons[j]->get_state_vars() + i) * 0.25;
 			prev_state_vars[i] += *(sons[j]->get_prev_state_vars() + i) * 0.25;
+			pre2_state_vars[i] += *(sons[j]->get_pre2_state_vars() + i) * 0.25;
+			pre3_state_vars[i] += *(sons[j]->get_pre3_state_vars() + i) * 0.25;
 		}
 	}
 
@@ -973,7 +982,7 @@ void Element::set_mins(HashTable* NodeTable) {
 	dx[0] = (np->coord[0] - nm->coord[0]) /*(zeta[0]*zeta[0]+1)*/;
 
 	if (dx[0] == 0)
-		cout<<"ERROR in dx[0] \n";
+		cout << "ERROR in dx[0] \n";
 //		printf("np %p,nm %p,dx, np_coord, nm_coord %e %e\n", np, nm, np->coord[0], nm->coord[0]);
 
 	np = (Node*) NodeTable->lookup(node_key[yp + 4]);
@@ -981,17 +990,16 @@ void Element::set_mins(HashTable* NodeTable) {
 
 	dx[1] = (np->coord[1] - nm->coord[1]) /*(zeta[1]*zeta[1]+1)*/;
 
-	min_gen=generation;
-	min_dx[0]=dx[0];
-	min_dx[1]=dx[1];
+	min_gen = generation;
+	min_dx[0] = dx[0];
+	min_dx[1] = dx[1];
 
 	if (dx[1] == 0)
-		cout<<"ERROR in dx[1] \n";
+		cout << "ERROR in dx[1] \n";
 //		printf("dy, np_coord, nm_coord %e %e\n", np->coord[1], nm->coord[1]);
 
 	return;
 }
-
 
 void Element::calculate_dx(HashTable* NodeTable) {
 	int i, j;
@@ -1031,7 +1039,7 @@ void Element::calculate_dx(HashTable* NodeTable) {
 	dx[1] = min_dx[1] * pow(.5, dif_gen);
 
 	if (dx[0] == 0)
-		cout<<"ERROR in dx[0] \n";
+		cout << "ERROR in dx[0] \n";
 //		printf("np %p,nm %p,dx, np_coord, nm_coord %e %e\n", np, nm, np->coord[0], nm->coord[0]);
 
 //	np = (Node*) NodeTable->lookup(node_key[yp + 4]);
@@ -1040,7 +1048,7 @@ void Element::calculate_dx(HashTable* NodeTable) {
 //	dx[1] = (np->coord[1] - nm->coord[1]) /*(zeta[1]*zeta[1]+1)*/;
 
 	if (dx[1] == 0)
-		cout<<"ERROR in dx[1] \n";
+		cout << "ERROR in dx[1] \n";
 //		printf("dy, np_coord, nm_coord %e %e\n", np->coord[1], nm->coord[1]);
 
 	return;
@@ -3071,11 +3079,10 @@ void Element::calc_edge_states(HashTable* El_Table, HashTable* NodeTable, vector
 	}
 }
 
-
 template<>
-void Element::calc_edge_states<ErrorElem>(HashTable* El_Table, HashTable* NodeTable, vector<ErrorElem*>* x_elem_list,
-    vector<ErrorElem*>* y_elem_list, MatProps* matprops_ptr, int myid, double dt, int* order_flag,
-    double *outflow) {
+void Element::calc_edge_states<ErrorElem>(HashTable* El_Table, HashTable* NodeTable,
+    vector<ErrorElem*>* x_elem_list, vector<ErrorElem*>* y_elem_list, MatProps* matprops_ptr,
+    int myid, double dt, int* order_flag, double *outflow) {
 	Node *np, *np1, *np2, *nm, *nm1, *nm2;
 	ErrorElem *elm1, *elm2;
 	int side, zp, zm;
@@ -3369,7 +3376,6 @@ void Element::calc_edge_states<ErrorElem>(HashTable* El_Table, HashTable* NodeTa
 		}
 	}
 }
-
 
 void Element::boundary_flux(HashTable* El_Table, HashTable* NodeTable, const int myid,
     const int side) {
@@ -4517,6 +4523,8 @@ void Element::write_elem(gzFile& myfile) {
 	gzwrite(myfile, (state_vars), sizeof(double) * 3);
 	assert(state_vars[0] >= 0.);
 	gzwrite(myfile, (prev_state_vars), sizeof(double) * 3);
+	gzwrite(myfile, (pre2_state_vars), sizeof(double) * 3);
+	gzwrite(myfile, (pre3_state_vars), sizeof(double) * 3);
 	gzwrite(myfile, (zeta), sizeof(double) * 2);
 	gzwrite(myfile, &(effect_bedfrict), sizeof(double));
 	gzwrite(myfile, &(effect_tanbedfrict), sizeof(double));
@@ -4579,6 +4587,8 @@ Element::Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, i
 	gzread(myfile, (state_vars), sizeof(double) * 3);
 	assert(state_vars[0] >= 0.);
 	gzread(myfile, (prev_state_vars), sizeof(double) * 3);
+	gzread(myfile, (pre2_state_vars), sizeof(double) * 3);
+	gzread(myfile, (pre3_state_vars), sizeof(double) * 3);
 	gzread(myfile, (zeta), sizeof(double) * 2);
 	gzread(myfile, &(effect_bedfrict), sizeof(double));
 	gzread(myfile, &(effect_tanbedfrict), sizeof(double));
@@ -4602,7 +4612,6 @@ Element::Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, i
 	gzread(myfile, &iwetnode, sizeof(int));
 	gzread(myfile, &lb_weight, sizeof(double));
 	gzread(myfile, &ithelem, sizeof(int));
-
 
 //	if (adapted > 0) {
 //		calc_which_son();

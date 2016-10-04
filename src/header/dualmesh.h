@@ -129,6 +129,10 @@ public:
 
 	double* get_prev_adjoint();
 
+	double* get_pre2_adjoint();
+
+	double* get_pre3_adjoint();
+
 	double* get_adjoint();
 
 	void update_adjoint();
@@ -190,9 +194,13 @@ private:
 	//
 	ErrorElem* mysons[4];
 
-	double phi_sens[3];
+	double phi_sens[NUM_STATE_VARS];
 
-	double hint_sens[3];
+	double hint_sens[NUM_STATE_VARS];
+
+	double pre2_adjoint[NUM_STATE_VARS];
+
+	double pre3_adjoint[NUM_STATE_VARS];
 };
 
 inline double* DualElem::get_adjoint() {
@@ -205,9 +213,22 @@ inline double* DualElem::get_prev_adjoint() {
 }
 ;
 
+inline double* DualElem::get_pre2_adjoint() {
+	return pre2_adjoint;
+}
+;
+
+inline double* DualElem::get_pre3_adjoint() {
+	return pre3_adjoint;
+}
+;
+
 inline void DualElem::update_adjoint() {
-	for (int i = 0; i < NUM_STATE_VARS; ++i)
+	for (int i = 0; i < NUM_STATE_VARS; ++i){
+		pre3_adjoint[i]=pre2_adjoint[i];
+		pre2_adjoint[i]=prev_adjoint[i];
 		prev_adjoint[i] = adjoint[i];
+	}
 }
 ;
 

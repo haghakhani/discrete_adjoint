@@ -100,11 +100,10 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
     double *dgdx, double kactxyelem, double fric_tiny, double* orgSrcSgn, //4
     double increment, double epsilon, int* check_stop_crit, int srcflag = 1, int org_res_flag = 1); //5
 
-void residual(double* residual, double *state_vars, double *prev_state_vars, double *fluxxp,
-    double *fluxyp, double *fluxxm, double *fluxym, double dtdx, double dtdy, double dt,
-    double *d_state_vars_x, double *d_state_vars_y, double *curvature, double intfrictang,
-    double bedfrict, double *gravity, double *dgdx, double kactxyelem, double fric_tiny, int* stop,
-    double* orgSrcSgn);
+void residual(double* residual, double *prev_state_vars, double *fluxxp, double *fluxyp,//4
+    double *fluxxm, double *fluxym, double dtdx, double dtdy, double dt, double *d_state_vars_x,//6
+    double *d_state_vars_y, double *curvature, double intfrictang, double bedfrict, double *gravity,//5
+    double *dgdx, double kactxyelem, double fric_tiny, int* stop, double* orgSrcSgn);//5
 
 void update_states(double *state_vars, double *prev_state_vars, //2
     double *fluxxp, double *fluxyp, double *fluxxm, double *fluxym, double dtdx, //5
@@ -308,7 +307,7 @@ public:
 	unsigned* pass_key() {
 		return key;
 	}
-	double* get_coord(){
+	double* get_coord() {
 		return position;
 	}
 

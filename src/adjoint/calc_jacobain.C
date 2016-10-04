@@ -92,11 +92,20 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 
 					int stop[DIMENSION] = { 0, 0 };
 					double orgSrcSgn[4] = { 0., 0., 0., 0. };
+					double res_vec[]={ 0., 0., 0.};
 
-					update_states(state_vars, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy,
+					residual(res_vec, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy,
 					    dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, matprops_ptr->intfrict,
 					    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), matprops_ptr->frict_tiny,
 					    stop, orgSrcSgn);
+
+					double coef = 0.;
+					if (iter > 3)
+						coef = 0.25;
+					double *pre3_state = Curr_El->get_pre3_state_vars();
+
+					for (int ind = 0; ind < NUM_STATE_VARS; ++ind)
+						state_vars[ind] = 0.75 * prev_state_vars[ind] + 1.5 * res_vec[ind] + coef * pre3_state[ind];
 
 					Vec_Mat<9>& jacobian = Curr_El->get_jacobian();
 

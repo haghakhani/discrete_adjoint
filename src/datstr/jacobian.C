@@ -21,16 +21,21 @@
 
 #include "../header/hpfem.h"
 
-Solution::Solution(double* curr_sol) {
+Solution::Solution(double* curr_sol, double* pre3_sol) {
 
-	for (int i = 0; i < NUM_STATE_VARS; ++i)
+	for (int i = 0; i < NUM_STATE_VARS; ++i) {
 		states[i] = curr_sol[i];
+		pre3_state[i] = pre3_sol[i];
+	}
 }
 
 Solution::Solution() {
 
-	for (int i = 0; i < NUM_STATE_VARS; ++i)
+	for (int i = 0; i < NUM_STATE_VARS; ++i) {
 		states[i] = 0.;
+		pre3_state[i] = 0.;
+	}
+
 }
 
 Solution Solution::solution_zero;

@@ -200,7 +200,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		comminucate_jacobians(&dual_meshctx, propctx);
 		jacobian.stop();
 
-		write_jacobian_to_compute_eigen(&dual_meshctx, propctx);
+//		write_jacobian_to_compute_eigen(&dual_meshctx, propctx);
 
 		adjoint_sol.start();
 		calc_adjoint(&dual_meshctx, propctx);

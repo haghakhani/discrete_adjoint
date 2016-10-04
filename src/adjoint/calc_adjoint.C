@@ -104,13 +104,22 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 
 			if (effelement == 0) {		    //this part of code
 
-				double* adjoint_prev = (Curr_El->get_prev_adjoint());
+				double* adjoint_prev = Curr_El->get_prev_adjoint();
+				double* adjoint_pre3 = Curr_El->get_pre3_adjoint();
 
 				Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
 
+				double coef = 0.25;
+				if (propctx->timeprops->adjiter == 1 || propctx->timeprops->adjiter == 2)
+					coef = 0.;
+
 				for (int k = 0; k < NUM_STATE_VARS; ++k)
 					for (int l = 0; l < NUM_STATE_VARS; ++l)
-						adjcontr[k] += adjoint_prev[l] * jacobianmat(effelement, l, k);
+						if (k == l)
+							adjcontr[k] += -0.75 * adjoint_prev[l]
+							    + 1.5 * adjoint_prev[l] * jacobianmat(effelement, l, k) - coef * adjoint_pre3[l];
+						else
+							adjcontr[k] += 1.5 * adjoint_prev[l] * jacobianmat(effelement, l, k);
 
 			} else if (effelement <= 4
 			    || (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) > -2)) {
@@ -130,7 +139,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 
 					for (int k = 0; k < NUM_STATE_VARS; ++k)
 						for (int l = 0; l < NUM_STATE_VARS; ++l)
-							adjcontr[k] += adjoint_prev[l] * jacobianmat(jacind, l, k);
+							adjcontr[k] += 1.5 * adjoint_prev[l] * jacobianmat(jacind, l, k);
 
 				}
 			}

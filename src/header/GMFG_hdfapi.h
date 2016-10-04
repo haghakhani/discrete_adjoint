@@ -80,7 +80,8 @@ void GH5_write_state_vars(hid_t fp, int num_elms, double *state_var, const char 
 
 void GH5_write_zero_keys(hid_t h5fid, int size_zero, vector<unsigned>& key);
 
-void GH5_write_non_zero_keys_sol(hid_t h5fid, int size, vector<unsigned>& key,vector<double>& state);
+void GH5_write_non_zero_keys_sol(hid_t h5fid, int size, vector<unsigned>& key,
+    vector<double>& state, vector<double>& pre_state);
 
 //#ifdef __cplusplus
 //}
