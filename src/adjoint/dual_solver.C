@@ -197,6 +197,10 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		jacobian.start();
 		calc_jacobian(&dual_meshctx, propctx);
 
+		int res=1;
+		if (timeprops_ptr->iter==1)
+			write_alldata_ordered(Dual_El_Tab,  res);
+
 		comminucate_jacobians(&dual_meshctx, propctx);
 		jacobian.stop();
 
@@ -244,12 +248,12 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		error.stop();
 #else
 		dual_vis.start();
-		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
+//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
 			    1);
 //			print_func_var(propctx);
-		}
+//		}
 		dual_vis.stop();
 #endif
 
@@ -885,6 +889,9 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 		}
 	}
 
+	double hscale = matprops_ptr->HEIGHT_SCALE;
+	double lscale = matprops_ptr->LENGTH_SCALE;
+
 	char filename[50];
 	sprintf(filename, "func_var_%04d", myid);
 
@@ -899,8 +906,9 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 				Container * container = (Container*) (currentPtr->value);
 
-				fprintf(file, "%f,%f,%f,%e\n", container->get_coord()[0], container->get_coord()[1],
-				    container->get_state()[0], *(container->get_sens()));
+				fprintf(file, "%f,%f,%f,%e\n", container->get_coord()[0] * lscale,
+				    container->get_coord()[1] * lscale, container->get_state()[0] * hscale,
+				    *(container->get_sens()) * lscale * lscale);
 
 				currentPtr = currentPtr->next;
 			}

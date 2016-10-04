@@ -2401,6 +2401,7 @@ void DualElem::update_state(SolRec* solrec, HashTable* El_Table, int iter) {
 	for (int i = 0; i < NUM_STATE_VARS; ++i) {
 		prev_state_vars[i] = *(prev_sol->get_solution() + i);
 		pre3_state_vars[i] = *(prev_sol->get_pre3_solution() + i);
+		pre3_adjoint[i] = pre2_adjoint[i];
 		pre2_adjoint[i] = prev_adjoint[i];
 		prev_adjoint[i] = adjoint[i];
 	}

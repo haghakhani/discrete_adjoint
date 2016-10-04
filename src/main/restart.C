@@ -492,12 +492,14 @@ class Data {
 private:
 	unsigned* key;
 	double* state;
+	double* pre3_state;
 
 public:
 
 	Data(Element* elem) {
 		key = elem->pass_key();
 		state = elem->get_state_vars();
+		pre3_state = elem->get_pre3_state_vars();
 	}
 
 	unsigned* get_key() const {
@@ -506,6 +508,10 @@ public:
 
 	double* get_state() const {
 		return state;
+	}
+
+	double* get_pre3_state() const{
+		return pre3_state;
 	}
 
 	bool operator<(const Data& rdata) const {
@@ -555,8 +561,9 @@ void write_alldata_ordered(HashTable* El_Table, int myid) {
 
 	set<Data>::iterator it;
 	for (it = mydata.begin(); it != mydata.end(); ++it) {
-		fprintf(fp, "%u %u %16.10f %16.10f %16.10f \n", it->get_key()[0], it->get_key()[1],
-		    it->get_state()[0], it->get_state()[1], it->get_state()[2]);
+		fprintf(fp, "%u %u %16.10f %16.10f %16.10f %16.10f %16.10f %16.10f\n", it->get_key()[0],
+		    it->get_key()[1], it->get_state()[0], it->get_state()[1], it->get_state()[2],
+		    it->get_pre3_state()[0], it->get_pre3_state()[1], it->get_pre3_state()[2]);
 //		gzwrite(myfile, (it->get_key()), sizeof(unsigned) * 2);
 //		gzwrite(myfile, (it->get_state()), sizeof(double) * 3);
 	}

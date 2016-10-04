@@ -92,20 +92,24 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 
 					int stop[DIMENSION] = { 0, 0 };
 					double orgSrcSgn[4] = { 0., 0., 0., 0. };
-					double res_vec[]={ 0., 0., 0.};
+					double res_vec[] = { 0., 0., 0. };
 
-					residual(res_vec, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy,
-					    dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, matprops_ptr->intfrict,
+					residual(res_vec, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy, dt,
+					    d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, matprops_ptr->intfrict,
 					    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), matprops_ptr->frict_tiny,
 					    stop, orgSrcSgn);
 
 					double coef = 0.;
-					if (iter > 3)
+					if (iter > 2)
 						coef = 0.25;
 					double *pre3_state = Curr_El->get_pre3_state_vars();
 
 					for (int ind = 0; ind < NUM_STATE_VARS; ++ind)
-						state_vars[ind] = 0.75 * prev_state_vars[ind] + 1.5 * res_vec[ind] + coef * pre3_state[ind];
+						state_vars[ind] = 0.75 * prev_state_vars[ind] + 1.5 * res_vec[ind]
+						    + coef * pre3_state[ind];
+
+					if (state_vars[0] < 0.)
+						state_vars[0] = 0.;
 
 					Vec_Mat<9>& jacobian = Curr_El->get_jacobian();
 
@@ -909,7 +913,6 @@ void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx) {
 					    * max(
 					        gravity[2] * prev_state_vars[0] + velocity[1] * prev_state_vars[2] * curvature[1],
 					        0.0);
-
 
 				} else if (Curr_El->get_adapted_flag() > 0) {
 
