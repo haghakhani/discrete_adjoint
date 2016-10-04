@@ -1176,9 +1176,13 @@ DualElem::DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 	for (i = 0; i < NUM_STATE_VARS; i++) {
 		state_vars[i] = elem2->state_vars[i];
 		prev_state_vars[i] = elem2->prev_state_vars[i];
+		pre2_state_vars[i] = elem2->pre2_state_vars[i];
+		pre3_state_vars[i] = elem2->pre3_state_vars[i];
 		Influx[i] = elem2->Influx[i];
 		adjoint[i] = elem2->adjoint[i];
 		prev_adjoint[i] = elem2->prev_adjoint[i];
+		pre2_adjoint[i] = elem2->pre2_adjoint[i];
+		pre3_adjoint[i] = elem2->pre3_adjoint[i];
 	}
 	for (i = 0; i < 3; i++)
 		gravity[i] = elem2->gravity[i];
@@ -1434,9 +1438,13 @@ void DualElem::Pack_element(DualElemPack* elem, HashTable* HT_Node_Ptr, int dest
 	for (i = 0; i < NUM_STATE_VARS; i++) {
 		elem->state_vars[i] = state_vars[i];
 		elem->prev_state_vars[i] = prev_state_vars[i];
+		elem->pre2_state_vars[i] = pre2_state_vars[i];
+		elem->pre3_state_vars[i] = pre3_state_vars[i];
 		elem->Influx[i] = Influx[i];
 		elem->adjoint[i] = adjoint[i];
 		elem->prev_adjoint[i] = prev_adjoint[i];
+		elem->pre2_adjoint[i] = pre2_adjoint[i];
+		elem->pre3_adjoint[i] = pre3_adjoint[i];
 	}
 	for (i = 0; i < 3; i++)
 		elem->gravity[i] = gravity[i];
@@ -2393,7 +2401,6 @@ void DualElem::update_state(SolRec* solrec, HashTable* El_Table, int iter) {
 	for (int i = 0; i < NUM_STATE_VARS; ++i) {
 		prev_state_vars[i] = *(prev_sol->get_solution() + i);
 		pre3_state_vars[i] = *(prev_sol->get_pre3_solution() + i);
-		pre3_adjoint[i] = pre2_adjoint[i];
 		pre2_adjoint[i] = prev_adjoint[i];
 		prev_adjoint[i] = adjoint[i];
 	}
@@ -3208,6 +3215,8 @@ ErrorElem::ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 	for (i = 0; i < NUM_STATE_VARS; i++) {
 		state_vars[i] = elem2->state_vars[i];
 		prev_state_vars[i] = elem2->prev_state_vars[i];
+		pre2_state_vars[i] = elem2->pre2_state_vars[i];
+		pre3_state_vars[i] = elem2->pre3_state_vars[i];
 		Influx[i] = elem2->Influx[i];
 		adjoint[i] = elem2->adjoint[i];
 	}
@@ -3555,6 +3564,8 @@ void ErrorElem::Pack_element(ErrElemPack* elem, HashTable* HT_Node_Ptr, int dest
 	for (i = 0; i < NUM_STATE_VARS; i++) {
 		elem->state_vars[i] = state_vars[i];
 		elem->prev_state_vars[i] = prev_state_vars[i];
+		elem->pre2_state_vars[i] = pre2_state_vars[i];
+		elem->pre3_state_vars[i] = pre3_state_vars[i];
 		elem->Influx[i] = Influx[i];
 		elem->adjoint[i] = adjoint[i];
 	}

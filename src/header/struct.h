@@ -63,6 +63,8 @@ struct ElemPack {
 	double Awet;                                        // 63
 	double Swet;                                        // 64
 	double drypoint[DIMENSION];                         // 66
+	double pre2_state_vars[NUM_STATE_VARS];             // 69
+	double pre3_state_vars[NUM_STATE_VARS];             // 72
 
 };
 
@@ -113,6 +115,10 @@ struct DualElemPack {
 	double Awet;                                        // 69
 	double Swet;                                        // 70
 	double drypoint[DIMENSION];                         // 72
+	double pre2_state_vars[NUM_STATE_VARS];             // 75
+	double pre3_state_vars[NUM_STATE_VARS];             // 78
+	double pre2_adjoint[NUM_STATE_VARS];                // 81
+	double pre3_adjoint[NUM_STATE_VARS];                // 84
 
 };
 
@@ -165,6 +171,8 @@ struct ErrElemPack {
 	double bilin_adj[NUM_STATE_VARS];                   // 72
 	double bilin_state[NUM_STATE_VARS];                 // 75
 	double bilin_prev_state[NUM_STATE_VARS];            // 78
+	double pre2_state_vars[NUM_STATE_VARS];             // 81
+	double pre3_state_vars[NUM_STATE_VARS];             // 84
 };
 
 //see ../repartition/new_datatype.C blockcounts[2]={2*KEYLENGTH,9}

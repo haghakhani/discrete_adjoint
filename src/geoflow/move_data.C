@@ -702,7 +702,7 @@ void move_err_data(MeshCTX* meshctx, PropCTX* propctx) {
 
 		entryp = *(buck + ibuck);
 		while (entryp) {
-			DualElem* EmTemp = (DualElem*) (entryp->value);
+			ErrorElem* EmTemp = (ErrorElem*) (entryp->value);
 			entryp = entryp->next;
 
 			if ((EmTemp->get_refined_flag() == 0) && (EmTemp->get_adapted_flag() > 0)) {

@@ -253,6 +253,8 @@ void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, 
 	for (i = 0; i < NUM_STATE_VARS; i++) {
 		newelement->state_vars[i] = elem2->state_vars[i];
 		newelement->prev_state_vars[i] = elem2->prev_state_vars[i];
+		newelement->pre2_state_vars[i] = elem2->pre2_state_vars[i];
+		newelement->pre3_state_vars[i] = elem2->pre3_state_vars[i];
 		newelement->Influx[i] = elem2->Influx[i];
 	}
 	for (i = 0; i < 3; i++)

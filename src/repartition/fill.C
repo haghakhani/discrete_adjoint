@@ -76,6 +76,8 @@ void Pack_element(void *sendel_in, ElemPack* elem, HashTable* HT_Node_Ptr, int d
 	for (i = 0; i < NUM_STATE_VARS; i++) {
 		elem->state_vars[i] = sendel->state_vars[i];
 		elem->prev_state_vars[i] = sendel->prev_state_vars[i];
+		elem->pre2_state_vars[i] = sendel->pre2_state_vars[i];
+		elem->pre3_state_vars[i] = sendel->pre3_state_vars[i];
 		elem->Influx[i] = sendel->Influx[i];
 	}
 	for (i = 0; i < 3; i++)
