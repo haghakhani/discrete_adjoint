@@ -113,18 +113,16 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 				if (propctx->timeprops->adjiter == 1 || propctx->timeprops->adjiter == 2)
 					coef = 0.;
 
-				double dry1 = 1., dry2 = 1.;
+				double dry = 1.;
 				if (Curr_El->get_prev_state_vars()[0] == 0.)
-					dry1 = 0.;
-				if (Curr_El->get_pre3_state_vars()[0] == 0.)
-					dry2 = 0.;
+					dry = 0.;
 
 				for (int k = 0; k < NUM_STATE_VARS; ++k)
 					for (int l = 0; l < NUM_STATE_VARS; ++l)
 						if (k == l)
 							adjcontr[k] += -0.75 * adjoint_prev[l]
-							    * (1. * dry1 - 2. * jacobianmat(effelement, l, k))
-							    - coef * adjoint_pre3[l] * dry2;
+							    * (1. * dry - 2. * jacobianmat(effelement, l, k))
+							    - coef * adjoint_pre3[l] * dry;
 						else
 							adjcontr[k] += 1.5 * adjoint_prev[l] * jacobianmat(effelement, l, k);
 
