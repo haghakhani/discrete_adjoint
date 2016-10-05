@@ -306,42 +306,45 @@ void orgSourceSgn(Element* Curr_El, double frictiny, double* orgSgn) {
 
 }
 
-void residual(double *res_vec, double *prev_state_vars, //2
-    double *fluxxp, double *fluxyp, double *fluxxm, double *fluxym, double dtdx, //5
-    double dtdy, double dt, double *d_state_vars_x, double *d_state_vars_y, //4
-    double *curvature, double intfrictang, double bedfrict, double *gravity, //4
-    double *dgdx, double kactxyelem, double fric_tiny, int* stop, double* orgSrcSgn) { //5
+void residual(double *state_vars, double *prev_state_vars, double *fluxxp, double *fluxyp,
+    double *fluxxm, double *fluxym, double dtdx, double dtdy, double dt, double *d_state_vars_x,
+    double *d_state_vars_y, double *curvature, double intfrictang, double bedfrict, double *gravity,
+    double *dgdx, double kactxyelem, double fric_tiny, int* stop, double* orgSrcSgn, int iter,
+    double *pre3_state, double* adjusted_tan_phi_bed, double* adjusted_sin_phi_int) {
+
+	double coef = 0.;
+	if (iter > 2)
+		coef = 0.25;
+
+	double res_vec[] = { 0., 0., 0. };
+	for (int i = 0; i < NUM_STATE_VARS; i++)
+		res_vec[i] = -dtdx * (fluxxp[i] - fluxxm[i]) - dtdy * (fluxyp[i] - fluxym[i]);
+
+	//multi-step 3rd order TVD time scheme p512 Lecture notes in Comp. Phys.
+	state_vars[0] = 0.75 * prev_state_vars[0] + 1.5 * res_vec[0] + coef * pre3_state[0];
+
+	if (state_vars[0] < 0.)
+		state_vars[0] = 0.;
 
 	double velocity[DIMENSION];
 	double kactxy[DIMENSION];
 	double tmp;
 
+	stop[0] = stop[1] = 0;
+
+	for (int i = 0; i < 4; ++i)
+		orgSrcSgn[i] = 0.;
+
 	if (prev_state_vars[0] > GEOFLOW_TINY) {
+
 		for (int k = 0; k < DIMENSION; k++)
 			kactxy[k] = kactxyelem;
-
 		// velocities
 		velocity[0] = prev_state_vars[1] / prev_state_vars[0];
 		velocity[1] = prev_state_vars[2] / prev_state_vars[0];
 
-	} else {
-
-		for (int k = 0; k < DIMENSION; k++) {
-			kactxy[k] = 0.;
-			velocity[k] = 0.;
-		}
-
-	}
-
-	for (int i = 0; i < NUM_STATE_VARS; i++)
-		res_vec[i] = -dtdx * (fluxxp[i] - fluxxm[i]) - dtdy * (fluxyp[i] - fluxym[i]);
-
-	if (prev_state_vars[0] > GEOFLOW_TINY) {
-
 //		double unitvx = 0., unitvy = 0., h_inv = 0., speed = 0.;
-		double h_inv = 0.;
-
-		h_inv = 1. / prev_state_vars[0];
+		double h_inv = 1. / prev_state_vars[0];
 
 		tmp = h_inv * (d_state_vars_y[1] - velocity[0] * d_state_vars_y[0]);
 		orgSrcSgn[0] = tiny_sgn(tmp, fric_tiny);
@@ -366,7 +369,33 @@ void residual(double *res_vec, double *prev_state_vars, //2
 		if (s3 == 0. && orgSrcSgn[2])
 			stop[0] = 1;
 
-		res_vec[1] += dt * (s1 - s2 - s3);
+		if (fabs(dt * (s2 + s3))
+		    > fabs(res_vec[1] + dt * s1 + .75 * prev_state_vars[1] + coef * pre3_state[1])) {
+			//friction are big enough to stop the flow
+			state_vars[1] = 0.;
+			//we have to adjust the frictions otherwise we will have problem in jacobian computation may be just one is enough
+
+			//following condition means just internal drag is large enough to cancel the momentum
+			if (fabs(dt * s2)
+			    > fabs(res_vec[1] + dt * s1 + .75 * prev_state_vars[1] + coef * pre3_state[1])) {
+				adjusted_tan_phi_bed[0] = 0.;
+				adjusted_sin_phi_int[0] = sin_int_fric
+				    * (res_vec[1] + dt * s1 + .75 * prev_state_vars[1] + coef * pre3_state[1]) / (dt * s2);
+
+			} else {
+				//basically we are changing bed friction to balance the two sides
+				adjusted_tan_phi_bed[0] = tan_bed_fric
+				    * (res_vec[1] + dt * (s1 - s2) + .75 * prev_state_vars[1] + coef * pre3_state[1])
+				    / (dt * s3);
+				adjusted_sin_phi_int[0] = sin_int_fric;
+
+			}
+		} else {
+			res_vec[1] += dt * (s1 - s2 - s3);
+			state_vars[1] = 0.75 * prev_state_vars[1] + 1.5 * res_vec[1] + coef * pre3_state[1];
+			adjusted_tan_phi_bed[0] = tan_bed_fric;
+			adjusted_sin_phi_int[0] = sin_int_fric;
+		}
 
 		//y dir
 		s1 = gravity[1] * prev_state_vars[0];
@@ -381,7 +410,33 @@ void residual(double *res_vec, double *prev_state_vars, //2
 		if (s3 == 0. && orgSrcSgn[3])
 			stop[1] = 1;
 
-		res_vec[2] += dt * (s1 - s2 - s3);
+		if (fabs(dt * (s2 + s3))
+		    > fabs(res_vec[2] + dt * s1 + .75 * prev_state_vars[2] + coef * pre3_state[2])) {
+			//friction are big enough to stop the flow
+			state_vars[2] = 0.;
+			//we have to adjust the frictions otherwise we will have problem in jacobian computation may be just one is enough
+
+			//following condition means just internal drag is large enough to cancel the momentum
+			if (fabs(dt * s2)
+			    > fabs(res_vec[2] + dt * s1 + .75 * prev_state_vars[2] + coef * pre3_state[2])) {
+				adjusted_tan_phi_bed[1] = 0.;
+				adjusted_sin_phi_int[1] = sin_int_fric
+				    * (res_vec[2] + dt * s1 + .75 * prev_state_vars[2] + coef * pre3_state[2]) / (dt * s2);
+
+			} else {
+				//basically we are changing bed friction to balance the two sides
+				adjusted_tan_phi_bed[1] = tan_bed_fric
+				    * (res_vec[2] + dt * (s1 - s2) + .75 * prev_state_vars[2] + coef * pre3_state[2])
+				    / (dt * s3);
+				adjusted_sin_phi_int[1] = sin_int_fric;
+
+			}
+		} else {
+			res_vec[2] += dt * (s1 - s2 - s3);
+			state_vars[2] = 0.75 * prev_state_vars[2] + 1.5 * res_vec[2] + coef * pre3_state[2];
+			adjusted_tan_phi_bed[1] = tan_bed_fric;
+			adjusted_sin_phi_int[1] = sin_int_fric;
+		}
 
 	}
 

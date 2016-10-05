@@ -15,8 +15,9 @@
 void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3x3& jac_flux_p_x,
     const Mat3x3& jac_flux_n_y, const Mat3x3& jac_flux_p_y, double* prev_state_vars,
     double* d_state_vars_x, double* d_state_vars_y, double *curvature, double* gravity,
-    double* d_gravity, double* dh_sens, double int_fric, double bedfrict, double kact, int effelem,
-    double dtdx, double dtdy, double dt, int* stop, double* OrgSgn) {
+    double* d_gravity, double* dh_sens, double kact, int effelem, double dtdx, double dtdy,
+    double dt, int* stop, double* OrgSgn, double* adjusted_tan_phi_bed,
+    double* adjusted_sin_phi_int) {
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		for (int j = 0; j < NUM_STATE_VARS; ++j)
@@ -25,11 +26,9 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 
 	if (prev_state_vars[0] > GEOFLOW_TINY) {
 
-		double sin_int_fric = sin(int_fric);
+		double alpha = adjusted_sin_phi_int[0] * OrgSgn[0] * kact;
 
-		double alpha = sin_int_fric * OrgSgn[0] * kact;
-
-		double betta = sin_int_fric * OrgSgn[1] * kact;
+		double betta = adjusted_sin_phi_int[1] * OrgSgn[1] * kact;
 
 		if (effelem > 0) {
 
@@ -46,17 +45,17 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 
 			double vx_sq = velocity[0] * velocity[0], vy_sq = velocity[1] * velocity[1];
 
-			double tan_bed_frict = tan(bedfrict);
-
 			jacobian(1, 0) -= dt
 			    * (gravity[0] - alpha * prev_state_vars[0] * (2 * d_gravity[1] + gravity[2] * dh_sens[1])
 			        - alpha * gravity[2] * d_state_vars_y[0]);
 
-			if (OrgSgn[2] != 0. && !stop[0] ) {
+			if (OrgSgn[2] != 0. && !stop[0]) {
 
-				jacobian(1, 0) -= -dt * OrgSgn[2] * tan_bed_frict * (gravity[2] - vx_sq * curvature[0]);
+				jacobian(1, 0) -= -dt * OrgSgn[2] * adjusted_tan_phi_bed[0]
+				    * (gravity[2] - vx_sq * curvature[0]);
 
-				jacobian(1, 1) -= -dt * OrgSgn[2] * tan_bed_frict * (2 * velocity[0] * curvature[0]);
+				jacobian(1, 1) -= -dt * OrgSgn[2] * adjusted_tan_phi_bed[0]
+				    * (2 * velocity[0] * curvature[0]);
 
 				jacobian(1, 2) -= 0.;
 			}
@@ -66,11 +65,13 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 			        - betta * gravity[2] * d_state_vars_x[0]);
 
 			if (OrgSgn[3] != 0. && !stop[1] /*&& unitvy != 0.*/) {
-				jacobian(2, 0) -= -dt * OrgSgn[3] * tan_bed_frict * (gravity[2] - vy_sq * curvature[1]);
+				jacobian(2, 0) -= -dt * OrgSgn[3] * adjusted_tan_phi_bed[1]
+				    * (gravity[2] - vy_sq * curvature[1]);
 
 				jacobian(2, 1) -= 0.;
 
-				jacobian(2, 2) -= -dt * OrgSgn[3] * tan_bed_frict * (2 * velocity[1] * curvature[1]);
+				jacobian(2, 2) -= -dt * OrgSgn[3] * adjusted_tan_phi_bed[1]
+				    * (2 * velocity[1] * curvature[1]);
 
 			}
 		}

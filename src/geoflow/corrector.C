@@ -86,28 +86,15 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	double *curvature = EmTemp->get_curvature();
 	double bedfrict = EmTemp->get_effect_bedfrict();
 	double *Influx = EmTemp->get_influx();
-
-	int stop[2];
-	double orgSrcSgn[4];
-	double res_vec[] = { 0., 0., 0. };
-
-	residual(res_vec, prev_state_vars, //2
-	    fluxxp, fluxyp, fluxxm, fluxym, dtdx, //5
-	    dtdy, dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), //4
-	    curvature, (matprops_ptr->intfrict), bedfrict, gravity, //4
-	    d_gravity, kactxy[0], matprops_ptr->frict_tiny, stop, orgSrcSgn);
-
-	//multi-step 3rd order TVD time scheme p512 Lecture notes in Comp. Phys.
-	double coef = 0.;
-	if (timeprops->iter > 2)
-		coef = 0.25;
 	double *pre3_state = EmTemp->get_pre3_state_vars();
 
-	for (i = 0; i < NUM_STATE_VARS; ++i)
-		state_vars[i] = 0.75 * prev_state_vars[i] + 1.5 * res_vec[i] + coef * pre3_state[i];
+	int stop[2];
+	double orgSrcSgn[4], adjusted_tan_phi_bed[2], adjusted_sin_phi_int[2];
 
-	if (state_vars[0]<0.)
-		state_vars[0]=0.;
+	residual(state_vars, prev_state_vars, fluxxp, fluxyp, fluxxm, fluxym, dtdx, dtdy, dt,
+	    d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, (matprops_ptr->intfrict), bedfrict,
+	    gravity, d_gravity, kactxy[0], matprops_ptr->frict_tiny, stop, orgSrcSgn, timeprops->iter,
+	    pre3_state, adjusted_tan_phi_bed, adjusted_sin_phi_int);
 
 	char filename[] = "corrector";
 

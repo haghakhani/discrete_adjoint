@@ -90,26 +90,28 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 					double dtdx = dt / dx[0];
 					double dtdy = dt / dx[1];
 
-					int stop[DIMENSION] = { 0, 0 };
-					double orgSrcSgn[4] = { 0., 0., 0., 0. };
-					double res_vec[] = { 0., 0., 0. };
+					int stop[DIMENSION];
+					double orgSrcSgn[4];
 
-					residual(res_vec, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy, dt,
+					double adjusted_tan_phi_bed[2], adjusted_sin_phi_int[2];
+
+					residual(state_vars, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy, dt,
 					    d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, matprops_ptr->intfrict,
 					    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), matprops_ptr->frict_tiny,
-					    stop, orgSrcSgn);
+					    stop, orgSrcSgn, iter, Curr_El->get_pre3_state_vars(), adjusted_tan_phi_bed,
+					    adjusted_sin_phi_int);
 
-					double coef = 0.;
-					if (iter > 2)
-						coef = 0.25;
-					double *pre3_state = Curr_El->get_pre3_state_vars();
-
-					for (int ind = 0; ind < NUM_STATE_VARS; ++ind)
-						state_vars[ind] = 0.75 * prev_state_vars[ind] + 1.5 * res_vec[ind]
-						    + coef * pre3_state[ind];
-
-					if (state_vars[0] < 0.)
-						state_vars[0] = 0.;
+//					double coef = 0.;
+//					if (iter > 2)
+//						coef = 0.25;
+//					double *pre3_state = Curr_El->get_pre3_state_vars();
+//
+//					for (int ind = 0; ind < NUM_STATE_VARS; ++ind)
+//						state_vars[ind] = 0.75 * prev_state_vars[ind] + 1.5 * res_vec[ind]
+//						    + coef * pre3_state[ind];
+//
+//					if (state_vars[0] < 0.)
+//						state_vars[0] = 0.;
 
 					Vec_Mat<9>& jacobian = Curr_El->get_jacobian();
 
@@ -146,8 +148,8 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 
 							calc_jacobian_elem(jacobian(effelement), *jac_flux_n_x, *jac_flux_p_x, *jac_flux_n_y,
 							    *jac_flux_p_y, prev_state_vars, d_state_vars, (d_state_vars + NUM_STATE_VARS),
-							    curvature, gravity, d_gravity, dh_sens, matprops_ptr->intfrict, bedfrict,
-							    *(Curr_El->get_kactxy()), effelement, dtdx, dtdy, dt, stop, orgSrcSgn);
+							    curvature, gravity, d_gravity, dh_sens, *(Curr_El->get_kactxy()), effelement,
+							    dtdx, dtdy, dt, stop, orgSrcSgn, adjusted_tan_phi_bed, adjusted_sin_phi_int);
 
 						}
 					}

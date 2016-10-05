@@ -200,6 +200,27 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 		matprops_ptr->GRAVITY_SCALE = 1;
 	}
 	inscale.close();
+
+	double totalvolume = 0.0;
+
+	if (pileprops_ptr->numpiles > 0)
+		for (isrc = 0; isrc < pileprops_ptr->numpiles; isrc++)
+			totalvolume += PI * pileprops_ptr->pileheight[isrc] * pileprops_ptr->majorrad[isrc]
+			    * pileprops_ptr->minorrad[isrc];
+
+	if (fluxprops->no_of_sources > 0)
+		for (isrc = 0; isrc < fluxprops->no_of_sources; isrc++)
+			totalvolume += PI * fluxprops->influx[isrc] * fluxprops->majorrad[isrc]
+			    * fluxprops->minorrad[isrc] * 0.5 * (fluxprops->end_time[isrc] - //0.5 for linear decrease
+			        fluxprops->start_time[isrc]);
+
+	double doubleswap = pow(totalvolume, 1.0 / 3.0);
+
+	if ((matprops_ptr->GRAVITY_SCALE != 1.0) || (matprops_ptr->LENGTH_SCALE != 1.0))
+		matprops_ptr->HEIGHT_SCALE = doubleswap;
+	else
+		matprops_ptr->HEIGHT_SCALE = 1.0;
+
 	matprops_ptr->epsilon = matprops_ptr->HEIGHT_SCALE / matprops_ptr->LENGTH_SCALE;
 
 	//this is used in ../geoflow/stats.C ... might want to set
@@ -387,7 +408,7 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 	matprops_ptr->tanbedfrict = CAllocD1(matprops_ptr->material_count + 1);
 	char stringswap[512];
 	int imat;
-	double doubleswap;
+
 	for (imat = 1; imat <= matprops_ptr->material_count; imat++) {
 		fgets(stringswap, 512, fp);
 		matprops_ptr->matnames[imat] = allocstrcpy(stringswap);
