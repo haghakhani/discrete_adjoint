@@ -200,7 +200,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		comminucate_jacobians(&dual_meshctx, propctx);
 		jacobian.stop();
 
-//		write_jacobian_to_compute_eigen(&dual_meshctx, propctx);
+		write_jacobian_to_compute_eigen(&dual_meshctx, propctx);
 
 		adjoint_sol.start();
 		calc_adjoint(&dual_meshctx, propctx);
@@ -244,12 +244,12 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		error.stop();
 #else
 		dual_vis.start();
-//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
 			    1);
 //			print_func_var(propctx);
-//		}
+		}
 		dual_vis.stop();
 #endif
 
@@ -830,6 +830,8 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 	MatProps* matprops_ptr = propctx->matprops;
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
+	MAX_Energy* maxenergy = (MAX_Energy*) propctx->functional_info;
+
 	int iter = timeprops_ptr->iter;
 	double dt = timeprops_ptr->dt.at(iter - 1);
 
@@ -887,12 +889,15 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 	double hscale = matprops_ptr->HEIGHT_SCALE;
 	double lscale = matprops_ptr->LENGTH_SCALE;
+	double vel_scale = sqrt(lscale * matprops_ptr->GRAVITY_SCALE);
+	double mom_scale = vel_scale * hscale;
+	double functiona_sclae = mom_scale * mom_scale;
 
 	char filename[50];
 	sprintf(filename, "func_var_%04d", myid);
 
 	FILE *file = fopen(filename, "a");
-	fprintf(file, "X,Y,h_o,sensitivity\n");
+	fprintf(file, "X,Y,h_o,sensitivity,functional=%f\n", maxenergy->max_energy * functiona_sclae);
 
 	buck = new_hashtab->getbucketptr();
 	for (int i = 0; i < new_hashtab->get_no_of_buckets(); i++)
@@ -904,7 +909,7 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 				fprintf(file, "%f,%f,%f,%e\n", container->get_coord()[0] * lscale,
 				    container->get_coord()[1] * lscale, container->get_state()[0] * hscale,
-				    *(container->get_sens()) * lscale * lscale);
+				    *(container->get_sens()) * functiona_sclae / hscale);
 
 				currentPtr = currentPtr->next;
 			}
@@ -914,64 +919,43 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 	delete_hashtables_objects<Container>(new_hashtab);
 }
 
-void write_jacobian_to_compute_eigen(MeshCTX* dual_meshctx, PropCTX* propctx) {
+void check_max_energy(HashTable* El_Table, MAX_Energy* maxenergy, int iter) {
 
-	HashTable* El_Table = dual_meshctx->el_table;
+	//we use a
 
-	set_ithm(El_Table);
-
+	double energy = 0.;
 	HashEntryPtr* buck = El_Table->getbucketptr();
-	HashTable* new_hashtab = new HashTable(El_Table);
-
-	char filename[20];
-
-	sprintf(filename, "Jacobian%d.csv", propctx->timeprops->iter);
-
-	FILE* file = fopen(filename, "w");
-
-	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
 			HashEntryPtr currentPtr = *(buck + i);
 			while (currentPtr) {
-				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+				Element * Curr_El = (Element*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0) {
-					for (int effel = 0; effel < EFF_ELL; ++effel) {
 
-						Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
-						int row = Curr_El->get_ithelem();
-						int col;
-						if (effel == 0) {
-							col = row;
+					double bell_func = 1.
+					    / (1.
+					        + pow(fabs(.5 * maxenergy->xrange * (Curr_El->get_coord()[0] - maxenergy->xpos)),
+					            10)
+					        + pow(fabs(.5 * maxenergy->yrange * (Curr_El->get_coord()[1] - maxenergy->ypos)),
+					            10));
 
-							for (int sub_row = 0; sub_row < NUM_STATE_VARS; ++sub_row)
-								for (int sub_col = 0; sub_col < NUM_STATE_VARS; ++sub_col)
-									if (jacobianmat(effel, sub_row, sub_col) != 0.)
-										fprintf(file, "%d,%d,%f\n", row * NUM_STATE_VARS + sub_row,
-										    col * NUM_STATE_VARS + sub_col, jacobianmat(effel, sub_row, sub_col));
-
-						} else if (effel <= 4
-						    || (effel > 4 && *(Curr_El->get_neigh_proc() + (effel - 1)) > -2)) {
-
-							DualElem * neigh_elem = (DualElem*) (El_Table->lookup(
-							    Curr_El->get_neighbors() + (effel - 1) * KEYLENGTH));
-
-							if (neigh_elem) {
-								col = neigh_elem->get_ithelem();
-								for (int sub_row = 0; sub_row < NUM_STATE_VARS; ++sub_row)
-									for (int sub_col = 0; sub_col < NUM_STATE_VARS; ++sub_col)
-										if (jacobianmat(effel, sub_row, sub_col) != 0.)
-											fprintf(file, "%d,%d,%f\n", row * NUM_STATE_VARS + sub_row,
-											    col * NUM_STATE_VARS + sub_col, jacobianmat(effel, sub_row, sub_col));
-
-							}
-						}
-					}
+					energy += bell_func * Curr_El->get_coord()[0] * Curr_El->get_coord()[1]
+					    * (Curr_El->get_state_vars()[1] * Curr_El->get_state_vars()[1]
+					        + Curr_El->get_state_vars()[2] * Curr_El->get_state_vars()[2]);
 				}
+
 				currentPtr = currentPtr->next;
 			}
 		}
-	}
 
-	fclose(file);
+	double global_energy = 0.;
+
+	MPI_Allreduce(&energy, &global_energy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+	if (global_energy > maxenergy->max_energy) {
+		maxenergy->max_energy = global_energy / maxenergy->normalized_area;
+		maxenergy->time_step = iter;
+	}
 }
+

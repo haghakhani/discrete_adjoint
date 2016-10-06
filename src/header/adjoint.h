@@ -315,6 +315,26 @@ public:
 
 };
 
+struct MAX_Energy {
+	double xpos, ypos, xrange, yrange, normalized_area, xmax, xmin, ymin, ymax;
+	int time_step;
+	double max_energy;
+
+	MAX_Energy(double xposin, double yposin, double xrangein, double yrangein, double lscale) {
+		xpos = xposin / lscale, ypos = yposin / lscale;
+		xrange = xrangein / lscale, yrange = yrangein / lscale;
+		normalized_area = xrange * yrange;
+		ymax = ypos + .5 * yrange;
+		ymin = ypos - .5 * yrange;
+		xmax = xpos + .5 * xrange;
+		xmin = xpos - .5 * xrange;
+		time_step = 0;
+		max_energy = 0.;
+	}
+
+};
+
+void check_max_energy(HashTable* El_Table, MAX_Energy* maxenergy, int iter);
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);
 

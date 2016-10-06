@@ -17,7 +17,7 @@
 #endif
 #include "../header/hpfem.h"
 
-#define	DEBUG
+//#define	DEBUG
 
 void residual(double* residual, double *state_vars, double *prev_state_vars, //3
     double *fluxxp, double *fluxyp, double *fluxxm, double *fluxym, double dtdx, //5
@@ -441,7 +441,7 @@ void residual(double *state_vars, double *prev_state_vars, double *fluxxp, doubl
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
-		assert(!isnan(res_vec[i]) && !isinf(res_vec[i]));
+		assert(!isnan(state_vars[i]) && !isinf(state_vars[i]));
 
 }
 

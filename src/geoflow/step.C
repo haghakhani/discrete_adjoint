@@ -108,7 +108,8 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 
 	update_discharge(El_Table, NodeTable, discharge, dt);
 
-	calc_stats(El_Table, NodeTable, myid, matprops_ptr, timeprops_ptr, statprops_ptr, dt);
+	MPI_Barrier(MPI_COMM_WORLD);
+	calc_stats(El_Table, NodeTable, myid, matprops_ptr, timeprops_ptr, statprops_ptr, discharge, 0.0);
 
 	return;
 }

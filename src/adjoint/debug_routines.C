@@ -613,3 +613,66 @@ unsigned* makekey(unsigned k1,unsigned k2){
 	 key[0]=k1;key[1]=k2;
 	 return key;
 }
+
+void write_jacobian_to_compute_eigen(MeshCTX* dual_meshctx, PropCTX* propctx) {
+
+	HashTable* El_Table = dual_meshctx->el_table;
+
+	set_ithm(El_Table);
+
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashTable* new_hashtab = new HashTable(El_Table);
+
+	char filename[20];
+
+	sprintf(filename, "Jacobian%d.csv", propctx->timeprops->iter);
+
+	FILE* file = fopen(filename, "w");
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0) {
+					for (int effel = 0; effel < EFF_ELL; ++effel) {
+
+						Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
+						int row = Curr_El->get_ithelem();
+						int col;
+						if (effel == 0) {
+							col = row;
+
+							for (int sub_row = 0; sub_row < NUM_STATE_VARS; ++sub_row)
+								for (int sub_col = 0; sub_col < NUM_STATE_VARS; ++sub_col)
+									if (jacobianmat(effel, sub_row, sub_col) != 0.)
+										fprintf(file, "%d,%d,%f\n", row * NUM_STATE_VARS + sub_row,
+										    col * NUM_STATE_VARS + sub_col, jacobianmat(effel, sub_row, sub_col));
+
+						} else if (effel <= 4
+						    || (effel > 4 && *(Curr_El->get_neigh_proc() + (effel - 1)) > -2)) {
+
+							DualElem * neigh_elem = (DualElem*) (El_Table->lookup(
+							    Curr_El->get_neighbors() + (effel - 1) * KEYLENGTH));
+
+							if (neigh_elem) {
+								col = neigh_elem->get_ithelem();
+								for (int sub_row = 0; sub_row < NUM_STATE_VARS; ++sub_row)
+									for (int sub_col = 0; sub_col < NUM_STATE_VARS; ++sub_col)
+										if (jacobianmat(effel, sub_row, sub_col) != 0.)
+											fprintf(file, "%d,%d,%f\n", row * NUM_STATE_VARS + sub_row,
+											    col * NUM_STATE_VARS + sub_col, jacobianmat(effel, sub_row, sub_col));
+
+							}
+						}
+					}
+				}
+				currentPtr = currentPtr->next;
+			}
+		}
+	}
+
+	fclose(file);
+}
+

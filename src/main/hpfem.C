@@ -140,6 +140,8 @@ int main(int argc, char *argv[]) {
 		setup_geoflow(El_Table, Node_Table, myid, numprocs, &matprops, &timeprops);
 	}
 
+	MAX_Energy maxenergy(643800., 2.15550e6, 400., 1000., matprops.LENGTH_SCALE);
+
 	MeshCTX meshctx;
 	meshctx.el_table = El_Table;
 	meshctx.nd_table = Node_Table;
@@ -153,7 +155,8 @@ int main(int argc, char *argv[]) {
 	propctx.myid = myid;
 	propctx.adapt_flag = adaptflag;
 	propctx.discharge = &discharge;
-	propctx.pileprops=&pileprops;
+	propctx.pileprops = &pileprops;
+	propctx.functional_info = &maxenergy;
 
 	if (runcond != 2) {
 
@@ -168,7 +171,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		MPI_Barrier(MPI_COMM_WORLD);
-		calc_stats(El_Table, Node_Table, myid, &matprops, &timeprops, &statprops, 0.0);
+		calc_stats(El_Table, Node_Table, myid, &matprops, &timeprops, &statprops, &discharge, 0.0);
 
 		output_discharge(&matprops, &timeprops, &discharge, myid);
 
@@ -185,7 +188,7 @@ int main(int argc, char *argv[]) {
 
 //#ifdef HAVE_HDF5
 //		if(viz_flag&8)
-		xdmerr=write_xdmf(El_Table,Node_Table,&timeprops,&matprops,&mapnames,XDMF_NEW);
+		xdmerr = write_xdmf(El_Table, Node_Table, &timeprops, &matprops, &mapnames, XDMF_NEW);
 //#endif
 
 		if (viz_flag & 16) {
@@ -269,6 +272,8 @@ int main(int argc, char *argv[]) {
 			step(El_Table, Node_Table, myid, numprocs, &matprops, &timeprops, &pileprops, &fluxprops,
 			    &statprops, &order_flag, &outline, &discharge, adaptflag);
 
+			check_max_energy(El_Table, &maxenergy, timeprops.iter);
+
 			stept.stop();
 
 			write_solution.start();
@@ -305,7 +310,7 @@ int main(int argc, char *argv[]) {
 //
 //#ifdef HAVE_HDF5
 //				if(viz_flag&8)
-				xdmerr=write_xdmf(El_Table,Node_Table,&timeprops,&matprops,&mapnames,XDMF_OLD);
+				xdmerr = write_xdmf(El_Table, Node_Table, &timeprops, &matprops, &mapnames, XDMF_OLD);
 //#endif
 //
 //				if (viz_flag & 16) {

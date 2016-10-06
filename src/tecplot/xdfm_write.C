@@ -106,7 +106,8 @@ int write_dual_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timepr
 
 	double residual_scale[] = { hscale, momentum_scale, momentum_scale };
 	double error_scale, correction_scale, functional_scale;
-	error_scale = functional_scale = correction_scale = hscale * lscale * lscale;
+	//this is for discharge and conv. of mass functional_scale=hscale * lscale * lscale;
+	error_scale = functional_scale = correction_scale = momentum_scale * momentum_scale;
 	double adjoint_scale[3] = { functional_scale / hscale, functional_scale / momentum_scale,
 	    functional_scale / momentum_scale };
 
