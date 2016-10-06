@@ -200,7 +200,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		comminucate_jacobians(&dual_meshctx, propctx);
 		jacobian.stop();
 
-		write_jacobian_to_compute_eigen(&dual_meshctx, propctx);
+//		write_jacobian_to_compute_eigen(&dual_meshctx, propctx);
 
 		adjoint_sol.start();
 		calc_adjoint(&dual_meshctx, propctx);
@@ -897,7 +897,8 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 	sprintf(filename, "func_var_%04d", myid);
 
 	FILE *file = fopen(filename, "a");
-	fprintf(file, "X,Y,h_o,sensitivity,functional=%f\n", maxenergy->max_energy * functiona_sclae);
+	fprintf(file, "X,Y,h_o,sensitivity,functional=%f, timestep=%d\n",
+	    maxenergy->max_energy * functiona_sclae, maxenergy->time_step);
 
 	buck = new_hashtab->getbucketptr();
 	for (int i = 0; i < new_hashtab->get_no_of_buckets(); i++)
@@ -935,10 +936,10 @@ void check_max_energy(HashTable* El_Table, MAX_Energy* maxenergy, int iter) {
 
 					double bell_func = 1.
 					    / (1.
-					        + pow(fabs(.5 * maxenergy->xrange * (Curr_El->get_coord()[0] - maxenergy->xpos)),
-					            10)
-					        + pow(fabs(.5 * maxenergy->yrange * (Curr_El->get_coord()[1] - maxenergy->ypos)),
-					            10));
+					        + pow(fabs(2. * (Curr_El->get_coord()[0] - maxenergy->xpos) / maxenergy->xrange),
+					            10.)
+					        + pow(fabs(2. * (Curr_El->get_coord()[1] - maxenergy->ypos) / maxenergy->yrange),
+					            10.));
 
 					energy += bell_func * Curr_El->get_coord()[0] * Curr_El->get_coord()[1]
 					    * (Curr_El->get_state_vars()[1] * Curr_El->get_state_vars()[1]

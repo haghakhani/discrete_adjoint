@@ -253,7 +253,7 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 	int numproc = propctx->numproc;
 	int myid = propctx->myid;
 
-	MAX_Energy* maxenergy=(MAX_Energy*) propctx->functional_info;
+	MAX_Energy* maxenergy = (MAX_Energy*) propctx->functional_info;
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -266,17 +266,17 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 						double bell_func = 1.
 						    / (1.
 						        + pow(
-						            fabs(.5 * maxenergy->xrange * (Curr_El->get_coord()[0] - maxenergy->xpos)),
-						            10)
+						            fabs(2. * (Curr_El->get_coord()[0] - maxenergy->xpos) / maxenergy->xrange),
+						            10.)
 						        + pow(
-						            fabs(.5 * maxenergy->yrange * (Curr_El->get_coord()[1] - maxenergy->ypos)),
-						            10));
+						            fabs(2. * (Curr_El->get_coord()[1] - maxenergy->ypos) / maxenergy->yrange),
+						            10.));
 
 						Curr_El->get_func_sens()[0] = 0.;
-						Curr_El->get_func_sens()[1] = 2 * bell_func * Curr_El->get_coord()[0]
+						Curr_El->get_func_sens()[1] = 2. * bell_func * Curr_El->get_coord()[0]
 						    * Curr_El->get_coord()[1] * Curr_El->get_state_vars()[1]
 						    / maxenergy->normalized_area;
-						Curr_El->get_func_sens()[2] = 2 * bell_func * Curr_El->get_coord()[0]
+						Curr_El->get_func_sens()[2] = 2. * bell_func * Curr_El->get_coord()[0]
 						    * Curr_El->get_coord()[1] * Curr_El->get_state_vars()[2]
 						    / maxenergy->normalized_area;
 
@@ -290,6 +290,9 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 				currentPtr = currentPtr->next;
 			}
 		}
+
+	if (timeprops->iter == maxenergy->time_step)
+		timeprops->adjiter = 0;
 
 }
 //
