@@ -121,8 +121,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 					for (int l = 0; l < NUM_STATE_VARS; ++l)
 						if (k == l)
 							adjcontr[k] += -0.75 * adjoint_prev[l]
-							    * (1. * dry - 2. * jacobianmat(effelement, l, k))
-							    - coef * adjoint_pre3[l] * dry;
+							    * (1. * dry - 2. * jacobianmat(effelement, l, k)) - coef * adjoint_pre3[l] * dry;
 						else
 							adjcontr[k] += 1.5 * adjoint_prev[l] * jacobianmat(effelement, l, k);
 
@@ -155,10 +154,15 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
+		if (fabs(adjoint[i]) < 1.e-16)
+			adjoint[i] = 0.;
+
+#ifdef DEBUGFILE
+
+	for (int i = 0; i < NUM_STATE_VARS; i++)
 		if (isnan(adjoint[i]) || isinf(adjoint[i]))
 			cout << "it is incorrect  " << endl;
 
-#ifdef DEBUGFILE
 	ofstream adjdebug;
 	adjdebug.open("adjdebug.txt", ios::app);
 
@@ -172,6 +176,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 	myfile.close();
 #endif
 }
+
 void DualElem::calc_func_sens(const void * ctx) {
 
 	Func_CTX* contx = (Func_CTX *) ctx;
