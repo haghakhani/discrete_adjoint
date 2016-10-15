@@ -58,6 +58,7 @@ using namespace std;
 #include "geoflow.h"
 #include "adjoint.h"
 #include <unistd.h>
+#include <set>
 
 #undef CRAY
 

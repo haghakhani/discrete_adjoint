@@ -17,10 +17,10 @@
 #endif
 #include "../header/hpfem.h"
 
-#define KEY0   1612867174
-#define KEY1   1717986918
-#define ITER   249
-#define EFFELL 0
+#define KEY0   3937086542
+#define KEY1   3303820997
+#define ITER   31
+#define EFFELL 2
 #define J      0
 #define JACIND 0
 
@@ -84,40 +84,33 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 						matprops_ptr->frict_tiny = 0.000000001;
 
 					double flux[4][NUM_STATE_VARS];
-					get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
+					get_flux(El_Table, NodeTable, Curr_El, flux);
 
 					double dt = timeprops_ptr->dt.at(iter - 1);	//at final time step we do not need the computation of adjoint and we always compute it for the previouse time so we need iter.
 					double dtdx = dt / dx[0];
 					double dtdy = dt / dx[1];
 
+					int aa = 0, bb = 1;
+					if (Curr_El->get_ithelem() == 338)
+						bb = aa;
+
 					int stop[DIMENSION];
 					double orgSrcSgn[4];
-
-					double adjusted_tan_phi_bed[2], adjusted_sin_phi_int[2];
-
 					residual(state_vars, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy, dt,
 					    d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, matprops_ptr->intfrict,
 					    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), matprops_ptr->frict_tiny,
-					    stop, orgSrcSgn, iter, Curr_El->get_pre3_state_vars(), adjusted_tan_phi_bed,
-					    adjusted_sin_phi_int);
-
-//					double coef = 0.;
-//					if (iter > 2)
-//						coef = 0.25;
-//					double *pre3_state = Curr_El->get_pre3_state_vars();
-//
-//					for (int ind = 0; ind < NUM_STATE_VARS; ++ind)
-//						state_vars[ind] = 0.75 * prev_state_vars[ind] + 1.5 * res_vec[ind]
-//						    + coef * pre3_state[ind];
-//
-//					if (state_vars[0] < 0.)
-//						state_vars[0] = 0.;
+					    stop, orgSrcSgn, iter, Curr_El->get_pre3_state_vars(),
+					    Curr_El->get_tan_phi_efective(), Curr_El->get_sin_int_efective());
 
 					Vec_Mat<9>& jacobian = Curr_El->get_jacobian();
 
 					for (int effelement = 0; effelement < EFF_ELL; effelement++) { //0 for the element itself, and the rest id for neighbour elements
 
 #ifdef DEBUG
+						int aa = 0, bb = 1;
+						if (Curr_El->pass_key()[0] == KEY0 && Curr_El->pass_key()[1] == KEY1 && iter == ITER)
+						bb = aa;
+
 						char filename[] = "jacobian";
 						int bb = 1, aa = 0;
 
@@ -149,7 +142,8 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 							calc_jacobian_elem(jacobian(effelement), *jac_flux_n_x, *jac_flux_p_x, *jac_flux_n_y,
 							    *jac_flux_p_y, prev_state_vars, d_state_vars, (d_state_vars + NUM_STATE_VARS),
 							    curvature, gravity, d_gravity, dh_sens, *(Curr_El->get_kactxy()), effelement,
-							    dtdx, dtdy, dt, stop, orgSrcSgn, adjusted_tan_phi_bed, adjusted_sin_phi_int);
+							    dtdx, dtdy, dt, stop, orgSrcSgn, Curr_El->get_tan_phi_efective(),
+							    Curr_El->get_sin_int_efective());
 
 						}
 					}
@@ -854,9 +848,6 @@ void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx) {
 	MatProps* matprops_ptr = propctx->matprops;
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
-	int iter = timeprops_ptr->iter;
-	double dt = timeprops_ptr->dt.at(iter - 1);
-
 	HashEntryPtr* buck = El_Table->getbucketptr();
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
@@ -865,65 +856,92 @@ void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx) {
 			while (currentPtr) {
 				DualElem* Curr_El = (DualElem*) (currentPtr->value);
 
-				if (Curr_El->get_adapted_flag() > 0 && *(Curr_El->get_prev_state_vars()) > GEOFLOW_TINY) {
-
-					double* prev_state_vars = Curr_El->get_prev_state_vars();
-
+				if (Curr_El->get_adapted_flag() > 0) {
 					double* phi_sens = Curr_El->get_phi_sens();
 
-					double* gravity = Curr_El->get_gravity();
-
-					double* kactxy = Curr_El->get_kactxy();
-
-					double* d_state_vars_x = Curr_El->get_prev_state_vars();
-					double* d_state_vars_y = (Curr_El->get_prev_state_vars() + NUM_STATE_VARS);
-
-					double* dgdx = Curr_El->get_d_gravity();
-
-					double tan_bed_fric = tan((Curr_El->get_effect_bedfrict()));
-
-					double tan_sq_bed_fric = tan_bed_fric * tan_bed_fric;
-
-					double velocity[2];
-
-					// velocities
-					velocity[0] = prev_state_vars[1] / prev_state_vars[0];
-					velocity[1] = prev_state_vars[2] / prev_state_vars[0];
-
-					double *curvature = Curr_El->get_curvature();
-
-					double h_inv = 1. / prev_state_vars[0];
-
-					double tmp = h_inv * (d_state_vars_y[1] - velocity[0] * d_state_vars_y[0]);
-
-					double OrgSgn[4];
-
-					OrgSgn[0] = tiny_sgn(tmp, matprops_ptr->frict_tiny);
-					OrgSgn[2] = tiny_sgn(velocity[0], matprops_ptr->frict_tiny);
-
-					tmp = h_inv * (d_state_vars_x[2] - velocity[1] * d_state_vars_x[0]);
-					OrgSgn[1] = tiny_sgn(tmp, matprops_ptr->frict_tiny);
-					OrgSgn[3] = tiny_sgn(velocity[1], matprops_ptr->frict_tiny);
-
-					phi_sens[0] = 0.;
-
-					phi_sens[1] = dt * OrgSgn[2] * (1 + tan_sq_bed_fric)
-					    * max(
-					        gravity[2] * prev_state_vars[0] + velocity[0] * prev_state_vars[1] * curvature[0],
-					        0.0);
-					phi_sens[2] = dt * OrgSgn[3] * (1 + tan_sq_bed_fric)
-					    * max(
-					        gravity[2] * prev_state_vars[0] + velocity[1] * prev_state_vars[2] * curvature[1],
-					        0.0);
-
-				} else if (Curr_El->get_adapted_flag() > 0) {
-
-					double* phi_sens = Curr_El->get_phi_sens();
+					double* pint_sens = Curr_El->get_pint_sens();
 
 					for (int j = 0; j < NUM_STATE_VARS; ++j) {
 						phi_sens[j] = 0.;
+						pint_sens[j] = 0.;
 					}
 
+					if (*(Curr_El->get_prev_state_vars()) > GEOFLOW_TINY) {
+
+						double tan_sq_bed_fric_1 = Curr_El->get_tan_phi_efective()[0]
+						    * Curr_El->get_tan_phi_efective()[0];
+
+						double tan_sq_bed_fric_2 = Curr_El->get_tan_phi_efective()[1]
+						    * Curr_El->get_tan_phi_efective()[1];
+
+						double* prev_state_vars = Curr_El->get_prev_state_vars();
+
+						double* gravity = Curr_El->get_gravity();
+
+						double* kactxy = Curr_El->get_kactxy();
+
+						double* d_state_vars_x = Curr_El->get_prev_state_vars();
+						double* d_state_vars_y = (Curr_El->get_prev_state_vars() + NUM_STATE_VARS);
+
+						double* dgdx = Curr_El->get_d_gravity();
+
+						double cos_int_fric_1 = cos(asin(Curr_El->get_sin_int_efective()[0]));
+
+						double cos_int_fric_2 = cos(asin(Curr_El->get_sin_int_efective()[1]));
+
+						double velocity[2];
+
+						// velocities
+						velocity[0] = prev_state_vars[1] / prev_state_vars[0];
+						velocity[1] = prev_state_vars[2] / prev_state_vars[0];
+
+						double *curvature = Curr_El->get_curvature();
+
+						double h_inv = 0.;
+
+						h_inv = 1. / prev_state_vars[0];
+
+						double tmp = h_inv * (d_state_vars_y[1] - velocity[0] * d_state_vars_y[0]);
+
+						double OrgSgn[4];
+
+						OrgSgn[0] = tiny_sgn(tmp, matprops_ptr->frict_tiny);
+						OrgSgn[2] = tiny_sgn(velocity[0], matprops_ptr->frict_tiny);
+
+						tmp = h_inv * (d_state_vars_x[2] - velocity[1] * d_state_vars_x[0]);
+						OrgSgn[1] = tiny_sgn(tmp, matprops_ptr->frict_tiny);
+						OrgSgn[3] = tiny_sgn(velocity[1], matprops_ptr->frict_tiny);
+
+						phi_sens[0] = 0.;
+
+						if (tan_sq_bed_fric_1 > 0.)
+							phi_sens[1] = OrgSgn[2] * (1 + tan_sq_bed_fric_1)
+							    * max(
+							        gravity[2] * prev_state_vars[0]
+							            + velocity[0] * prev_state_vars[1] * curvature[0], 0.0);
+						if (tan_sq_bed_fric_2 > 0.)
+							phi_sens[2] = OrgSgn[3] * (1 + tan_sq_bed_fric_2)
+							    * max(
+							        gravity[2] * prev_state_vars[0]
+							            + velocity[1] * prev_state_vars[2] * curvature[1], 0.0);
+
+						pint_sens[0] = 0.;
+
+						if (Curr_El->get_sin_int_efective()[0] > 0.)
+							pint_sens[1] = OrgSgn[0] * prev_state_vars[0] * kactxy[0]
+							    * (gravity[2] * d_state_vars_y[0] + dgdx[1] * prev_state_vars[0])
+							    * cos_int_fric_1;
+
+						if (Curr_El->get_sin_int_efective()[1] > 0.)
+							pint_sens[2] = OrgSgn[1] * prev_state_vars[0] * kactxy[0]
+							    * (gravity[2] * d_state_vars_x[0] + dgdx[0] * prev_state_vars[0])
+							    * cos_int_fric_2;
+
+//					int bb = 1, cc = 0;
+//					for (int j = 0; j < NUM_STATE_VARS; ++j)
+//						if (isnan(phi_sens[j]) || isnan(pint_sens[j]))
+//							bb = cc;
+					}
 				}
 				currentPtr = currentPtr->next;
 			}
@@ -931,4 +949,3 @@ void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx) {
 	}
 
 }
-

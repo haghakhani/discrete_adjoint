@@ -160,9 +160,13 @@ public:
 
 	void write_elem(gzFile& myfile);
 
-	double* get_hint_sens();
+	double* get_pint_sens();
 
 	double* get_phi_sens();
+
+	double* get_tan_phi_efective();
+
+	double* get_sin_int_efective();
 
 private:
 
@@ -196,11 +200,15 @@ private:
 
 	double phi_sens[NUM_STATE_VARS];
 
-	double hint_sens[NUM_STATE_VARS];
+	double pint_sens[NUM_STATE_VARS];
 
 	double pre2_adjoint[NUM_STATE_VARS];
 
 	double pre3_adjoint[NUM_STATE_VARS];
+
+	double tan_phi_efective [DIMENSION];
+
+	double sin_int_effective [DIMENSION];
 };
 
 inline double* DualElem::get_adjoint() {
@@ -250,14 +258,24 @@ inline ErrorElem** DualElem::get_son_addresses() {
 }
 ;
 
-inline double* DualElem::get_hint_sens() {
-	return hint_sens;
+inline double* DualElem::get_pint_sens() {
+	return pint_sens;
 }
 ;
 
 inline double* DualElem::get_phi_sens() {
 
 	return phi_sens;
+}
+;
+
+inline double* DualElem::get_tan_phi_efective(){
+	return tan_phi_efective;
+}
+;
+
+inline double* DualElem::get_sin_int_efective(){
+	return sin_int_effective;
 }
 ;
 

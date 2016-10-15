@@ -3579,10 +3579,10 @@ int Element::determine_refinement(double target) {
 
 void Element::calc_d_gravity(HashTable* El_Table) {
 
-	unsigned keyy[2] = { 3941335040, 0 };
-	int aa = 0, bb = 1;
-	if (key[0] == keyy[0] && key[1] == keyy[1])
-		bb = aa;
+//	unsigned keyy[2] = { 3941335040, 0 };
+//	int aa = 0, bb = 1;
+//	if (key[0] == keyy[0] && key[1] == keyy[1])
+//		bb = aa;
 
 	int xp, xm, yp, ym; //x plus, x minus, y plus, y minus
 	xp = positive_x_side;
@@ -3630,7 +3630,7 @@ void Element::calc_d_gravity(HashTable* El_Table) {
 		d_gravity[0] = (ep->gravity[2] - gravity[2]) / dxp;
 	} else
 //no neighbors on either side -- assume that the ground is flat
-		d_gravity[0] = 0;
+		d_gravity[0] = 0.;
 
 	/* y direction */
 	ep = (Element*) (El_Table->lookup(&neighbor[yp][0]));
@@ -3653,7 +3653,7 @@ void Element::calc_d_gravity(HashTable* El_Table) {
 		d_gravity[1] = (ep->gravity[2] - gravity[2]) / dxp;
 	} else
 //no neighbors on either side -- assume that the ground is flat
-		d_gravity[1] = 0;
+		d_gravity[1] = 0.;
 
 	return;
 }

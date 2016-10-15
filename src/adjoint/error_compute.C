@@ -71,7 +71,7 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 						matprops_ptr->frict_tiny = 0.000000001;
 
 					double flux[4][NUM_STATE_VARS];
-					get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
+					get_flux(El_Table, NodeTable, Curr_El, flux);
 
 					int stop[2];
 					double tmp[] = { 0., 0., 0. };

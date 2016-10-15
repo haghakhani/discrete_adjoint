@@ -114,8 +114,6 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	calc_adjoint(&dual_meshctx, propctx);
 
-//	compute_functional_variation(&dual_meshctx, propctx);
-
 	dual_vis.start();
 	write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW, 2);
 	dual_vis.stop();
@@ -185,6 +183,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	for (int iter = maxiter; iter > 0; --iter) {
 
+		set_ithm(Dual_El_Tab);
+
 		timeprops_ptr->iter = iter;
 		if (myid == 0)
 			cout << "computing ADJOINT time step " << iter - 1 << endl;
@@ -207,8 +207,10 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		adjoint_sol.stop();
 //		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
 
-//		compute_param_sens(&dual_meshctx, propctx);
-//		compute_functional_variation(&dual_meshctx, propctx);
+//		wrtie_El_Table_ordered(&dual_meshctx, propctx, "DUAL");
+
+		compute_param_sens(&dual_meshctx, propctx);
+		compute_functional_variation(&dual_meshctx, propctx);
 
 #ifdef Error
 		error.start();
@@ -246,9 +248,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		dual_vis.start();
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
-			    1);
-//			print_func_var(propctx);
+		write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD, 1);
+			print_func_var(propctx);
 //		}
 		dual_vis.stop();
 #endif
@@ -324,6 +325,7 @@ void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, 
 		adjoint_sol.start();
 		calc_adjoint(dual_meshctx, propctx);
 		adjoint_sol.stop();
+
 //		cout << "test of adjoint: " << simple_test(Dual_El_Tab, timeprops_ptr, matprops_ptr) << endl;
 
 //		compute_param_sens(dual_meshctx, propctx);
@@ -505,9 +507,12 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 					// note that at time step n adjoint_prev is for time step n+1 and adjoint is at time step n
 					double* adjoint = Curr_El->get_prev_adjoint();
 					double* phi_sens = Curr_El->get_phi_sens();
+					double* pint_sens = Curr_El->get_pint_sens();
 
 					// the minus sign comes from the adjoint equation
-					matprops_ptr->sensitivity[0] += adjoint[1] * phi_sens[1] + adjoint[2] * phi_sens[2];
+					matprops_ptr->sensitivity[0] =0.;
+					matprops_ptr->sensitivity[1] += adjoint[1] * phi_sens[1] + adjoint[2] * phi_sens[2];
+					matprops_ptr->sensitivity[2] += adjoint[1] * pint_sens[1] + adjoint[2] * pint_sens[2];
 
 //					int cc = 0, bb = 1;
 ////					for (int j = 0; j < 2; ++j)
@@ -629,7 +634,7 @@ void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 					double *dx = Curr_El->get_dx();
 
 					double flux[4][NUM_STATE_VARS];
-					get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
+					get_flux(El_Table, NodeTable, Curr_El, flux);
 					int iter = timeprops_ptr->iter;
 					double dt = timeprops_ptr->dt.at(iter - 1);
 					double dtdx = dt / dx[0];
@@ -739,7 +744,7 @@ void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 					double *dx = Curr_El->get_dx();
 
 					double flux[4][NUM_STATE_VARS];
-					get_flux(El_Table, NodeTable, Curr_El->pass_key(), matprops_ptr, myid, flux);
+					get_flux(El_Table, NodeTable, Curr_El, flux);
 					int iter = timeprops_ptr->iter;
 					double dt = timeprops_ptr->dt.at(iter - 1);
 					double dtdx = dt / dx[0];
@@ -814,7 +819,7 @@ void print_func_var(PropCTX* propctx) {
 
 		fprintf(file, "%d %f %e %e %e\n", timeprops_ptr->iter,
 		    timeprops_ptr->time * timeprops_ptr->TIME_SCALE, global_sens[0] * functional_scale,
-		    global_sens[1] * functional_scale / lscale, global_sens[2] * functional_scale / lscale);
+		    global_sens[1] * functional_scale , global_sens[2] * functional_scale );
 
 		fclose(file);
 	}

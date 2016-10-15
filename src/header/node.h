@@ -40,8 +40,8 @@ class Node {
 
 	friend void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx);
 
-	friend void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
-	    MatProps* matprops_ptr, int myid, double fluxold[4][NUM_STATE_VARS]);
+	friend void get_flux(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El,
+	    double fluxold[4][NUM_STATE_VARS]);
 
 	friend void AssertMeshErrorFree(HashTable *El_Table, HashTable* NodeTable, int numprocs, int myid,
 	    double loc);
@@ -87,8 +87,8 @@ class Node {
 	friend void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
 	    double* e_error);
 
-	friend void uniform_refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump, int myid, void* RL,
-	    TimeProps* timeprops_ptr);
+	friend void uniform_refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump,
+	    int myid, void* RL, TimeProps* timeprops_ptr);
 
 	friend void adjust_node_info(MeshCTX* meshctx, PropCTX* propctx);
 

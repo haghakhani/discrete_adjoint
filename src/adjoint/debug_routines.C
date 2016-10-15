@@ -467,13 +467,10 @@ int table_members(HashTable *NodeTable) {
 				currentPtr = currentPtr->next;
 			}
 		}
-return num;
+	return num;
 }
 
-void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
-    int myid, double flux[4][NUM_STATE_VARS]) {
-
-	Element* Curr_El = (Element*) (El_Table->lookup(key));
+void get_flux(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, double flux[4][NUM_STATE_VARS]) {
 
 	int xp = Curr_El->get_positive_x_side(); //finding the direction of element
 	int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
@@ -608,8 +605,203 @@ void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatPr
 	}
 }
 
-unsigned* makekey(unsigned k1,unsigned k2){
-	 unsigned *key=new unsigned[2];
-	 key[0]=k1;key[1]=k2;
-	 return key;
+unsigned* makekey(unsigned k1, unsigned k2) {
+	unsigned *key = new unsigned[2];
+	key[0] = k1;
+	key[1] = k2;
+	return key;
 }
+
+class CustomComparitor {
+public:
+	int operator()(const pair<unsigned, unsigned>& lhs, const pair<unsigned, unsigned>& rhs) {
+		if (lhs.first < rhs.first || (lhs.first == rhs.first && lhs.second < rhs.second))
+			return true;
+
+		return false;
+	}
+};
+
+void wrtie_El_Table_ordered(MeshCTX* meshctx, PropCTX* propctx, char* place) {
+
+	HashTable* El_Table = meshctx->el_table;
+	HashTable* NodeTable = meshctx->nd_table;
+
+	TimeProps* timeprops_ptr = propctx->timeprops;
+	MapNames* mapname_ptr = propctx->mapnames;
+	MatProps* matprops_ptr = propctx->matprops;
+	int myid = propctx->myid, numprocs = propctx->numproc;
+
+	int iter = timeprops_ptr->iter;
+	double dt = timeprops_ptr->dt.at(iter - 1);
+
+	HashEntryPtr* buck = El_Table->getbucketptr();
+
+	char filename[20];
+
+	sprintf(filename, "%s_%d_%d.csv", place, propctx->timeprops->iter, myid);
+
+	FILE* file = fopen(filename, "wb");
+
+	set<pair<unsigned, unsigned>, CustomComparitor> ordered_key;
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0)
+					//save key in ordered way
+					ordered_key.insert(make_pair(Curr_El->pass_key()[0], Curr_El->pass_key()[1]));
+
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	set<pair<unsigned, unsigned> >::iterator it;
+	for (it = ordered_key.begin(); it != ordered_key.end(); ++it) {
+		unsigned key[] = { it->first, it->second };
+		Element* elem = (Element*) El_Table->lookup(key);
+
+		double flux[4][NUM_STATE_VARS];
+		get_flux(El_Table, NodeTable, elem, flux);
+
+//		fprintf(file, "%u,%u,%.8e,%.8e,%.8e,%.8e,%.8e,%.8e,%.8e,%.8e,%.8e,,%.8e,%.8e,%.8e\n", it->first,
+//		    it->second, flux[0][0], flux[0][1], flux[0][2], flux[1][0], flux[1][1], flux[1][2],
+//		    flux[2][0], flux[2][1], flux[2][2], flux[3][0], flux[3][1], flux[3][2]);
+
+//		fprintf(file, "%u,%u,%.8e,%.8e,%.8e,%.8e,%.8e,%.8e\n", it->first, it->second,
+//		    elem->get_d_state_vars()[0], elem->get_d_state_vars()[1], elem->get_d_state_vars()[2],
+//		    elem->get_d_state_vars()[3], elem->get_d_state_vars()[4], elem->get_d_state_vars()[5]);
+//		fprintf(file, "%u,%u,%.8e,%.8e\n", it->first, it->second, elem->get_d_gravity()[0],
+//		    elem->get_d_gravity()[1]);
+
+		fprintf(file, "%u,%u,%.8e,%.8e,%.8e\n", it->first, it->second, elem->get_state_vars()[0],
+		    elem->get_state_vars()[1], elem->get_state_vars()[2]);
+//		fwrite(elem->get_state_vars(), sizeof(double), 3, file);
+	}
+}
+
+class Data {
+private:
+	unsigned* key;
+	double* state;
+	double* pre3_state;
+
+public:
+
+	Data(Element* elem) {
+		key = elem->pass_key();
+		state = elem->get_state_vars();
+		pre3_state = elem->get_pre3_state_vars();
+	}
+
+	unsigned* get_key() const {
+		return key;
+	}
+
+	double* get_state() const {
+		return state;
+	}
+
+	double* get_pre3_state() const{
+		return pre3_state;
+	}
+
+	bool operator<(const Data& rdata) const {
+		if (key[0] < rdata.key[0] || (key[0] == rdata.key[0] && key[1] < rdata.key[1]))
+			return true;
+
+		return false;
+	}
+	;
+};
+
+class DualData: public Data {
+private:
+	double *adjoint;
+
+public:
+	DualData(DualElem* elem) :
+			Data(elem) {
+		adjoint = elem->get_adjoint();
+	}
+
+	double* get_adjoint() const {
+		return adjoint;
+	}
+};
+
+void write_alldata_ordered(HashTable* El_Table, int myid) {
+
+	set<Data> mydata;
+
+	int no_of_elm_buckets = El_Table->get_no_of_buckets();
+	for (int ibucket = 0; ibucket < no_of_elm_buckets; ibucket++) {
+		HashEntryPtr entryp = *(El_Table->getbucketptr() + ibucket);
+		while (entryp) {
+			Element* EmTemp = (Element*) entryp->value;
+			if (EmTemp->get_adapted_flag() > 0)
+				mydata.insert(Data(EmTemp));
+
+			entryp = entryp->next;
+		}
+	}
+
+	char filename[50];
+	sprintf(filename, "ordered_%04d", myid);
+//	gzFile myfile = gzopen(filename, "wb");
+	FILE *fp = fopen(filename, "w");
+
+	set<Data>::iterator it;
+	for (it = mydata.begin(); it != mydata.end(); ++it) {
+		fprintf(fp, "%u %u %16.10f %16.10f %16.10f %16.10f %16.10f %16.10f\n", it->get_key()[0],
+		    it->get_key()[1], it->get_state()[0], it->get_state()[1], it->get_state()[2],
+		    it->get_pre3_state()[0], it->get_pre3_state()[1], it->get_pre3_state()[2]);
+//		gzwrite(myfile, (it->get_key()), sizeof(unsigned) * 2);
+//		gzwrite(myfile, (it->get_state()), sizeof(double) * 3);
+	}
+
+	fclose(fp);
+
+//	gzclose (myfile);
+
+}
+
+void write_alldualdata_ordered(HashTable* El_Table, int myid) {
+
+	set<DualData> mydata;
+
+	int no_of_elm_buckets = El_Table->get_no_of_buckets();
+	for (int ibucket = 0; ibucket < no_of_elm_buckets; ibucket++) {
+		HashEntryPtr entryp = *(El_Table->getbucketptr() + ibucket);
+		while (entryp) {
+			DualElem* EmTemp = (DualElem*) entryp->value;
+			if (EmTemp->get_adapted_flag() > 0)
+				mydata.insert(DualData(EmTemp));
+
+			entryp = entryp->next;
+		}
+	}
+
+	char filename[50];
+	sprintf(filename, "ordered_%04d", myid);
+//	gzFile myfile = gzopen(filename, "wb");
+	FILE *fp = fopen(filename, "w");
+
+	set<DualData>::iterator it;
+	for (it = mydata.begin(); it != mydata.end(); ++it) {
+		fprintf(fp, "%u %u %16.10f %16.10f %16.10f %16.10f %16.10f %16.10f\n", it->get_key()[0],
+		    it->get_key()[1], it->get_state()[0], it->get_state()[1], it->get_state()[2],
+		    it->get_adjoint()[0], it->get_adjoint()[1], it->get_adjoint()[2]);
+//		gzwrite(myfile, (it->get_key()), sizeof(unsigned) * 2);
+//		gzwrite(myfile, (it->get_state()), sizeof(double) * 3);
+	}
+
+	fclose(fp);
+
+//	gzclose (myfile);
+
+}
+

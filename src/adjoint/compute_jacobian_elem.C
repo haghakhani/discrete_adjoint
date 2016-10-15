@@ -66,12 +66,12 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 
 			if (OrgSgn[3] != 0. && !stop[1] /*&& unitvy != 0.*/) {
 				jacobian(2, 0) -= -dt * OrgSgn[3] * adjusted_tan_phi_bed[1]
-				    * (gravity[2] - vy_sq * curvature[1]);
+				 * (gravity[2] - vy_sq * curvature[1]);
 
 				jacobian(2, 1) -= 0.;
 
 				jacobian(2, 2) -= -dt * OrgSgn[3] * adjusted_tan_phi_bed[1]
-				    * (2 * velocity[1] * curvature[1]);
+				 * (2 * velocity[1] * curvature[1]);
 
 			}
 		}

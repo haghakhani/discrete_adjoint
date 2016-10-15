@@ -343,7 +343,6 @@ void residual(double *state_vars, double *prev_state_vars, double *fluxxp, doubl
 		velocity[0] = prev_state_vars[1] / prev_state_vars[0];
 		velocity[1] = prev_state_vars[2] / prev_state_vars[0];
 
-//		double unitvx = 0., unitvy = 0., h_inv = 0., speed = 0.;
 		double h_inv = 1. / prev_state_vars[0];
 
 		tmp = h_inv * (d_state_vars_y[1] - velocity[0] * d_state_vars_y[0]);
@@ -369,27 +368,18 @@ void residual(double *state_vars, double *prev_state_vars, double *fluxxp, doubl
 		if (s3 == 0. && orgSrcSgn[2])
 			stop[0] = 1;
 
-		if (fabs(dt * (s2 + s3))
-		    > fabs(res_vec[1] + dt * s1 + .75 * prev_state_vars[1] + coef * pre3_state[1])) {
+		if (fabs(1.5 * dt * (s2 + s3))
+		    > fabs(1.5 * (res_vec[1] + dt * s1) + .75 * prev_state_vars[1] + coef * pre3_state[1])) {
 			//friction are big enough to stop the flow
 			state_vars[1] = 0.;
-			//we have to adjust the frictions otherwise we will have problem in jacobian computation may be just one is enough
+			//we adjust the friction terms to handle this situation
+			double fract = fabs(
+			    1.5 * (res_vec[1] + dt * s1) + .75 * prev_state_vars[1] + coef * pre3_state[1])
+			    / fabs(1.5 * dt * (s2 + s3));
 
-			//following condition means just internal drag is large enough to cancel the momentum
-			if (fabs(dt * s2)
-			    > fabs(res_vec[1] + dt * s1 + .75 * prev_state_vars[1] + coef * pre3_state[1])) {
-				adjusted_tan_phi_bed[0] = 0.;
-				adjusted_sin_phi_int[0] = sin_int_fric
-				    * (res_vec[1] + dt * s1 + .75 * prev_state_vars[1] + coef * pre3_state[1]) / (dt * s2);
+			adjusted_tan_phi_bed[0] = fract * tan_bed_fric;
+			adjusted_sin_phi_int[0] = fract * sin_int_fric;
 
-			} else {
-				//basically we are changing bed friction to balance the two sides
-				adjusted_tan_phi_bed[0] = tan_bed_fric
-				    * (res_vec[1] + dt * (s1 - s2) + .75 * prev_state_vars[1] + coef * pre3_state[1])
-				    / (dt * s3);
-				adjusted_sin_phi_int[0] = sin_int_fric;
-
-			}
 		} else {
 			res_vec[1] += dt * (s1 - s2 - s3);
 			state_vars[1] = 0.75 * prev_state_vars[1] + 1.5 * res_vec[1] + coef * pre3_state[1];
@@ -410,27 +400,18 @@ void residual(double *state_vars, double *prev_state_vars, double *fluxxp, doubl
 		if (s3 == 0. && orgSrcSgn[3])
 			stop[1] = 1;
 
-		if (fabs(dt * (s2 + s3))
-		    > fabs(res_vec[2] + dt * s1 + .75 * prev_state_vars[2] + coef * pre3_state[2])) {
+		if (fabs(1.5 * dt * (s2 + s3))
+		    > fabs(1.5 * (res_vec[2] + dt * s1) + .75 * prev_state_vars[2] + coef * pre3_state[2])) {
 			//friction are big enough to stop the flow
 			state_vars[2] = 0.;
 			//we have to adjust the frictions otherwise we will have problem in jacobian computation may be just one is enough
+			double fract = fabs(
+			    1.5 * (res_vec[2] + dt * s1) + .75 * prev_state_vars[2] + coef * pre3_state[2])
+			    / fabs(1.5 * dt * (s2 + s3));
 
-			//following condition means just internal drag is large enough to cancel the momentum
-			if (fabs(dt * s2)
-			    > fabs(res_vec[2] + dt * s1 + .75 * prev_state_vars[2] + coef * pre3_state[2])) {
-				adjusted_tan_phi_bed[1] = 0.;
-				adjusted_sin_phi_int[1] = sin_int_fric
-				    * (res_vec[2] + dt * s1 + .75 * prev_state_vars[2] + coef * pre3_state[2]) / (dt * s2);
+			adjusted_tan_phi_bed[1] = fract * tan_bed_fric;
+			adjusted_sin_phi_int[1] = fract * sin_int_fric;
 
-			} else {
-				//basically we are changing bed friction to balance the two sides
-				adjusted_tan_phi_bed[1] = tan_bed_fric
-				    * (res_vec[2] + dt * (s1 - s2) + .75 * prev_state_vars[2] + coef * pre3_state[2])
-				    / (dt * s3);
-				adjusted_sin_phi_int[1] = sin_int_fric;
-
-			}
 		} else {
 			res_vec[2] += dt * (s1 - s2 - s3);
 			state_vars[2] = 0.75 * prev_state_vars[2] + 1.5 * res_vec[2] + coef * pre3_state[2];
@@ -438,6 +419,9 @@ void residual(double *state_vars, double *prev_state_vars, double *fluxxp, doubl
 			adjusted_sin_phi_int[1] = sin_int_fric;
 		}
 
+	} else {
+		state_vars[1] = 0.75 * prev_state_vars[1] + 1.5 * res_vec[1] + coef * pre3_state[1];
+		state_vars[2] = 0.75 * prev_state_vars[2] + 1.5 * res_vec[2] + coef * pre3_state[2];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)

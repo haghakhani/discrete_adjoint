@@ -89,8 +89,8 @@ void close_xdmf_files(int myid) {
 int write_dual_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timeprops_ptr,
     MatProps *matprops_ptr, MapNames *mapnames, const int mode, const int plotflag) {
 	//if Need to have generic form, do vector of vectors
-	vector<double> pheight, xmom, ymom, adj1, adj2, adj3, xcoord, ycoord, zcoord;
-	vector<int> C1, C2, C3, C4;
+	vector<double> pheight, xmom, ymom, adj1, adj2, adj3, xcoord, ycoord, zcoord, ithelem;
+
 	int num_nodes = 0, num_elm = 0;
 	int i, j, k;
 	double *state_vars, *adjoint, *coord, elevation;
@@ -109,8 +109,6 @@ int write_dual_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timepr
 	error_scale = functional_scale = correction_scale = hscale * lscale * lscale;
 	double adjoint_scale[3] = { functional_scale / hscale, functional_scale / momentum_scale,
 	    functional_scale / momentum_scale };
-
-	unsigned *nodes;
 
 	/* scan HashTable and store coordinates and variables in vectors */
 	HashEntry *entryptr;
@@ -132,9 +130,10 @@ int write_dual_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timepr
 				adj1.push_back(adjoint[0] * adjoint_scale[0]);
 				adj2.push_back(adjoint[1] * adjoint_scale[1]);
 				adj3.push_back(adjoint[2] * adjoint_scale[2]);
+				ithelem.push_back(EmTemp->get_ithelem());
 
 				num_elm++;
-				nodes = EmTemp->getNode();
+				unsigned * nodes = EmTemp->getNode();
 				for (j = 0; j < 4; j++) {
 					Node * NodeTemp = (Node *) NodeTable->lookup(nodes + j * KEYLENGTH);
 					coord = NodeTemp->get_coord();
@@ -222,6 +221,10 @@ int write_dual_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timepr
 	copy(adj3.begin(), adj3.end(), vars);
 	GH5_write_state_vars(h5fid, num_elm, vars, "ADJOINT3");
 
+	//ithelem
+	copy(ithelem.begin(), ithelem.end(), vars);
+	GH5_write_state_vars(h5fid, num_elm, vars, "ITHELEM");
+
 	delete[] vars;
 	GH5_closefile(h5fid);
 
@@ -291,6 +294,13 @@ int write_dual_xdmf(HashTable *El_Table, HashTable *NodeTable, TimeProps *timepr
 	xmlf << "<DataItem DataType=\"Float\" Precision=\"8\" ";
 	xmlf << "Dimensions=\"" << num_elm << " 1\" Format=\"HDF\">" << endl;
 	xmlf << "\t\t" << hdf5file << ":/Properties/ADJOINT3" << endl;
+	xmlf << "</DataItem>" << endl;
+	xmlf << "</Attribute>" << endl;
+	// ITHELEM
+	xmlf << "<Attribute Type=\"Scalar\" Center=\"Cell\" Name=\"ITHELEM\">" << endl;
+	xmlf << "<DataItem DataType=\"Float\" Precision=\"8\" ";
+	xmlf << "Dimensions=\"" << num_elm << " 1\" Format=\"HDF\">" << endl;
+	xmlf << "\t\t" << hdf5file << ":/Properties/ITHELEM" << endl;
 	xmlf << "</DataItem>" << endl;
 	xmlf << "</Attribute>" << endl;
 	xmlf << "</Grid>" << endl;

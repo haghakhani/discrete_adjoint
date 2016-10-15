@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
 	propctx.myid = myid;
 	propctx.adapt_flag = adaptflag;
 	propctx.discharge = &discharge;
-	propctx.pileprops=&pileprops;
+	propctx.pileprops = &pileprops;
 
 	if (runcond != 2) {
 
@@ -177,22 +177,22 @@ int main(int argc, char *argv[]) {
 		if (myid == 0)
 			output_summary(&timeprops, &statprops, savefileflag);
 
-		if (viz_flag & 1)
-			tecplotter(El_Table, Node_Table, &matprops, &timeprops, &mapnames, statprops.vstar, adjflag);
-
-		if (viz_flag & 2)
-			meshplotter(El_Table, Node_Table, &matprops, &timeprops, &mapnames, statprops.vstar);
-
+//		if (viz_flag & 1)
+//			tecplotter(El_Table, Node_Table, &matprops, &timeprops, &mapnames, statprops.vstar, adjflag);
+//
+//		if (viz_flag & 2)
+//			meshplotter(El_Table, Node_Table, &matprops, &timeprops, &mapnames, statprops.vstar);
+//
 //#ifdef HAVE_HDF5
 //		if(viz_flag&8)
-		xdmerr=write_xdmf(El_Table,Node_Table,&timeprops,&matprops,&mapnames,XDMF_NEW);
+//		xdmerr = write_xdmf(El_Table, Node_Table, &timeprops, &matprops, &mapnames, XDMF_NEW);
 //#endif
-
-		if (viz_flag & 16) {
-			if (myid == 0)
-				grass_sites_header_output(&timeprops);
-			grass_sites_proc_output(El_Table, Node_Table, myid, &matprops, &timeprops);
-		}
+//
+//		if (viz_flag & 16) {
+//			if (myid == 0)
+//				grass_sites_header_output(&timeprops);
+//			grass_sites_proc_output(El_Table, Node_Table, myid, &matprops, &timeprops);
+//		}
 
 		/*
 		 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -269,6 +269,8 @@ int main(int argc, char *argv[]) {
 			step(El_Table, Node_Table, myid, numprocs, &matprops, &timeprops, &pileprops, &fluxprops,
 			    &statprops, &order_flag, &outline, &discharge, adaptflag);
 
+//			wrtie_El_Table_ordered(&meshctx, &propctx, "FORWARD");
+
 			stept.stop();
 
 			write_solution.start();
@@ -305,7 +307,7 @@ int main(int argc, char *argv[]) {
 //
 //#ifdef HAVE_HDF5
 //				if(viz_flag&8)
-				xdmerr=write_xdmf(El_Table,Node_Table,&timeprops,&matprops,&mapnames,XDMF_OLD);
+//				xdmerr = write_xdmf(El_Table, Node_Table, &timeprops, &matprops, &mapnames, XDMF_OLD);
 //#endif
 //
 //				if (viz_flag & 16) {
@@ -322,7 +324,7 @@ int main(int argc, char *argv[]) {
 				save_forward(meshctx, propctx, solrec);
 				solrec->wrtie_sol_to_disk(myid);
 				solrec->delete_jacobians_after_writes();
-//			write_alldata_ordered(El_Table, myid);
+			write_alldata_ordered(El_Table, myid);
 			}
 
 #ifdef PERFTEST

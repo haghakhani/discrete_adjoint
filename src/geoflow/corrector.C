@@ -91,6 +91,10 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	int stop[2];
 	double orgSrcSgn[4], adjusted_tan_phi_bed[2], adjusted_sin_phi_int[2];
 
+	int aa = 0, bb = 1;
+	if (EmTemp->pass_key()[0] == 3885755050 && EmTemp->pass_key()[1] == 2863311530 && timeprops->iter == 1)
+		bb = aa;
+
 	residual(state_vars, prev_state_vars, fluxxp, fluxyp, fluxxm, fluxym, dtdx, dtdy, dt,
 	    d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, (matprops_ptr->intfrict), bedfrict,
 	    gravity, d_gravity, kactxy[0], matprops_ptr->frict_tiny, stop, orgSrcSgn, timeprops->iter,

@@ -11,6 +11,8 @@
 #include <vector>
 //#define Error
 
+extern int STOP_ADJ;
+
 //! this function transfers information during events such as ghost element data exchange and repartitioning
 void move_dual_data(MeshCTX* meshctx, PropCTX* propctx);
 
@@ -138,8 +140,8 @@ void bilinear_interp_elem(ErrorElem *elem11, ErrorElem *elem21, ErrorElem *elem1
 
 int void_neigh_elem(HashTable* El_Table, Element* Curr_El, int effelement);
 
-void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
-    int myid, double fluxold[4][NUM_STATE_VARS]);
+void get_flux(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El,
+    double fluxold[4][NUM_STATE_VARS]);
 
 void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* fluxypold,
     double* fluxymold, double* fluxxp, double* fluxxm, double* fluxyp, double* fluxym,
@@ -272,6 +274,8 @@ void compute_init_location_variation(MeshCTX* dual_meshctx, PropCTX* propctx);
 void write_jacobian_to_compute_eigen(MeshCTX* dual_meshctx, PropCTX* propctx);
 
 void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx);
+
+void wrtie_El_Table_ordered(MeshCTX* meshctx, PropCTX* propctx, char* place);
 
 class Container {
 private:
