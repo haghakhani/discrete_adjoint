@@ -249,7 +249,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 		write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD, 1);
-			print_func_var(propctx);
+		print_func_var(propctx);
 //		}
 		dual_vis.stop();
 #endif
@@ -496,6 +496,8 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 	HashEntryPtr currentPtr;
 	HashEntryPtr *buck = El_Table->getbucketptr();
 	int elem = 0;
+	for (int i = 0; i < NUM_STATE_VARS; ++i)
+		matprops_ptr->sensitivity[i] = 0.;
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -510,7 +512,7 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 					double* pint_sens = Curr_El->get_pint_sens();
 
 					// the minus sign comes from the adjoint equation
-					matprops_ptr->sensitivity[0] =0.;
+					matprops_ptr->sensitivity[0] = 0.;
 					matprops_ptr->sensitivity[1] += adjoint[1] * phi_sens[1] + adjoint[2] * phi_sens[2];
 					matprops_ptr->sensitivity[2] += adjoint[1] * pint_sens[1] + adjoint[2] * pint_sens[2];
 
@@ -819,7 +821,7 @@ void print_func_var(PropCTX* propctx) {
 
 		fprintf(file, "%d %f %e %e %e\n", timeprops_ptr->iter,
 		    timeprops_ptr->time * timeprops_ptr->TIME_SCALE, global_sens[0] * functional_scale,
-		    global_sens[1] * functional_scale , global_sens[2] * functional_scale );
+		    global_sens[1] * functional_scale, global_sens[2] * functional_scale);
 
 		fclose(file);
 	}
