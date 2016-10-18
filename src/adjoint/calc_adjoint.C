@@ -67,6 +67,10 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 		}
 	}
 
+	move_dual_data(meshctx, propctx);
+
+	apply_adjoint_bc(meshctx, propctx);
+
 }
 
 void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
@@ -98,28 +102,36 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 
 		for (int effelement = 0; effelement < EFF_ELL; effelement++) { //0 for the element itself, and the rest id for neighbour elements
 
-			if (effelement == 0) {		    //this part of code
+			if (effelement == 0) {
+				bool boundary = false;
+				for (int bound = 0; bound < 4; ++bound)
+					if (Curr_El->get_neigh_proc()[bound] == INIT)
+						boundary = true;
 
-				double* adjoint_prev = Curr_El->get_prev_adjoint();
-				double* adjoint_pre3 = Curr_El->get_pre3_adjoint();
+				if (!boundary) {
 
-				Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
+					double* adjoint_prev = Curr_El->get_prev_adjoint();
+					double* adjoint_pre3 = Curr_El->get_pre3_adjoint();
 
-				double coef = 0.25;
-				if (propctx->timeprops->adjiter == 1 || propctx->timeprops->adjiter == 2)
-					coef = 0.;
+					Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
 
-				double dry = 1.;
-				if (Curr_El->get_prev_state_vars()[0] == 0.)
-					dry = 0.;
+					double coef = 0.25;
+					if (propctx->timeprops->adjiter == 1 || propctx->timeprops->adjiter == 2)
+						coef = 0.;
 
-				for (int k = 0; k < NUM_STATE_VARS; ++k)
-					for (int l = 0; l < NUM_STATE_VARS; ++l)
-						if (k == l)
-							adjcontr[k] += -0.75 * adjoint_prev[l]
-							    * (1. * dry - 2. * jacobianmat(effelement, l, k)) - coef * adjoint_pre3[l] * dry;
-						else
-							adjcontr[k] += 1.5 * adjoint_prev[l] * jacobianmat(effelement, l, k);
+					double dry = 1.;
+					if (Curr_El->get_prev_state_vars()[0] == 0.)
+						dry = 0.;
+
+					for (int k = 0; k < NUM_STATE_VARS; ++k)
+						for (int l = 0; l < NUM_STATE_VARS; ++l)
+							if (k == l)
+								adjcontr[k] += -0.75 * adjoint_prev[l]
+								    * (1. * dry - 2. * jacobianmat(effelement, l, k))
+								    - coef * adjoint_pre3[l] * dry;
+							else
+								adjcontr[k] += 1.5 * adjoint_prev[l] * jacobianmat(effelement, l, k);
+				}
 
 			} else if (effelement <= 4
 			    || (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) > -2)) {
@@ -154,11 +166,6 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 //		if (fabs(adjoint[i]) < 1.e-16)
 //			adjoint[i]=0.;
 
-	int cc = 1, bb = 0;
-	for (int i = 1; i < NUM_STATE_VARS; i++)
-		if (fabs(adjoint[i]) > 1.e-13)
-			bb = cc;
-
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		if (isnan(adjoint[i]) || isinf(adjoint[i]))
 			cout << "it is incorrect  " << endl;
@@ -177,6 +184,61 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 	myfile.close();
 #endif
 }
+
+void apply_adjoint_bc(MeshCTX* meshctx, PropCTX* propctx) {
+
+	HashTable* El_Table = meshctx->el_table;
+	HashEntryPtr* buck = El_Table->getbucketptr();
+	HashEntryPtr currentPtr;
+	DualElem* Curr_El = NULL;
+	int iter = propctx->timeprops->iter;
+	int myid = propctx->myid;
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+
+				if (Curr_El->get_adapted_flag() > 0)
+					for (int neighbor = 0; neighbor < 8; ++neighbor)
+						if (Curr_El->get_neigh_proc()[neighbor] >= 0) {
+
+							DualElem* neig_elem = (DualElem*) El_Table->lookup(
+							    Curr_El->get_neighbors() + KEYLENGTH * neighbor);
+							for (int side = 0; side < 4; ++side)
+								if (neig_elem->get_neigh_proc()[side] == INIT && (neighbor % 4) == side) {
+
+									int diff_gen = neig_elem->get_gen() - Curr_El->get_gen();
+
+									switch (diff_gen) {
+										case -1:
+											// Curr_El with another cell is neighbor of a cell adjacent to interface
+											//so just half of that cell will effect its adjoint
+											for (int comp = 0; comp < NUM_STATE_VARS; ++comp)
+												Curr_El->get_adjoint()[comp] += .5 * neig_elem->get_adjoint()[comp];
+											break;
+										case 0:
+											for (int comp = 0; comp < NUM_STATE_VARS; ++comp)
+												Curr_El->get_adjoint()[comp] += neig_elem->get_adjoint()[comp];
+											break;
+										case 1:
+											//there has to be another neighbor cell of Curr_El which
+											//its effect will be added later or has been added earlier
+											for (int comp = 0; comp < NUM_STATE_VARS; ++comp)
+												Curr_El->get_adjoint()[comp] += .5 * neig_elem->get_adjoint()[comp];
+											break;
+										default:
+											exit(1);
+											break;
+									}
+								}
+						}
+				currentPtr = currentPtr->next;
+			}
+		}
+}
+
 void DualElem::calc_func_sens(const void * ctx) {
 
 	Func_CTX* contx = (Func_CTX *) ctx;

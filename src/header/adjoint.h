@@ -275,6 +275,8 @@ void write_jacobian_to_compute_eigen(MeshCTX* dual_meshctx, PropCTX* propctx);
 
 void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx);
 
+void apply_adjoint_bc(MeshCTX* meshctx, PropCTX* propctx);
+
 void wrtie_El_Table_ordered(MeshCTX* meshctx, PropCTX* propctx, char* place);
 
 class Container {

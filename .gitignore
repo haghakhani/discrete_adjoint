@@ -23,6 +23,10 @@ bin/
 *.out
 *.app
 
+# Profiling
+*.gcda
+*.gcno
+
 # Eclipse
 .autotools
 .cproject
