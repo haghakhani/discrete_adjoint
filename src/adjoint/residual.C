@@ -312,9 +312,10 @@ void residual(double *state_vars, double *prev_state_vars, double *fluxxp, doubl
     double *dgdx, double kactxyelem, double fric_tiny, int* stop, double* orgSrcSgn, int iter,
     double *pre3_state, double* adjusted_tan_phi_bed, double* adjusted_sin_phi_int) {
 
-	double coef = 0.;
-	if (iter > 2)
-		coef = 0.25;
+	double coef = 0.25;
+	if (iter < 3)
+		for (int ind = 0; ind < NUM_STATE_VARS; ++ind)
+			pre3_state[ind] = prev_state_vars[ind];
 
 	double res_vec[] = { 0., 0., 0. };
 	for (int i = 0; i < NUM_STATE_VARS; i++)
