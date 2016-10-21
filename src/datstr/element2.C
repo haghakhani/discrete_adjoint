@@ -3412,8 +3412,12 @@ void Element::boundary_flux(HashTable* El_Table, HashTable* NodeTable, const int
 
 		for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++)
 			nm->refinementflux[ivar] = np->refinementflux[ivar];
-
 	}
+
+//	if (side == 0 & np->flux[1] < 0.)
+//		cout << "negative flux in postive dir BC\n";
+//	else if (side == 1 & np->flux[2] < 0.)
+//		cout << "negative flux in postive dir BC\n";
 }
 
 void Element::calc_shortspeed(double inv_dt) {

@@ -21,9 +21,9 @@
 
 #include "../header/hpfem.h"
 
-#define KEY0   2695539370
+#define KEY0   3205245610
 #define KEY1   2863311530
-#define ITER   1
+#define ITER   274
 
 /*! calc_edge_states() cycles through the element Hashtable (listing of all 
  *  elements) and for each element (that has not been refined this iteration 
@@ -57,6 +57,10 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matpr
 			while (currentPtr) {
 				Curr_El = (T*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) {
+
+					int aa = 1, ddd = 0;
+					if(*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1 && timeprops_ptr->iter == ITER)
+					ddd=aa;
 
 					Curr_El->calc_edge_states<T>(El_Table, NodeTable, &x_elem_list, &y_elem_list,
 					    matprops_ptr, myid, timeprops_ptr->dtime, order_flag, &localoutflow);

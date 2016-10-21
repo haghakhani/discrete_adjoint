@@ -140,8 +140,8 @@ int main(int argc, char *argv[]) {
 		setup_geoflow(El_Table, Node_Table, myid, numprocs, &matprops, &timeprops);
 	}
 
-//	MAX_Energy maxenergy(643800., 2.15550e6, 400., 1000., matprops.LENGTH_SCALE);
-	MAX_Energy maxenergy(.7, .31, .2, .2, matprops.LENGTH_SCALE);
+	MAX_Energy maxenergy(643800., 2.15550e6, 400., 1000., matprops.LENGTH_SCALE);
+//	MAX_Energy maxenergy(.7, .31, .2, .2, matprops.LENGTH_SCALE);
 
 	MeshCTX meshctx;
 	meshctx.el_table = El_Table;

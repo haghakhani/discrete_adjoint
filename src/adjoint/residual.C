@@ -135,16 +135,16 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
 //		}
 
 	for (int k = 0; k < 3; k++)
-		if (isnan(residual[k])) {
-			cout << "exit for NAN in residual" << endl << flush;
-			exit(-1);
-		}
+	if (isnan(residual[k])) {
+		cout << "exit for NAN in residual" << endl << flush;
+		exit(-1);
+	}
 
 	for (int k = 0; k < 3; k++)
-		if (isinf(residual[k])) {
-			cout << "exit for Inf in residual" << endl << flush;
-			exit(-2);
-		}
+	if (isinf(residual[k])) {
+		cout << "exit for Inf in residual" << endl << flush;
+		exit(-2);
+	}
 #endif
 
 	return;
@@ -312,15 +312,17 @@ void residual(double *state_vars, double *prev_state_vars, double *fluxxp, doubl
     double *dgdx, double kactxyelem, double fric_tiny, int* stop, double* orgSrcSgn, int iter,
     double *pre3_state, double* adjusted_tan_phi_bed, double* adjusted_sin_phi_int) {
 
-	double coef = 0.;
-	if (iter > 2)
-		coef = 0.25;
+	double coef = 0.25;
+	if (iter < 3) {
+		for (int ind = 0; ind < NUM_STATE_VARS; ind++)
+			pre3_state[ind] = prev_state_vars[ind];
+	}
 
 	double res_vec[] = { 0., 0., 0. };
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		res_vec[i] = -dtdx * (fluxxp[i] - fluxxm[i]) - dtdy * (fluxyp[i] - fluxym[i]);
 
-	//multi-step 3rd order TVD time scheme p512 Lecture notes in Comp. Phys.
+	//multi-step 2nd order TVD time scheme p512 Lecture notes in Comp. Phys.
 	state_vars[0] = 0.75 * prev_state_vars[0] + 1.5 * res_vec[0] + coef * pre3_state[0];
 
 	if (state_vars[0] < 0.)

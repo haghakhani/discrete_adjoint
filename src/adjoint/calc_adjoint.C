@@ -110,8 +110,9 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 				Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
 
 				double coef = 0.25;
-				if (propctx->timeprops->adjiter == 1 || propctx->timeprops->adjiter == 2)
-					coef = 0.;
+				if (propctx->timeprops->adjiter < 3)
+					for (int ind = 0; ind < NUM_STATE_VARS; ++ind)
+						adjoint_pre3[ind] = adjoint_prev[ind];
 
 				double dry = 1.;
 				if (Curr_El->get_prev_state_vars()[0] == 0.)
