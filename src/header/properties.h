@@ -34,6 +34,7 @@
 #include <time.h>
 #include <iostream>
 #include <string.h>
+#include <fstream>
 
 inline string fill_name(const char * name) {
 
@@ -62,8 +63,8 @@ public:
 		cout << name << " " << elapsedTime << " sec " << endl;
 	}
 
-	void write(FILE* file) {
-		fprintf(file, "%s %d sec\n", name, elapsedTime);
+	void write(ofstream& myfile) {
+		myfile << name << " " << elapsedTime << " sec " << endl;
 	}
 
 private:

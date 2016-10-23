@@ -20,8 +20,8 @@
 #endif
 
 #include "../header/hpfem.h"
-//#define PARABALOID
-#define CYLINDER
+#define PARABALOID
+//#define CYLINDER
 //#define PLANE
 //#define CASITA
 //#define POPO

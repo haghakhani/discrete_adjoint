@@ -584,16 +584,16 @@ void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, DualElem* eff_el, int 
 
 	if (side == xm) {
 		for (int k = 0; k < NUM_STATE_VARS; ++k)
-			func_sens[k] += -1.5 * dt * dx[1] * flux_jac(0, 0, 0)(0, k);
+			func_sens[k] += -dt * dx[1] * flux_jac(0, 0, 0)(0, k);
 	} else if (side == xp) {
 		for (int k = 0; k < NUM_STATE_VARS; ++k)
-			func_sens[k] += 1.5 * dt * dx[1] * flux_jac(0, 1, 0)(0, k);
+			func_sens[k] += dt * dx[1] * flux_jac(0, 1, 0)(0, k);
 	} else if (side == ym) {
 		for (int k = 0; k < NUM_STATE_VARS; ++k)
-			func_sens[k] += -1.5 * dt * dx[0] * flux_jac(1, 0, 0)(0, k);
+			func_sens[k] += -dt * dx[0] * flux_jac(1, 0, 0)(0, k);
 	} else {
 		for (int k = 0; k < NUM_STATE_VARS; ++k)
-			func_sens[k] += 1.5 * dt * dx[0] * flux_jac(1, 1, 0)(0, k);
+			func_sens[k] += dt * dx[0] * flux_jac(1, 1, 0)(0, k);
 	}
 
 }

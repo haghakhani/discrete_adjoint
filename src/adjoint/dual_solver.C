@@ -482,15 +482,16 @@ void print_timings(int myid) {
 		total.print();
 
 		//writing sameinformation to  a file
-		FILE *fp = fopen("timing", "w");
-		cout << "\n=========== TIMING of PRIMAL PROBLOM =========\n";
+	  ofstream fp;
+	  fp.open ("timing.txt",ofstream::out);
+	  fp << "\n=========== TIMING of PRIMAL PROBLOM =========\n";
 		initialization_f.write(fp);
 		adaption.write(fp);
 		repartition_f.write(fp);
 		stept.write(fp);
 		write_solution.write(fp);
 		visualization.write(fp);
-		cout << "\n============ TIMING of DUAL PROBLOM ==========\n";
+		fp << "\n============ TIMING of DUAL PROBLOM ==========\n";
 		dual_init.write(fp);
 		dual_adapt.write(fp);
 		dual_repart.write(fp);
@@ -500,7 +501,7 @@ void print_timings(int myid) {
 		read_solution.write(fp);
 		dual_vis.write(fp);
 #ifdef Error
-		cout << "\n=========== TIMING of ERROR PROBLOM ==========\n";
+		fp << "\n=========== TIMING of ERROR PROBLOM ==========\n";
 		error_init.write(fp);
 		error_adapt.write(fp);
 		error_repart.write(fp);
@@ -511,13 +512,15 @@ void print_timings(int myid) {
 		error_comp.write(fp);
 		error_vis.write(fp);
 #endif
-		cout << "\n===============  TOTAL TIMING  ===============\n";
+		fp << "\n===============  TOTAL TIMING  ===============\n";
 		primal.write(fp);
 		dual.write(fp);
 #ifdef Error
 		error.write(fp);
 #endif
 		total.write(fp);
+
+		fp.close();
 
 	}
 }
