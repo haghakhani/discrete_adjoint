@@ -209,8 +209,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 //		wrtie_El_Table_ordered(&dual_meshctx, propctx, "DUAL");
 
-		compute_param_sens(&dual_meshctx, propctx);
-		compute_functional_variation(&dual_meshctx, propctx);
+//		compute_param_sens(&dual_meshctx, propctx);
+//		compute_functional_variation(&dual_meshctx, propctx);
 
 #ifdef Error
 		error.start();
@@ -246,11 +246,11 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		error.stop();
 #else
 		dual_vis.start();
-//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
-//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-		write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD, 1);
-		print_func_var(propctx);
-//		}
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
+			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
+			    1);
+//		print_func_var(propctx);
+		}
 		dual_vis.stop();
 #endif
 
@@ -480,6 +480,45 @@ void print_timings(int myid) {
 		error.print();
 #endif
 		total.print();
+
+		//writing sameinformation to  a file
+		FILE *fp = fopen("timing", "w");
+		cout << "\n=========== TIMING of PRIMAL PROBLOM =========\n";
+		initialization_f.write(fp);
+		adaption.write(fp);
+		repartition_f.write(fp);
+		stept.write(fp);
+		write_solution.write(fp);
+		visualization.write(fp);
+		cout << "\n============ TIMING of DUAL PROBLOM ==========\n";
+		dual_init.write(fp);
+		dual_adapt.write(fp);
+		dual_repart.write(fp);
+		dual_neigh_update.write(fp);
+		jacobian.write(fp);
+		adjoint_sol.write(fp);
+		read_solution.write(fp);
+		dual_vis.write(fp);
+#ifdef Error
+		cout << "\n=========== TIMING of ERROR PROBLOM ==========\n";
+		error_init.write(fp);
+		error_adapt.write(fp);
+		error_repart.write(fp);
+		error_neigh_update.write(fp);
+		update_error.write(fp);
+		read_dual.write(fp);
+		bilin_interp.write(fp);
+		error_comp.write(fp);
+		error_vis.write(fp);
+#endif
+		cout << "\n===============  TOTAL TIMING  ===============\n";
+		primal.write(fp);
+		dual.write(fp);
+#ifdef Error
+		error.write(fp);
+#endif
+		total.write(fp);
+
 	}
 }
 
@@ -835,6 +874,7 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 	TimeProps* timeprops_ptr = propctx->timeprops;
 	MapNames* mapname_ptr = propctx->mapnames;
 	MatProps* matprops_ptr = propctx->matprops;
+	PileProps* pileprops = propctx->pileprops;
 	int myid = propctx->myid, numprocs = propctx->numproc;
 
 	int iter = timeprops_ptr->iter;
@@ -842,6 +882,10 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashTable* new_hashtab = new HashTable(El_Table);
+
+	double sens_x0 = 0., sens_y0 = 0., sens_majrad = 0., sens_minrad = 0.;
+	double majrad = pileprops->majorrad[0], minrad = pileprops->minorrad[0],
+	    xcen = pileprops->xCen[0], ycen = pileprops->yCen[0];
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
@@ -853,6 +897,8 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 					Container* contain = new Container(Curr_El);
 					new_hashtab->add(Curr_El->pass_key(), contain);
+					double* sensitivity = contain->get_sens();
+					double* coord = contain->get_coord();
 
 					for (int effelement = 0; effelement < EFF_ELL; ++effelement) {
 
@@ -862,7 +908,7 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 							Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
 
 							for (int l = 0; l < NUM_STATE_VARS; ++l)
-								*(contain->get_sens()) += adjoint[l] * jacobianmat(effelement, l, 0);
+								*(sensitivity) += adjoint[l] * jacobianmat(effelement, l, 0);
 
 						} else if (effelement <= 4
 						    || (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) > -2)) {
@@ -881,42 +927,63 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 								jacind++;
 
 								for (int l = 0; l < NUM_STATE_VARS; ++l)
-									*(contain->get_sens()) += adjoint[l] * jacobianmat(jacind, l, 0);
+									*(sensitivity) += adjoint[l] * jacobianmat(jacind, l, 0);
 
 							}
 						}
 					}
+
+					sens_x0 += *(sensitivity) * 2. * (coord[0] - xcen) / (majrad * majrad);
+					sens_y0 += *(sensitivity) * 2. * (coord[1] - ycen) / (minrad * minrad);
+					sens_majrad += *(sensitivity) * 2. * (coord[0] - xcen) * (coord[0] - xcen)
+					    / (majrad * majrad * majrad);
+					sens_minrad += *(sensitivity) * 2. * (coord[1] - ycen) * (coord[1] - ycen)
+					    / (minrad * minrad * minrad);
+
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 	}
+	double g_sens_x0 = 0., g_sens_y0 = 0., g_sens_majrad = 0., g_sens_minrad = 0.;
+
+	MPI_Reduce(&sens_x0, &g_sens_x0, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	MPI_Reduce(&sens_y0, &g_sens_y0, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	MPI_Reduce(&sens_majrad, &g_sens_majrad, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	MPI_Reduce(&sens_minrad, &g_sens_minrad, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
 	double hscale = matprops_ptr->HEIGHT_SCALE;
 	double lscale = matprops_ptr->LENGTH_SCALE;
+	double functional_scale = lscale * lscale * hscale;
 
-	char filename[50];
-	sprintf(filename, "func_var_%04d", myid);
+	if (myid == 0) {
+		char filename[50];
+		sprintf(filename, "func_var");
 
-	FILE *file = fopen(filename, "a");
-	fprintf(file, "X,Y,h_o,sensitivity\n");
+		FILE *file = fopen(filename, "a");
+		fprintf(file, "discharge,sens_x0,sens_y0,sens_majrad,sens_minrad\n");
 
-	buck = new_hashtab->getbucketptr();
-	for (int i = 0; i < new_hashtab->get_no_of_buckets(); i++)
-		if (*(buck + i)) {
-			HashEntryPtr currentPtr = *(buck + i);
-			while (currentPtr) {
+		fprintf(file, "%e,%e,%e,%e,%e\n", fabs(discharge) * functional_scale,
+		    g_sens_x0 * functional_scale / lscale, g_sens_y0 * functional_scale / lscale,
+		    g_sens_majrad * functional_scale / lscale, g_sens_minrad * functional_scale / lscale);
 
-				Container * container = (Container*) (currentPtr->value);
-
-				fprintf(file, "%f,%f,%f,%e\n", container->get_coord()[0] * lscale,
-				    container->get_coord()[1] * lscale, container->get_state()[0] * hscale,
-				    *(container->get_sens()) * lscale * lscale);
-
-				currentPtr = currentPtr->next;
-			}
-		}
-	fclose(file);
+//	buck = new_hashtab->getbucketptr();
+//	for (int i = 0; i < new_hashtab->get_no_of_buckets(); i++)
+//		if (*(buck + i)) {
+//			HashEntryPtr currentPtr = *(buck + i);
+//			while (currentPtr) {
+//
+//				Container * container = (Container*) (currentPtr->value);
+//
+//				fprintf(file, "%f,%f,%f,%e\n", container->get_coord()[0] * lscale,
+//				    container->get_coord()[1] * lscale, container->get_state()[0] * hscale,
+//				    *(container->get_sens()) * lscale * lscale);
+//
+//				currentPtr = currentPtr->next;
+//			}
+//		}
+		fclose(file);
+	}
 
 	delete_hashtables_objects<Container>(new_hashtab);
 }

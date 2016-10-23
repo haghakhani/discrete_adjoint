@@ -62,6 +62,10 @@ public:
 		cout << name << " " << elapsedTime << " sec " << endl;
 	}
 
+	void write(FILE* file) {
+		fprintf(file, "%s %d sec\n", name, elapsedTime);
+	}
+
 private:
 	clock_t startTime;
 	clock_t stopTime;
@@ -474,11 +478,11 @@ struct TimeProps {
 			return 0;
 	}
 
-	void adjust_save_time(){
+	void adjust_save_time() {
 
-		if (ndnextsave>ndmaxtime){
-			isave-=2;
-			ndnextsave=((isave + 1) * timesave) / TIME_SCALE;
+		if (ndnextsave > ndmaxtime) {
+			isave -= 2;
+			ndnextsave = ((isave + 1) * timesave) / TIME_SCALE;
 		}
 	}
 
@@ -651,8 +655,8 @@ struct MatProps {
 		HEIGHT_SCALE = hscale;
 		GRAVITY_SCALE = gscale;
 
-		for (int i=0;i<NUM_STATE_VARS;++i)
-			sensitivity[i]=0.;
+		for (int i = 0; i < NUM_STATE_VARS; ++i)
+			sensitivity[i] = 0.;
 
 	}
 
@@ -1329,7 +1333,6 @@ struct DISCHARGE {
 //						sensitivity[0] += dt
 //						    * (statevars[1] * (intersectpoint[1][1] - intersectpoint[0][1])
 //						        - statevars[2] * (intersectpoint[1][0] - intersectpoint[0][0])) / statevars[0];
-
 					sensitivity[1] += dt * (intersectpoint[1][1] - intersectpoint[0][1]);
 					sensitivity[2] += -dt * (intersectpoint[1][0] - intersectpoint[0][0]);
 

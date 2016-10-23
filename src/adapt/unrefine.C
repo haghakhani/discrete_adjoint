@@ -348,6 +348,12 @@ int Element::check_unrefinement(HashTable* El_Table, double target) {
 		i++;
 	}
 
+	//this part is for discharge plane to not unrefine element near the boundary
+	for (int ineigh = 0; ineigh < 4; ineigh++) {
+		if (neigh_proc[ineigh]==INIT)
+			return (0);
+	}
+
 	return (1);
 }
 

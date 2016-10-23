@@ -116,9 +116,9 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 					Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
 
 					double coef = 0.25;
-					if (propctx->timeprops->adjiter <3)
-						for (int ind=0;ind<NUM_STATE_VARS;++ind)
-							adjoint_pre3[ind]=adjoint_prev[ind];
+					if (propctx->timeprops->adjiter < 3)
+						for (int ind = 0; ind < NUM_STATE_VARS; ++ind)
+							adjoint_pre3[ind] = adjoint_prev[ind];
 
 					double dry = 1.;
 					if (Curr_El->get_prev_state_vars()[0] == 0.)
@@ -365,58 +365,58 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 							bb = aa;
 
 						int* neigh_proc = Curr_El->get_neigh_proc();
+						int xp = Curr_El->get_positive_x_side(); //finding the direction of element
+						int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+
 						for (int j = 0; j < 4; j++)
-							if (neigh_proc[j] == INIT) { // this is a boundary!
+							if (neigh_proc[j] == INIT && j == ym) { // this is a boundary!
 
 								double* dx = Curr_El->get_dx();
 								double* func_sens = Curr_El->get_func_sens();
 
-								int xp = Curr_El->get_positive_x_side(); //finding the direction of element
-								int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+//								double flux[4][NUM_STATE_VARS];
+//								get_flux(El_Table, NodeTable, Curr_El, flux);
+//
+//								if (j == xp && flux[0][0] != 0.) {
+//									assert(flux[0][0] == flux[2][0]);
+//									func_sens[1] += -dt * dx[1];
+//								} else if (j == xm && flux[2][0] != 0.) {
+//									assert(flux[0][0] == flux[2][0]);
+//									func_sens[1] += dt * dx[1];
+//								} else if (j == yp && flux[1][0] != 0.) {
+//									assert(flux[1][0] == flux[3][0]);
+//									func_sens[2] += -dt * dx[0];
+//								} else if (j == ym && flux[3][0] != 0.) {
+//									assert(flux[1][0] == flux[3][0]);
+//									func_sens[2] += dt * dx[0];
+//								}
 
-								double flux[4][NUM_STATE_VARS];
-								get_flux(El_Table, NodeTable, Curr_El, flux);
+								unsigned* neigh_key = Curr_El->get_neighbors();
 
-								if (j == xp && flux[0][0] != 0.) {
-									assert(flux[0][0] == flux[2][0]);
-									func_sens[1] += -dt * dx[1];
-								} else if (j == xm && flux[2][0] != 0.) {
-									assert(flux[0][0] == flux[2][0]);
-									func_sens[1] += dt * dx[1];
-								} else if (j == yp && flux[1][0] != 0.) {
-									assert(flux[1][0] == flux[3][0]);
-									func_sens[2] += -dt * dx[0];
-								} else if (j == ym && flux[3][0] != 0.) {
-									assert(flux[1][0] == flux[3][0]);
-									func_sens[2] += dt * dx[0];
+								int opos_dirc = (j + 2) % 4;
+
+								DualElem* eff_el = (DualElem*) El_Table->lookup(neigh_key + opos_dirc * KEYLENGTH);
+
+								if (eff_el->get_myprocess() != myid) {
+									complicate_elements.push_back(eff_el->pass_key()[0]);
+									complicate_elements.push_back(eff_el->pass_key()[1]);
+									complicate_elements_side.push_back(j);
+								} else
+									sens_on_boundary(meshctx, propctx, eff_el, j);
+
+								// if the adjacent cell to the boundary has two neighbors on the opposite side
+								if (neigh_proc[opos_dirc + 4] != -2) {
+									DualElem* eff_el = (DualElem*) El_Table->lookup(
+									    neigh_key + (opos_dirc + 4) * KEYLENGTH);
+
+									if (eff_el->get_myprocess() != myid) {
+										complicate_elements.push_back(eff_el->pass_key()[0]);
+										complicate_elements.push_back(eff_el->pass_key()[1]);
+										complicate_elements_side.push_back(j);
+									} else
+										sens_on_boundary(meshctx, propctx, eff_el, j);
+
 								}
-
-//							unsigned* neigh_key = Curr_El->get_neighbors();
-//
-//							int opos_dirc = (j + 2) % 4;
-//
-//							DualElem* eff_el = (DualElem*) El_Table->lookup(neigh_key + opos_dirc * KEYLENGTH);
-//
-//							if (eff_el->get_myprocess() != myid) {
-//								complicate_elements.push_back(eff_el->pass_key()[0]);
-//								complicate_elements.push_back(eff_el->pass_key()[1]);
-//								complicate_elements_side.push_back(j);
-//							} else
-//								sens_on_boundary(meshctx, propctx, eff_el, j);
-//
-//							// if the adjacent cell to the boundary has two neighbors on the opposite side
-//							if (neigh_proc[opos_dirc + 4] != -2) {
-//								DualElem* eff_el = (DualElem*) El_Table->lookup(
-//								    neigh_key + (opos_dirc + 4) * KEYLENGTH);
-//
-//								if (eff_el->get_myprocess() != myid) {
-//									complicate_elements.push_back(eff_el->pass_key()[0]);
-//									complicate_elements.push_back(eff_el->pass_key()[1]);
-//									complicate_elements_side.push_back(j);
-//								} else
-//									sens_on_boundary(meshctx, propctx, eff_el, j);
-//
-//							}
 
 							}
 					}
@@ -424,63 +424,63 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 				}
 			}
 
-//	int sizes[numproc];
-//	int size = complicate_elements.size();
-//	MPI_Allgather(&size, 1, MPI_INT, sizes, 1, MPI_INT, MPI_COMM_WORLD);
-//
-//	int sum = 0;
-//	int mystart[numproc];
-//	for (int i = 0; i < numproc; ++i) {
-//		mystart[i] = sum;
-//		sum += sizes[i];
-//	}
-//
-//	if (sum) {
-//
-//		unsigned* check_elem = new unsigned[sum];
-//
-//		MPI_Allgatherv(&complicate_elements[0], sizes[myid], MPI_UNSIGNED, check_elem, sizes, mystart,
-//		MPI_UNSIGNED, MPI_COMM_WORLD);
-//
-//		for (int i = 0; i < numproc; ++i) {
-//			mystart[i] = mystart[i] / 2;
-//			sizes[i] = sizes[i] / 2;
-//		}
-//
-//		int* check_side = new int[sum / 2];
-//
-//		MPI_Allgatherv(&complicate_elements_side[0], sizes[myid], MPI_INT, check_side, sizes, mystart,
-//		MPI_INT, MPI_COMM_WORLD);
-//
-//		for (int i = 0; i < sum / 2; i = i + 2) {
-//			unsigned key[] = { check_elem[i], check_elem[i + 1] };
-//			DualElem* eff_el = (DualElem*) El_Table->lookup(key);
-//			if (eff_el)
-//				sens_on_boundary(meshctx, propctx, eff_el, check_side[i]);
-//		}
-//
-//		delete[] check_elem;
-//		delete[] check_side;
-//
-//	}
+	int sizes[numproc];
+	int size = complicate_elements.size();
+	MPI_Allgather(&size, 1, MPI_INT, sizes, 1, MPI_INT, MPI_COMM_WORLD);
 
-	Func_CTX contx;
-	contx.meshctx = meshctx;
-	contx.propctx = propctx;
+	int sum = 0;
+	int mystart[numproc];
+	for (int i = 0; i < numproc; ++i) {
+		mystart[i] = sum;
+		sum += sizes[i];
+	}
 
-	if (timeprops->adjiter == 0)
-		for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
-			if (*(buck + i)) {
-				currentPtr = *(buck + i);
-				while (currentPtr) {
-					DualElem* Curr_El = (DualElem*) (currentPtr->value);
+	if (sum) {
 
-					if (Curr_El->get_adapted_flag() > 0)
-						Curr_El->calc_func_sens(&contx);
+		unsigned* check_elem = new unsigned[sum];
 
-					currentPtr = currentPtr->next;
-				}
-			}
+		MPI_Allgatherv(&complicate_elements[0], sizes[myid], MPI_UNSIGNED, check_elem, sizes, mystart,
+		MPI_UNSIGNED, MPI_COMM_WORLD);
+
+		for (int i = 0; i < numproc; ++i) {
+			mystart[i] = mystart[i] / 2;
+			sizes[i] = sizes[i] / 2;
+		}
+
+		int* check_side = new int[sum / 2];
+
+		MPI_Allgatherv(&complicate_elements_side[0], sizes[myid], MPI_INT, check_side, sizes, mystart,
+		MPI_INT, MPI_COMM_WORLD);
+
+		for (int i = 0; i < sum / 2; i = i + 2) {
+			unsigned key[] = { check_elem[i], check_elem[i + 1] };
+			DualElem* eff_el = (DualElem*) El_Table->lookup(key);
+			if (eff_el)
+				sens_on_boundary(meshctx, propctx, eff_el, check_side[i]);
+		}
+
+		delete[] check_elem;
+		delete[] check_side;
+
+	}
+
+//	Func_CTX contx;
+//	contx.meshctx = meshctx;
+//	contx.propctx = propctx;
+//
+//	if (timeprops->adjiter == 0)
+//		for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+//			if (*(buck + i)) {
+//				currentPtr = *(buck + i);
+//				while (currentPtr) {
+//					DualElem* Curr_El = (DualElem*) (currentPtr->value);
+//
+//					if (Curr_El->get_adapted_flag() > 0)
+//						Curr_El->calc_func_sens(&contx);
+//
+//					currentPtr = currentPtr->next;
+//				}
+//			}
 
 }
 
@@ -598,10 +598,13 @@ void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, DualElem* eff_el, int 
 
 }
 
-void update_discharge(HashTable* El_Table, HashTable* NodeTable, DISCHARGE* discharge, double dt) {
+double discharge = 0.;
+
+void update_discharge(HashTable* El_Table, HashTable* NodeTable, DISCHARGE* dsge, double dt) {
 
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
+	double local_discharge = 0.;
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -610,27 +613,47 @@ void update_discharge(HashTable* El_Table, HashTable* NodeTable, DISCHARGE* disc
 				Element* Curr_El = (DualElem*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0) {
-					unsigned *nodes = Curr_El->getNode();
-					double nodescoord[9][2], *coord;
-					Node* node;
 
-					for (int inode = 0; inode < 8; inode++) {
-						node = (Node*) NodeTable->lookup(nodes + 2 * inode);
-						coord = node->get_coord();
+					for (int bound = 0; bound < 4; ++bound)
+						if (Curr_El->get_neigh_proc()[bound] == INIT) {
 
-						nodescoord[inode][0] = coord[0];
-						nodescoord[inode][1] = coord[1];
+							int xp = Curr_El->get_positive_x_side(); //finding the direction of element
+							int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+							if (bound == ym) {
+								double flux[4][NUM_STATE_VARS];
+								get_flux(El_Table, NodeTable, Curr_El, flux);
 
-					}
-					nodescoord[8][0] = *(Curr_El->get_coord());
-					nodescoord[8][1] = *(Curr_El->get_coord() + 1);
+//								if (flux[3][0] < 0.)
+								local_discharge += flux[3][0] * Curr_El->get_dx()[0] * dt;
+							}
+						}
 
-					discharge->update(nodescoord, Curr_El->get_prev_state_vars(), dt);
+//					unsigned *nodes = Curr_El->getNode();
+//					double nodescoord[9][2], *coord;
+//					Node* node;
+//
+//					for (int inode = 0; inode < 8; inode++) {
+//						node = (Node*) NodeTable->lookup(nodes + 2 * inode);
+//						coord = node->get_coord();
+//
+//						nodescoord[inode][0] = coord[0];
+//						nodescoord[inode][1] = coord[1];
+//
+//					}
+//					nodescoord[8][0] = *(Curr_El->get_coord());
+//					nodescoord[8][1] = *(Curr_El->get_coord() + 1);
+//
+//					discharge->update(nodescoord, Curr_El->get_prev_state_vars(), dt);
 
 				}
 
 				currentPtr = currentPtr->next;
 			}
 		}
+
+	double g_local_discharge = 0.;
+	MPI_Reduce(&local_discharge, &g_local_discharge, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	discharge += g_local_discharge;
+
 }
 

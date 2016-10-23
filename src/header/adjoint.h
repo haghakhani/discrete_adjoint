@@ -11,7 +11,7 @@
 #include <vector>
 //#define Error
 
-extern int STOP_ADJ;
+extern double discharge;
 
 //! this function transfers information during events such as ghost element data exchange and repartitioning
 void move_dual_data(MeshCTX* meshctx, PropCTX* propctx);
