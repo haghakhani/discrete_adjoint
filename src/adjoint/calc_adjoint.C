@@ -163,9 +163,9 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 	}
 
 //	int cc = 1, bb = 0;
-//	for (int i = 0; i < NUM_STATE_VARS; i++)
-//		if (fabs(adjoint[i]) < 1.e-16)
-//			adjoint[i]=0.;
+	for (int i = 0; i < NUM_STATE_VARS; i++)
+		if (fabs(adjoint[i]) < 1.e-16)
+			adjoint[i]=0.;
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		if (isnan(adjoint[i]) || isinf(adjoint[i]))

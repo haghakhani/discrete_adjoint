@@ -39,7 +39,6 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	double *dx = EmTemp->get_dx();
 	double dtdx = dt / dx[0];
 	double dtdy = dt / dx[1];
-	double kactxy[DIMENSION];
 
 	double tiny = GEOFLOW_TINY;
 	int xp = EmTemp->get_positive_x_side();
@@ -87,13 +86,14 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	double bedfrict = EmTemp->get_effect_bedfrict();
 	double *Influx = EmTemp->get_influx();
 	double *pre3_state = EmTemp->get_pre3_state_vars();
+	double *kactxy= EmTemp->get_kactxy();
 
 	int stop[2];
 	double orgSrcSgn[4], adjusted_tan_phi_bed[2], adjusted_sin_phi_int[2];
 
-	int aa = 0, bb = 1;
-	if (EmTemp->pass_key()[0] == 3885755050 && EmTemp->pass_key()[1] == 2863311530 && timeprops->iter == 1)
-		bb = aa;
+//	int aa = 0, bb = 1;
+//	if (EmTemp->pass_key()[0] == 3885755050 && EmTemp->pass_key()[1] == 2863311530 && timeprops->iter == 1)
+//		bb = aa;
 
 	residual(state_vars, prev_state_vars, fluxxp, fluxyp, fluxxm, fluxym, dtdx, dtdy, dt,
 	    d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, (matprops_ptr->intfrict), bedfrict,
@@ -109,9 +109,9 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 #endif
 
 	bool print_vars = false;
-	for (i = 0; i < NUM_STATE_VARS; i++)
-		if (state_vars[i] > 1e3) // || dabs(state_vars[5])>5 )
-			print_vars = false;
+//	for (i = 0; i < NUM_STATE_VARS; i++)
+//		if (state_vars[i] > 1e3) // || dabs(state_vars[5])>5 )
+//			print_vars = false;
 
 	if (print_vars) {
 		double tempU[NUM_STATE_VARS];
