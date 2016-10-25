@@ -348,6 +348,10 @@ int Element::check_unrefinement(HashTable* El_Table, double target) {
 		i++;
 	}
 
+	for (int ineigh = 0; ineigh < 4; ineigh++)
+		if (neigh_proc[ineigh] == INIT)
+			return (0);
+
 	return (1);
 }
 

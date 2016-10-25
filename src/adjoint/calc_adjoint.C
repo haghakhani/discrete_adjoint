@@ -116,9 +116,9 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 					Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
 
 					double coef = 0.25;
-					if (propctx->timeprops->adjiter <3)
-						for (int ind=0;ind<NUM_STATE_VARS;++ind)
-							adjoint_pre3[ind]=adjoint_prev[ind];
+					if (propctx->timeprops->adjiter < 3)
+						for (int ind = 0; ind < NUM_STATE_VARS; ++ind)
+							adjoint_pre3[ind] = adjoint_prev[ind];
 
 					double dry = 1.;
 					if (Curr_El->get_prev_state_vars()[0] == 0.)
@@ -162,10 +162,10 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 			adjoint[j] = -*(Curr_El->get_func_sens() + j) - adjcontr[j];
 	}
 
-//	int cc = 1, bb = 0;
-//	for (int i = 0; i < NUM_STATE_VARS; i++)
-//		if (fabs(adjoint[i]) < 1.e-16)
-//			adjoint[i]=0.;
+	int cc = 1, bb = 0;
+	for (int i = 0; i < NUM_STATE_VARS; i++)
+		if (fabs(adjoint[i]) < 1.e-16)
+			adjoint[i]=0.;
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		if (isnan(adjoint[i]) || isinf(adjoint[i]))

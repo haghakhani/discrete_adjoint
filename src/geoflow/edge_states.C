@@ -21,8 +21,8 @@
 
 #include "../header/hpfem.h"
 
-#define KEY0   2695539370
-#define KEY1   2863311530
+#define KEY0   2218506450
+#define KEY1   2027059408
 #define ITER   1
 
 /*! calc_edge_states() cycles through the element Hashtable (listing of all 
@@ -57,6 +57,9 @@ void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matpr
 			while (currentPtr) {
 				Curr_El = (T*) (currentPtr->value);
 				if (Curr_El->get_adapted_flag() > 0) {
+					int aa=0,bb=1;
+					if (*(Curr_El->pass_key()) == KEY0 && *(Curr_El->pass_key() + 1) == KEY1)
+						bb=aa;
 
 					Curr_El->calc_edge_states<T>(El_Table, NodeTable, &x_elem_list, &y_elem_list,
 					    matprops_ptr, myid, timeprops_ptr->dtime, order_flag, &localoutflow);

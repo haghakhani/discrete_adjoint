@@ -17,7 +17,7 @@
 #endif
 #include "../header/hpfem.h"
 
-#define	DEBUG
+//#define	DEBUG
 
 void residual(double* residual, double *state_vars, double *prev_state_vars, //3
     double *fluxxp, double *fluxyp, double *fluxxm, double *fluxym, double dtdx, //5
@@ -313,6 +313,8 @@ void residual(double *state_vars, double *prev_state_vars, double *fluxxp, doubl
     double *pre3_state, double* adjusted_tan_phi_bed, double* adjusted_sin_phi_int) {
 
 	double coef = 0.25;
+	double res_coef = 1.5;
+
 	if (iter < 3)
 		for (int ind = 0; ind < NUM_STATE_VARS; ++ind)
 			pre3_state[ind] = prev_state_vars[ind];
@@ -322,7 +324,7 @@ void residual(double *state_vars, double *prev_state_vars, double *fluxxp, doubl
 		res_vec[i] = -dtdx * (fluxxp[i] - fluxxm[i]) - dtdy * (fluxyp[i] - fluxym[i]);
 
 	//multi-step 3rd order TVD time scheme p512 Lecture notes in Comp. Phys.
-	state_vars[0] = 0.75 * prev_state_vars[0] + 1.5 * res_vec[0] + coef * pre3_state[0];
+	state_vars[0] = 0.75 * prev_state_vars[0] + res_coef * res_vec[0] + coef * pre3_state[0];
 
 	if (state_vars[0] < 0.)
 		state_vars[0] = 0.;
@@ -348,11 +350,14 @@ void residual(double *state_vars, double *prev_state_vars, double *fluxxp, doubl
 
 		tmp = h_inv * (d_state_vars_y[1] - velocity[0] * d_state_vars_y[0]);
 		orgSrcSgn[0] = tiny_sgn(tmp, fric_tiny);
-		orgSrcSgn[2] = tiny_sgn(velocity[0], fric_tiny);
+//		double speed = sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
+//		if (speed > 0.)
+			orgSrcSgn[2] = tiny_sgn(velocity[0], fric_tiny);
 
 		tmp = h_inv * (d_state_vars_x[2] - velocity[1] * d_state_vars_x[0]);
 		orgSrcSgn[1] = tiny_sgn(tmp, fric_tiny);
-		orgSrcSgn[3] = tiny_sgn(velocity[1], fric_tiny);
+//		if (speed > 0.)
+			orgSrcSgn[3] = tiny_sgn(velocity[1], fric_tiny);
 
 		//x dir
 		double s1 = gravity[0] * prev_state_vars[0];
@@ -361,7 +366,7 @@ void residual(double *state_vars, double *prev_state_vars, double *fluxxp, doubl
 		double s2 = orgSrcSgn[0] * prev_state_vars[0] * kactxy[0]
 		    * (gravity[2] * d_state_vars_y[0] + dgdx[1] * prev_state_vars[0]) * sin_int_fric;
 
-		double tan_bed_fric = tan(bedfrict);
+		double tan_bed_fric =tan(bedfrict);
 		double s3 = orgSrcSgn[2]
 		    * max(gravity[2] * prev_state_vars[0] + velocity[0] * prev_state_vars[1] * curvature[0],
 		        0.0) * tan_bed_fric;
@@ -369,21 +374,22 @@ void residual(double *state_vars, double *prev_state_vars, double *fluxxp, doubl
 		if (s3 == 0. && orgSrcSgn[2])
 			stop[0] = 1;
 
-		if (fabs(1.5 * dt * (s2 + s3))
-		    > fabs(1.5 * (res_vec[1] + dt * s1) + .75 * prev_state_vars[1] + coef * pre3_state[1])) {
+		if (fabs(res_coef * dt * (s2 + s3))
+		    > fabs(
+		        res_coef * (res_vec[1] + dt * s1) + .75 * prev_state_vars[1] + coef * pre3_state[1])) {
 			//friction are big enough to stop the flow
 			state_vars[1] = 0.;
 			//we adjust the friction terms to handle this situation
 			double fract = fabs(
-			    1.5 * (res_vec[1] + dt * s1) + .75 * prev_state_vars[1] + coef * pre3_state[1])
-			    / fabs(1.5 * dt * (s2 + s3));
+			    res_coef * (res_vec[1] + dt * s1) + .75 * prev_state_vars[1] + coef * pre3_state[1])
+			    / fabs(res_coef * dt * (s2 + s3));
 
 			adjusted_tan_phi_bed[0] = fract * tan_bed_fric;
 			adjusted_sin_phi_int[0] = fract * sin_int_fric;
 
 		} else {
 			res_vec[1] += dt * (s1 - s2 - s3);
-			state_vars[1] = 0.75 * prev_state_vars[1] + 1.5 * res_vec[1] + coef * pre3_state[1];
+			state_vars[1] = 0.75 * prev_state_vars[1] + res_coef * res_vec[1] + coef * pre3_state[1];
 			adjusted_tan_phi_bed[0] = tan_bed_fric;
 			adjusted_sin_phi_int[0] = sin_int_fric;
 		}
@@ -401,28 +407,29 @@ void residual(double *state_vars, double *prev_state_vars, double *fluxxp, doubl
 		if (s3 == 0. && orgSrcSgn[3])
 			stop[1] = 1;
 
-		if (fabs(1.5 * dt * (s2 + s3))
-		    > fabs(1.5 * (res_vec[2] + dt * s1) + .75 * prev_state_vars[2] + coef * pre3_state[2])) {
+		if (fabs(res_coef * dt * (s2 + s3))
+		    > fabs(
+		        res_coef * (res_vec[2] + dt * s1) + .75 * prev_state_vars[2] + coef * pre3_state[2])) {
 			//friction are big enough to stop the flow
 			state_vars[2] = 0.;
 			//we have to adjust the frictions otherwise we will have problem in jacobian computation may be just one is enough
 			double fract = fabs(
-			    1.5 * (res_vec[2] + dt * s1) + .75 * prev_state_vars[2] + coef * pre3_state[2])
-			    / fabs(1.5 * dt * (s2 + s3));
+			    res_coef * (res_vec[2] + dt * s1) + .75 * prev_state_vars[2] + coef * pre3_state[2])
+			    / fabs(res_coef * dt * (s2 + s3));
 
 			adjusted_tan_phi_bed[1] = fract * tan_bed_fric;
 			adjusted_sin_phi_int[1] = fract * sin_int_fric;
 
 		} else {
 			res_vec[2] += dt * (s1 - s2 - s3);
-			state_vars[2] = 0.75 * prev_state_vars[2] + 1.5 * res_vec[2] + coef * pre3_state[2];
+			state_vars[2] = 0.75 * prev_state_vars[2] + res_coef * res_vec[2] + coef * pre3_state[2];
 			adjusted_tan_phi_bed[1] = tan_bed_fric;
 			adjusted_sin_phi_int[1] = sin_int_fric;
 		}
 
 	} else {
-		state_vars[1] = 0.75 * prev_state_vars[1] + 1.5 * res_vec[1] + coef * pre3_state[1];
-		state_vars[2] = 0.75 * prev_state_vars[2] + 1.5 * res_vec[2] + coef * pre3_state[2];
+		state_vars[1] = 0.75 * prev_state_vars[1] + res_coef * res_vec[1] + coef * pre3_state[1];
+		state_vars[2] = 0.75 * prev_state_vars[2] + res_coef * res_vec[2] + coef * pre3_state[2];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)

@@ -90,9 +90,9 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 					double dtdx = dt / dx[0];
 					double dtdy = dt / dx[1];
 
-					int aa = 0, bb = 1;
-					if (Curr_El->get_ithelem() == 338)
-						bb = aa;
+//					int aa = 0, bb = 1;
+//					if (Curr_El->get_ithelem() == 338)
+//						bb = aa;
 
 					int stop[DIMENSION];
 					double orgSrcSgn[4];
@@ -927,12 +927,12 @@ void compute_param_sens(MeshCTX* dual_meshctx, PropCTX* propctx) {
 
 						pint_sens[0] = 0.;
 
-						if (Curr_El->get_sin_int_efective()[0] > 0.)
+						if (fabs(Curr_El->get_sin_int_efective()[0]) > 0.)
 							pint_sens[1] = OrgSgn[0] * prev_state_vars[0] * kactxy[0]
 							    * (gravity[2] * d_state_vars_y[0] + dgdx[1] * prev_state_vars[0])
 							    * cos_int_fric_1;
 
-						if (Curr_El->get_sin_int_efective()[1] > 0.)
+						if (fabs(Curr_El->get_sin_int_efective()[1]) > 0.)
 							pint_sens[2] = OrgSgn[1] * prev_state_vars[0] * kactxy[0]
 							    * (gravity[2] * d_state_vars_x[0] + dgdx[0] * prev_state_vars[0])
 							    * cos_int_fric_2;

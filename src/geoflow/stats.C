@@ -12,7 +12,7 @@
  * Description: 
  *
  *******************************************************************
- * $Id: stats.C 128 2007-06-07 19:51:52Z dkumar $ 
+ * $Id: stats.C 232 2012-03-27 00:33:41Z dkumar $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -20,8 +20,6 @@
 #endif
 
 #include "../header/hpfem.h"
-#include <cmath>
-using namespace std;
 
 /* STAT_VOL_FRAC is only here temporarily until a good value for it
  is found (because changing geoflow.h requires recompiling all of
@@ -29,7 +27,7 @@ using namespace std;
 #define STAT_VOL_FRAC 0.95
 
 void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* matprops,
-    TimeProps* timeprops, StatProps* statprops, double d_time) {
+    TimeProps* timeprops, StatProps* statprops, DISCHARGE* discharge, double d_time) {
 	int i, iproc;
 	double area = 0.0, max_height = 0.0;
 	double cutoffvolume; /* the desired volume of material to take
@@ -59,8 +57,7 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 
 	double testvolume = 0.0;
 	double slope_ave = 0.0;
-	double v_max = 0.0, v_ave = 0.0, vx_ave = 0.0, vy_ave = 0.0, g_ave, adjoint = 0.0;
-	double u_max = 0.0, u_ave = 0.0;
+	double v_max = 0.0, v_ave = 0.0, vx_ave = 0.0, vy_ave = 0.0, g_ave;
 	double xC = 0.0, yC = 0.0, rC = 0.0, piler2 = 0.0;
 	double xVar = 0.0, yVar = 0.0;
 	//assume that mean starting location is at (x,y) = (1,1)
@@ -75,10 +72,6 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 		xyminmax[i] = HUGE_VAL;
 
 	MPI_Comm_size(MPI_COMM_WORLD, &numproc);
-
-	double VELOCITY_SCALE = sqrt(matprops->LENGTH_SCALE * matprops->GRAVITY_SCALE);
-	char filename[50];
-	sprintf(filename, "debug.%04d", myid);
 
 	/* need to allocate space to store nonzero pile heights and
 	 volumes, to do that we first have to count the number of
@@ -102,11 +95,18 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 			}
 		}
 
-	double Velocity[4];
-	double temp1df[2], temp2df;
+	/**************************************************/
+	/****** TADA!!!!!!!!! we have finally found  ******/
+	/****** this iteration's cut off height (and ******/
+	/****** the global volumes too) now we can   ******/
+	/****** calculate the rest of the stats in a ******/
+	/****** straight forward manner              ******/
+	/**************************************************/
 
+	double VxVy[2];
 	for (i = 0; i < num_buck; i++)
 		if (*(buck + i)) {
+
 			HashEntryPtr currentPtr = *(buck + i);
 			while (currentPtr) {
 
@@ -115,8 +115,36 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 				if ((Curr_El->get_adapted_flag() > 0) && (myid == Curr_El->get_myprocess())) {
 
 					double* state_vars = Curr_El->get_state_vars();
+
+					//calculate volume passing through "discharge planes"
+					unsigned *nodes = Curr_El->getNode();
+					double nodescoord[9][2], *coord;
+					Node* node;
+
+					for (int inode = 0; inode < 8; inode++) {
+						node = (Node*) NodeTable->lookup(nodes + 2 * inode);
+						coord = node->get_coord();
+						if ((timeprops->iter == 291) && (inode == 8)) {
+							printf("coord=(%g,%g) node=%u  ", coord[0], coord[1], node);
+							fflush(stdout);
+						}
+						nodescoord[inode][0] = coord[0];
+						nodescoord[inode][1] = coord[1];
+						if ((timeprops->iter == 291) && (inode >= 8)) {
+							printf("inode=%d node=%u", inode, node);
+							fflush(stdout);
+						}
+					}
+					nodescoord[8][0] = *(Curr_El->get_coord());
+					nodescoord[8][1] = *(Curr_El->get_coord() + 1);
+
+					discharge->update(nodescoord, state_vars, d_time);
+
 					// rule out non physical fast moving thin layers
+					//if(state_vars[0] >= cutoffheight){
+
 					if (state_vars[0] > min_height) {
+
 						if (state_vars[0] > max_height)
 							max_height = state_vars[0];
 
@@ -160,10 +188,9 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 						rC += sqrt((xy[0] - xCen) * (xy[0] - xCen) + (xy[1] - yCen) * (xy[1] - yCen)) * dVol;
 
 						v_ave += sqrt(state_vars[1] * state_vars[1] + state_vars[2] * state_vars[2]) * dA;
-						u_ave += sqrt(state_vars[1] * state_vars[1] + state_vars[2] * state_vars[2]) * dA;
-						Curr_El->eval_velocity(0.0, 0.0, Velocity);
+						Curr_El->eval_velocity(0.0, 0.0, VxVy);
 
-						if ((!((v_ave <= 0.0) || (0.0 <= v_ave))) || (!((u_ave <= 0.0) || (0.0 <= u_ave)))
+						if ((!((v_ave <= 0.0) || (0.0 <= v_ave)))
 						    || (!((state_vars[0] <= 0.0) || (0.0 <= state_vars[0])))
 						    || (!((state_vars[1] <= 0.0) || (0.0 <= state_vars[1])))
 						    || (!((state_vars[2] <= 0.0) || (0.0 <= state_vars[2])))) {
@@ -172,27 +199,23 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 							    *(Curr_El->pass_key() + 0), *(Curr_El->pass_key() + 1), timeprops->iter);
 							printf("prevu={%12.6g,%12.6g,%12.6g}\n", *(Curr_El->get_prev_state_vars() + 0),
 							    *(Curr_El->get_prev_state_vars() + 1), *(Curr_El->get_prev_state_vars() + 2));
-							printf("  u={%12.6g,%12.6g,%12.6g}\n", state_vars[0], state_vars[1], state_vars[2]);
-							printf("prev {Vx_s, Vy_s}={%12.6g,%12.6g}\n",
-							    *(Curr_El->get_prev_state_vars() + 1) / (*(Curr_El->get_prev_state_vars())),
-							    *(Curr_El->get_prev_state_vars() + 2) / (*(Curr_El->get_prev_state_vars())));
-							printf("this {Vx_s, Vy_s}={%12.6g,%12.6g}\n", state_vars[1] / state_vars[0],
+							printf("    u={%12.6g,%12.6g,%12.6g}\n", state_vars[0], state_vars[1], state_vars[2]);
+							printf("prev {hVx/h,hVy/h}={%12.6g,%12.6g}\n",
+							    *(Curr_El->get_prev_state_vars() + 1) / *(Curr_El->get_prev_state_vars() + 0),
+							    *(Curr_El->get_prev_state_vars() + 2) / *(Curr_El->get_prev_state_vars() + 0));
+							printf("this {hVx/h,hVy/h}={%12.6g,%12.6g}\n", state_vars[1] / state_vars[0],
 							    state_vars[2] / state_vars[0]);
+							printf("     { Vx  , Vy  }={%12.6g,%12.6g}\n", VxVy[0], VxVy[1]);
 							ElemBackgroundCheck2(El_Table, NodeTable, Curr_El, stdout);
-							exit(1);
+							assert(0);
 						}
 
-						temp = sqrt(Velocity[0] * Velocity[0] + Velocity[1] * Velocity[1]);
+						temp = sqrt(VxVy[0] * VxVy[0] + VxVy[1] * VxVy[1]);
 						if (temp > v_max)
 							v_max = temp;
-						temp = sqrt(Velocity[2] * Velocity[2] + Velocity[3] * Velocity[3]);
-						if (temp > u_max)
-							u_max = temp;
 						vx_ave += state_vars[1] * dA;
 						vy_ave += state_vars[2] * dA;
-						adjoint += .5
-						    * (9.8 * state_vars[0] * state_vars[0]
-						        + state_vars[0] * (Velocity[0] * Velocity[0] + Velocity[1] * Velocity[1])) * dA;
+
 						//these are garbage, Bin Yu wanted them when he was trying to come up
 						//with a global stopping criteria (to stop the calculation, not the pile)
 						//volume averaged slope in the direction of velocity
@@ -213,7 +236,6 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 
 	MPI_Reduce(xyminmax, statprops->xyminmax, 4, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
 	if (myid == 0) {
-		//printf("[%g,%g,%g,%g]\n",xyminmax[0],-xyminmax[1],xyminmax[2],-xyminmax[3]);
 		statprops->xyminmax[0] *= (matprops->LENGTH_SCALE);
 		statprops->xyminmax[1] *= -(matprops->LENGTH_SCALE);
 		statprops->xyminmax[2] *= (matprops->LENGTH_SCALE);
@@ -221,13 +243,12 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 	}
 
 	int inttempout;
-	double tempin[14], tempout[14];
+	double tempin[13], tempout[13], temp2in[2], temp2out[2];
 
 	//find the minimum distance (squared) to the test point
 	MPI_Allreduce(&testpointmindist2, tempout, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
 
-	//if this processor isn't the closest to the test point
-	//it doesn't count as it's flow reaching the point
+	//if this processor isn't the closest to the test point it doesn't count as it's flow reaching the point
 	if (tempout[0] < testpointmindist2)
 		testpointreach = 0;
 
@@ -243,24 +264,22 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 	tempin[5] = vx_ave;
 	tempin[6] = vy_ave;
 	tempin[7] = slope_ave;
-	tempin[8] = adjoint;  //piler2;
+	tempin[8] = piler2;
 	tempin[9] = slopevolume;
 	tempin[10] = testvolume;
 	tempin[11] = xVar;
 	tempin[12] = yVar;
-	tempin[13] = u_ave;
-	i = MPI_Reduce(tempin, tempout, 14, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
-	double temp2in[3], temp2out[3];
+	i = MPI_Reduce(tempin, tempout, 13, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 	temp2in[0] = max_height;
 	temp2in[1] = v_max;
-	temp2in[2] = u_max;
-	i = MPI_Reduce(temp2in, temp2out, 3, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+	i = MPI_Reduce(temp2in, temp2out, 2, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
 	if (myid == 0) {
 		if (testpointreach && (statprops->timereached < 0.0))
 			statprops->timereached = timeprops->timesec();
 
+		double VELOCITY_SCALE = sqrt(matprops->LENGTH_SCALE * matprops->GRAVITY_SCALE);
 		//dimensionalize
 		statprops->xcen = tempout[0] * (matprops->LENGTH_SCALE) / tempout[10];
 		statprops->ycen = tempout[1] * (matprops->LENGTH_SCALE) / tempout[10];
@@ -271,7 +290,6 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 		statprops->rmean = tempout[2] * (matprops->LENGTH_SCALE) / tempout[10];
 		statprops->area = tempout[3] * (matprops->LENGTH_SCALE) * (matprops->LENGTH_SCALE);
 		statprops->vmean = tempout[4] * VELOCITY_SCALE / tempout[10];
-		statprops->umean = tempout[13] * VELOCITY_SCALE / tempout[10];
 		statprops->vxmean = tempout[5] * VELOCITY_SCALE / tempout[10];
 		statprops->vymean = tempout[6] * VELOCITY_SCALE / tempout[10];
 
@@ -285,17 +303,16 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 		    * (matprops->HEIGHT_SCALE);
 
 		statprops->cutoffheight = cutoffheight * (matprops->HEIGHT_SCALE);
-		testvolume = tempout[10] / statprops->statvolume;
+		testvolume = tempout[10] / statvolume;
 
 		/* the factor of 3^0.5 is a safety factor, this value was chosen because
-		 it makes the "radius" of a uniformly distributed line equal to half
-		 the line length */
+		 * it makes the "radius" of a uniformly distributed line equal to half
+		 * the line length
+		 */
 		//3 standard deviations out ~ 99.5% of the material
 		statprops->piler = 3.0 * sqrt(statprops->xvar + statprops->yvar);
-
 		statprops->hmax = temp2out[0] * (matprops->HEIGHT_SCALE);
 		statprops->vmax = temp2out[1] * VELOCITY_SCALE;
-		statprops->umax = temp2out[2] * VELOCITY_SCALE;
 
 		/* v_star is the nondimensional global average velocity by v_slump
 		 once v_slump HAS BEEN CALIBRATED (not yet done see ../main/datread.C)
@@ -308,14 +325,10 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 
 		/* output Center Of Mass and x and y components of mean velocity to
 		 assist the dynamic gis update daemon */
-		/*
-		 FILE* fp2=fopen("com.up","w");
-		 fprintf(fp2,"%d %g %g %g %g %g %g\n",
-		 timeprops->iter,timeprops->timesec(),
-		 statprops->xcen,statprops->ycen,
-		 statprops->vxmean,statprops->vymean,statprops->piler);
-		 fclose(fp2);
-		 */
+		FILE* fp2 = fopen("com.up", "w");
+		fprintf(fp2, "%d %g %g %g %g %g %g\n", timeprops->iter, timeprops->timesec(), statprops->xcen,
+		    statprops->ycen, statprops->vxmean, statprops->vymean, statprops->piler);
+		fclose(fp2);
 
 		/* standard to screen output */
 		d_time *= timeprops->TIME_SCALE;
@@ -324,19 +337,20 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 		double seconds;
 		timeprops->chunktime(&hours, &minutes, &seconds);
 
-		printf("At the end of time step %d the time is %d:%02d:%g (hrs:min:sec),\n"
-				"time step length is %g [sec], volume is %g [m^3],\n"
-				"max height is %g [m],\n"
-				"max solid-velocity is %g [m/s], max fluid-velocity is %g\n"
-				"ave solid-velocity is %g [m/s], ave fluid-velocity is %g\n\n", timeprops->iter, hours,
-		    minutes, seconds, d_time, statprops->statvolume, statprops->hmax, statprops->vmax,
-		    statprops->umax, statprops->vmean, statprops->umean);
+    printf("At the end of time step %d the time is %d:%02d:%g (hrs:min:sec),\n \ 
+           time step length is %g [sec], volume is %g [m^3],\n \
+           max height is %g [m], max velocity is %g [m/s],\n \
+           ave velocity is %g [m/s], v* = %g, area is %g\n\n",
+	   timeprops->iter, hours, minutes, seconds, d_time,
+	   statprops->statvolume, statprops->hmax, statprops->vmax,
+	   statprops->vmean, statprops->vstar,statprops->area);
 	}
+
 	return;
 }
 
 void out_final_stats(TimeProps* timeprops, StatProps* statprops) {
-	//round the run time to the nearest second and chunk it
+//round the run time to the nearest second and chunk it
 	int walltime = (int) (time(NULL) - timeprops->starttime + 0.5);
 	int wallhours = walltime / 3600;
 	int wallminutes = (walltime % 3600) / 60;

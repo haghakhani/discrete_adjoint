@@ -93,9 +93,11 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 			}
 		}
 
-	update_discharge(El_Table, NodeTable, discharge, dt);
+//	write_alldata_ordered(El_Table, timeprops_ptr->iter);
 
-	calc_stats(El_Table, NodeTable, myid, matprops_ptr, timeprops_ptr, statprops_ptr, dt);
+//	update_discharge(El_Table, NodeTable, discharge, dt);
+
+	calc_stats(El_Table, NodeTable, myid, matprops_ptr, timeprops_ptr, statprops_ptr, discharge, dt);
 
 	return;
 }

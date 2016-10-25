@@ -205,12 +205,12 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 
 	if (pileprops_ptr->numpiles > 0)
 		for (isrc = 0; isrc < pileprops_ptr->numpiles; isrc++)
-			totalvolume += PI * pileprops_ptr->pileheight[isrc] * pileprops_ptr->majorrad[isrc]
+			totalvolume += 0.5 *PI * pileprops_ptr->pileheight[isrc] * pileprops_ptr->majorrad[isrc]
 			    * pileprops_ptr->minorrad[isrc];
 
 	if (fluxprops->no_of_sources > 0)
 		for (isrc = 0; isrc < fluxprops->no_of_sources; isrc++)
-			totalvolume += PI * fluxprops->influx[isrc] * fluxprops->majorrad[isrc]
+			totalvolume += 0.5 *PI * fluxprops->influx[isrc] * fluxprops->majorrad[isrc]
 			    * fluxprops->minorrad[isrc] * 0.5 * (fluxprops->end_time[isrc] - //0.5 for linear decrease
 			        fluxprops->start_time[isrc]);
 

@@ -183,7 +183,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 	for (int iter = maxiter; iter > 0; --iter) {
 
-		set_ithm(Dual_El_Tab);
+//		set_ithm(Dual_El_Tab);
 
 		timeprops_ptr->iter = iter;
 		if (myid == 0)
@@ -246,11 +246,12 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		error.stop();
 #else
 		dual_vis.start();
-//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/) {
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-		write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD, 1);
-		print_func_var(propctx);
-//		}
+			write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
+			    1);
+			print_func_var(propctx);
+		}
 		dual_vis.stop();
 #endif
 
@@ -274,7 +275,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	}
 
 //	compute_init_location_variation(&dual_meshctx, propctx);
-	compute_init_volume_variation(&dual_meshctx, propctx);
+//	compute_init_volume_variation(&dual_meshctx, propctx);
 
 	delete_hashtables_objects<DualElem>(Dual_El_Tab);
 	delete_hashtables_objects<Node>(NodeTable);
@@ -393,7 +394,7 @@ void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, 
 	}
 
 //	compute_init_location_variation(dual_meshctx, propctx);
-	compute_init_volume_variation(dual_meshctx, propctx);
+//	compute_init_volume_variation(dual_meshctx, propctx);
 
 	delete_hashtables_objects<DualElem>(Dual_El_Tab);
 	delete_hashtables_objects<Node>(NodeTable);
@@ -496,8 +497,8 @@ void compute_functional_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 	HashEntryPtr currentPtr;
 	HashEntryPtr *buck = El_Table->getbucketptr();
 	int elem = 0;
-	for (int i = 0; i < NUM_STATE_VARS; ++i)
-		matprops_ptr->sensitivity[i] = 0.;
+//	for (int i = 0; i < NUM_STATE_VARS; ++i)
+//		matprops_ptr->sensitivity[i] = 0.;
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
