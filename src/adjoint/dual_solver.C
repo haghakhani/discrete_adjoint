@@ -482,9 +482,9 @@ void print_timings(int myid) {
 		total.print();
 
 		//writing sameinformation to  a file
-	  ofstream fp;
-	  fp.open ("timing.txt",ofstream::out);
-	  fp << "\n=========== TIMING of PRIMAL PROBLOM =========\n";
+		ofstream fp;
+		fp.open("timing.txt", ofstream::out);
+		fp << "\n=========== TIMING of PRIMAL PROBLOM =========\n";
 		initialization_f.write(fp);
 		adaption.write(fp);
 		repartition_f.write(fp);
@@ -895,13 +895,13 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 			HashEntryPtr currentPtr = *(buck + i);
 			while (currentPtr) {
 				DualElem* Curr_El = (DualElem*) (currentPtr->value);
+				if (Curr_El->get_adapted_flag() > 0) {
 
-				if (Curr_El->get_adapted_flag() > 0 && *(Curr_El->get_prev_state_vars()) > GEOFLOW_TINY) {
-
-					Container* contain = new Container(Curr_El);
-					new_hashtab->add(Curr_El->pass_key(), contain);
-					double* sensitivity = contain->get_sens();
-					double* coord = contain->get_coord();
+//					Container* contain = new Container(Curr_El);
+//					new_hashtab->add(Curr_El->pass_key(), contain);
+//					double* sensitivity = contain->get_sens();
+					double sensitivity = 0.;
+					double* coord = Curr_El->get_coord();
 
 					for (int effelement = 0; effelement < EFF_ELL; ++effelement) {
 
@@ -911,7 +911,7 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 							Vec_Mat<9>& jacobianmat = Curr_El->get_jacobian();
 
 							for (int l = 0; l < NUM_STATE_VARS; ++l)
-								*(sensitivity) += adjoint[l] * jacobianmat(effelement, l, 0);
+								sensitivity += adjoint[l] * jacobianmat(effelement, l, 0);
 
 						} else if (effelement <= 4
 						    || (effelement > 4 && *(Curr_El->get_neigh_proc() + (effelement - 1)) > -2)) {
@@ -930,17 +930,17 @@ void compute_init_volume_variation(MeshCTX* dual_meshctx, PropCTX* propctx) {
 								jacind++;
 
 								for (int l = 0; l < NUM_STATE_VARS; ++l)
-									*(sensitivity) += adjoint[l] * jacobianmat(jacind, l, 0);
+									sensitivity += adjoint[l] * jacobianmat(jacind, l, 0);
 
 							}
 						}
 					}
 
-					sens_x0 += *(sensitivity) * 2. * (coord[0] - xcen) / (majrad * majrad);
-					sens_y0 += *(sensitivity) * 2. * (coord[1] - ycen) / (minrad * minrad);
-					sens_majrad += *(sensitivity) * 2. * (coord[0] - xcen) * (coord[0] - xcen)
+					sens_x0 += sensitivity * 2. * (coord[0] - xcen) / (majrad * majrad);
+					sens_y0 += sensitivity * 2. * (coord[1] - ycen) / (minrad * minrad);
+					sens_majrad += sensitivity * 2. * (coord[0] - xcen) * (coord[0] - xcen)
 					    / (majrad * majrad * majrad);
-					sens_minrad += *(sensitivity) * 2. * (coord[1] - ycen) * (coord[1] - ycen)
+					sens_minrad += sensitivity * 2. * (coord[1] - ycen) * (coord[1] - ycen)
 					    / (minrad * minrad * minrad);
 
 				}

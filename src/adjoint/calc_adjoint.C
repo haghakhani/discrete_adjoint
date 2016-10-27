@@ -165,7 +165,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 //	int cc = 1, bb = 0;
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		if (fabs(adjoint[i]) < 1.e-16)
-			adjoint[i]=0.;
+			adjoint[i] = 0.;
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
 		if (isnan(adjoint[i]) || isinf(adjoint[i]))
@@ -315,6 +315,7 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
 	TimeProps* timeprops = propctx->timeprops;
+	MatProps* matprops = propctx->matprops;
 
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
@@ -359,10 +360,10 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 
 					if (Curr_El->get_adapted_flag() > 0) {
 
-						int aa = 1, bb = 0;
-						if (*(Curr_El->pass_key()) == 2868635045&& *(Curr_El->pass_key() + 1) == 2779096474
-						&& propctx->timeprops->iter == ITER)
-							bb = aa;
+//						int aa = 1, bb = 0;
+//						if (*(Curr_El->pass_key()) == 2868635045&& *(Curr_El->pass_key() + 1) == 2779096474
+//						&& propctx->timeprops->iter == ITER)
+//							bb = aa;
 
 						int* neigh_proc = Curr_El->get_neigh_proc();
 						int xp = Curr_El->get_positive_x_side(); //finding the direction of element
@@ -371,8 +372,13 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 						for (int j = 0; j < 4; j++)
 							if (neigh_proc[j] == INIT && j == ym) { // this is a boundary!
 
-								double* dx = Curr_El->get_dx();
-								double* func_sens = Curr_El->get_func_sens();
+								Node* nm = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
+								double* coord_node = nm->get_coord();
+								if (coord_node[1] * matprops->LENGTH_SCALE >= 2157550
+								    && coord_node[1] * matprops->LENGTH_SCALE <= 2158050) {
+
+									double* dx = Curr_El->get_dx();
+									double* func_sens = Curr_El->get_func_sens();
 
 //								double flux[4][NUM_STATE_VARS];
 //								get_flux(El_Table, NodeTable, Curr_El, flux);
@@ -391,23 +397,12 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 //									func_sens[2] += dt * dx[0];
 //								}
 
-								unsigned* neigh_key = Curr_El->get_neighbors();
+									unsigned* neigh_key = Curr_El->get_neighbors();
 
-								int opos_dirc = (j + 2) % 4;
+									int opos_dirc = (j + 2) % 4;
 
-								DualElem* eff_el = (DualElem*) El_Table->lookup(neigh_key + opos_dirc * KEYLENGTH);
-
-								if (eff_el->get_myprocess() != myid) {
-									complicate_elements.push_back(eff_el->pass_key()[0]);
-									complicate_elements.push_back(eff_el->pass_key()[1]);
-									complicate_elements_side.push_back(j);
-								} else
-									sens_on_boundary(meshctx, propctx, eff_el, j);
-
-								// if the adjacent cell to the boundary has two neighbors on the opposite side
-								if (neigh_proc[opos_dirc + 4] != -2) {
 									DualElem* eff_el = (DualElem*) El_Table->lookup(
-									    neigh_key + (opos_dirc + 4) * KEYLENGTH);
+									    neigh_key + opos_dirc * KEYLENGTH);
 
 									if (eff_el->get_myprocess() != myid) {
 										complicate_elements.push_back(eff_el->pass_key()[0]);
@@ -416,8 +411,20 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 									} else
 										sens_on_boundary(meshctx, propctx, eff_el, j);
 
-								}
+									// if the adjacent cell to the boundary has two neighbors on the opposite side
+									if (neigh_proc[opos_dirc + 4] != -2) {
+										DualElem* eff_el = (DualElem*) El_Table->lookup(
+										    neigh_key + (opos_dirc + 4) * KEYLENGTH);
 
+										if (eff_el->get_myprocess() != myid) {
+											complicate_elements.push_back(eff_el->pass_key()[0]);
+											complicate_elements.push_back(eff_el->pass_key()[1]);
+											complicate_elements_side.push_back(j);
+										} else
+											sens_on_boundary(meshctx, propctx, eff_el, j);
+
+									}
+								}
 							}
 					}
 					currentPtr = currentPtr->next;
@@ -600,7 +607,8 @@ void sens_on_boundary(MeshCTX* meshctx, PropCTX* propctx, DualElem* eff_el, int 
 
 double discharge = 0.;
 
-void update_discharge(HashTable* El_Table, HashTable* NodeTable, DISCHARGE* dsge, double dt) {
+void update_discharge(HashTable* El_Table, HashTable* NodeTable, DISCHARGE* dsge,
+    MatProps* matprops, double dt) {
 
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
@@ -622,9 +630,13 @@ void update_discharge(HashTable* El_Table, HashTable* NodeTable, DISCHARGE* dsge
 							if (bound == ym) {
 								double flux[4][NUM_STATE_VARS];
 								get_flux(El_Table, NodeTable, Curr_El, flux);
+								Node* nm = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
+								double* coord_node = nm->get_coord();
+								if (coord_node[1] * matprops->LENGTH_SCALE >= 2157550
+								    && coord_node[1] * matprops->LENGTH_SCALE <= 2158050)
 
 //								if (flux[3][0] < 0.)
-								local_discharge += flux[3][0] * Curr_El->get_dx()[0] * dt;
+									local_discharge += flux[3][0] * Curr_El->get_dx()[0] * dt;
 							}
 						}
 

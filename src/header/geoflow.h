@@ -83,7 +83,8 @@ template<class T>
 void calc_edge_states(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,
     TimeProps* timeprops_ptr, int myid, int* order_flag, double *outflow);
 
-void update_discharge(HashTable* El_Table, HashTable* NodeTable, DISCHARGE* discharge, double dt);
+void update_discharge(HashTable* El_Table, HashTable* NodeTable, DISCHARGE* discharge,
+    MatProps* matprops, double dt);
 
 double tiny_sgn(double num, double tiny);
 
