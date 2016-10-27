@@ -374,8 +374,8 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 
 								Node* nm = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
 								double* coord_node = nm->get_coord();
-								if (coord_node[1] * matprops->LENGTH_SCALE >= 2157550
-								    && coord_node[1] * matprops->LENGTH_SCALE <= 2158050) {
+								if (coord_node[0] * matprops->LENGTH_SCALE >= 644750
+								    && coord_node[0] * matprops->LENGTH_SCALE <= 644250) {
 
 									double* dx = Curr_El->get_dx();
 									double* func_sens = Curr_El->get_func_sens();
@@ -632,8 +632,8 @@ void update_discharge(HashTable* El_Table, HashTable* NodeTable, DISCHARGE* dsge
 								get_flux(El_Table, NodeTable, Curr_El, flux);
 								Node* nm = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
 								double* coord_node = nm->get_coord();
-								if (coord_node[1] * matprops->LENGTH_SCALE >= 2157550
-								    && coord_node[1] * matprops->LENGTH_SCALE <= 2158050)
+								if (coord_node[0] * matprops->LENGTH_SCALE >= 644750
+								    && coord_node[0] * matprops->LENGTH_SCALE <= 645250)
 
 //								if (flux[3][0] < 0.)
 									local_discharge += flux[3][0] * Curr_El->get_dx()[0] * dt;
