@@ -375,7 +375,7 @@ void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {
 								Node* nm = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
 								double* coord_node = nm->get_coord();
 								if (coord_node[0] * matprops->LENGTH_SCALE >= 644750
-								    && coord_node[0] * matprops->LENGTH_SCALE <= 644250) {
+								    && coord_node[0] * matprops->LENGTH_SCALE <= 645250) {
 
 									double* dx = Curr_El->get_dx();
 									double* func_sens = Curr_El->get_func_sens();
