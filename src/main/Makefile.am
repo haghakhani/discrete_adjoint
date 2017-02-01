@@ -8,7 +8,7 @@ bin_PROGRAMS = titan
 
 titan_SOURCES = compare_key.C delete_tab.C hpfem.C datread.C hilbert.C init_piles.C update_topo.C restart.C
 
-titan_CXXFLAGS = -I../gisapi/
+titan_CXXFLAGS = -I$(srcdir)/../gisapi
 
 titan_LDADD = ../adjoint/libadjoint.a ../gisapi/libgisapi.a ../adapt/libadapt.a @FLIBS@ \
   ../geoflow/libgeoflow.a ../datstr/libdatstr.a  ../useful/libuseful.a \
