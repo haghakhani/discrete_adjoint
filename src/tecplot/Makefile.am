@@ -12,4 +12,4 @@ if HAVE_HDF5
    libtecplot_a_SOURCES += xdfm_write.C GMFG_hdfconstants.h hd5calls.C
 endif
 
-INCLUDES=-I../header/
+INCLUDES=-I$(srcdir)/../header/ -I$(srcdir)/../gisapi
