@@ -74,7 +74,7 @@ public:
 
 	Solution* lookup(unsigned* key, int iter);
 
-	void write_table(gzFile& myfile);
+	void write_table(gzFile& myfile,const int status=0);
 
 };
 
@@ -94,6 +94,8 @@ public:
 	DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr);
 
 	DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid);
+
+	DualElem(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
 
 	void update(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid);
 
@@ -149,6 +151,8 @@ public:
 	    ElemPtrList<DualElem>* refinelist, ElemPtrList<DualElem>* unrefinelist,
 	    vector<TRANSKEY>& trans_keys_vec, vector<int>& trans_keys_status,
 	    vector<DualElem*>& repart_list, double* allKeyRange);
+
+	void write_elem(gzFile& myfile);
 
 private:
 
@@ -232,6 +236,8 @@ public:
 
 	ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid);
 
+	ErrorElem(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
+
 	void update(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid);
 
 	void get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double gamma);
@@ -265,22 +271,24 @@ public:
 
 	void Pack_element(ErrElemPack* elem, HashTable* HT_Node_Ptr, int destination_proc);
 
+	void write_elem(gzFile& myfile);
+
 private:
 
 	//! adjoint vector
 	double adjoint[NUM_STATE_VARS];
 
 	//! this array is for bilinear reconstruction of adjoints
-	double bilin_adj[3];
+	double bilin_adj[NUM_STATE_VARS];
 
 	//! this array is for bilinear reconstruction of state_vars
-	double bilin_state[3];
+	double bilin_state[NUM_STATE_VARS];
 
 	//! this array is for bilinear reconstruction of state_vars
-	double bilin_prev_state[3];
+	double bilin_prev_state[NUM_STATE_VARS];
 
 	//! residual vector from error compute
-	double residual[3];
+	double residual[NUM_STATE_VARS];
 
 	//! this term holds the correction term computed from inner product of linear construction of residual and linear construction of adjoint
 	double correction;

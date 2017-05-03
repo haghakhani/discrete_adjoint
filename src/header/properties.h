@@ -456,6 +456,24 @@ struct TimeProps {
 			return 0;
 	}
 
+	void update_savetime() {
+		isave--;
+		ndnextsave = ((isave + 1) * timesave) / TIME_SCALE;
+	}
+
+	//! checks if the restart file should be saved now
+	int ifsave_adj() {
+		// don't save if nobody asked you to do it
+//		if (timesave < 1.0E-06)
+//			return 0;
+		if (fabs(time - ndnextsave) < 1.0E-06 && time > 0.) {
+			isave--; //using isave eliminates roundoff
+			ndnextsave = ((isave + 1) * timesave) / TIME_SCALE;
+			return (1);
+		} else
+			return 0;
+	}
+
 	//! checks if the output files should be written now
 	int ifoutput() {
 		if (time >= ndnextoutput) {
@@ -1133,12 +1151,6 @@ struct DISCHARGE {
 		return;
 	}
 
-	//! this function deallocates the array holding the information about the discharge planes
-	void dealloc() {
-		num_planes = 0;
-		CDeAllocD2(planes);
-		return;
-	}
 };
 
 //! The FluxProps Structure holds all the data about extrusion flux sources (material flowing out of the ground) they can become active and later deactivate at any time during the simulation.  There must be at least 1 initial pile or one flux source that is active at time zero, otherwise the timestep will be set to zero and the simulation will never advance. 

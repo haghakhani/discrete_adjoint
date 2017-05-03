@@ -96,7 +96,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 //		Curr_El->calc_func_sens((void*) propctx);
 
 		for (int i = 0; i < NUM_STATE_VARS; ++i)
-			adjoint[i] = *(Curr_El->get_func_sens() + i);
+			adjoint[i] = - *(Curr_El->get_func_sens() + i);
 
 	} else {
 
@@ -137,7 +137,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 		}
 
 		for (int j = 0; j < NUM_STATE_VARS; j++)
-			adjoint[j] = *(Curr_El->get_func_sens() + j) - adjcontr[j];
+			adjoint[j] = - *(Curr_El->get_func_sens() + j) - adjcontr[j];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)

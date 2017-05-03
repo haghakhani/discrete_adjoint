@@ -668,11 +668,11 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 		(*ElemTable)->add(nodes[8], Quad9P);
 
 		Quad9P->find_positive_x_side(*NodeTable);
-//		Quad9P->calculate_dx(*NodeTable);
+		Quad9P->calculate_dx(*NodeTable);
 
 	}
-	Quad9P->set_mins(*NodeTable);
-	compute_dx(*ElemTable);
+//	Quad9P->set_mins(*NodeTable);
+//	compute_dx(*ElemTable);
 //	check_elem_size(*ElemTable);
 
 	/************************************************************/

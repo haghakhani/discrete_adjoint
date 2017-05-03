@@ -9,7 +9,7 @@
 #define SRC_HEADER_ADJOINT_H_
 
 #include <vector>
-#define Error
+//#define Error
 
 //! this function transfers information during events such as ghost element data exchange and repartitioning
 void move_dual_data(MeshCTX* meshctx, PropCTX* propctx);
@@ -17,6 +17,8 @@ void move_dual_data(MeshCTX* meshctx, PropCTX* propctx);
 void move_err_data(MeshCTX* meshctx, PropCTX* propctx);
 
 void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
+
+void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, PropCTX* propctx);
 
 void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, MatProps* matprops_ptr,
     int effelement, int j, int myid, double increment);
@@ -229,6 +231,9 @@ void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKey
 
 void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec);
 
+void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX* propctx,
+    SolRec *solrec);
+
 extern Timer dual, dual_vis, jacobian, adjoint_sol, dual_repart, dual_adapt, read_solution,
     dual_init, dual_neigh_update;
 
@@ -252,6 +257,8 @@ void adjust_node_info(MeshCTX* meshctx, PropCTX* propctx);
 unsigned* makekey(unsigned k1, unsigned k2);
 
 void check_the_list(vector<ErrorElem*> imported_elem, HashTable* El_Table);
+
+void write_elem_sorted(HashTable* El_Table, char place[50]);
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);

@@ -12,6 +12,7 @@
 #include "../header/exvar.h"
 #include <algorithm>
 #include <map>
+#include <set>
 
 void copy_jacobian(HashTable* El_Table, map<int, Vec_Mat<9> >& jac_map) {
 
@@ -33,23 +34,32 @@ void copy_jacobian(HashTable* El_Table, map<int, Vec_Mat<9> >& jac_map) {
 
 }
 
-void compare_jacobians(map<int, Vec_Mat<9> >& jac_code, map<int, Vec_Mat<9> >& jac_diff) {
+void compare_jacobians(map<int, Vec_Mat<9> >& jac_code,
+		map<int, Vec_Mat<9> >& jac_diff) {
 
-	for (map<int, Vec_Mat<9> >::iterator it = jac_code.begin(); it != jac_code.end(); ++it) {
+	for (map<int, Vec_Mat<9> >::iterator it = jac_code.begin();
+			it != jac_code.end(); ++it) {
 		Vec_Mat<9>& jacdiff = jac_diff[it->first];
 		Vec_Mat<9>& jaccode = jac_code[it->first];
 
 		for (int i = 0; i < EFF_ELL; ++i)
 			for (int j = 0; j < NUM_STATE_VARS; ++j)
 				for (int k = 0; k < NUM_STATE_VARS; ++k)
-					if (fabs(jacdiff(i, j, k) - jaccode(i, j, k)) > 1e-11 && jacdiff(i, j, k) != 0.) {
+					if (fabs(jacdiff(i, j, k) - jaccode(i, j, k)) > 1e-11
+							&& jacdiff(i, j, k) != 0.) {
 						double denum;
 						if (jacdiff(i, j, k) != 0.)
 							denum = dabs(jacdiff(i, j, k));
-						cout << "in element  " << it->first << " in indices: " << i << " , " << j << " , " << k
-						    << "  there is a difference of  "
-						    << 100 * dabs(jacdiff(i, j, k) - jaccode(i, j, k)) / denum << "  jacobian diff= "
-						    << jacdiff(i, j, k) << "  jacobian code=" << jaccode(i, j, k) << endl;
+						cout << "in element  " << it->first << " in indices: "
+								<< i << " , " << j << " , " << k
+								<< "  there is a difference of  "
+								<< 100
+										* dabs(
+												jacdiff(i, j, k)
+														- jaccode(i, j, k))
+										/ denum << "  jacobian diff= "
+								<< jacdiff(i, j, k) << "  jacobian code="
+								<< jaccode(i, j, k) << endl;
 					}
 
 	}
@@ -71,7 +81,8 @@ void check_kackxy(HashTable* El_Tab) {
 				Curr_El = (Element*) (currentPtr->value);
 
 				if (Curr_El->get_adapted_flag() > 0)
-					if (*(Curr_El->get_kactxy()) < 0 || *(Curr_El->get_kactxy() + 1) < 0)
+					if (*(Curr_El->get_kactxy()) < 0
+							|| *(Curr_El->get_kactxy() + 1) < 0)
 						aa = bb;
 
 				currentPtr = currentPtr->next;
@@ -100,7 +111,8 @@ void clean_jacobian(HashTable* El_Table) {
 		}
 }
 
-void check_state_vars_with_record(HashTable* El_Table, SolRec* solrec, int iter) {
+void check_state_vars_with_record(HashTable* El_Table, SolRec* solrec,
+		int iter) {
 
 	HashEntryPtr currentPtr;
 	Element *Curr_El;
@@ -120,7 +132,8 @@ void check_state_vars_with_record(HashTable* El_Table, SolRec* solrec, int iter)
 		}
 }
 
-void print_Elem_Table(HashTable* El_Table, HashTable* NodeTable, int iter, int place) {
+void print_Elem_Table(HashTable* El_Table, HashTable* NodeTable, int iter,
+		int place) {
 
 	ofstream myfile;
 	char filename[50];
@@ -147,15 +160,20 @@ void print_Elem_Table(HashTable* El_Table, HashTable* NodeTable, int iter, int p
 					if (print) {
 
 						int xp = Curr_El->get_positive_x_side(); //finding the direction of element
-						int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
+						int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3)
+								% 4;
 
-						Node* nxp = (Node*) NodeTable->lookup(Curr_El->getNode() + (xp + 4) * 2);
+						Node* nxp = (Node*) NodeTable->lookup(
+								Curr_El->getNode() + (xp + 4) * 2);
 
-						Node* nyp = (Node*) NodeTable->lookup(Curr_El->getNode() + (yp + 4) * 2);
+						Node* nyp = (Node*) NodeTable->lookup(
+								Curr_El->getNode() + (yp + 4) * 2);
 
-						Node* nxm = (Node*) NodeTable->lookup(Curr_El->getNode() + (xm + 4) * 2);
+						Node* nxm = (Node*) NodeTable->lookup(
+								Curr_El->getNode() + (xm + 4) * 2);
 
-						Node* nym = (Node*) NodeTable->lookup(Curr_El->getNode() + (ym + 4) * 2);
+						Node* nym = (Node*) NodeTable->lookup(
+								Curr_El->getNode() + (ym + 4) * 2);
 
 						double flux[4][NUM_STATE_VARS];
 
@@ -174,7 +192,8 @@ void print_Elem_Table(HashTable* El_Table, HashTable* NodeTable, int iter, int p
 						}
 
 						myfile << "key: ";
-						myfile << *(Curr_El->pass_key()) << " " << *(Curr_El->pass_key() + 1) << " ";
+						myfile << *(Curr_El->pass_key()) << " "
+								<< *(Curr_El->pass_key() + 1) << " ";
 
 						myfile << "neighbors: ";
 						for (int i = 0; i < 8 * 2; ++i)
@@ -194,7 +213,8 @@ void print_Elem_Table(HashTable* El_Table, HashTable* NodeTable, int iter, int p
 
 						myfile << "prev_state_vars: ";
 						for (int i = 0; i < NUM_STATE_VARS; ++i)
-							myfile << *(Curr_El->get_prev_state_vars() + i) << " ";
+							myfile << *(Curr_El->get_prev_state_vars() + i)
+									<< " ";
 
 						myfile << "d_state_vars: ";
 						for (int i = 0; i < NUM_STATE_VARS * DIMENSION; ++i)
@@ -288,9 +308,9 @@ void plot_ithm(HashTable* El_Table) {
 
 void refinement_report(HashTable* El_Table, int myid) {
 
-	int newbuffer = 0, buffer = 0, newson = 0, newfather = 0, norecadapt = 0, ghnewbuffer = 0,
-	    ghbuffer = 0, ghnewson = 0, ghnewfather = 0, ghnotrecadapt = 0, tobedeleted = 0,
-	    oldfather = 0, oldson = 0;
+	int newbuffer = 0, buffer = 0, newson = 0, newfather = 0, norecadapt = 0,
+			ghnewbuffer = 0, ghbuffer = 0, ghnewson = 0, ghnewfather = 0,
+			ghnotrecadapt = 0, tobedeleted = 0, oldfather = 0, oldson = 0;
 
 	HashEntryPtr currentPtr;
 	Element *Curr_El;
@@ -303,59 +323,62 @@ void refinement_report(HashTable* El_Table, int myid) {
 				Curr_El = (Element*) (currentPtr->value);
 
 				switch (Curr_El->get_adapted_flag()) {
-					case NEWBUFFER:
-						newbuffer++;
-						break;
-					case BUFFER:
-						buffer++;
-						break;
-					case NEWSON:
-						newson++;
-						break;
-					case NEWFATHER:
-						newfather++;
-						break;
-					case NOTRECADAPTED:
-						norecadapt++;
-						break;
-					case TOBEDELETED:
-						tobedeleted++;
-						break;
-					case -NOTRECADAPTED:
-						ghnotrecadapt++;
-						break;
-					case -NEWFATHER:
-						ghnewfather++;
-						break;
-					case -NEWSON:
-						ghnewson++;
-						break;
-					case -BUFFER:
-						ghbuffer++;
-						break;
-					case -NEWBUFFER:
-						ghnewbuffer++;
-						break;
-					case OLDFATHER:
-						oldfather++;
-						break;
-					case OLDSON:
-						oldson++;
-						break;
-					default:
-						cout << "this case is irregular \n";
+				case NEWBUFFER:
+					newbuffer++;
+					break;
+				case BUFFER:
+					buffer++;
+					break;
+				case NEWSON:
+					newson++;
+					break;
+				case NEWFATHER:
+					newfather++;
+					break;
+				case NOTRECADAPTED:
+					norecadapt++;
+					break;
+				case TOBEDELETED:
+					tobedeleted++;
+					break;
+				case -NOTRECADAPTED:
+					ghnotrecadapt++;
+					break;
+				case -NEWFATHER:
+					ghnewfather++;
+					break;
+				case -NEWSON:
+					ghnewson++;
+					break;
+				case -BUFFER:
+					ghbuffer++;
+					break;
+				case -NEWBUFFER:
+					ghnewbuffer++;
+					break;
+				case OLDFATHER:
+					oldfather++;
+					break;
+				case OLDSON:
+					oldson++;
+					break;
+				default:
+					cout << "this case is irregular \n";
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 
-	cout << "Proc ID:" << myid << "\n new buffer:       " << newbuffer << "\n buffer:           "
-	    << buffer << "\n newson:           " << newson << "\n newfather:        " << newfather
-	    << "\n norecadapt:       " << norecadapt << "\n tobedeleted:      " << tobedeleted
-	    << "\n ghost new buffer: " << ghnewbuffer << "\n ghost buffer:     " << ghbuffer
-	    << "\n ghostnewson:      " << ghnewson << "\n ghost newfather:  " << ghnewfather
-	    << "\n ghost norecadapt: " << ghnotrecadapt << "\n oldfather:        " << oldfather
-	    << "\n oldson:           " << oldson << "\n";
+	cout << "Proc ID:" << myid << "\n new buffer:       " << newbuffer
+			<< "\n buffer:           " << buffer << "\n newson:           "
+			<< newson << "\n newfather:        " << newfather
+			<< "\n norecadapt:       " << norecadapt << "\n tobedeleted:      "
+			<< tobedeleted << "\n ghost new buffer: " << ghnewbuffer
+			<< "\n ghost buffer:     " << ghbuffer << "\n ghostnewson:      "
+			<< ghnewson << "\n ghost newfather:  " << ghnewfather
+			<< "\n ghost norecadapt: " << ghnotrecadapt
+			<< "\n oldfather:        " << oldfather << "\n oldson:           "
+			<< oldson << "\n";
 
 }
 
@@ -373,24 +396,26 @@ void refine_flag_report(HashTable* El_Table, int myid) {
 				Curr_El = (Element*) (currentPtr->value);
 
 				switch (Curr_El->get_refined_flag()) {
-					case 0:
-						zero++;
-						break;
-					case 1:
-						one++;
-						break;
-					case GHOST:
-						ghost++;
-						break;
-					default:
-						cout << "this case is irregular" << Curr_El->get_refined_flag() << "\n";
+				case 0:
+					zero++;
+					break;
+				case 1:
+					one++;
+					break;
+				case GHOST:
+					ghost++;
+					break;
+				default:
+					cout << "this case is irregular"
+							<< Curr_El->get_refined_flag() << "\n";
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 
-	cout << "Proc ID:" << myid << "\n refine=1:    " << one << "\n refine=0:    " << zero
-	    << "\n refine=GHOST:" << ghost << "\n";
+	cout << "Proc ID:" << myid << "\n refine=1:    " << one
+			<< "\n refine=0:    " << zero << "\n refine=GHOST:" << ghost
+			<< "\n";
 }
 
 void print_jacobian(HashTable* El_Table, int iter) {
@@ -467,11 +492,11 @@ int table_members(HashTable *NodeTable) {
 				currentPtr = currentPtr->next;
 			}
 		}
-return num;
+	return num;
 }
 
-void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
-    int myid, double flux[4][NUM_STATE_VARS]) {
+void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
+		MatProps* matprops_ptr, int myid, double flux[4][NUM_STATE_VARS]) {
 
 	Element* Curr_El = (Element*) (El_Table->lookup(key));
 
@@ -494,13 +519,15 @@ void get_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps
 	}
 }
 
-void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* fluxypold,
-    double* fluxymold, double* fluxxp, double* fluxxm, double* fluxyp, double* fluxym,
-    int effelement, int j, int iter, double dt) {
+void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold,
+		double* fluxypold, double* fluxymold, double* fluxxp, double* fluxxm,
+		double* fluxyp, double* fluxym, int effelement, int j, int iter,
+		double dt) {
 
-	double diff1[NUM_STATE_VARS], diff2[NUM_STATE_VARS], diff3[NUM_STATE_VARS], diff4[NUM_STATE_VARS];
-	double fluxxold[NUM_STATE_VARS], fluxxnew[NUM_STATE_VARS], fluxyold[NUM_STATE_VARS],
-	    fluxynew[NUM_STATE_VARS];
+	double diff1[NUM_STATE_VARS], diff2[NUM_STATE_VARS], diff3[NUM_STATE_VARS],
+			diff4[NUM_STATE_VARS];
+	double fluxxold[NUM_STATE_VARS], fluxxnew[NUM_STATE_VARS],
+			fluxyold[NUM_STATE_VARS], fluxynew[NUM_STATE_VARS];
 	double abs_fluxx_diff[NUM_STATE_VARS], abs_fluxy_diff[NUM_STATE_VARS];
 
 	double *state_vars = Curr_El->get_state_vars();
@@ -514,9 +541,10 @@ void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* 
 	fp = fopen("debugfile", "a");
 	fprintf(fp, "this is for jacobian corresponding to state vars %d \n", j);
 	fprintf(fp,
-	    "In corrector time step %d with dt=%f dtdx=%f dtdy=%f kactx=%f , kacty=%f , x=%6f, y=%6f \n state vars are: \n",
-	    iter, dt, dtdx, dtdy, *(Curr_El->get_kactxy()), *(Curr_El->get_kactxy() + 1),
-	    *(Curr_El->get_coord()), *(Curr_El->get_coord() + 1));
+			"In corrector time step %d with dt=%f dtdx=%f dtdy=%f kactx=%f , kacty=%f , x=%6f, y=%6f \n state vars are: \n",
+			iter, dt, dtdx, dtdy, *(Curr_El->get_kactxy()),
+			*(Curr_El->get_kactxy() + 1), *(Curr_El->get_coord()),
+			*(Curr_El->get_coord() + 1));
 
 	for (int state = 0; state < NUM_STATE_VARS; state++)
 		fprintf(fp, "%10e ", state_vars[state]);
@@ -552,11 +580,12 @@ void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* 
 		diff2[ivar] = (fluxxmold[ivar] - fluxxm[ivar]);
 		diff3[ivar] = (fluxypold[ivar] - fluxyp[ivar]);
 		diff4[ivar] = (fluxymold[ivar] - fluxym[ivar]);
-		cout << "jacobian of flux of " << ivar << " for neighbor " << effelement << " for state " << j
-		    << "  xp: " << (fluxxpold[ivar] - fluxxp[ivar]) / INCREMENT << " xm: "
-		    << (fluxxmold[ivar] - fluxxm[ivar]) / INCREMENT << " yp: "
-		    << (fluxypold[ivar] - fluxyp[ivar]) / INCREMENT << " ym: "
-		    << (fluxymold[ivar] - fluxym[ivar]) / INCREMENT << endl;
+		cout << "jacobian of flux of " << ivar << " for neighbor " << effelement
+				<< " for state " << j << "  xp: "
+				<< (fluxxpold[ivar] - fluxxp[ivar]) / INCREMENT << " xm: "
+				<< (fluxxmold[ivar] - fluxxm[ivar]) / INCREMENT << " yp: "
+				<< (fluxypold[ivar] - fluxyp[ivar]) / INCREMENT << " ym: "
+				<< (fluxymold[ivar] - fluxym[ivar]) / INCREMENT << endl;
 	}
 
 	for (int ivar = 0; ivar < NUM_STATE_VARS; ivar++) {
@@ -584,8 +613,8 @@ void flux_debug(Element* Curr_El, double* fluxxpold, double* fluxxmold, double* 
 	return;
 }
 
-void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatProps* matprops_ptr,
-    int myid, double fluxold[4][NUM_STATE_VARS]) {
+void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key,
+		MatProps* matprops_ptr, int myid, double fluxold[4][NUM_STATE_VARS]) {
 
 	Element* Curr_El = (Element*) (El_Table->lookup(key));
 
@@ -608,8 +637,195 @@ void record_flux(HashTable* El_Table, HashTable* NodeTable, unsigned* key, MatPr
 	}
 }
 
-unsigned* makekey(unsigned k1,unsigned k2){
-	 unsigned *key=new unsigned[2];
-	 key[0]=k1;key[1]=k2;
-	 return key;
+unsigned* makekey(unsigned k1, unsigned k2) {
+	unsigned *key = new unsigned[2];
+	key[0] = k1;
+	key[1] = k2;
+	return key;
 }
+
+int compar(const void * el1, const void* el2) {
+
+	Element* elem1 = (Element*) el1;
+	Element* elem2 = (Element*) el2;
+	if (*(elem1->pass_key()) < *(elem2->pass_key())
+			|| ((*(elem1->pass_key()) == *(elem2->pass_key()))
+					&& (*(elem1->pass_key() + 1) < *(elem2->pass_key() + 1))))
+		return 1;
+	return 0;
+}
+
+void write_elem_sorted(HashTable* El_Table, char place[50]) {
+
+	int num_elem = table_members(El_Table);
+	Element **ElemArray = (Element**) malloc(num_elem * sizeof(Element*));
+	int indx = 0;
+	HashEntryPtr currentPtr;
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				ElemArray[indx] = (Element*) currentPtr->value;
+				indx++;
+				currentPtr = currentPtr->next;
+			}
+		}
+
+	qsort(ElemArray, num_elem, sizeof(Element*), compar);
+
+	ofstream myfile;
+
+	myfile.open(place, ios::out);
+
+	for (int j = 0; j < num_elem; j++) {
+
+		Element* Curr_El = ElemArray[j];
+
+		myfile << "key: ";
+		myfile << *(Curr_El->pass_key()) << " " << *(Curr_El->pass_key() + 1)
+				<< " ";
+
+		myfile << "neighbors: ";
+		for (int i = 0; i < 8 * 2; ++i)
+			myfile << *(Curr_El->get_neighbors() + i) << " ";
+
+		myfile << "neighbors_gen: ";
+		for (int i = 0; i < 8; ++i)
+			myfile << *(Curr_El->get_neigh_gen() + i) << " ";
+
+		myfile << "neighbors_proc: ";
+		for (int i = 0; i < 8; ++i)
+			myfile << *(Curr_El->get_neigh_proc() + i) << " ";
+
+		myfile << "state_vars: ";
+		for (int i = 0; i < NUM_STATE_VARS; ++i)
+			myfile << *(Curr_El->get_state_vars() + i) << " ";
+
+		myfile << "prev_state_vars: ";
+		for (int i = 0; i < NUM_STATE_VARS; ++i)
+			myfile << *(Curr_El->get_prev_state_vars() + i) << " ";
+
+		myfile << "d_state_vars: ";
+		for (int i = 0; i < NUM_STATE_VARS * DIMENSION; ++i)
+			myfile << *(Curr_El->get_d_state_vars() + i) << " ";
+	}
+
+	free(ElemArray);
+}
+
+
+class Data {
+private:
+	unsigned* key;
+	double* state;
+
+public:
+
+	Data(Element* elem) {
+		key = elem->pass_key();
+		state = elem->get_state_vars();
+	}
+
+	unsigned* get_key() const {
+		return key;
+	}
+
+	double* get_state() const {
+		return state;
+	}
+
+	bool operator<(const Data& rdata) const {
+		if (key[0] < rdata.key[0] || (key[0] == rdata.key[0] && key[1] < rdata.key[1]))
+			return true;
+
+		return false;
+	}
+	;
+};
+
+class DualData:public Data{
+private:
+	double *adjoint;
+
+public:
+	DualData(DualElem* elem):Data(elem){
+		adjoint = elem->get_adjoint();
+	}
+
+	double* get_adjoint() const {
+		return adjoint;
+	}
+};
+
+void write_alldata_ordered(HashTable* El_Table, char filename[50]) {
+
+	set<Data> mydata;
+
+	int no_of_elm_buckets = El_Table->get_no_of_buckets();
+	for (int ibucket = 0; ibucket < no_of_elm_buckets; ibucket++) {
+		HashEntryPtr entryp = *(El_Table->getbucketptr() + ibucket);
+		while (entryp) {
+			Element* EmTemp = (Element*) entryp->value;
+			if (EmTemp->get_adapted_flag() > 0)
+				mydata.insert(Data(EmTemp));
+
+			entryp = entryp->next;
+		}
+	}
+
+//	gzFile myfile = gzopen(filename, "wb");
+	FILE *fp = fopen(filename, "w");
+
+	set<Data>::iterator it;
+	for (it = mydata.begin(); it != mydata.end(); ++it) {
+		fprintf(fp, "%u %u %16.10f %16.10f %16.10f \n", it->get_key()[0], it->get_key()[1],
+		    it->get_state()[0], it->get_state()[1], it->get_state()[2]);
+//		gzwrite(myfile, (it->get_key()), sizeof(unsigned) * 2);
+//		gzwrite(myfile, (it->get_state()), sizeof(double) * 3);
+	}
+
+	fclose(fp);
+
+//	gzclose (myfile);
+
+}
+
+void write_alldualdata_ordered(HashTable* El_Table, char filename[50]) {
+
+	set<DualData> mydata;
+
+	int no_of_elm_buckets = El_Table->get_no_of_buckets();
+	for (int ibucket = 0; ibucket < no_of_elm_buckets; ibucket++) {
+		HashEntryPtr entryp = *(El_Table->getbucketptr() + ibucket);
+		while (entryp) {
+			DualElem* EmTemp = (DualElem*) entryp->value;
+			if (EmTemp->get_adapted_flag() > 0)
+				mydata.insert(DualData(EmTemp));
+
+			entryp = entryp->next;
+		}
+	}
+
+//	gzFile myfile = gzopen(filename, "wb");
+	FILE *fp = fopen(filename, "w");
+
+	set<DualData>::iterator it;
+	for (it = mydata.begin(); it != mydata.end(); ++it) {
+		fprintf(fp, "%u %u %16.10f %16.10f %16.10f \n", it->get_key()[0], it->get_key()[1],
+		    it->get_state()[0], it->get_state()[1], it->get_state()[2]);
+//		fprintf(fp, "%u %u %16.10f %16.10f %16.10f %16.10f %16.10f %16.10f\n", it->get_key()[0], it->get_key()[1],
+//		    it->get_state()[0], it->get_state()[1], it->get_state()[2],
+//		    it->get_adjoint()[0], it->get_adjoint()[1], it->get_adjoint()[2]);
+//		gzwrite(myfile, (it->get_key()), sizeof(unsigned) * 2);
+//		gzwrite(myfile, (it->get_state()), sizeof(double) * 3);
+	}
+
+	fclose(fp);
+
+//	gzclose (myfile);
+
+}
+
+

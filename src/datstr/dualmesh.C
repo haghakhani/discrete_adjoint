@@ -25,10 +25,16 @@ SolRec::SolRec(gzFile& myfile) :
 
 }
 
-void SolRec::write_table(gzFile& myfile) {
+void SolRec::write_table(gzFile& myfile,const int status) {
 
 	HashTable::write_table(myfile);
-	gzwrite(myfile, &last_solution_time_step, sizeof(int));
+
+	int record_time_step=last_solution_time_step;
+
+	if(status==DUAL)
+		record_time_step++;
+
+	gzwrite(myfile, &record_time_step, sizeof(int));
 
 }
 
@@ -84,7 +90,6 @@ void SolRec::wrtie_sol_to_disk(int myid) {
 	gzFile myfile;
 	char filename[50];
 	HashEntryPtr currentPtr;
-	double *solution, kact;
 
 	for (int step = first_solution_time_step; step < last_solution_time_step; ++step) {
 		int count = 0;
@@ -150,7 +155,6 @@ void SolRec::wrtie_sol_to_disk_hdf5(int myid) {
 
 	char hdf5file[50];
 	HashEntryPtr currentPtr;
-	double *solution, kact;
 
 	for (int step = first_solution_time_step; step < last_solution_time_step; ++step) {
 		int count = 0;
@@ -1139,6 +1143,15 @@ DualElem::DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 	Swet = elem2->Swet;
 	drypoint[0] = elem2->drypoint[0];
 	drypoint[1] = elem2->drypoint[1];
+
+}
+
+DualElem::DualElem(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, int myid) :
+		Element(myfile, NodeTable, matprops_ptr, myid) {
+
+	gzread(myfile, (adjoint), sizeof(double) * 3);
+//	gzread(myfile, (prev_adjoint), sizeof(double) * 3);
+//	gzread(myfile, (func_sens), sizeof(double) * 3);
 
 }
 
@@ -2466,6 +2479,16 @@ void DualElem::dual_check_refine_unrefine_repartition(SolRec* solrec, HashTable*
 	}
 }
 
+void DualElem::write_elem(gzFile& myfile) {
+
+	Element::write_elem(myfile);
+
+	gzwrite(myfile, (adjoint), sizeof(double) * 3);
+//	gzwrite(myfile, (prev_adjoint), sizeof(double) * 3);
+//	gzwrite(myfile, (func_sens), sizeof(double) * 3);
+
+}
+
 //==========================================================================
 
 ErrorElem::ErrorElem(Element* element) {
@@ -3142,6 +3165,13 @@ ErrorElem::ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 
 }
 
+ErrorElem::ErrorElem(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, int myid) :
+		Element(myfile, NodeTable, matprops_ptr, myid) {
+
+//	gzread(myfile, (adjoint), sizeof(double) * 3);
+
+}
+
 void ErrorElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double gamma) {
 	int j = 0, bc = 0;
 	/* check to see if this is a boundary */
@@ -3602,6 +3632,14 @@ void ErrorElem::update(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 		bilin_state[i] = elem2->bilin_state[i];
 		bilin_prev_state[i] = elem2->bilin_prev_state[i];
 	}
+
+}
+
+void ErrorElem::write_elem(gzFile& myfile) {
+
+	Element::write_elem(myfile);
+
+//	gzwrite(myfile, (adjoint), sizeof(double) * 3);
 
 }
 
