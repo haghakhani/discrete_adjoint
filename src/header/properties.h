@@ -362,8 +362,6 @@ struct TimeProps {
 	//! the non-dimensional time step
 	double dtime;
 
-	double vstarmax;
-
 	//! wallclock time shortly after titan starts running
 	time_t starttime;
 
@@ -388,7 +386,6 @@ struct TimeProps {
 		isave = 0;
 		time = 0.0;
 		dtime = 0.0;
-		vstarmax = 0.0;
 		// we clear for case that we need to use timpeprops again
 		dt.clear();
 	}
@@ -431,11 +428,10 @@ struct TimeProps {
 		return (iter == 1);
 	} //! checks if it's at first time step
 
-	//! checks if the simulation should end due to running out of time, running out of timesteps or meeting a legacy "stopped" criteria
-	int ifend(double vstar) {
-		if (vstar > vstarmax)
-			vstarmax = vstar;
-		return ((time >= ndmaxtime) || (iter > maxiter) || ((vstarmax > 2.0) && !(vstar > 1.0)));
+	//! checks if the simulation should end due to running out of time, running out of timesteps
+	int ifend() {
+
+		return ((time >= ndmaxtime) || (iter > maxiter));
 	}
 
 	//! checks if the simulation has passed 1/10th of the maximum time allowed

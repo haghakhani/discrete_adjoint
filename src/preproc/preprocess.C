@@ -49,7 +49,7 @@ using namespace std;
 
 //createfunky() is found in createfunky.C
 void createfunky(int NumProc, char *GISDbase, char *location, char *mapset, char *topomap,
-    int havelimits, double limits[4], int *node_count, Node **node, int *element_count,
+    int havelimits, double limits[4], long int *node_count, Node **node, long int *element_count,
     Element **element, int *force_count, int *constraint_count, Boundary **boundary,
     int *material_count, char ***materialnames, double **lambda, double **mu);
 
@@ -88,7 +88,8 @@ int main(int argc, char** argv) {
 	unsigned minkey[2] = { 0, 0 };
 	unsigned maxkey[2] = { 0, 0 };
 	int i; //generic indice
-	int node_count, element_count, force_count, constraint_count, material_count;
+	long int node_count, element_count;
+	int force_count, constraint_count, material_count;
 	long location; /* "current" location within the intermediate file (funky.bin
 	 or funky.dat), this is only used if you're reading from 
 	 an intermediate file (i.e. you're NOT passing the funky 
@@ -102,8 +103,8 @@ int main(int argc, char** argv) {
 	double limits[4]; /* optional (string) arguments of main() are requested 
 	 xmin, ymin, xmax, ymax (which are doubles) */
 	double *lambda, *mu; //internal and bed friction angles
-	double max[2] = { 0, 0 };
-	double min[2] = { 0, 0 };
+	double max[] = { 0., 0. };
+	double min[] = { 0., 0. };
 
 	Node *node;
 	Element *element, **ordering;

@@ -43,7 +43,7 @@ void myround(double *num) {
 void Read_material_data(int *material_count, char ***materialnames, double **lambda, double **mu);
 
 void createfunky(int NumProc, char *GISDbase, char *location, char *mapset, char *topomap,
-    int havelimits, double limits[4], int *node_count, Node **node, int *element_count,
+    int havelimits, double limits[4], long int *node_count, Node **node, long int *element_count,
     Element **element, int *force_count, int *constraint_count, Boundary **boundary,
     int *material_count, char ***materialnames, double **lambda, double **mu) {
 
@@ -207,11 +207,10 @@ void createfunky(int NumProc, char *GISDbase, char *location, char *mapset, char
 		double dX = (xmax - xmin) / NumDimDiv; //subdomain X length
 		double dY = (ymax - ymin) / NumDimDiv; //subdomain Y length
 
-		int nx = 2;
-		double dx = dX / nx;
-		int ny = 2;
-		double dy = dY / ny;
+		double dx = 0.5 * dX;
+		double dy = 0.5 * dY;
 
+		int nx =2 ,ny =2;
 		if (dy >= dx) {
 			ny = ceil(dY / dx);
 			dy = dY / ny;
@@ -240,27 +239,20 @@ void createfunky(int NumProc, char *GISDbase, char *location, char *mapset, char
 		double **bound_xy;
 		double *x, *y, **xy;
 
-		/*
-		 nx = (int) (ny*(0.00001+xlength/ylength));
-		 if(nx <= 0){
-		 nx = 10;
-		 ny = (int) (nx*(ylength/xlength));}
-		 */
+		dx = 0.5 * xlength / (double) nx;
+		dy = 0.5 * ylength / (double) ny;
 
 		//set up corner, side and bubble nodes
 		//first x nodes
 		x = CAllocD1(2 * nx + 1);
-		for (i = 0; i < 2 * nx + 1; i++){
-			x[i] = xlength * i / (2.0 * nx) + xmin;
-//			myround(&x[i]);
-		}
+		for (i = 0; i < 2 * nx + 1; i++)
+			x[i] = dx * i + xmin;
 
 		//now y nodes
 		y = CAllocD1(2 * ny + 1);
-		for (i = 0; i < 2 * ny + 1; i++){
-			y[i] = ylength * i / (2.0 * ny) + ymin;
-//			myround(&y[i]);
-		}
+		for (i = 0; i < 2 * ny + 1; i++)
+			y[i] = dy * i + ymin;
+
 
 		//determine how many nodes, elements, bc's and materials there are
 		*node_count = (2 * nx + 1) * (2 * ny + 1) - nx * ny;

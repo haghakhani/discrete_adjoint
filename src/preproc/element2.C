@@ -163,7 +163,7 @@ void Element::create_m_node(double* max, double *min) {
 	for (int j = 0; j < 2; j++) {
 		newPtr->node_coord[j] = 0;
 		for (int i = 0; i < 4; i++)
-			newPtr->node_coord[j] += element_nodes[i]->node_coord[j] / 4;
+			newPtr->node_coord[j] += 0.25 * element_nodes[i]->node_coord[j];
 	}
 	newPtr->written = 0;
 

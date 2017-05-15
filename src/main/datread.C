@@ -523,13 +523,15 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 		freadD(fp, &(YRange[1]));
 	} //max y
 
+	double inv_length_scale=1./matprops_ptr->LENGTH_SCALE;
+
 	double xminmax[2], yminmax[2];
 	for (i = 0; i < 2; i++) {
-		XRange[i] = XRange[i] / matprops_ptr->LENGTH_SCALE;
+		XRange[i] = XRange[i] * inv_length_scale;
 		xminmax[i] = XRange[i];
 	}
 	for (i = 0; i < 2; i++) {
-		YRange[i] = YRange[i] / matprops_ptr->LENGTH_SCALE;
+		YRange[i] = YRange[i] * inv_length_scale;
 		yminmax[i] = YRange[i];
 	}
 
@@ -547,7 +549,7 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 				freadD(fp, &(coord[j]));
 
 		for (j = 0; j < 2; j++) {
-			coord[j] = coord[j] / matprops_ptr->LENGTH_SCALE;
+			coord[j] = coord[j] * inv_length_scale;
 //			myround(&coord[j]);
 		}
 		NodeP = new Node(key, coord, matprops_ptr);

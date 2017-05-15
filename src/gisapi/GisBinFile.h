@@ -50,10 +50,10 @@ public:
 		isInteger_ = trueFalse;
 	}
 
-	bool readRow(int row, float* floatValues);
+	bool readRow(int row, double* floatValues);
 	bool readRow(int row, char* charValues);
 
-	bool readCompressdRow(int row, float* floatValues);
+	bool readCompressdRow(int row, double* floatValues);
 	bool readCompressdRow(int row, char* charValues);
 
 	bool read(float* floatValue);	//IEEE 32 bits

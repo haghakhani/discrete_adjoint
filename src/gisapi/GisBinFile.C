@@ -128,7 +128,7 @@ void GisBinFile::gotoPos(long newPos) {
 	file_.seekg(newPos);
 }
 
-bool GisBinFile::readRow(int row, float* floatValues) {
+bool GisBinFile::readRow(int row, double* floatValues) {
 	if (file_.good()) {
 		this->gotoPos(0L);
 		if (this->isCompressed())
@@ -174,7 +174,7 @@ bool GisBinFile::readRow(int row, char* charValues) {
 	return false;
 }
 
-bool GisBinFile::readCompressdRow(int row, float* floatValues) {
+bool GisBinFile::readCompressdRow(int row, double* floatValues) {
 	char nBytes;
 	if (file_.get(nBytes)) {
 		if ((int) nBytes == 4 || (int) nBytes == 8) {

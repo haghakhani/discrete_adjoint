@@ -73,22 +73,22 @@ typedef struct {
 	Gis_Head ghead;
 
 	//! array holding elevation data at GIS grid points
-	float **elev;
+	double **elev;
 
 	//! array holding x direction slope data at GIS grid points
-	float **xslope;
+	double **xslope;
 
 	//! array holding y direction slope data at GIS grid points
-	float **yslope;
+	double **yslope;
 
 	//! array holding slope (actually I think this is a mixed directions second order partial derivative first order x, first order y)) data at GIS grid points
-	float **slope;
+	double **slope;
 
 	//! array holding curvature (actually I think this is second derivative rather than curvature) in the x direction data at GIS grid points
-	float **xcurv;
+	double **xcurv;
 
 	//! array holding (actually I think this is second derivative rather than curvature) in the y direction data at GIS grid points
-	float **ycurv;
+	double **ycurv;
 } Gis_Grid;
 
 //! structure holding the GIS material map

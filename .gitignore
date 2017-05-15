@@ -6,7 +6,7 @@
 *.Po
 bin/
 .hg/
-
+build/
 # Compiled Dynamic libraries
 *.so
 *.dylib

@@ -66,10 +66,6 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 	MPI_Get_processor_name(processor_name, &namelen);
 
-	double start, end;
-
-	start = MPI_Wtime();
-
 	/* create new MPI datastructures for class objects */
 	MPI_New_Datatype();
 
@@ -202,7 +198,6 @@ int main(int argc, char *argv[]) {
 		 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 		 */
 		long element_counter = 0; // for performance count elements/timestep/proc
-		int ifstop = 0;
 		double max_momentum = 100;  //nondimensional
 
 		/* ifend(0.5*statprops.vmean) is a hack, the original intent (when we were
@@ -215,9 +210,8 @@ int main(int argc, char *argv[]) {
 
 		initialization_f.stop();
 
-		while (!(timeprops.ifend(0)) && !ifstop) //(timeprops.ifend(0.5*statprops.vmean)) && !ifstop)
+		while (!(timeprops.ifend())) //(timeprops.ifend(0.5*statprops.vmean)) && !ifstop)
 		{
-
 			/*
 			 *  mesh adaption routines
 			 */
@@ -229,12 +223,6 @@ int main(int argc, char *argv[]) {
 				matprops.frict_tiny = 0.1;
 			else
 				matprops.frict_tiny = 0.000000001;
-
-			//check for changes in topography and update if necessary
-			//may want to put an "if(timeprops.iter %20==0)" (20 is arbitrary) here
-			if (timeprops.iter == 200) {
-				update_topo(El_Table, Node_Table, myid, numprocs, &matprops, &timeprops, &mapnames);
-			}
 
 			if ((adaptflag != 0) && timeprops.ifrefine()) {
 
@@ -329,33 +317,6 @@ int main(int argc, char *argv[]) {
 				solrec->delete_jacobians_after_writes();
 //			write_alldata_ordered(El_Table, myid);
 			}
-
-#ifdef PERFTEST
-			int countedvalue=timeprops.iter%2+1;
-			int e_buckets=El_Table->get_no_of_buckets();
-			HashEntry* entryp;
-			for(i=0; i<e_buckets; i++)
-			{
-				entryp = *(El_Table->getbucketptr() + i);
-				while(entryp)
-				{
-					Element * EmTemp = (Element*)entryp->value;
-					assert(EmTemp);
-					assert(EmTemp->get_counted()!=countedvalue);
-
-					if((EmTemp->get_adapted_flag()>=NOTRECADAPTED)&&
-							(EmTemp->get_adapted_flag()<=BUFFER)
-					) {
-						//if this element doesn't belong on this processor don't involve
-						element_counter++;
-						EmTemp->put_counted(countedvalue);
-					}
-					entryp = entryp->next;
-				}
-			}
-
-			MPI_Barrier(MPI_COMM_WORLD);
-#endif
 		}
 
 		MPI_Barrier(MPI_COMM_WORLD);
@@ -424,25 +385,10 @@ int main(int argc, char *argv[]) {
 
 	print_timings(myid);
 
-#ifdef PERFTEST
-	long m = element_counter, ii;
-
-	MPI_Allreduce ( &element_counter, &ii, 1,
-			MPI_LONG, MPI_SUM, MPI_COMM_WORLD );
-
-	end=MPI_Wtime();
-	char perffilename[256];
-	sprintf(perffilename,"perform%04d.%04d",numprocs,myid);
-	FILE *fpperf=fopen(perffilename,"w");
-	fprintf(fpperf,"%d Finished -- used %ld elements of %ld total in %e seconds, %e\n",myid,m,ii,end-start, ii/(end-start));
-	fclose(fpperf);
-#endif
-
 //	Delete_Table(El_Table, Node_Table, solrec);
 	free_mpi_types();
 
 	MPI_Finalize();
 	return (0);
-
 }
 

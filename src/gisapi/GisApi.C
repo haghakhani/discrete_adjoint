@@ -49,9 +49,11 @@ int clear_gis_rast();
 int clear_gis_image();
 char **alloc_char_matrix(int nrows, int ncols);
 float **alloc_float_matrix(int rows, int cols);
+double **alloc_double_matrix(int rows, int cols);
 int free_char_matrix(char **m);
 int free_float_matrix(float **m);
-void get_grid(double resolution, double xmin, double xmax, double ymin, double ymax, float** ingrid,
+int free_double_matrix(double **m);
+void get_grid(double resolution, double xmin, double xmax, double ymin, double ymax, double** ingrid,
     double* outgrid);
 void get_int_grid(double resolution, double xmin, double xmax, double ymin, double ymax,
     char** ingrid, int* outgrid);
@@ -219,7 +221,7 @@ int Update_GIS_data(char* GISDbase, char* location, char* mapset, char* raster_f
 		int nrows = gis_grid.ghead.nrows;
 		int ncols = gis_grid.ghead.ncols;
 
-		if (!(gis_grid2.elev = alloc_float_matrix(nrows, ncols)))
+		if (!(gis_grid2.elev = alloc_double_matrix(nrows, ncols)))
 			return -3;	// memory error
 
 		strcpy(gisFullPath, gisPath);
@@ -270,7 +272,7 @@ int load_GIS_data() {
 		binFile.nRows(nrows);
 		binFile.nCols(ncols);
 
-		if (!(gis_grid.elev = alloc_float_matrix(nrows, ncols)))
+		if (!(gis_grid.elev = alloc_double_matrix(nrows, ncols)))
 			return -3;	// memory error
 
 		for (row = 0; row < nrows; row++)
@@ -645,7 +647,7 @@ int Get_number_of_columns(int *cols) {
 /***************************************************************/
 /*GETTING VALUES FOR SINGLE POINTS*/
 /***************************************************************/
-double interpolate_bilinear_at(double resolution, double x, double y, float** ingrid) {
+double interpolate_bilinear_at(double resolution, double x, double y, double** ingrid) {
 	double dx, dy, dx1, dy1, p1, p2;
 	int row, col;
 
@@ -764,12 +766,12 @@ int Get_slope(double resolution, double x, double y, double* xslope, double* ysl
 int Get_curvature(double resolution, double x, double y, double* xcurv, double* ycurv) {
 	int row, col, i, j;
 	int status;
-	float** xxcurv;
-	float** yycurv;
+	double** xxcurv;
+	double** yycurv;
 	double x1, y1;
 
-	xxcurv = alloc_float_matrix(2, 2);
-	yycurv = alloc_float_matrix(2, 2);
+	xxcurv = alloc_double_matrix(2, 2);
+	yycurv = alloc_double_matrix(2, 2);
 	if (!xxcurv || !yycurv)
 		return -3;
 
@@ -809,13 +811,13 @@ int Get_curvature(double resolution, double x, double y, double* xcurv, double* 
 					    + 2 * (gis_grid.xslope[row + i][col + j + 1] - gis_grid.xslope[row + i][col + j - 1])
 					    + (gis_grid.xslope[row + i + 1][col + j + 1]
 					        - gis_grid.xslope[row + i + 1][col + j - 1]))
-					    / (8 * (float) gis_grid.ghead.resolution);
+					    / (8 * (double) gis_grid.ghead.resolution);
 					yycurv[i][j] = ((gis_grid.yslope[row + i - 1][col + j - 1]
 					    - gis_grid.yslope[row + i + 1][col + j - 1])
 					    + 2 * (gis_grid.yslope[row + i - 1][col + j] - gis_grid.yslope[row + i + 1][col + j])
 					    + (gis_grid.yslope[row + i - 1][col + j + 1]
 					        - gis_grid.yslope[row + i + 1][col + j + 1]))
-					    / (8 * (float) gis_grid.ghead.resolution);
+					    / (8 * (double) gis_grid.ghead.resolution);
 				}
 			}
 			x1 = x - gis_grid.ghead.xmin - gis_grid.ghead.resolution * (double) col;
@@ -827,8 +829,8 @@ int Get_curvature(double resolution, double x, double y, double* xcurv, double* 
 
 		}
 	}
-	free_float_matrix(xxcurv);
-	free_float_matrix(yycurv);
+	free_double_matrix(xxcurv);
+	free_double_matrix(yycurv);
 	return 0;
 }
 
@@ -1029,7 +1031,7 @@ int Get_curvature_grid(double resolution, double xmin, double xmax, double ymin,
 /* INTERNAL USE FUNCTIONS */
 /***************************************************************/
 
-void get_grid(double resolution, double xmin, double xmax, double ymin, double ymax, float** ingrid,
+void get_grid(double resolution, double xmin, double xmax, double ymin, double ymax, double** ingrid,
     double* outgrid) {
 	int row, col, i, j, li;
 	int irow, icol; /* initial row and column */
@@ -1181,12 +1183,12 @@ int clear_gis_grid() {
 	gis_grid.ghead.wymax = 0;
 	gis_grid.ghead.wresolution = 0;
 
-	free_float_matrix(gis_grid.elev);
-	free_float_matrix(gis_grid.xslope);
-	free_float_matrix(gis_grid.yslope);
-	free_float_matrix(gis_grid.slope);
-	free_float_matrix(gis_grid.xcurv);
-	free_float_matrix(gis_grid.ycurv);
+	free_double_matrix(gis_grid.elev);
+	free_double_matrix(gis_grid.xslope);
+	free_double_matrix(gis_grid.yslope);
+	free_double_matrix(gis_grid.slope);
+	free_double_matrix(gis_grid.xcurv);
+	free_double_matrix(gis_grid.ycurv);
 
 	gis_grid.elev = 0;
 	gis_grid.xslope = 0;
@@ -1259,6 +1261,21 @@ float **alloc_float_matrix(int nrows, int ncols) {
 	return 0;
 }
 
+double **alloc_double_matrix(int nrows, int ncols) {
+	double **m = 0;
+	int i;
+
+	if (m = (double **) calloc(nrows, sizeof(double *))) {
+		if (m[0] = (double *) calloc(nrows * ncols, sizeof(double))) {
+			for (i = 1; i < nrows; i++)
+				m[i] = m[i - 1] + ncols;
+		} else
+			return 0;
+		return m;
+	}
+	return 0;
+}
+
 char **alloc_char_matrix(int nrows, int ncols) {
 	char **m = 0;
 	int i;
@@ -1275,6 +1292,15 @@ char **alloc_char_matrix(int nrows, int ncols) {
 }
 
 int free_float_matrix(float **m) {
+	if (m) {
+		if (m[0])
+			free(m[0]);
+		free(m);
+	}
+	return 0;
+}
+
+int free_double_matrix(double **m) {
 	if (m) {
 		if (m[0])
 			free(m[0]);
@@ -1302,20 +1328,20 @@ int calculate_slope() {
 			return status;
 	}
 
-	free_float_matrix(gis_grid.xslope);
-	free_float_matrix(gis_grid.yslope);
-	free_float_matrix(gis_grid.slope);
+	free_double_matrix(gis_grid.xslope);
+	free_double_matrix(gis_grid.yslope);
+	free_double_matrix(gis_grid.slope);
 
-	free_float_matrix(gis_grid.xcurv);
-	free_float_matrix(gis_grid.ycurv);
+	free_double_matrix(gis_grid.xcurv);
+	free_double_matrix(gis_grid.ycurv);
 
-	if (!(gis_grid.xslope = alloc_float_matrix(gis_grid.ghead.nrows, gis_grid.ghead.ncols)))
+	if (!(gis_grid.xslope = alloc_double_matrix(gis_grid.ghead.nrows, gis_grid.ghead.ncols)))
 		return -3; /*memory error*/
 
-	if (!(gis_grid.yslope = alloc_float_matrix(gis_grid.ghead.nrows, gis_grid.ghead.ncols)))
+	if (!(gis_grid.yslope = alloc_double_matrix(gis_grid.ghead.nrows, gis_grid.ghead.ncols)))
 		return -3; /*memory error*/
 
-	if (!(gis_grid.slope = alloc_float_matrix(gis_grid.ghead.nrows, gis_grid.ghead.ncols)))
+	if (!(gis_grid.slope = alloc_double_matrix(gis_grid.ghead.nrows, gis_grid.ghead.ncols)))
 		return -3; /*memory error*/
 
 	for (row = 1; row < gis_grid.ghead.nrows - 1; row++) {
@@ -1324,13 +1350,13 @@ int calculate_slope() {
 			    - gis_grid.elev[row - 1][col - 1])
 			    + 2 * (gis_grid.elev[row][col + 1] - gis_grid.elev[row][col - 1])
 			    + (gis_grid.elev[row + 1][col + 1] - gis_grid.elev[row + 1][col - 1]))
-			    / (8 * (float) gis_grid.ghead.resolution);
+			    / (8 * (double) gis_grid.ghead.resolution);
 			gis_grid.yslope[row][col] = ((gis_grid.elev[row - 1][col - 1]
 			    - gis_grid.elev[row + 1][col - 1])
 			    + 2 * (gis_grid.elev[row - 1][col] - gis_grid.elev[row + 1][col])
 			    + (gis_grid.elev[row - 1][col + 1] - gis_grid.elev[row + 1][col + 1]))
-			    / (8 * (float) gis_grid.ghead.resolution);
-			gis_grid.slope[row][col] = (float) sqrt(
+			    / (8 * (double) gis_grid.ghead.resolution);
+			gis_grid.slope[row][col] = (double) sqrt(
 			    gis_grid.xslope[row][col] * gis_grid.xslope[row][col]
 			        + gis_grid.yslope[row][col] * gis_grid.yslope[row][col]);
 		}
@@ -1364,13 +1390,13 @@ int calculate_curvature() {
 			return status;
 	}
 
-	free_float_matrix(gis_grid.xcurv);
-	free_float_matrix(gis_grid.ycurv);
+	free_double_matrix(gis_grid.xcurv);
+	free_double_matrix(gis_grid.ycurv);
 
-	if (!(gis_grid.xcurv = alloc_float_matrix(gis_grid.ghead.nrows, gis_grid.ghead.ncols)))
+	if (!(gis_grid.xcurv = alloc_double_matrix(gis_grid.ghead.nrows, gis_grid.ghead.ncols)))
 		return -3; /*memory error*/
 
-	if (!(gis_grid.ycurv = alloc_float_matrix(gis_grid.ghead.nrows, gis_grid.ghead.ncols)))
+	if (!(gis_grid.ycurv = alloc_double_matrix(gis_grid.ghead.nrows, gis_grid.ghead.ncols)))
 		return -3; /*memory error*/
 
 	for (row = 1; row < gis_grid.ghead.nrows - 1; row++) {
@@ -1379,12 +1405,12 @@ int calculate_curvature() {
 			    - gis_grid.slope[row - 1][col - 1])
 			    + 2 * (gis_grid.slope[row][col + 1] - gis_grid.slope[row][col - 1])
 			    + (gis_grid.slope[row + 1][col + 1] - gis_grid.slope[row + 1][col - 1]))
-			    / (8 * (float) gis_grid.ghead.resolution);
+			    / (8 * (double) gis_grid.ghead.resolution);
 			gis_grid.ycurv[row][col] = ((gis_grid.slope[row - 1][col - 1]
 			    - gis_grid.slope[row + 1][col - 1])
 			    + 2 * (gis_grid.slope[row - 1][col] - gis_grid.slope[row + 1][col])
 			    + (gis_grid.slope[row - 1][col + 1] - gis_grid.slope[row + 1][col + 1]))
-			    / (8 * (float) gis_grid.ghead.resolution);
+			    / (8 * (double) gis_grid.ghead.resolution);
 		}
 	}
 	for (col = 1; col < gis_grid.ghead.ncols - 1; col++) {
