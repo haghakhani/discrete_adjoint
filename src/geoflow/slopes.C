@@ -22,7 +22,7 @@
 #include "../header/hpfem.h"
 #include "../header/geoflow.h"
 
-void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int dualcall) {
+void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, run_mode dualcall) {
 	int i;
 	//-------------------go through all the elements of the subdomain------------------------
 	//-------------------and   --------------------------
@@ -31,7 +31,7 @@ void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, i
 	/* mdj 2007-02 */
 	HashEntryPtr currentPtr;
 	Element* Curr_El;
-	if (dualcall == FORWARD) {
+	if (dualcall & FORWARD) {
 		for (i = 0; i < El_Table->get_no_of_buckets(); i++)
 			if (*(buck + i)) {
 				currentPtr = *(buck + i);
@@ -43,7 +43,7 @@ void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, i
 					currentPtr = currentPtr->next;
 				}
 			}
-	} else if (dualcall == DUAL) {
+	} else if (dualcall & ADJOINT) {
 		for (i = 0; i < El_Table->get_no_of_buckets(); i++)
 			if (*(buck + i)) {
 				currentPtr = *(buck + i);
@@ -61,7 +61,7 @@ void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, i
 					currentPtr = currentPtr->next;
 				}
 			}
-	} else {
+	} else if (dualcall & ERROR) {
 
 		for (i = 0; i < El_Table->get_no_of_buckets(); i++)
 			if (*(buck + i)) {

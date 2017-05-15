@@ -24,7 +24,7 @@ void update_bilinear_error_grid(MeshCTX* meshctx, PropCTX* propctx) {
 	double outflow = 0.;
 	double tiny = GEOFLOW_TINY;
 
-	slopes(El_Table, NodeTable, matprops_ptr, 2);
+	slopes(El_Table, NodeTable, matprops_ptr, ERROR);
 
 //	move_err_data(meshctx, propctx);
 

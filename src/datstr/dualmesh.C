@@ -25,13 +25,13 @@ SolRec::SolRec(gzFile& myfile) :
 
 }
 
-void SolRec::write_table(gzFile& myfile,const int status) {
+void SolRec::write_table(gzFile& myfile,run_mode mode) {
 
 	HashTable::write_table(myfile);
 
 	int record_time_step=last_solution_time_step;
 
-	if(status==DUAL)
+	if(mode & ADJOINT)
 		record_time_step++;
 
 	gzwrite(myfile, &record_time_step, sizeof(int));

@@ -59,9 +59,6 @@ const int NUM_STATE_VARS = 3;
 const int NUM_ADJ_EQS = 3;
 const int EFF_ELL = 9;
 
-const int FORWARD = 0;
-const int DUAL = 1;
-
 const size_t STRING_SIZE = 30;
 
 const double GEOFLOW_TINY = 1.e-04;

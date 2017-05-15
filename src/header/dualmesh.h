@@ -12,6 +12,7 @@
 #include "jacobian.h"
 #include <hdf5.h>
 #include "GMFG_hdfapi.h"
+#include "geoflow.h"
 
 class ErrorElem;
 
@@ -74,7 +75,7 @@ public:
 
 	Solution* lookup(unsigned* key, int iter);
 
-	void write_table(gzFile& myfile,const int status=0);
+	void write_table(gzFile& myfile,run_mode=NORMAL);
 
 };
 

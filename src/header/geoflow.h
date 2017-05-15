@@ -18,20 +18,20 @@
 #ifndef __GEOFLOW
 #define __GEOFLOW
 
-/* geoflow header file */
-#define WEIGHT_ADJUSTER 1
-
-#define NUM_FREEFALLS_2_STOP 2 //stopping criteria parameter
-//#define STOPCRIT_CHANGE_FLUX
-//#define STOPCRIT_CHANGE_BED
-//#define STOPCRIT_CHANGE_SOURCE
-//#define DO_EROSION
-
-//#define REFINE_LEVEL 3
 extern int REFINE_LEVEL; //make REFINE_LEVEL a global variable that can be changed set it in  Read_grid() (datread.C) or loadrun() (restart.C)
 extern double doubleKeyRange;
 //(mdj)2007-04-11 #define MIN_GENERATION -1 //minimum refinement level
 #define MIN_GENERATION -3 //minimum refinement level
+
+typedef enum{
+	FORWARD=0x01,
+	ADJOINT=0x02,
+	ERROR=0x04,
+	RESTART=0x08,
+	NORMAL=0x10
+}run_mode;
+
+#define WEIGHT_ADJUSTER 1
 
 //! non member C++ function that wraps the fortran correct_() function
 void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* matprops_ptr,
@@ -66,7 +66,7 @@ void setup_geoflow(HashTable* El_Table, HashTable* NodeTable, int myid, int nump
 void calc_d_gravity(HashTable* El_Table);
 
 //! this function calculates the spatial derivatives of the state variables
-void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, int dualcall);
+void slopes(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr, run_mode dualcall);
 
 //! this function computes k active/passive (which is necessary because of the use of the Coulomb friction model) calculates the wave speeds (eigen values of the flux jacobians) and based on them determines the maximum allowable timestep for this iteration.
 double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* matprops_ptr,

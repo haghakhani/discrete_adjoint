@@ -245,7 +245,7 @@ void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX
 //	assert(count == numelem);
 #endif
 
-	solrec->write_table(myfile, DUAL);
+	solrec->write_table(myfile, ADJOINT);
 
 	check = 5555;
 	gzwrite(myfile, &(check), sizeof(unsigned));

@@ -416,9 +416,9 @@ int main(int argc, char *argv[]) {
 		MeshCTX error_meshctx;
 		error_meshctx.el_table = Err_El_Table;
 		error_meshctx.nd_table = Err_Node_Table;
-		dual_solver(solrec, &dual_meshctx, &error_meshctx, &propctx);
+		dual_solver(solrec, &dual_meshctx, &error_meshctx, &propctx,RESTART);
 	} else
-		dual_solver(solrec, &meshctx, &propctx);
+		dual_solver(solrec, &meshctx, NULL, &propctx,NORMAL);
 	dual.stop();
 	total.stop();
 

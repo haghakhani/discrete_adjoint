@@ -37,7 +37,7 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 	/* pass off proc data here (really only need state_vars for off-proc neighbors) */
 	move_data(nump, myid, El_Table, NodeTable, timeprops_ptr);
 
-	slopes(El_Table, NodeTable, matprops_ptr, 0);
+	slopes(El_Table, NodeTable, matprops_ptr, FORWARD);
 
 	// get coefficients, eigenvalues, hmax and calculate the time step
 	double dt = get_coef_and_eigen(El_Table, NodeTable, matprops_ptr, fluxprops, timeprops_ptr, 0);

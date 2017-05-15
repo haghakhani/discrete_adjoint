@@ -32,15 +32,11 @@
 #include <iomanip>
 #include <fstream>
 using namespace std;
-//#include <unordered_map>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include <assert.h>
-//#undef SEEK_SET
-//#undef SEEK_END
-//#undef SEEK_CUR
 #include <mpi.h>
 #include "matrix.h"
 #include "hashtab.h"

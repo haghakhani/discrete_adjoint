@@ -16,9 +16,7 @@ void move_dual_data(MeshCTX* meshctx, PropCTX* propctx);
 
 void move_err_data(MeshCTX* meshctx, PropCTX* propctx);
 
-void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
-
-void dual_solver(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* error_meshctx, PropCTX* propctx);
+void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropCTX* propctx, run_mode mode);
 
 void restore(HashTable* El_Table, HashTable* NodeTable, Element* Curr_El, MatProps* matprops_ptr,
     int effelement, int j, int myid, double increment);

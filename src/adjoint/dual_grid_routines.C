@@ -60,7 +60,7 @@ void update_dual_grid(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 
 //this function computes slopes based on prev_state_vars and dh/dh_e where h_e is pile height in neighbor element
 // we need this term to compute jacobian of elements
-	slopes(El_Table, NodeTable, matprops_ptr, 1);
+	slopes(El_Table, NodeTable, matprops_ptr, ADJOINT);
 
 //	move_dual_data(meshctx, propctx);
 
