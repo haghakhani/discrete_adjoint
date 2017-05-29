@@ -452,6 +452,15 @@ struct TimeProps {
 			return 0;
 	}
 
+	void adjust_save_time(){
+
+		if (ndnextsave>ndmaxtime){
+			isave-=2;
+			ndnextsave=((isave + 1) * timesave) / TIME_SCALE;
+		}
+	}
+
+
 	void update_savetime() {
 		isave--;
 		ndnextsave = ((isave + 1) * timesave) / TIME_SCALE;

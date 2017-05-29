@@ -81,18 +81,28 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropC
 	TimeProps* timeprops_ptr = propctx->timeprops;
 	MapNames* mapname_ptr = propctx->mapnames;
 	MatProps* matprops_ptr = propctx->matprops;
-	int myid = propctx->myid, numprocs = propctx->numproc;
+	int myid = propctx->myid;
 	int maxiter;
 	MeshCTX dual_meshctx;
-	HashTable *Dual_El_Tab,*NodeTable,*Err_El_Tab,*Err_Nod_Tab;
+	HashTable *Dual_El_Tab,*NodeTable;
 
-	if (mode & RESTART){
+	timeprops_ptr->adjust_save_time();
 
-	 Dual_El_Tab = meshctx->el_table;
+	timeprops_ptr->update_savetime();
+
+#ifdef Error
+	HashTable *Err_El_Tab, *Err_Nod_Tab;
+#endif
+
+	if (mode & (ADJOINT|RESTART)){
+
+	Dual_El_Tab = meshctx->el_table;
 	NodeTable = meshctx->nd_table;
 
+#ifdef Error
 	 Err_El_Tab = error_meshctx->el_table;
 	 Err_Nod_Tab = error_meshctx->nd_table;
+#endif
 
 	maxiter = timeprops_ptr->iter-1;
 
@@ -265,7 +275,9 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropC
 #endif
 		if (timeprops_ptr->ifsave_adj()) {
 			move_dual_data(&dual_meshctx, propctx);
+#ifdef Error
 			move_err_data(error_meshctx, propctx);
+#endif
 			save_dual(&dual_meshctx, error_meshctx, propctx, solrec);
 		}
 //for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional

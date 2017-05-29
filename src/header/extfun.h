@@ -99,13 +99,13 @@ extern void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable**
     MatProps* matprops_ptr, OutLine* outline_ptr, SolRec** solrec);
 
 //! this function loads the restart file, recreates the hashtables and restores the saved nodes and elements.  Only one readstatement per Node is performed and one or two per Element depending upon the Element's boundary conditions so it is very fast.  Keith, who wrote this, believes a slightly cleaner solution is to add/move functionality to useful_lib.h and useful_lib.C to pack/unpack variables into an unsigned array, which is what should be done if Read_grid is ever rewritten.
-extern int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable,
-    MatProps* matprops_ptr, TimeProps* timeprops_ptr, MapNames *mapnames_ptr, int *adaptflag_ptr,
-    int *order_flag_ptr, StatProps* statprops_ptr, DISCHARGE* discharge_ptr, OutLine* outline_ptr);
+extern int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable, MatProps* matprops_ptr,
+    TimeProps* timeprops_ptr, MapNames *mapnames_ptr, int *adaptflag_ptr, int *order_flag_ptr,
+	StatProps* statprops_ptr, DISCHARGE* discharge_ptr, OutLine* outline_ptr);
 
-extern int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable,
+extern run_mode loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable,
     HashTable** Err_NodeTable, HashTable** Err_ElemTable, SolRec** solrec, MatProps* matprops_ptr,
-    TimeProps* timeprops_ptr, OutLine* outline);
+    TimeProps* timeprops_ptr, OutLine* outline, char* prefix, char* iter);
 
 extern void write_alldata_ordered(HashTable* El_table, char filename[50]);
 

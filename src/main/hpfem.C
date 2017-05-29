@@ -47,8 +47,6 @@ int main(int argc, char *argv[]) {
 	initialization_f.start();
 	MPI_Init(&argc, &argv);
 
-	int i; //-- counters
-
 	HashTable *Node_Table, *Err_Node_Table;
 	HashTable *El_Table, *Err_El_Table;
 
@@ -57,10 +55,9 @@ int main(int argc, char *argv[]) {
 	memuse.usedmem = 0;
 
 	//-- MPI
-	int myid, master, numprocs;
+	int myid, numprocs;
 	int namelen;
 	char processor_name[MPI_MAX_PROCESSOR_NAME];
-	MPI_Status status;
 
 	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 	MPI_Comm_rank(MPI_COMM_WORLD, &myid);
@@ -76,7 +73,6 @@ int main(int argc, char *argv[]) {
 	double epsilon = 1., intfrictang = 1, *bedfrictang = NULL, gamma = 1;
 	double frict_tiny = .1, mu = 1.0e-03, rho = 1600;
 	char **matnames = NULL;
-	int xdmerr;
 
 	StatProps statprops;
 	MatProps matprops(material_count, matnames, intfrictang, bedfrictang, mu, rho, epsilon, gamma,
@@ -94,7 +90,6 @@ int main(int argc, char *argv[]) {
 	int adaptflag;
 	int rescomp = 0;
 	int adjflag = 0;
-	double end_time = 10000.0;
 
 	int OUTPUT = 0; //Hossein generated this flag to turn off writing output in forward run
 	/*
@@ -108,19 +103,15 @@ int main(int argc, char *argv[]) {
 	 order_flag == 2 means use second order method
 	 */
 	int viz_flag = 0, order_flag, savefileflag = 1; //savefileflag will be flipped so first savefile will end in 0
-	int Init_Node_Num, Init_Elem_Num, srctype;
-	double v_star; // v/v_slump
-	double nz_star; /* temporary... used for negligible velocity as stopping
-	 criteria paper... plan to include in v_star implicitly
-	 later */
+	int srctype;
 
 	Read_data(myid, &matprops, &pileprops, &statprops, &timeprops, &fluxprops, &adaptflag, &viz_flag,
 	    &order_flag, &mapnames, &discharge, &outline, &srctype);
 
-	int runcond = loadrun(myid, numprocs, &Node_Table, &El_Table, &Err_Node_Table, &Err_El_Table,
-	    &solrec, &matprops, &timeprops, &outline);
+	run_mode runcond = loadrun(myid, numprocs, &Node_Table, &El_Table, &Err_Node_Table, &Err_El_Table,
+	    &solrec, &matprops, &timeprops, &outline, argv[1], argv[2]);
 
-	if (!runcond) {
+	if (runcond & NORMAL) {
 		Read_grid(myid, numprocs, &Node_Table, &El_Table, &matprops, &outline, &solrec);
 
 		setup_geoflow(El_Table, Node_Table, myid, numprocs, &matprops, &timeprops);
@@ -149,7 +140,7 @@ int main(int argc, char *argv[]) {
 	propctx.myid = myid;
 	propctx.adapt_flag = adaptflag;
 
-	if (runcond != 2) {
+	if ((runcond & NORMAL) || (runcond & FORWARD)) {
 
 		if (myid == 0) {
 			for (int imat = 1; imat <= matprops.material_count; imat++)
@@ -179,7 +170,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef HAVE_HDF5
 		if(viz_flag&8)
-		xdmerr=write_xdmf(El_Table,Node_Table,&timeprops,&matprops,&mapnames,XDMF_NEW);
+		write_xdmf(El_Table,Node_Table,&timeprops,&matprops,&mapnames,XDMF_NEW);
 #endif
 
 		if (viz_flag & 16) {
@@ -187,6 +178,7 @@ int main(int argc, char *argv[]) {
 				grass_sites_header_output(&timeprops);
 			grass_sites_proc_output(El_Table, Node_Table, myid, &matprops, &timeprops);
 		}
+		initialization_f.stop();
 
 		/*
 		 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -197,18 +189,6 @@ int main(int argc, char *argv[]) {
 		 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 		 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 		 */
-		long element_counter = 0; // for performance count elements/timestep/proc
-		double max_momentum = 100;  //nondimensional
-
-		/* ifend(0.5*statprops.vmean) is a hack, the original intent (when we were
-		 intending to use vstar as a stopping criteria) whas to have the
-		 calculation when vstar dropped back down below 1, instead we're
-		 using the ifend() function to stop the simulation when the volume
-		 averaged velocity falls back down below 2 meters... this hack is only
-		 for the colima hazard map runs, otherwise pass ifend() a constant
-		 valued */
-
-		initialization_f.stop();
 
 		while (!(timeprops.ifend())) //(timeprops.ifend(0.5*statprops.vmean)) && !ifstop)
 		{
@@ -298,7 +278,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef HAVE_HDF5
 				if(viz_flag&8)
-				xdmerr=write_xdmf(El_Table,Node_Table,&timeprops,&matprops,&mapnames,XDMF_OLD);
+				write_xdmf(El_Table,Node_Table,&timeprops,&matprops,&mapnames,XDMF_OLD);
 #endif
 
 				if (viz_flag & 16) {
@@ -369,7 +349,7 @@ int main(int argc, char *argv[]) {
 
 	dual.start();
 
-	if (runcond == 2) {
+	if (runcond & RESTART) {
 		MeshCTX dual_meshctx;
 		dual_meshctx.el_table = El_Table;
 		dual_meshctx.nd_table = Node_Table;
@@ -377,9 +357,10 @@ int main(int argc, char *argv[]) {
 		MeshCTX error_meshctx;
 		error_meshctx.el_table = Err_El_Table;
 		error_meshctx.nd_table = Err_Node_Table;
-		dual_solver(solrec, &dual_meshctx, &error_meshctx, &propctx,RESTART);
-	} else
-		dual_solver(solrec, &meshctx, NULL, &propctx,NORMAL);
+		dual_solver(solrec, &dual_meshctx, &error_meshctx, &propctx, runcond);
+	} else if (runcond & NORMAL)
+		dual_solver(solrec, &meshctx, NULL, &propctx, NORMAL);
+
 	dual.stop();
 	total.stop();
 

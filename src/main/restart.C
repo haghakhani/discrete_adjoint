@@ -26,7 +26,6 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 	OutLine* outline = propctx.outline;
 	int numprocs = propctx.numproc;
 	int myid = propctx.myid;
-	int adapt_flag = propctx.adapt_flag;
 
 	HashTable* El_Table = meshctx.el_table;
 	HashTable* NodeTable = meshctx.nd_table;
@@ -34,12 +33,12 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 
 	move_data(numprocs, myid, El_Table, NodeTable, timeprops);
 
-	sprintf(filename, "restart_%04d", myid);
+	sprintf(filename, "forward_%04d_%06d", myid,timeprops->iter);
 	gzFile myfile = gzopen(filename, "wb");
 
-	unsigned status = 1;
+	run_mode status = FORWARD;
 
-	gzwrite(myfile, &(status), sizeof(unsigned));
+	gzwrite(myfile, &(status), sizeof(run_mode));
 //	gzwrite(myfile, &(min_dx[0]), sizeof(double));
 //	gzwrite(myfile, &(min_dx[1]), sizeof(double));
 //	gzwrite(myfile, &(min_gen), sizeof(double));
@@ -124,24 +123,23 @@ void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX
 
 	TimeProps* timeprops = propctx->timeprops;
 
-	int numprocs = propctx->numproc;
 	int myid = propctx->myid;
-	int adapt_flag = propctx->adapt_flag;
 
 	HashTable* El_Table = meshctx->el_table;
 	HashTable* NodeTable = meshctx->nd_table;
 
+#ifdef Error
 	HashTable* Err_El_Table = err_meshctx->el_table;
 	HashTable* Err_NodeTable = err_meshctx->nd_table;
-
+#endif
 	char filename[50];
 
-	sprintf(filename, "restart_%04d", myid);
+	sprintf(filename, "adjoint_%04d_%06d", myid,timeprops->iter);
 	gzFile myfile = gzopen(filename, "wb");
 
-	unsigned status = 2;
+	run_mode status = ADJOINT;
 
-	gzwrite(myfile, &(status), sizeof(unsigned));
+	gzwrite(myfile, &(status), sizeof(run_mode));
 //	gzwrite(myfile, &(min_dx[0]), sizeof(double));
 //	gzwrite(myfile, &(min_dx[1]), sizeof(double));
 //	gzwrite(myfile, &(min_gen), sizeof(double));
@@ -255,24 +253,25 @@ void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX
 	MPI_Barrier(MPI_COMM_WORLD);
 }
 
-int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable,
+run_mode loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable,
     HashTable** Err_NodeTable, HashTable** Err_ElemTable, SolRec** solrec, MatProps* matprops,
-    TimeProps* timeprops, OutLine* outline) {
+    TimeProps* timeprops, OutLine* outline, char prefix[7], char* iter) {
 
 	char filename[50];
-	sprintf(filename, "restart_%04d", myid);
-	//printf("filename=\"%s\"\n",filename);
+
+	sprintf(filename,"%7s_%04d_%06d",prefix,myid,atoi(iter));
+
 	gzFile myfile = gzopen(filename, "rb");
 
 	if (myfile == NULL)
-		return (0);
+		return ( run_mode( NORMAL | FORWARD));
 
 	// this is a flag that shows the place of restart. status=1 shows that the restart will take place in forward run and status=2
-	unsigned status = 0;
+	run_mode status;
 
-	gzread(myfile, (void*) &(status), sizeof(unsigned));
+	gzread(myfile, &(status), sizeof(run_mode));
 
-	if (status == 1) {
+	if (status & FORWARD) {
 
 //		gzread(myfile, (void*) &(min_dx[0]), sizeof(double));
 //		gzread(myfile, (void*) &(min_dx[1]), sizeof(double));
@@ -345,7 +344,9 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 
 		MPI_Barrier(MPI_COMM_WORLD);
 
-	} else if (status == 2) {
+		status= run_mode(status | RESTART);
+
+	} else if (status & ADJOINT) {
 
 //		gzread(myfile, (void*) &(min_dx[0]), sizeof(double));
 //		gzread(myfile, (void*) &(min_dx[1]), sizeof(double));
@@ -476,6 +477,8 @@ int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable
 		assert(check == 5555);
 
 		gzclose(myfile);
+
+		status= run_mode(status|RESTART);
 
 	}
 
