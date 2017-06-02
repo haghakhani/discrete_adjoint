@@ -83,7 +83,6 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	double *d_state_vars = EmTemp->get_d_state_vars();
 	double *gravity = EmTemp->get_gravity();
 	double *d_gravity = EmTemp->get_d_gravity();
-	double *zeta = EmTemp->get_zeta();
 	double *curvature = EmTemp->get_curvature();
 	double bedfrict = EmTemp->get_effect_bedfrict();
 	double *Influx = EmTemp->get_influx();
@@ -111,7 +110,6 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	double V_avg[DIMENSION];
 	V_avg[0] = Vsolid[0];
 	V_avg[1] = Vsolid[1];
-//	EmTemp->convect_dryline(V_avg, dt); //this is necessary
 
 //	int debuging, ggg = 0;
 //	if (EmTemp->get_ithelem() == 8251 /*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1 */
@@ -121,17 +119,9 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 //		debuging = ggg = 1;
 
 	double dragforce[2] = { 0., 0. };
-//	correct_(state_vars, prev_state_vars, fluxxp, fluxyp, fluxxm, fluxym, &tiny,
-//			&dtdx, &dtdy, &dt, d_state_vars, (d_state_vars + NUM_STATE_VARS),
-//			&(zeta[0]), &(zeta[1]), curvature, &(matprops_ptr->intfrict), &bedfrict,
-//			gravity, d_gravity, kactxy, &(matprops_ptr->frict_tiny), forceint,
-//			forcebed, dragforce, &do_erosion, eroded, Vsolid, &terminal_vel,
-//			&(matprops_ptr->epsilon), &IF_STOPPED, Influx);//31
 
 	int stop[2];
 	double orgSrcSgn[4];
-
-//	curvature[0]=curvature[1]=0.;
 
 	update_states(state_vars, prev_state_vars, //2
 	    fluxxp, fluxyp, fluxxm, fluxym, dtdx, //5
@@ -146,11 +136,6 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 		EmTemp->write_elem_info(NodeTable, filename, timeprops->iter, dt);
 	}
 #endif
-
-//	EmTemp->put_drag(dragforce);
-//	*forceint *= dx[0] * dx[1];
-//	*forcebed *= dx[0] * dx[1];
-//	*eroded *= dx[0] * dx[1];
 
 	bool print_vars = false;
 	for (i = 0; i < NUM_STATE_VARS; i++)

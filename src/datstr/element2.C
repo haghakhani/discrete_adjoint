@@ -4493,7 +4493,6 @@ void Element::write_elem_info(HashTable* NodeTable, char* filename, int iter, do
 void Element::write_elem(gzFile& myfile) {
 
 	gzwrite(myfile, &(generation), sizeof(int));
-	gzwrite(myfile, (lb_key), sizeof(unsigned) * 2);
 	gzwrite(myfile, (key), sizeof(unsigned) * 2);
 
 	for (int i = 0; i < 8; ++i) {
@@ -4510,14 +4509,12 @@ void Element::write_elem(gzFile& myfile) {
 	gzwrite(myfile, (neigh_gen), sizeof(int) * 8);
 	gzwrite(myfile, &(refined), sizeof(int));
 	gzwrite(myfile, &(adapted), sizeof(int));
-	gzwrite(myfile, &(new_old), sizeof(int));
 
 	gzwrite(myfile, (coord), sizeof(double) * 2);
 	gzwrite(myfile, (elm_loc), sizeof(int) * 2);
 	gzwrite(myfile, (state_vars), sizeof(double) * 3);
 	assert(state_vars[0] >= 0.);
 	gzwrite(myfile, (prev_state_vars), sizeof(double) * 3);
-	gzwrite(myfile, (zeta), sizeof(double) * 2);
 	gzwrite(myfile, &(effect_bedfrict), sizeof(double));
 	gzwrite(myfile, &(effect_tanbedfrict), sizeof(double));
 
@@ -4530,14 +4527,7 @@ void Element::write_elem(gzFile& myfile) {
 	gzwrite(myfile, d_gravity, sizeof(double) * 2);
 	gzwrite(myfile, &opposite_brother_flag, sizeof(int));
 
-	gzwrite(myfile, &shortspeed, sizeof(double));
 	gzwrite(myfile, &material, sizeof(int));
-	gzwrite(myfile, &stoppedflags, sizeof(int));
-	gzwrite(myfile, &Awet, sizeof(double));
-	gzwrite(myfile, &Swet, sizeof(double));
-	gzwrite(myfile, &iwetnode, sizeof(int));
-	gzwrite(myfile, &lb_weight, sizeof(double));
-	gzwrite(myfile, &ithelem, sizeof(int));
 }
 
 void Element::save_elem(FILE* fp, FILE *fptxt) {
@@ -4555,7 +4545,6 @@ Element::Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, i
 	myprocess = myid;
 
 	gzread(myfile, &(generation), sizeof(int));
-	gzread(myfile, (lb_key), sizeof(unsigned) * 2);
 	gzread(myfile, (key), sizeof(unsigned) * 2);
 
 	for (int i = 0; i < 8; ++i) {
@@ -4572,14 +4561,12 @@ Element::Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, i
 	gzread(myfile, (neigh_gen), sizeof(int) * 8);
 	gzread(myfile, &(refined), sizeof(int));
 	gzread(myfile, &(adapted), sizeof(int));
-	gzread(myfile, &(new_old), sizeof(int));
 
 	gzread(myfile, (coord), sizeof(double) * 2);
 	gzread(myfile, (elm_loc), sizeof(int) * 2);
 	gzread(myfile, (state_vars), sizeof(double) * 3);
 	assert(state_vars[0] >= 0.);
 	gzread(myfile, (prev_state_vars), sizeof(double) * 3);
-	gzread(myfile, (zeta), sizeof(double) * 2);
 	gzread(myfile, &(effect_bedfrict), sizeof(double));
 	gzread(myfile, &(effect_tanbedfrict), sizeof(double));
 
@@ -4594,15 +4581,7 @@ Element::Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, i
 	gzread(myfile, &opposite_brother_flag, sizeof(int));
 
 	//super extra
-	gzread(myfile, &shortspeed, sizeof(double));
 	gzread(myfile, &material, sizeof(int));
-	gzread(myfile, &stoppedflags, sizeof(int));
-	gzread(myfile, &Awet, sizeof(double));
-	gzread(myfile, &Swet, sizeof(double));
-	gzread(myfile, &iwetnode, sizeof(int));
-	gzread(myfile, &lb_weight, sizeof(double));
-	gzread(myfile, &ithelem, sizeof(int));
-
 
 //	if (adapted > 0) {
 //		calc_which_son();
