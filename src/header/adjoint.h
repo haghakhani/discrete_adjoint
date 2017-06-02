@@ -216,7 +216,7 @@ void free_mpi_types();
 void SetTransPack(TRANSKEY& transelem, unsigned* key, unsigned* father_key, unsigned son_key[][2]);
 
 void check_received_keys(SolRec* solrec, vector<TRANSKEY>& keys_to_check_vec,
-    vector<int>& keys_status, int iter, int &found);
+		int* keys_status, int iter, int &found, int receive_size);
 
 void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
 
