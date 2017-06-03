@@ -42,11 +42,10 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	double dtdy = dt / dx[1];
 	double kactxy[DIMENSION];
 
-	double tiny = GEOFLOW_TINY;
 	int xp = EmTemp->get_positive_x_side();
 	int yp = (xp + 1) % 4, xm = (xp + 2) % 4, ym = (xp + 3) % 4;
 
-	int ivar, i, j, k;
+	int ivar, i;
 	double fluxxp[NUM_STATE_VARS], fluxyp[NUM_STATE_VARS];
 	double fluxxm[NUM_STATE_VARS], fluxym[NUM_STATE_VARS];
 
@@ -66,18 +65,6 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	for (ivar = 0; ivar < NUM_STATE_VARS; ivar++)
 		fluxym[ivar] = nym->flux[ivar];
 
-#ifdef DO_EROSION
-	int do_erosion = 1;
-#else
-	int do_erosion=0;
-#endif
-
-#ifdef STOPCRIT_CHANGE_SOURCE
-	int IF_STOPPED=EmTemp->get_stoppedflags();
-#else
-	int IF_STOPPED = !(!EmTemp->get_stoppedflags());
-#endif
-
 	double *state_vars = EmTemp->get_state_vars();
 	double *prev_state_vars = EmTemp->get_prev_state_vars();
 	double *d_state_vars = EmTemp->get_d_state_vars();
@@ -85,9 +72,6 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	double *d_gravity = EmTemp->get_d_gravity();
 	double *curvature = EmTemp->get_curvature();
 	double bedfrict = EmTemp->get_effect_bedfrict();
-	double *Influx = EmTemp->get_influx();
-	double terminal_vel = matprops_ptr->v_terminal;
-	double navslip_coef = matprops_ptr->navslip_coef;
 
 	double Vsolid[DIMENSION];
 

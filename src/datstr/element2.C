@@ -32,7 +32,6 @@
 Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int mat,
     int* elm_loc_in, double pile_height, int myid, unsigned* opposite_brother) {
 
-	counted = 0; //for debugging only
 	adapted = NOTRECADAPTED;
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
@@ -45,27 +44,26 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 		father[ikey] = brothers[0][ikey] = brothers[1][ikey] = brothers[2][ikey] = brothers[3][ikey] =
 		    son[0][ikey] = son[1][ikey] = son[2][ikey] = son[3][ikey] = 0;
 
-	int i, j;
-	for (i = 0; i < 4; i++)
+	for (int i = 0; i < 4; i++)
 		son[i][0] = son[i][1] = brothers[i][0] = brothers[i][1] = NULL;
 	lb_key[0] = lb_key[1] = NULL;
 	lb_weight = 1.0;
 	new_old = OLD;
 	generation = 0; //--first generation
 	material = mat;
-	for (i = 0; i < EQUATIONS; i++)
+	for (int i = 0; i < EQUATIONS; i++)
 		el_error[i] = 0.0;
 
-	for (i = 0; i < KEYLENGTH; i++) {
+	for (int i = 0; i < KEYLENGTH; i++) {
 		father[i] = NULL;
 		key[i] = nodekeys[8][i]; //--using bubble key to represent the element
 	}
 
-	for (i = 0; i < 8; i++)
+	for (int i = 0; i < 8; i++)
 		for (int j = 0; j < KEYLENGTH; j++)
 			node_key[i][j] = nodekeys[i][j];
 
-	for (i = 0; i < 4; i++) {
+	for (int i = 0; i < 4; i++) {
 		neigh_proc[i] = n_pro[i];
 		neigh_proc[i + 4] = -2; //-- -2 means regular element
 		if (neigh_proc[i] != -1)
@@ -76,7 +74,7 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 				neighbor[i][j] = neighbor[i + 4][j] = NULL;
 	}
 
-	for (i = 0; i < 8; i++)
+	for (int i = 0; i < 8; i++)
 		neigh_gen[i] = 0;
 
 	refined = 0;
@@ -85,32 +83,32 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 	elm_loc[0] = elm_loc_in[0];
 	elm_loc[1] = elm_loc_in[1];
 	calc_which_son();
-	for (i = 0; i < KEYLENGTH; i++) {
+	for (int i = 0; i < KEYLENGTH; i++) {
 		brothers[which_son][i] = key[i];
 		brothers[(which_son + 2) % 4][i] = opposite_brother[i];
 	}
 
 	switch (which_son) {
 		case 0:
-			for (i = 0; i < KEYLENGTH; i++) {
+			for (int i = 0; i < KEYLENGTH; i++) {
 				brothers[1][i] = neighbor[1][i];
 				brothers[3][i] = neighbor[2][i];
 			}
 			break;
 		case 1:
-			for (i = 0; i < KEYLENGTH; i++) {
+			for (int i = 0; i < KEYLENGTH; i++) {
 				brothers[0][i] = neighbor[3][i];
 				brothers[2][i] = neighbor[2][i];
 			}
 			break;
 		case 2:
-			for (i = 0; i < KEYLENGTH; i++) {
+			for (int i = 0; i < KEYLENGTH; i++) {
 				brothers[1][i] = neighbor[0][i];
 				brothers[3][i] = neighbor[3][i];
 			}
 			break;
 		case 3:
-			for (i = 0; i < KEYLENGTH; i++) {
+			for (int i = 0; i < KEYLENGTH; i++) {
 				brothers[0][i] = neighbor[0][i];
 				brothers[2][i] = neighbor[1][i];
 			}
@@ -123,37 +121,27 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 	state_vars[2] = state_vars[1] = 0.;
 	if (state_vars[0] != 0)
 		state_vars[1] = state_vars[2] = 0.0001;
-	shortspeed = 0.0;
-
-	iwetnode = 8;
-	drypoint[0] = drypoint[1] = 0.0;
-	Awet = Swet = (pile_height > GEOFLOW_TINY) ? 1.0 : 0.0;
 
 	prev_state_vars[0] = pile_height;
 	prev_state_vars[1] = prev_state_vars[2] = 0.;
 	if (prev_state_vars[0] != 0)
 		prev_state_vars[1] = prev_state_vars[2] = 0.0001;
 
-	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
+	for (int i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
 		d_state_vars[i] = 0;
-	for (i = 0; i < NUM_STATE_VARS; i++)
+	for (int i = 0; i < NUM_STATE_VARS; i++)
 		Influx[i] = 0.0;
-	//printf("creating an original element\n");
-	stoppedflags = 2;
 
 	// initialize kactxy
 	kactxy[0] = kactxy[1] = 0.;
 	effect_kactxy[0] = effect_kactxy[1] = 0.;
 	effect_bedfrict = effect_tanbedfrict = 0.;
-
 }
 
 //used for refinement
 Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
     int elm_loc_in[], int gen_neigh[], int mat, Element *fthTemp, double *coord_in,
-    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr, int iwetnodefather,
-    double Awetfather, double *drypoint_in) {
-	counted = 0; //for debugging only
+    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr) {
 
 	adapted = NEWSON;
 
@@ -184,11 +172,6 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 		key[i] = nodekeys[8][i]; //--using buble key to represent the element
 	}
 
-//	int aa = 0, bb = 1;
-//	unsigned keyy[2] = { 3410598297, 2576980374 };
-//	if (key[0] == keyy[0] && key[1] == keyy[1])
-//		bb = aa;
-
 	elm_loc[0] = elm_loc_in[0];
 	elm_loc[1] = elm_loc_in[1];
 
@@ -216,23 +199,7 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 	dx[0] = .5 * fthTemp->dx[0];  //assume constant refinement
 	dx[1] = .5 * fthTemp->dx[1];
 
-	iwetnode = iwetnodefather;
-	drypoint[0] = drypoint_in[0];
-	drypoint[1] = drypoint_in[1];
-
-	double myfractionoffather;
-//	if ((Awetfather == 0.0) || (Awetfather == 1.0)) {
-//		Awet = Awetfather;
-//		myfractionoffather = 1.0;
-//	} else {
-//		Awet = convect_dryline(dx, 0.0); //dx is a dummy stand in for convection speed... value doesn't matter because it's being multiplied by a timestep of zero
-//		myfractionoffather = Awet / Awetfather;
-//	}
-	myfractionoffather=1.0;
-	Swet = 1.0;
-
-	double dxx = coord_in[0] - fthTemp->coord[0];
-	double dyy = coord_in[1] - fthTemp->coord[1];
+	double myfractionoffather=1.0;
 
 	find_positive_x_side(NodeTable);
 	calc_topo_data(matprops_ptr);
@@ -244,22 +211,15 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 
 	calc_which_son();
 
-	stoppedflags = fthTemp->stoppedflags;
-
 	for (int i = 0; i < NUM_STATE_VARS; i++) {
 		state_vars[i] = fthTemp->state_vars[i] * myfractionoffather;
 		prev_state_vars[i] = fthTemp->prev_state_vars[i] * myfractionoffather;
-		shortspeed = fthTemp->shortspeed;
 	}
-
-	return;
 }
 /*********************************
  making a father element from its sons
  *****************************************/
 Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr) {
-	counted = 0; //for debugging only
-
 	adapted = NEWFATHER;
 
 	for (int i = 0; i < NUM_STATE_VARS; i++) {
@@ -278,11 +238,6 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 	for (ikey = 0; ikey < KEYLENGTH; ikey++)
 		key[ikey] = *(sons[2]->getNode() + ikey);
 
-//	unsigned keyy[2] = { 541694361, 2576980377 };
-//	int aa = 0, bb = 1;
-//	if (key[0] == keyy[0] && key[1] == keyy[1])
-//		bb = aa;
-
 	for (ison = 0; ison < 4; ison++) {
 		sons[ison]->put_adapted_flag(OLDSON);
 		for (ikey = 0; ikey < KEYLENGTH; ikey++) {
@@ -291,21 +246,16 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 		}
 	}
 
-	//for(i=0;i<4;i++) son[i][0]=son[i][1]=brothers[i][0]=brothers[i][1]=NULL;
 	lb_key[0] = lb_key[1] = NULL;
 	lb_weight = 1.0;
 	new_old = NEW;
 	unsigned* son_nodes[4];
 	opposite_brother_flag = 0;
-	stoppedflags = 2;
 	for (i = 0; i < EQUATIONS; i++)
 		el_error[i] = 0.0;
 
-	for (ison = 0; ison < 4; ison++) {
+	for (ison = 0; ison < 4; ison++)
 		son_nodes[ison] = sons[ison]->getNode();
-		if (sons[ison]->stoppedflags < stoppedflags)
-			stoppedflags = sons[ison]->stoppedflags;
-	}
 
 	for (ikey = 0; ikey < KEYLENGTH; ikey++) {
 		father[ikey] = NULL;
@@ -531,25 +481,6 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 			prev_state_vars[i] += *(sons[j]->get_prev_state_vars() + i) * 0.25;
 		}
 	}
-
-	Awet = 0.0;
-	for (int ison = 0; ison < 4; ison++)
-		Awet += sons[ison]->get_Awet();
-	Awet *= 0.25;
-
-	//uninitialized flag values... will fix shortly
-	drypoint[0] = drypoint[1] = 0.0;
-	iwetnode = 8;
-	Swet = 1.0;
-
-	//calculate the shortspeed
-	shortspeed = 0.0;
-	for (j = 0; j < 4; j++)
-		shortspeed += *(sons[j]->get_state_vars()) * sons[j]->get_shortspeed();
-	if (state_vars[0] > 0.0)
-		shortspeed /= (4.0 * state_vars[0]);
-
-	return;
 }
 
 unsigned* Element::getfather() {
@@ -1186,624 +1117,6 @@ void Element::calc_wet_dry_orient(HashTable *El_Table) {
 //		Awet = (state_vars[0] > GEOFLOW_TINY) ? 1.0 : 0.0;
 
 	return;
-}
-
-// The Element member function calc_elem_edge_wet_fraction()
-// returns the "how much of this is wet" fraction of side that this
-// element shares with its ineigh-th neighboring element.
-// This fraction is used to determine wether or not to "zero" the
-// state variables used to compute physical fluxes through a "dry" side,
-// as part of "thin layer control".
-// Keith wrote this function may 2007
-double Element::calc_elem_edge_wet_fraction(int ineigh, int ifusewholeside) {
-
-	if (Awet == 0.0)
-		return 0.0;
-
-	if (Awet == 1.0)
-		return 1.0;
-
-	if (iwetnode == 8) {
-		printf("calc_elem_edge_wet_fraction(): key={%20u,%20u} adapted=%d\n", key[0], key[1], adapted);
-		printf("  iwetnode=%d, Awet=%g, Swet=%g, drypoint={%g,%g}\n", iwetnode, Awet, Swet, drypoint[0],
-		    drypoint[1]);
-		assert(iwetnode != 8);
-	}
-
-	if (!((0.0 < Awet) && (Awet < 1.0))) {
-		printf("Awet=%g\n", Awet);
-		fflush(stdout);
-		assert((0.0 < Awet) && (Awet < 1.0));
-	}
-	int ineighm4 = ineigh % 4;
-
-	if ((neigh_gen[ineighm4 + 4] == -2) || ifusewholeside) {
-		//there is only one neighbor on this side
-		switch (iwetnode) {
-			case 0:
-				switch (ineighm4) {
-					case 3:
-					case 0:
-						if (Awet > 0.5)
-							return 1.0;
-						else
-							return Swet;
-					case 2:
-					case 1:
-						if (Awet > 0.5)
-							return Swet;
-						else
-							return 0.0;
-					default:
-						assert(0);
-				}
-			case 1:
-				switch (ineighm4) {
-					case 0:
-					case 1:
-						if (Awet > 0.5)
-							return 1.0;
-						else
-							return Swet;
-					case 3:
-					case 2:
-						if (Awet > 0.5)
-							return Swet;
-						else
-							return 0.0;
-					default:
-						assert(0);
-				}
-			case 2:
-				switch (ineighm4) {
-					case 1:
-					case 2:
-						if (Awet > 0.5)
-							return 1.0;
-						else
-							return Swet;
-					case 0:
-					case 3:
-						if (Awet > 0.5)
-							return Swet;
-						else
-							return 0.0;
-					default:
-						assert(0);
-				}
-			case 3:
-				switch (ineighm4) {
-					case 2:
-					case 3:
-						if (Awet > 0.5)
-							return 1.0;
-						else
-							return Swet;
-					case 1:
-					case 0:
-						if (Awet > 0.5)
-							return Swet;
-						else
-							return 0.0;
-					default:
-						assert(0);
-				}
-			case 4:
-				switch (ineighm4) {
-					case 0:
-						return 1.0;
-					case 3:
-					case 1:
-						return Swet;
-					case 2:
-						return 0.0;
-					default:
-						assert(0);
-				}
-			case 5:
-				switch (ineighm4) {
-					case 1:
-						return 1.0;
-					case 0:
-					case 2:
-						return Swet;
-					case 3:
-						return 0.0;
-					default:
-						assert(0);
-				}
-			case 6:
-				switch (ineighm4) {
-					case 2:
-						return 1.0;
-					case 1:
-					case 3:
-						return Swet;
-					case 0:
-						return 0.0;
-					default:
-						assert(0);
-				}
-			case 7:
-				switch (ineighm4) {
-					case 3:
-						return 1.0;
-					case 2:
-					case 0:
-						return Swet;
-					case 1:
-						return 0.0;
-					default:
-						assert(0);
-				}
-			default:
-				assert(0);
-		}
-	} else {
-		//there is are 2 more refined neighbors on this side
-		//therefore need to "double" the wetness (possibly
-		//minus 0.5) for each
-		switch (iwetnode) {
-			case 0:
-				switch (ineigh) {
-					case 7:
-					case 0:
-						if (Awet > 0.125)
-							return 1.0;
-						else
-							return 2.0 * Swet;
-					case 3:
-					case 4:
-						if (Awet <= 0.125)
-							return 0.0;
-						else if (Awet > 0.5)
-							return 1.0;
-						else
-							return 2.0 * (Swet - 0.5);
-					case 6:
-					case 1:
-						if (Awet <= 0.5)
-							return 0.0;
-						else if (Awet > 0.875)
-							return 1.0;
-						else
-							return 2.0 * Swet;
-					case 2:
-					case 5:
-						if (Awet <= 0.875)
-							return 0.0;
-						else
-							return 2.0 * (Swet - 0.5);
-					default:
-						assert(0);
-				}
-			case 1:
-				switch (ineigh) {
-					case 4:
-					case 1:
-						if (Awet > 0.125)
-							return 1.0;
-						else
-							return 2.0 * Swet;
-					case 0:
-					case 5:
-						if (Awet <= 0.125)
-							return 0.0;
-						else if (Awet > 0.5)
-							return 1.0;
-						else
-							return 2.0 * (Swet - 0.5);
-					case 7:
-					case 2:
-						if (Awet <= 0.5)
-							return 0.0;
-						else if (Awet > 0.875)
-							return 1.0;
-						else
-							return 2.0 * Swet;
-					case 3:
-					case 6:
-						if (Awet <= 0.875)
-							return 0.0;
-						else
-							return 2.0 * (Swet - 0.5);
-					default:
-						assert(0);
-				}
-			case 2:
-				switch (ineigh) {
-					case 5:
-					case 2:
-						if (Awet > 0.125)
-							return 1.0;
-						else
-							return 2.0 * Swet;
-					case 1:
-					case 6:
-						if (Awet <= 0.125)
-							return 0.0;
-						else if (Awet > 0.5)
-							return 1.0;
-						else
-							return 2.0 * (Swet - 0.5);
-					case 4:
-					case 3:
-						if (Awet <= 0.5)
-							return 0.0;
-						else if (Awet > 0.875)
-							return 1.0;
-						else
-							return 2.0 * Swet;
-					case 0:
-					case 7:
-						if (Awet <= 0.875)
-							return 0.0;
-						else
-							return 2.0 * (Swet - 0.5);
-					default:
-						assert(0);
-				}
-			case 3:
-				switch (ineigh) {
-					case 5:
-					case 2:
-						if (Awet > 0.125)
-							return 1.0;
-						else
-							return 2.0 * Swet;
-					case 1:
-					case 6:
-						if (Awet <= 0.125)
-							return 0.0;
-						else if (Awet > 0.5)
-							return 1.0;
-						else
-							return 2.0 * (Swet - 0.5);
-					case 4:
-					case 3:
-						if (Awet <= 0.5)
-							return 0.0;
-						else if (Awet > 0.875)
-							return 1.0;
-						else
-							return 2.0 * Swet;
-					case 0:
-					case 7:
-						if (Awet <= 0.875)
-							return 0.0;
-						else
-							return 2.0 * (Swet - 0.5);
-					default:
-						assert(0);
-				}
-			case 4:
-				switch (ineigh) {
-					case 0:
-					case 4:
-						return 1.0;
-					case 7:
-					case 1:
-						if (Awet > 0.5)
-							return 1;
-						else
-							return 2.0 * Swet;
-					case 3:
-					case 5:
-						if (Awet > 0.5)
-							return 2.0 * (Swet - 0.5);
-						else
-							return 0.0;
-					case 6:
-					case 2:
-						return 0.0;
-					default:
-						assert(0);
-				}
-			case 5:
-				switch (ineigh) {
-					case 1:
-					case 5:
-						return 1.0;
-					case 4:
-					case 2:
-						if (Awet > 0.5)
-							return 1;
-						else
-							return 2.0 * Swet;
-					case 0:
-					case 6:
-						if (Awet > 0.5)
-							return 2.0 * (Swet - 0.5);
-						else
-							return 0.0;
-					case 7:
-					case 3:
-						return 0.0;
-					default:
-						assert(0);
-				}
-			case 6:
-				switch (ineigh) {
-					case 2:
-					case 6:
-						return 1.0;
-					case 5:
-					case 3:
-						if (Awet > 0.5)
-							return 1;
-						else
-							return 2.0 * Swet;
-					case 1:
-					case 7:
-						if (Awet > 0.5)
-							return 2.0 * (Swet - 0.5);
-						else
-							return 0.0;
-					case 4:
-					case 0:
-						return 0.0;
-					default:
-						assert(0);
-				}
-			case 7:
-				switch (ineigh) {
-					case 3:
-					case 7:
-						return 1.0;
-					case 6:
-					case 0:
-						if (Awet > 0.5)
-							return 1;
-						else
-							return 2.0 * Swet;
-					case 2:
-					case 4:
-						if (Awet > 0.5)
-							return 2.0 * (Swet - 0.5);
-						else
-							return 0.0;
-					case 5:
-					case 1:
-						return 0.0;
-					default:
-						assert(0);
-				}
-			default:
-				assert(0);
-		}
-	}
-	assert(0);
-	return 0.0;
-}
-
-// this function relaxes the zeroing of fluxes through cell edges that are completely dry at the beginning of the timestep, as indicated by calc_elem_edge_wet_fraction(), but will be at least partly wet by the end of the timestep... Keith wrote this function June 2007
-double Element::calc_elem_edge_wetness_factor(int ineigh, double dt) {
-
-#ifdef DISABLE_DRY_FLUX_ZEROING
-//this disables the zeroing of fluxes through dry sides facet of thin layer control
-	return 1.0;
-#endif
-
-	if (!(dt > 0.0))
-		//is this a prank call?!! why are you bothering me with a timestep of zero?
-		return 0.0;
-
-//handle completely wet or completely dry cells as a special case
-	if ((iwetnode == 8) || !(state_vars[0] > GEOFLOW_TINY))
-		return Awet;			//one or zero;
-
-	double wetnessfactor = calc_elem_edge_wet_fraction(ineigh % 4, 1);
-//for simpleness ...
-// may change later but will need to change most of this function's logic
-	if (wetnessfactor > 0.0)
-		return 1.0;
-	printf("yes, I am running (calc_edge_wetness_factor) \n");
-//the logic below this point is only to compute the time averaged wetness
-//of a cell side that is completely dry at the beginning of the timestep
-//assuming the cell is at least partially wet (pileheight>GEOFLOW_TINY) at
-//the beginning of the timestep... if a edge is partially or completely wet,
-//a wetness factor of 1 has already been returned.
-
-//this is the rarefaction speed, and is positive when moving in the
-//direction starting from the most wet node heading to the most dry node
-	double speed;
-//the ammount of time until the completely dry edge will be partially wet.
-	double dtnotwet = 0.0;
-
-	double a;			//speed of sound
-	double VxVy[2];	//will be rarefaction velocity non-dimensionalized by cell size
-	VxVy[0] = state_vars[1] / state_vars[0];
-	if (VxVy[0] != 0.0) {
-		a = sqrt(kactxy[0] * state_vars[0] * gravity[2]);
-		VxVy[0] *= (1.0 + 2.0 * a / fabs(VxVy[0])) / dx[0];
-	}
-
-	VxVy[1] = state_vars[2] / state_vars[0];
-	if (VxVy[1] != 0.0) {
-		a = sqrt(kactxy[1] * gravity[2] * state_vars[0]);
-		VxVy[1] *= (1.0 + 2.0 * a / fabs(VxVy[1])) / dx[1];
-	}
-
-	double doubleswap = 1.0 / sqrt(2.0);
-	switch (iwetnode) {
-		case 0:
-			speed = VxVy[0] * doubleswap + VxVy[1] * doubleswap;
-			if (speed <= 0.0)
-				return 0.0;
-			dtnotwet = (0.0 - drypoint[0]) / speed;
-			if (dtnotwet >= dt)
-				return 0.0;
-			return 1.0 - dtnotwet / dt;
-		case 1:
-			speed = VxVy[0] * -doubleswap + VxVy[1] * doubleswap;
-			if (speed <= 0.0)
-				return 0.0;
-			dtnotwet = (0.0 + drypoint[0]) / speed;
-			if (dtnotwet >= dt)
-				return 0.0;
-			return 1.0 - dtnotwet / dt;
-		case 2:
-			speed = VxVy[0] * doubleswap + VxVy[1] * -doubleswap;
-			if (speed <= 0.0)
-				return 0.0;
-			dtnotwet = (0.0 + drypoint[0]) / speed;
-			if (dtnotwet >= dt)
-				return 0.0;
-			return 1.0 - dtnotwet / dt;
-		case 3:
-			speed = VxVy[0] * -doubleswap + VxVy[1] * -doubleswap;
-			if (speed <= 0.0)
-				return 0.0;
-			dtnotwet = (0.0 - drypoint[0]) / speed;
-			if (dtnotwet >= dt)
-				return 0.0;
-			return 1.0 - dtnotwet / dt;
-		case 4:
-			speed = VxVy[1];
-			if (speed <= 0.0)
-				return 0.0;
-			dtnotwet = (0.5 - drypoint[1]) / speed;
-			if (dtnotwet >= dt)
-				return 0.0;
-			return 1.0 - dtnotwet / dt;
-		case 5:
-			speed = -VxVy[0];
-			if (speed <= 0.0)
-				return 0.0;
-			dtnotwet = (0.5 + drypoint[0]) / speed;
-			if (dtnotwet >= dt)
-				return 0.0;
-			return 1.0 - dtnotwet / dt;
-		case 6:
-			speed = -VxVy[1];
-			if (speed <= 0.0)
-				return 0.0;
-			dtnotwet = (0.5 + drypoint[1]) / speed;
-			if (dtnotwet >= dt)
-				return 0.0;
-			return 1.0 - dtnotwet / dt;
-		case 7:
-			speed = VxVy[0];
-			if (speed <= 0.0)
-				return 0.0;
-			dtnotwet = (0.5 - drypoint[0]) / speed;
-			if (dtnotwet >= dt)
-				return 0.0;
-			return 1.0 - dtnotwet / dt;
-		default:
-			assert(0);
-	}
-	return 0.0;
-}
-
-// The Element member function convect_dryline() calculates the coordinates of
-// the "drypoint" in the element's local coordinate system.  This is used to
-// determine the location of the wet-dry front (or dryline) inside this element,
-// which in turn is used (in conjunction with the location of "iwetnode" -
-// which indicates which side of the dryline is wet) to determine the fraction
-// of its total area that is wet (Awet).  Awet is then returned by the function.
-// Keith wrote this function may 2007
-double Element::convect_dryline(double VxVy[2], double dt) {
-
-//if dt>0.0 is used to disable Awet==0 during refinement, when split of a
-//father's conservative variables have not yet been set, and need to be set
-//based on the ratio's of Awet between the new sons... this is also why
-//the function returns Awet rather than not returning any number
-	if ((state_vars[0] <= GEOFLOW_TINY) && (dt > 0.0)) {
-		Awet = 0.0;
-		return Awet;
-	}
-
-	if (iwetnode == 8) {
-		Awet = 1.0;
-		return Awet;
-	}
-
-	drypoint[0] += VxVy[0] * dt / dx[0];
-	drypoint[1] += VxVy[1] * dt / dx[1];
-
-	switch (iwetnode) {
-		case 0: //diagonal: \
-      drypoint[0]=0.5*(drypoint[0]+drypoint[1]);
-			if (drypoint[0] < -0.5)
-				Awet = 0.0;
-			else if (drypoint[0] > 0.5)
-				Awet = 1.0;
-			else if (drypoint[0] < 0.0)
-				Awet = 2 * (0.5 + drypoint[0]) * (0.5 + drypoint[0]);
-			else
-				Awet = 1.0 - 2.0 * (0.5 - drypoint[0]) * (0.5 - drypoint[0]);
-			return Awet;
-		case 1: //diagonal: /
-			drypoint[0] = 0.5 * (drypoint[0] - drypoint[1]);
-			if (drypoint[0] > 0.5)
-				Awet = 0.0;
-			else if (drypoint[0] < -0.5)
-				Awet = 1.0;
-			else if (drypoint[0] > 0.0)
-				Awet = 2.0 * (0.5 - drypoint[0]) * (0.5 - drypoint[0]);
-			else
-				Awet = 1.0 - 2 * (0.5 + drypoint[0]) * (0.5 + drypoint[0]);
-			return Awet;
-		case 2: //diagonal: \
-      drypoint[0]=0.5*(drypoint[0]+drypoint[1]);
-			if (drypoint[0] > 0.5)
-				Awet = 0.0;
-			else if (drypoint[0] < -0.5)
-				Awet = 1.0;
-			else if (drypoint[0] > 0.0)
-				Awet = 2.0 * (0.5 - drypoint[0]) * (0.5 - drypoint[0]);
-			else
-				Awet = 1.0 - 2 * (0.5 + drypoint[0]) * (0.5 + drypoint[0]);
-			return Awet;
-		case 3: //diagonal: /
-			drypoint[0] = 0.5 * (drypoint[0] - drypoint[1]);
-			if (drypoint[0] < -0.5)
-				Awet = 0.0;
-			else if (drypoint[0] > 0.5)
-				Awet = 1.0;
-			else if (drypoint[0] < 0.0)
-				Awet = 2 * (0.5 + drypoint[0]) * (0.5 + drypoint[0]);
-			else
-				Awet = 1.0 - 2.0 * (0.5 - drypoint[0]) * (0.5 - drypoint[0]);
-			return Awet;
-		case 4: //horizontal: -
-			if (drypoint[1] < -0.5)
-				Awet = 0.0;
-			else if (drypoint[1] > 0.5)
-				Awet = 1.0;
-			else
-				Awet = 0.5 + drypoint[1];
-			return Awet;
-		case 5: //vertical: |
-			if (drypoint[0] > 0.5)
-				Awet = 0.0;
-			else if (drypoint[0] < -0.5)
-				Awet = 1.0;
-			else
-				Awet = 0.5 - drypoint[0];
-			return Awet;
-		case 6: //horizontal: -
-			if (drypoint[1] > 0.5)
-				Awet = 0.0;
-			else if (drypoint[1] < -0.5)
-				Awet = 1.0;
-			else
-				Awet = 0.5 - drypoint[1];
-			return Awet;
-		case 7: //vertical: |
-			if (drypoint[0] < -0.5)
-				Awet = 0.0;
-			else if (drypoint[0] > 0.5)
-				Awet = 1.0;
-			else
-				Awet = 0.5 + drypoint[0];
-			return Awet;
-		default:
-			assert(0);
-	}
-
-	return Awet;
 }
 
 //x direction flux in current cell
@@ -3410,115 +2723,6 @@ void Element::boundary_flux(HashTable* El_Table, HashTable* NodeTable, const int
 	}
 }
 
-void Element::calc_shortspeed(double inv_dt) {
-
-	/****************************************************************/
-	/* calculate the short cell magnitude of velocity as            */
-	/* dhv/dh=v*dh/dh+h*dv/dh=>lim h->0=>v                          */
-	/* v=dhv/dh=(Dhv/Dt)/(Dh/Dt)   (material derivative)            */
-	/* ||v||^2= (dhvx/dh)^2+(dhvy/dh)^2                             */
-	/* ||v||^2*(Dh/Dt)^2-(Dhvx/Dt)^2+(Dhvy/Dt)^2 = 0 = f            */
-	/* ||v||^2*(dh/dt+||v||((hv/||hv||).grad(h)))  -                */
-	/*    (dhvx/dt+||v||((hv/||hv||).grad(hvx)))^2 +                */
-	/*    (dhvy/dt+||v||((hv/||hv||).grad(hvy)))^2 = 0 = f          */
-	/* Newton iterate to find ||v||, starting at ||hv||/h           */
-	/* ||v||_(i+1)=||v||_i-((d(f^2)/d||v||)/(d^2(f^2)/d||v||^2))_i  */
-	/****************************************************************/
-
-	shortspeed = 0.0;
-
-#ifdef SHORTSPEED
-	if (state_vars[0] > GEOFLOW_TINY) {
-		double Vmag = pow(state_vars[1] * state_vars[1] + state_vars[2] * state_vars[2], 0.5);
-		if (!(Vmag > 0.0))
-		return;
-
-		double invnormhv = 1.0 / Vmag;
-		Vmag /= state_vars[0];
-		double Vmag0 = Vmag; //tall cell speed
-		assert(Vmag0 > 0.0);
-
-		double doubleswap_h = (state_vars[1] * d_state_vars[0] + state_vars[2] * d_state_vars[3])
-		* invnormhv;
-		double doubleswap_hvx = (state_vars[1] * d_state_vars[1] + state_vars[2] * d_state_vars[4])
-		* invnormhv;
-		double doubleswap_hvy = (state_vars[1] * d_state_vars[2] + state_vars[2] * d_state_vars[5])
-		* invnormhv;
-		double doubleswap_h_2, doubleswap_hvx_2, doubleswap_hvy_2;
-
-		double f, df, d2f, df2, d2f2, dVmag, absdVmag0, VmagOld = -1.0, dVmag2 = -1.0;
-		double toler = 1.0 / ((double) (1024 * 1024 * 1024));//toler~10^-9
-		int inewt, yada = 0;
-
-		for (inewt = 0; inewt < 15; inewt++) { //should only need about 5 newton iterations
-			doubleswap_h_2 = ((state_vars[0] - prev_state_vars[0]) * inv_dt + Vmag * doubleswap_h);
-			doubleswap_hvx_2 = ((state_vars[1] - prev_state_vars[1]) * inv_dt + Vmag * doubleswap_hvx);
-			doubleswap_hvy_2 = ((state_vars[2] - prev_state_vars[2]) * inv_dt + Vmag * doubleswap_hvy);
-
-			/* f could be greater or less than zero but f2 is always non-negative,
-			 note however that minimum/optimal value of f2 could be > 0 so solving
-			 for f2==0 isn't full proof, instead we want minium f2 which means solve
-			 for df2==0, but df2==0 could be min or max. but in newton if you take
-			 the absolute value d2f2 in the denominator you cause f2 to ALWAYS
-			 decrease, and thus you are guarenteed to find a local mimimum, recall
-			 we do want a minimum because f2 is guaranteed >= 0 */
-
-			f = Vmag * Vmag * doubleswap_h_2 * doubleswap_h_2 - doubleswap_hvx_2 * doubleswap_hvx_2
-			- doubleswap_hvy_2 * doubleswap_hvy_2;
-
-			df = 2.0
-			* (Vmag * doubleswap_h_2 * doubleswap_h_2 + Vmag * Vmag * doubleswap_h_2 * doubleswap_h
-					- doubleswap_hvx_2 * doubleswap_hvx - doubleswap_hvy_2 * doubleswap_hvy);
-			d2f = 2.0
-			* (doubleswap_h_2 * doubleswap_h_2 + 4.0 * Vmag * doubleswap_h_2 * doubleswap_h
-					+ Vmag * Vmag * doubleswap_h * doubleswap_h - doubleswap_hvx * doubleswap_hvx
-					- doubleswap_hvy * doubleswap_hvy);
-			//f2=f*f;
-			df2 = 2.0 * f * df;//solving for df2==0 is either min or max of f2
-			d2f2 = 2.0 * (f * d2f + df * df);
-			dVmag = (df2) ? (-df2 / fabs(d2f2)) : 0.0;//fabs(d2f2) will cause f2 to always decrease and since f2 can't be less than zero we always want it to decrease, also need to prevent division of zero by zero = nan
-
-			if (!(shortspeed >= 0.0)) {
-				printf(
-						"inewt=%d Vmag0=%g Vmag=%g doubleswap_h_2=%g doubleswap_hvx_2=%g doubleswap_hvy_2=%g f=%g df=%g d2f=%g df2=%g d2f2=%g\n",
-						inewt, Vmag0, Vmag, doubleswap_h_2, doubleswap_hvx_2, doubleswap_hvy_2, f, df, d2f, df2,
-						d2f2);
-				assert(0);
-			}
-
-			VmagOld = Vmag;
-			Vmag += dVmag;
-
-			if (Vmag < 0.0)
-			Vmag = 0.0; //safety in case it finds wrong root but this
-			//shouldn't be a problem equation looks like it should be smooth in
-			//the region were interested in
-
-			dVmag2 = Vmag - VmagOld;
-
-			if (fabs(dVmag2) < 0.0)
-			printf("VmagOld=%g dVmag2=%g yada=%d\n", VmagOld, dVmag2, yada);
-
-			yada = yada + yada;
-
-			if (inewt == 0)
-			absdVmag0 = fabs(dVmag);
-			else if ((absdVmag0 * toler >= fabs(dVmag2)) || (Vmag * toler >= fabs(dVmag2)))
-			break;
-		}
-
-		assert(inewt >= 0.0);
-
-		shortspeed = Vmag;
-	}
-#endif
-
-	if (!(shortspeed >= 0.0))
-		printf("shortspeed=%g\n", shortspeed);
-	assert(shortspeed >= 0.0);
-	return;
-}
-
 void Element::eval_velocity(double xoffset, double yoffset, double Vel[]) {
 	int i;
 	double temp_state_vars[NUM_STATE_VARS];
@@ -3536,10 +2740,6 @@ void Element::eval_velocity(double xoffset, double yoffset, double Vel[]) {
 		Vel[3] = temp_state_vars[2] / temp_state_vars[0];
 	}
 	return;
-}
-
-double* Element::get_zeta() {
-	return zeta;
 }
 
 void Element::calc_gravity_vector(MatProps* matprops_ptr) {
@@ -3650,6 +2850,10 @@ void Element::calc_d_gravity(HashTable* El_Table) {
 		d_gravity[1] = 0;
 
 	return;
+}
+
+double* Element::get_zeta() {
+	return zeta;
 }
 
 void Element::calc_topo_data(MatProps* matprops_ptr) {
@@ -4012,9 +3216,6 @@ void Element::calc_stop_crit(MatProps *matprops_ptr) {
 	effect_kactxy[1] = kactxy[1];
 	effect_bedfrict = matprops_ptr->bedfrict[material];
 	effect_tanbedfrict = matprops_ptr->tanbedfrict[material];
-
-	stoppedflags = 0;
-	return;
 }
 
 int Element::if_pile_boundary(HashTable *ElemTable, double contour_height) {
@@ -4534,7 +3735,6 @@ void Element::save_elem(FILE* fp, FILE *fptxt) {
 }
 
 Element::Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, int myid) {
-	counted = 0; //for debugging only
 
 	for (int ikey = 0; ikey < KEYLENGTH; ikey++)
 		father[ikey] = brothers[0][ikey] = brothers[1][ikey] = brothers[2][ikey] = brothers[3][ikey] =

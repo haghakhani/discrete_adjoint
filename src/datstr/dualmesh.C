@@ -304,7 +304,6 @@ void SolRec::read_sol_from_disk_hdf5(int myid, int iter) {
 
 	char filename[50];
 	Solution * solution;
-	int dbg, count = 0;
 	herr_t status;
 
 	sprintf(filename, "solution_%04d_%08d.h5", myid, iter);
@@ -318,7 +317,7 @@ void SolRec::read_sol_from_disk_hdf5(int myid, int iter) {
 	status = H5Sget_simple_extent_dims(dspace, dims, NULL);
 	unsigned* keys = new unsigned[2 * dims[0]];
 	status = H5Dread(dset, H5T_NATIVE_UINT, H5P_DEFAULT, dspace, H5P_DEFAULT, keys);
-	for (int i = 0; i < dims[0]; ++i) {
+	for (unsigned i = 0; i < dims[0]; ++i) {
 
 		Jacobian *jacobian = (Jacobian *) lookup(keys + 2 * i);
 		solution = &(Solution::solution_zero);
@@ -355,7 +354,7 @@ void SolRec::read_sol_from_disk_hdf5(int myid, int iter) {
 	double* state_vars = new double[3 * dims[0]];
 	status = H5Dread(dset1, H5T_NATIVE_DOUBLE, H5P_DEFAULT, dspace1, H5P_DEFAULT, state_vars);
 
-	for (int i = 0; i < dims[0]; ++i) {
+	for (unsigned i = 0; i < dims[0]; ++i) {
 
 		solution = new Solution(state_vars + 3 * i);
 		Jacobian *jacobian = (Jacobian *) lookup(keys + 2 * i);
@@ -497,27 +496,15 @@ DualElem::DualElem(Element* element) {
 
 	new_old = element->new_old;
 
-	shortspeed = element->shortspeed;
-
 	positive_x_side = element->positive_x_side;
 
 	elevation = element->elevation;
-
-	stoppedflags = element->stoppedflags;
 
 	effect_bedfrict = element->effect_bedfrict;
 
 	effect_tanbedfrict = element->effect_tanbedfrict;
 
-	counted = element->counted;
-
 	ithelem = element->ithelem;
-
-	iwetnode = element->iwetnode;
-
-	Awet = element->Awet;
-
-	Swet = element->Swet;
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i) {
 
@@ -549,8 +536,6 @@ DualElem::DualElem(Element* element) {
 		d_gravity[i] = element->d_gravity[i];
 
 		effect_kactxy[i] = element->effect_kactxy[i];
-
-		drypoint[i] = element->drypoint[i];
 
 		coord[i] = element->coord[i];
 
@@ -598,9 +583,7 @@ DualElem::DualElem(Element* element) {
 //used for refinement
 DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[],
     int gen, int elm_loc_in[], int gen_neigh[], int mat, DualElem *fthTemp, double *coord_in,
-    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr, int iwetnodefather,
-    double Awetfather, double *drypoint_in) {
-	counted = 0; //for debugging only
+    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr) {
 
 	adapted = NEWSON;
 
@@ -638,11 +621,6 @@ DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], 
 		key[i] = nodekeys[8][i]; //--using buble key to represent the element
 	}
 
-//	int aa = 0, bb = 1;
-//	unsigned keyy[2] = { 3410598297, 2576980374 };
-//	if (key[0] == keyy[0] && key[1] == keyy[1])
-//		bb = aa;
-
 	elm_loc[0] = elm_loc_in[0];
 	elm_loc[1] = elm_loc_in[1];
 
@@ -670,22 +648,7 @@ DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], 
 	dx[0] = .5 * fthTemp->dx[0];  //assume constant refinement
 	dx[1] = .5 * fthTemp->dx[1];
 
-	iwetnode = iwetnodefather;
-	drypoint[0] = drypoint_in[0];
-	drypoint[1] = drypoint_in[1];
-
 	double myfractionoffather = 1.;
-//	if ((Awetfather == 0.0) || (Awetfather == 1.0)) {
-//		Awet = Awetfather;
-//		myfractionoffather = 1.0;
-//	} else {
-//		Awet = convect_dryline(dx, 0.0); //dx is a dummy stand in for convection speed... value doesn't matter because it's being multiplied by a timestep of zero
-//		myfractionoffather = Awet / Awetfather;
-//	}
-	Swet = 1.0;
-
-	double dxx = coord_in[0] - fthTemp->coord[0];
-	double dyy = coord_in[1] - fthTemp->coord[1];
 
 	if (state_vars[0] < 0.)
 		state_vars[0] = 0.;
@@ -699,8 +662,6 @@ DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], 
 	coord[1] = coord_in[1];
 
 	calc_which_son();
-
-	stoppedflags = fthTemp->stoppedflags;
 
 	kactxy[0] = fthTemp->kactxy[0];
 	kactxy[1] = fthTemp->kactxy[1];
@@ -721,7 +682,6 @@ DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], 
  *****************************************/
 DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
     MatProps* matprops_ptr) {
-	counted = 0; //for debugging only
 
 	adapted = NEWFATHER;
 
@@ -758,15 +718,11 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 	new_old = NEW;
 	unsigned* son_nodes[4];
 	opposite_brother_flag = 0;
-	stoppedflags = 2;
 	for (i = 0; i < EQUATIONS; i++)
 		el_error[i] = 0.0;
 
-	for (ison = 0; ison < 4; ison++) {
+	for (ison = 0; ison < 4; ison++)
 		son_nodes[ison] = sons[ison]->getNode();
-		if (sons[ison]->stoppedflags < stoppedflags)
-			stoppedflags = sons[ison]->stoppedflags;
-	}
 
 	for (ikey = 0; ikey < KEYLENGTH; ikey++) {
 		father[ikey] = NULL;
@@ -999,34 +955,8 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 		}
 	}
 
-	Awet = 0.0;
-	for (int ison = 0; ison < 4; ison++)
-		Awet += sons[ison]->get_Awet();
-	Awet *= 0.25;
-
-//uninitialized flag values... will fix shortly
-	drypoint[0] = drypoint[1] = 0.0;
-	iwetnode = 8;
-	Swet = 1.0;
-
-//calculate the shortspeed
-	shortspeed = 0.0;
-	for (j = 0; j < 4; j++)
-		shortspeed += *(sons[j]->get_state_vars()) * sons[j]->get_shortspeed();
-	if (state_vars[0] > 0.0)
-		shortspeed /= (4.0 * state_vars[0]);
-
 	kactxy[0] = effect_kactxy[0] = 0.0;
 	kactxy[1] = effect_kactxy[1] = 0.0;
-
-//	for (j = 0; j < 4; j++) {
-////		for (i = 0; i < EQUATIONS; i++) {
-////			kactxy[i] += *(sons[j]->get_kactxy() + i) * 0.25;
-////			effect_kactxy[i] += *(sons[j]->get_effect_kactxy() + i) * 0.25;
-////			el_error[i] += *(sons[j]->get_el_error() + i) * 0.25;
-////		}
-//
-//	}
 }
 
 DualElem::DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
@@ -1133,26 +1063,16 @@ DualElem::DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 		gravity[i] = elem2->gravity[i];
 	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
 		d_state_vars[i] = elem2->d_state_vars[i];
-	shortspeed = elem2->shortspeed;
+
 	lb_weight = elem2->lb_weight;
 	elm_loc[0] = elem2->elm_loc[0];
 	elm_loc[1] = elem2->elm_loc[1];
-
-	iwetnode = elem2->iwetnode;
-	Awet = elem2->Awet;
-	Swet = elem2->Swet;
-	drypoint[0] = elem2->drypoint[0];
-	drypoint[1] = elem2->drypoint[1];
-
 }
 
 DualElem::DualElem(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, int myid) :
 		Element(myfile, NodeTable, matprops_ptr, myid) {
 
 	gzread(myfile, (adjoint), sizeof(double) * 3);
-//	gzread(myfile, (prev_adjoint), sizeof(double) * 3);
-//	gzread(myfile, (func_sens), sizeof(double) * 3);
-
 }
 
 void DualElem::update(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
@@ -1259,35 +1179,16 @@ void DualElem::update(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 		gravity[i] = elem2->gravity[i];
 	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
 		d_state_vars[i] = elem2->d_state_vars[i];
-	shortspeed = elem2->shortspeed;
+
 	lb_weight = elem2->lb_weight;
 	elm_loc[0] = elem2->elm_loc[0];
 	elm_loc[1] = elem2->elm_loc[1];
-
-	iwetnode = elem2->iwetnode;
-	Awet = elem2->Awet;
-	Swet = elem2->Swet;
-	drypoint[0] = elem2->drypoint[0];
-	drypoint[1] = elem2->drypoint[1];
-
 }
 
 void DualElem::put_jacpack(JacPack* jac) {
 
 	int neigh = which_neighbor(jac->key_neigh);
 	Vec_Mat<9>& jacobian = get_jacobian();
-
-//	if ((jac->key_send[0] == 3934801604 && jac->key_send[1] == 3964585199)
-//	    || (jac->key_neigh[0] == 3934801604 && jac->key_neigh[1] == 3964585199)) {
-//		cout << "key_send: " << jac->key_send[0] << " , " << jac->key_send[1] << "  key_neigh: "
-//		    << jac->key_neigh[0] << " , " << jac->key_neigh[1] << "\njacobian matrix is:\n";
-//
-//		for (int i = 0; i < NUM_STATE_VARS; ++i) {
-//			for (int j = 0; j < NUM_STATE_VARS; ++j)
-//				cout << jac->mat[i * NUM_STATE_VARS + j] << " ";
-//			cout << endl;
-//		}
-//	}
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		for (int j = 0; j < NUM_STATE_VARS; ++j)
@@ -1391,16 +1292,9 @@ void DualElem::Pack_element(DualElemPack* elem, HashTable* HT_Node_Ptr, int dest
 	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
 		elem->d_state_vars[i] = d_state_vars[i];
 
-	elem->shortspeed = shortspeed;
 	elem->lb_weight = lb_weight;
 	elem->elm_loc[0] = elm_loc[0];
 	elem->elm_loc[1] = elm_loc[1];
-
-	elem->iwetnode = iwetnode;
-	elem->Awet = Awet;
-	elem->Swet = Swet;
-	elem->drypoint[0] = drypoint[0];
-	elem->drypoint[1] = drypoint[1];
 }
 
 void DualElem::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double gamma) {
@@ -2511,27 +2405,15 @@ ErrorElem::ErrorElem(Element* element) {
 
 	new_old = element->new_old;
 
-	shortspeed = element->shortspeed;
-
 	positive_x_side = element->positive_x_side;
 
 	elevation = element->elevation;
-
-	stoppedflags = element->stoppedflags;
 
 	effect_bedfrict = element->effect_bedfrict;
 
 	effect_tanbedfrict = element->effect_tanbedfrict;
 
-	counted = element->counted;
-
 	ithelem = element->ithelem;
-
-	iwetnode = element->iwetnode;
-
-	Awet = element->Awet;
-
-	Swet = element->Swet;
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i) {
 
@@ -2563,8 +2445,6 @@ ErrorElem::ErrorElem(Element* element) {
 		d_gravity[i] = element->d_gravity[i];
 
 		effect_kactxy[i] = element->effect_kactxy[i];
-
-		drypoint[i] = element->drypoint[i];
 
 		coord[i] = element->coord[i];
 
@@ -2621,10 +2501,7 @@ ErrorElem::ErrorElem(Element* element) {
 //used for refinement
 ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[],
     int gen, int elm_loc_in[], int gen_neigh[], int mat, ErrorElem *fthTemp, double *coord_in,
-    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr, int iwetnodefather,
-    double Awetfather, double *drypoint_in) {
-
-	counted = 0; //for debugging only
+    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr) {
 
 	adapted = NEWSON;
 
@@ -2686,23 +2563,6 @@ ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH]
 	dx[0] = .5 * fthTemp->dx[0];  //assume constant refinement
 	dx[1] = .5 * fthTemp->dx[1];
 
-	iwetnode = iwetnodefather;
-	drypoint[0] = drypoint_in[0];
-	drypoint[1] = drypoint_in[1];
-
-	double myfractionoffather = 1.;
-//	if ((Awetfather == 0.0) || (Awetfather == 1.0)) {
-//		Awet = Awetfather;
-//		myfractionoffather = 1.0;
-//	} else {
-//		Awet = convect_dryline(dx, 0.0); //dx is a dummy stand in for convection speed... value doesn't matter because it's being multiplied by a timestep of zero
-//		myfractionoffather = Awet / Awetfather;
-//	}
-	Swet = 1.0;
-
-	double dxx = coord_in[0] - fthTemp->coord[0];
-	double dyy = coord_in[1] - fthTemp->coord[1];
-
 	if (state_vars[0] < 0.)
 		state_vars[0] = 0.;
 
@@ -2715,8 +2575,6 @@ ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH]
 	coord[1] = coord_in[1];
 
 	calc_which_son();
-
-	stoppedflags = fthTemp->stoppedflags;
 
 	correction = 0.0;
 	kactxy[0] = fthTemp->kactxy[0];
@@ -2741,7 +2599,6 @@ ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH]
  *****************************************/
 ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Table,
     MatProps* matprops_ptr) {
-	counted = 0; //for debugging only
 
 	adapted = NEWFATHER;
 
@@ -2767,15 +2624,11 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 	new_old = NEW;
 	unsigned* son_nodes[4];
 	opposite_brother_flag = 0;
-	stoppedflags = 2;
 	for (i = 0; i < EQUATIONS; i++)
 		el_error[i] = 0.0;
 
-	for (ison = 0; ison < 4; ison++) {
+	for (ison = 0; ison < 4; ison++)
 		son_nodes[ison] = sons[ison]->getNode();
-		if (sons[ison]->stoppedflags < stoppedflags)
-			stoppedflags = sons[ison]->stoppedflags;
-	}
 
 	for (ikey = 0; ikey < KEYLENGTH; ikey++) {
 		father[ikey] = NULL;
@@ -3017,30 +2870,12 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 		}
 	}
 
-	Awet = 0.0;
-	for (int ison = 0; ison < 4; ison++)
-		Awet += sons[ison]->get_Awet();
-	Awet *= 0.25;
-
-//uninitialized flag values... will fix shortly
-	drypoint[0] = drypoint[1] = 0.0;
-	iwetnode = 8;
-	Swet = 1.0;
-
-//calculate the shortspeed
-	shortspeed = 0.0;
-	for (j = 0; j < 4; j++)
-		shortspeed += *(sons[j]->get_state_vars()) * sons[j]->get_shortspeed();
-	if (state_vars[0] > 0.)
-		shortspeed /= (4.0 * state_vars[0]);
-
 	kactxy[0] = effect_kactxy[0] = 0.;
 	kactxy[1] = effect_kactxy[1] = 0.;
 	correction = 0.0;
 
 	for (i = 0; i < EQUATIONS; i++)
 		el_error[i] = 0.;
-
 }
 
 ErrorElem::ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
@@ -3146,16 +2981,10 @@ ErrorElem::ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 		gravity[i] = elem2->gravity[i];
 	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
 		d_state_vars[i] = elem2->d_state_vars[i];
-	shortspeed = elem2->shortspeed;
+
 	lb_weight = elem2->lb_weight;
 	elm_loc[0] = elem2->elm_loc[0];
 	elm_loc[1] = elem2->elm_loc[1];
-
-	iwetnode = elem2->iwetnode;
-	Awet = elem2->Awet;
-	Swet = elem2->Swet;
-	drypoint[0] = elem2->drypoint[0];
-	drypoint[1] = elem2->drypoint[1];
 
 	for (i = 0; i < NUM_STATE_VARS; i++) {
 		bilin_adj[i] = elem2->bilin_adj[i];
@@ -3495,16 +3324,9 @@ void ErrorElem::Pack_element(ErrElemPack* elem, HashTable* HT_Node_Ptr, int dest
 	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
 		elem->d_state_vars[i] = d_state_vars[i];
 
-	elem->shortspeed = shortspeed;
 	elem->lb_weight = lb_weight;
 	elem->elm_loc[0] = elm_loc[0];
 	elem->elm_loc[1] = elm_loc[1];
-
-	elem->iwetnode = iwetnode;
-	elem->Awet = Awet;
-	elem->Swet = Swet;
-	elem->drypoint[0] = drypoint[0];
-	elem->drypoint[1] = drypoint[1];
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i) {
 		elem->bilin_adj[i] = bilin_adj[i];
@@ -3616,23 +3438,16 @@ void ErrorElem::update(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 		gravity[i] = elem2->gravity[i];
 	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
 		d_state_vars[i] = elem2->d_state_vars[i];
-	shortspeed = elem2->shortspeed;
+
 	lb_weight = elem2->lb_weight;
 	elm_loc[0] = elem2->elm_loc[0];
 	elm_loc[1] = elem2->elm_loc[1];
-
-	iwetnode = elem2->iwetnode;
-	Awet = elem2->Awet;
-	Swet = elem2->Swet;
-	drypoint[0] = elem2->drypoint[0];
-	drypoint[1] = elem2->drypoint[1];
 
 	for (i = 0; i < NUM_STATE_VARS; i++) {
 		bilin_adj[i] = elem2->bilin_adj[i];
 		bilin_state[i] = elem2->bilin_state[i];
 		bilin_prev_state[i] = elem2->bilin_prev_state[i];
 	}
-
 }
 
 void ErrorElem::write_elem(gzFile& myfile) {

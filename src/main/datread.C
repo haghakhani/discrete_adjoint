@@ -214,10 +214,6 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 	//non-dimensionalize the inputs
 	double VELOCITY_SCALE = sqrt(matprops_ptr->LENGTH_SCALE * matprops_ptr->GRAVITY_SCALE);
 
-	double diameter = 0.005;
-	double vterm = pow(diameter, 2.) * (matprops_ptr->den_solid) * matprops_ptr->GRAVITY_SCALE
-	    / (18. * matprops_ptr->viscosity);
-	matprops_ptr->v_terminal = vterm;
 	double smallestpileradius = HUGE_VAL;
 
 	for (isrc = 0; isrc < pileprops_ptr->numpiles; isrc++) {
@@ -258,19 +254,6 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 	matprops_ptr->smallest_axis = 2.0 * smallestpileradius;
 	inD2 >> matprops_ptr->number_of_cells_across_axis;
 
-	/*************************************************************************/
-	/* the non-dimensional velocity stopping criteria is an idea that
-	 didn't work for anything other than a slumping pile on a horizontal
-	 surface, it's only still here because I didn't want to bother
-	 with removing it.  --Keith Dalbey 2005.10.28
-
-	 kappa is a to be determined constant, calculation stops when
-	 v*=v_ave/v_slump<kappa (or perhaps v* < kappa/tan(intfrict)) */
-	double kappa = 1.0;   //should eventually move to a header file
-	double gravity = 9.8; //[m/s^2]
-	matprops_ptr->Vslump = 1.0; //kappa*sqrt(gravity*max_init_height);
-
-	/*************************************************************************/
 	//time related info
 	int maxiter;
 	double maxtime, timeoutput, timesave;
@@ -378,9 +361,6 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 	//read in material properties
 	fp = fopen("frict.data", "r");
 	fscanf(fp, "%d\n", &(matprops_ptr->material_count));
-
-	// Navier slip-with-friction coefficient
-	matprops_ptr->navslip_coef = 0.1;
 
 	matprops_ptr->matnames = (char **) malloc((matprops_ptr->material_count + 1) * sizeof(char *));
 	matprops_ptr->bedfrict = CAllocD1(matprops_ptr->material_count + 1);

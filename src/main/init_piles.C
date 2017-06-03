@@ -124,8 +124,6 @@ void init_piles(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid, int nu
 
 					Curr_El->put_kactxy(epsilon);
 					Curr_El->calc_stop_crit(matprops);
-					if (Curr_El->get_stoppedflags() == 2)
-						depositedvol += dvol;
 
 					double resolution = 0, xslope = 0, yslope = 0;
 					Get_max_resolution(&resolution);

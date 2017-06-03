@@ -363,11 +363,6 @@ void calc_volume(HashTable* El_Table, int myid, MatProps* matprops_ptr, TimeProp
 
 		d_time *= timeprops_ptr->TIME_SCALE;
 
-		/* v_star is the nondimensional global average velocity by v_slump
-		 once v_slump HAS BEEN CALIBRATED (not yet done see ../main/datread.C)
-		 the calculation will terminate when v_star reaches 1 */
-		*v_star = gl_v_ave / matprops_ptr->Vslump;
-
 		//chunk time
 		int hours, minutes;
 		double seconds;

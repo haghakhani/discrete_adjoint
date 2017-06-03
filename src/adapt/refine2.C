@@ -621,13 +621,8 @@ void refine(T* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps*
 	double err = (*(EmTemp->get_el_error())) * .5; //added by jp oct11
 
 	// son 0 can use elm_loc
-	int iwetnodefather = EmTemp->get_iwetnode();
-	double Awetfather = EmTemp->get_Awet();
-	double dpson[2];
-	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 + 0.5;
-	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 + 0.5;
 	Quad9P = new T(nodes, neigh, neigh_proc, generation, elm_loc, neigh_gen, material, EmTemp, coord,
-	    HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson);
+	    HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr);
 	double* state_vars = Quad9P->get_state_vars();
 
 	Quad9P->put_which_son(0);  //--by jp, 0 means son 0
@@ -689,10 +684,9 @@ void refine(T* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps*
 
 	my_elm_loc[0] = elm_loc[0] + 1;
 	my_elm_loc[1] = elm_loc[1];
-	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 - 0.5;
-	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 + 0.5;
+
 	Quad9P = new T(nodes, neigh, neigh_proc, generation, my_elm_loc, neigh_gen, material, EmTemp,
-	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson);
+	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr);
 	state_vars = Quad9P->get_state_vars();
 
 	Quad9P->put_which_son(1); //--by jp
@@ -755,10 +749,9 @@ void refine(T* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps*
 
 	my_elm_loc[0] = elm_loc[0] + 1;
 	my_elm_loc[1] = elm_loc[1] + 1;
-	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 - 0.5;
-	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 - 0.5;
+
 	Quad9P = new T(nodes, neigh, neigh_proc, generation, my_elm_loc, neigh_gen, material, EmTemp,
-	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson);
+	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr);
 	state_vars = Quad9P->get_state_vars();
 
 	Quad9P->put_which_son(2); //--by jp
@@ -821,10 +814,9 @@ void refine(T* EmTemp, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, MatProps*
 
 	my_elm_loc[0] = elm_loc[0];
 	my_elm_loc[1] = elm_loc[1] + 1;
-	dpson[0] = *(EmTemp->get_drypoint() + 0) * 2 + 0.5;
-	dpson[1] = *(EmTemp->get_drypoint() + 1) * 2 - 0.5;
+
 	Quad9P = new T(nodes, neigh, neigh_proc, generation, my_elm_loc, neigh_gen, material, EmTemp,
-	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr, iwetnodefather, Awetfather, dpson);
+	    coord, HT_Elem_Ptr, HT_Node_Ptr, myid, matprops_ptr);
 	state_vars = Quad9P->get_state_vars();
 
 	Quad9P->put_which_son(3); //--by jp

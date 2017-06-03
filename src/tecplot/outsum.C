@@ -60,7 +60,7 @@ void output_stoch_stats(MatProps* matprops, StatProps* statprops) {
 	FILE *fp = fopen(filename, "w");
 	fprintf(fp, "%2d %6d %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g\n",
 	    statprops->lhs.refnum, statprops->lhs.runid, statprops->timereached,
-	    statprops->vstar * matprops->Vslump, statprops->hmax, statprops->xcen, statprops->ycen,
+	    statprops->vstar * matprops->intfrict, statprops->hmax, statprops->xcen, statprops->ycen,
 	    statprops->xyminmax[1] - statprops->xyminmax[0],
 	    statprops->xyminmax[3] - statprops->xyminmax[2]);
 	fflush(fp);

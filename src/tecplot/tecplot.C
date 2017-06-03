@@ -712,8 +712,8 @@ void viz_output(HashTable* El_Table, HashTable* NodeTable, int myid, int numproc
 					fprintf(fp, "%u %u %f %f %f %f %f %f %f %f %d %f \n", *(EmTemp->pass_key()),
 					    *(EmTemp->pass_key() + 1), (*(EmTemp->get_coord())) * (matprops)->LENGTH_SCALE,
 					    (*(EmTemp->get_coord() + 1)) * (matprops)->LENGTH_SCALE,
-					    (NdTemp->get_elevation()) * (matprops)->LENGTH_SCALE, *(EmTemp->get_zeta()),
-					    *(EmTemp->get_zeta() + 1), zero, zero, zero, myid, zero);
+					    (NdTemp->get_elevation()) * (matprops)->LENGTH_SCALE, *(EmTemp->get_dx()),
+					    *(EmTemp->get_dx() + 1), zero, zero, zero, myid, zero);
 				} else {
 					double Vel[4];
 					EmTemp->eval_velocity(0.0, 0.0, Vel);

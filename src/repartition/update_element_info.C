@@ -78,21 +78,6 @@ void destroy_element(void *r_element_in, HashTable* HT_Elem_Ptr, HashTable* HT_N
 
 }
 
-//! create_element() is a friend function of the Element and Node classes. After receiving an ElemPack, create_element() instances a new element, calls construct_el() to transfer data from ElemPack to the new element, and inserts the new element into the Hashtable. Don't call this if s_flag is 0 (original repartitioning scheme)
-void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid,
-    double* e_error) {
-
-	Element* newelement = new Element();
-
-	construct_el(newelement, elem2, HT_Node_Ptr, myid, e_error);
-
-	HT_Elem_Ptr->add(newelement->pass_key(), newelement);
-
-	if (!newelement->get_refined_flag()) //if parent .... don't care about neighbor info
-		check_neighbor_info(newelement, HT_Elem_Ptr, myid);
-
-}
-
 // bsfc repartitioning scheme
 void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid) {
 	Element* newelement = new Element();
@@ -259,18 +244,10 @@ void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, 
 		newelement->gravity[i] = elem2->gravity[i];
 	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
 		newelement->d_state_vars[i] = elem2->d_state_vars[i];
-	newelement->shortspeed = elem2->shortspeed;
+
 	newelement->lb_weight = elem2->lb_weight;
 	newelement->elm_loc[0] = elem2->elm_loc[0];
 	newelement->elm_loc[1] = elem2->elm_loc[1];
-
-	newelement->iwetnode = elem2->iwetnode;
-	newelement->Awet = elem2->Awet;
-	newelement->Swet = elem2->Swet;
-	newelement->drypoint[0] = elem2->drypoint[0];
-	newelement->drypoint[1] = elem2->drypoint[1];
-
-	return;
 }
 
 //void construct_dual_el(void* newelem, DUALElemPack* elem2, HashTable* HT_Node_Ptr, int myid,

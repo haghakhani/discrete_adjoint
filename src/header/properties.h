@@ -578,9 +578,6 @@ struct MatProps {
 	//! fluid viscosity
 	double viscosity;
 
-	//! terminal velocity of a single solid particle in fluid medium
-	double v_terminal;
-
 	//! scaling value, ratio of HEIGHT_SCALE to LENGTH_SCALE
 	double epsilon;
 
@@ -599,18 +596,8 @@ struct MatProps {
 	//! cells with flow below this height are neglected for purposes of calculating statistics
 	double MAX_NEGLIGIBLE_HEIGHT;
 
-	/*!
-	 *  Used in Bin Yu's legacy global stopping criteria, this never worked right
-	 *  except for initially cylindrical piles on a horizontal plane that were released
-	 *  and slumped... there Bin Yu's global stopping criteria worked great
-	 */
-	double Vslump;
-
 	//! to get the flow to start moving you have to decrease the friction angles, this variable is used to do that
 	double frict_tiny;
-
-	//! coeficient of Navier-Slip with friction
-	double navslip_coef;
 
 	/*! this constructor allocates initial properties unfortunately the properties
 	 *  aren't known at the time this is called so dummy values are fed in instead

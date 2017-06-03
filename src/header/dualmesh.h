@@ -88,8 +88,7 @@ public:
 	//used for refinement
 	DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
 	    int elm_loc_in[], int gen_neigh[], int mat, DualElem *fthTemp, double *coord_in,
-	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
-	    int iwetnodefather, double Awetfather, double *drypoint_in);
+	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr);
 
 	//used for unrefinement
 	DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr);
@@ -229,8 +228,7 @@ public:
 	//used for refinement
 	ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], int n_pro[], int gen,
 	    int elm_loc_in[], int gen_neigh[], int mat, ErrorElem *fthTemp, double *coord_in,
-	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr,
-	    int iwetnodefather, double Awetfather, double *drypoint_in);
+	    HashTable *El_Table, HashTable *NodeTable, int myid, MatProps *matprops_ptr);
 
 	//used for unrefinement
 	ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr);

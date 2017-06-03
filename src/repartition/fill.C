@@ -84,16 +84,9 @@ void Pack_element(void *sendel_in, ElemPack* elem, HashTable* HT_Node_Ptr, int d
 	for (i = 0; i < DIMENSION * NUM_STATE_VARS; i++)
 		elem->d_state_vars[i] = sendel->d_state_vars[i];
 
-	elem->shortspeed = sendel->shortspeed;
 	elem->lb_weight = sendel->lb_weight;
 	elem->elm_loc[0] = sendel->elm_loc[0];
 	elem->elm_loc[1] = sendel->elm_loc[1];
-
-	elem->iwetnode = sendel->iwetnode;
-	elem->Awet = sendel->Awet;
-	elem->Swet = sendel->Swet;
-	elem->drypoint[0] = sendel->drypoint[0];
-	elem->drypoint[1] = sendel->drypoint[1];
 }
 
 void Pack_neighbor(int target_proc, ELinkPtr* EL_head, int* counter, NePtr* packed_neighbor_info) {

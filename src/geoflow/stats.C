@@ -322,11 +322,6 @@ void calc_stats(HashTable* El_Table, HashTable* NodeTable, int myid, MatProps* m
 		statprops->vmax = temp2out[1] * VELOCITY_SCALE;
 		statprops->umax = temp2out[2] * VELOCITY_SCALE;
 
-		/* v_star is the nondimensional global average velocity by v_slump
-		 once v_slump HAS BEEN CALIBRATED (not yet done see ../main/datread.C)
-		 the calculation will terminate when v_star reaches 1 */
-		statprops->vstar = statprops->vmean / matprops->Vslump;
-
 		/******************/
 		/* output section */
 		/******************/

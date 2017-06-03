@@ -79,7 +79,7 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* m
 	double kactxy[DIMENSION];
 //	double dummy_kactxy[DIMENSION]={1.,1.};
 	double* d_uvec, *dx_ptr;
-	int intswap;
+
 	double *curve, maxcurve;
 	int ifanynonzeroheight = 0;
 	double Vsolid[2];
@@ -115,14 +115,6 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* m
 
 					EmTemp->put_kactxy(kactxy);
 					EmTemp->calc_stop_crit(matprops_ptr);
-					intswap = EmTemp->get_stoppedflags();
-
-					if ((intswap < 0) || (intswap > 2))
-						printf("get_coef_and_eigen stopped flag=%d\n", intswap);
-
-					//must use hVx/h and hVy/h rather than eval_velocity (L'Hopital's
-					//rule speed if it is smaller) because underestimating speed (which
-					//results in over estimating the timestep) is fatal to stability...
 
 					Vsolid[0] = (*(EmTemp->get_state_vars() + 1)) / (*(EmTemp->get_state_vars()));
 					Vsolid[1] = (*(EmTemp->get_state_vars() + 2)) / (*(EmTemp->get_state_vars()));

@@ -34,7 +34,7 @@ void ElemBackgroundCheck(HashTable* El_Table, HashTable* NodeTable, unsigned *de
 	ElemPtrList<Element> EmDebugFather(16);
 	Node* NdTemp;
 
-	int iFather, ison, ineigh, inode;
+	int ison, ineigh, inode;
 	int uniqueneigh = 8;
 
 	int num_buck = El_Table->get_no_of_buckets();
@@ -70,13 +70,10 @@ void ElemBackgroundCheck(HashTable* El_Table, HashTable* NodeTable, unsigned *de
 			    EmDebugFather.get_num_elem());
 			for (int iFather = 0; iFather < EmDebugFather.get_num_elem(); iFather++) {
 				fprintf(fp,
-				    " %d:   {%10u,%10u}  proc=%d gen=%d adapted=%d which_son=%d iwetnode=%d Awet=%9.6f Swet=%9.6f drypoint={%9.6f,%9.6f}\n",
+				    " %d:   {%10u,%10u}  proc=%d gen=%d adapted=%d which_son=%d \n",
 				    iFather, *(EmDebugFather.get_key(iFather) + 0), *(EmDebugFather.get_key(iFather) + 1),
 				    EmDebugFather.get(iFather)->myprocess, EmDebugFather.get(iFather)->generation,
-				    EmDebugFather.get(iFather)->adapted, EmDebugFather.get(iFather)->which_son,
-				    EmDebugFather.get(iFather)->iwetnode, EmDebugFather.get(iFather)->Awet,
-				    EmDebugFather.get(iFather)->Swet, EmDebugFather.get(iFather)->drypoint[0],
-				    EmDebugFather.get(iFather)->drypoint[1]);
+				    EmDebugFather.get(iFather)->adapted, EmDebugFather.get(iFather)->which_son);
 				uniqueneigh = 8;
 				for (ineigh = 0; ineigh < 8; ineigh++)
 					if (EmDebugFather.get(iFather)->neigh_proc[ineigh] < 0)
@@ -100,10 +97,6 @@ void ElemBackgroundCheck(HashTable* El_Table, HashTable* NodeTable, unsigned *de
 		fprintf(fp, "gen=%d ", EmDebug->generation);
 		fprintf(fp, "adapted=%d ", EmDebug->adapted);
 		fprintf(fp, "which_son=%d ", EmDebug->which_son);
-		fprintf(fp, "iwetnode=%d ", EmDebug->iwetnode);
-		fprintf(fp, "Awet=%9.6f ", EmDebug->Awet);
-		fprintf(fp, "Swet=%9.6f ", EmDebug->Swet);
-		fprintf(fp, "drypoint={%9.6f,%9.6f} ", EmDebug->drypoint[0], EmDebug->drypoint[1]);
 		fprintf(fp, "has neighbors (%d are unique)\n", uniqueneigh);
 		for (ineigh = 0; ineigh < 8; ineigh++)
 			fprintf(fp, " %d:   {%10u,%10u}  proc=%d gen=%d\n", ineigh, EmDebug->neighbor[ineigh][0],
@@ -113,13 +106,10 @@ void ElemBackgroundCheck(HashTable* El_Table, HashTable* NodeTable, unsigned *de
 			    EmDebugNeigh.get_num_elem(), debugkey[0], debugkey[1]);
 			for (ineigh = 0; ineigh < EmDebugNeigh.get_num_elem(); ineigh++)
 				fprintf(fp,
-				    " %d:   {%10u,%10u}  proc=%d gen=%d adapted=%d which_son=%d iwetnode=%d Awet=%9.6f Swet=%9.6f drypoint={%9.6f,%9.6f}\n",
+				    " %d:   {%10u,%10u}  proc=%d gen=%d adapted=%d which_son=%d\n",
 				    ineigh, *(EmDebugNeigh.get_key(ineigh) + 0), *(EmDebugNeigh.get_key(ineigh) + 1),
 				    EmDebugNeigh.get(ineigh)->myprocess, EmDebugNeigh.get(ineigh)->generation,
-				    EmDebugNeigh.get(ineigh)->adapted, EmDebugNeigh.get(ineigh)->which_son,
-				    EmDebugNeigh.get(ineigh)->iwetnode, EmDebugNeigh.get(ineigh)->Awet,
-				    EmDebugNeigh.get(ineigh)->Swet, EmDebugNeigh.get(ineigh)->drypoint[0],
-				    EmDebugNeigh.get(ineigh)->drypoint[1]);
+				    EmDebugNeigh.get(ineigh)->adapted, EmDebugNeigh.get(ineigh)->which_son);
 		}
 		fprintf(fp, "his 8 non bubble nodes are:\n");
 		for (inode = 0; inode < 8; inode++) {
@@ -189,13 +179,10 @@ void ElemBackgroundCheck2(HashTable *El_Table, HashTable *NodeTable, void *EmDeb
 			    EmDebugFather.get_num_elem());
 			for (int iFather = 0; iFather < EmDebugFather.get_num_elem(); iFather++) {
 				fprintf(fp,
-				    " %d:   {%10u,%10u}  proc=%d gen=%d adapted=%d which_son=%d iwetnode=%d Awet=%9.6f Swet=%9.6f drypoint={%9.6f,%9.6f}\n",
+				    " %d:   {%10u,%10u}  proc=%d gen=%d adapted=%d which_son=%d \n",
 				    iFather, *(EmDebugFather.get_key(iFather) + 0), *(EmDebugFather.get_key(iFather) + 1),
 				    EmDebugFather.get(iFather)->myprocess, EmDebugFather.get(iFather)->generation,
-				    EmDebugFather.get(iFather)->adapted, EmDebugFather.get(iFather)->which_son,
-				    EmDebugFather.get(iFather)->iwetnode, EmDebugFather.get(iFather)->Awet,
-				    EmDebugFather.get(iFather)->Swet, EmDebugFather.get(iFather)->drypoint[0],
-				    EmDebugFather.get(iFather)->drypoint[1]);
+				    EmDebugFather.get(iFather)->adapted, EmDebugFather.get(iFather)->which_son);
 				uniqueneigh = 8;
 				for (ineigh = 0; ineigh < 8; ineigh++)
 					if (EmDebugFather.get(iFather)->neigh_proc[ineigh] < 0)
@@ -219,10 +206,6 @@ void ElemBackgroundCheck2(HashTable *El_Table, HashTable *NodeTable, void *EmDeb
 		fprintf(fp, "gen=%d ", EmDebug->generation);
 		fprintf(fp, "adapted=%d ", EmDebug->adapted);
 		fprintf(fp, "which_son=%d ", EmDebug->which_son);
-		fprintf(fp, "iwetnode=%d ", EmDebug->iwetnode);
-		fprintf(fp, "Awet=%9.6f ", EmDebug->Awet);
-		fprintf(fp, "Swet=%9.6f ", EmDebug->Swet);
-		fprintf(fp, "drypoint={%9.6f,%9.6f} ", EmDebug->drypoint[0], EmDebug->drypoint[1]);
 		fprintf(fp, "has neighbors (%d are unique)\n", uniqueneigh);
 		for (ineigh = 0; ineigh < 8; ineigh++)
 			fprintf(fp, " %d:   {%10u,%10u}  proc=%d gen=%d\n", ineigh, EmDebug->neighbor[ineigh][0],
@@ -232,13 +215,10 @@ void ElemBackgroundCheck2(HashTable *El_Table, HashTable *NodeTable, void *EmDeb
 			    EmDebugNeigh.get_num_elem(), EmDebug->key[0], EmDebug->key[1]);
 			for (ineigh = 0; ineigh < EmDebugNeigh.get_num_elem(); ineigh++)
 				fprintf(fp,
-				    " %d:   {%10u,%10u}  proc=%d gen=%d adapted=%d which_son=%d iwetnode=%d Awet=%9.6f Swet=%9.6f drypoint={%9.6f,%9.6f}\n",
+				    " %d:   {%10u,%10u}  proc=%d gen=%d adapted=%d which_son=%d \n",
 				    ineigh, *(EmDebugNeigh.get_key(ineigh) + 0), *(EmDebugNeigh.get_key(ineigh) + 1),
 				    EmDebugNeigh.get(ineigh)->myprocess, EmDebugNeigh.get(ineigh)->generation,
-				    EmDebugNeigh.get(ineigh)->adapted, EmDebugNeigh.get(ineigh)->which_son,
-				    EmDebugNeigh.get(ineigh)->iwetnode, EmDebugNeigh.get(ineigh)->Awet,
-				    EmDebugNeigh.get(ineigh)->Swet, EmDebugNeigh.get(ineigh)->drypoint[0],
-				    EmDebugNeigh.get(ineigh)->drypoint[1]);
+				    EmDebugNeigh.get(ineigh)->adapted, EmDebugNeigh.get(ineigh)->which_son);
 		}
 		fprintf(fp, "his 8 non bubble nodes are:\n");
 		for (inode = 0; inode < 8; inode++) {
@@ -853,23 +833,14 @@ void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump, in
 	ElemPtrList<Element>* RefinedList = (ElemPtrList<Element>*) RL;
 	Node* NdTemp;
 	int ifather, iside, ineigh, ineighp4, isonA, isonB;
-	int ineighme, ineighmep4, ineighson, ikey, inewcase, inode;
+	int ineighme, ineighmep4, ikey, inewcase, inode;
 
 	//interproc update only variables
 	int *num_send, *num_recv, *isend;
-	int iproc, ineighm4, ierr, send_tag = 061201 * 2, neigh_proc;
+	int iproc, ineighm4, send_tag = 061201 * 2, neigh_proc;
 	unsigned **send, **recv;
 	MPI_Request* request = new MPI_Request[2 * nump];
 
-	//printf("myid=%d, nump=%d\n",myid,nump);
-
-	//unsigned ElemDebugKey[2]={1897922560,         0};
-
-	//unsigned nodedebugkey[2]={2115132074,2863311530};
-	//unsigned NodeDebugKey[2]={1895825408,         0};
-	//int NodeDebugInfo=-99999;
-	//Node* NodeDebug=(Node*) NodeTable->lookup(NodeDebugKey);
-	FILE *fpbg = stdout;
 	char fname2[256];
 	sprintf(fname2, "refine_neigh_update%04d.debug", myid);
 	FILE *fpdb2;
@@ -1188,7 +1159,7 @@ void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump, in
 
 		for (iproc = 0; iproc < nump; iproc++)
 			if ((iproc != myid) && (num_recv[iproc] > 0))
-				ierr = MPI_Irecv((void *) recv[iproc], 4 * KEYLENGTH * num_recv[iproc],
+				MPI_Irecv((void *) recv[iproc], 4 * KEYLENGTH * num_recv[iproc],
 				MPI_UNSIGNED, iproc, send_tag + iproc, MPI_COMM_WORLD, (request + nump + iproc));
 
 		for (ifather = RefinedList->get_inewstart(); ifather < RefinedList->get_num_elem(); ifather++) {
@@ -1269,7 +1240,7 @@ void refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump, in
 		//send the update neighbor information to the other processors
 		for (iproc = 0; iproc < nump; iproc++)
 			if ((iproc != myid) && (num_send[iproc] > 0))
-				ierr = MPI_Isend((void *) send[iproc], 4 * KEYLENGTH * num_send[iproc],
+				MPI_Isend((void *) send[iproc], 4 * KEYLENGTH * num_send[iproc],
 				MPI_UNSIGNED, iproc, send_tag + myid, MPI_COMM_WORLD, (request + iproc));
 		CDeAllocI1(isend);
 	}	  //if(nump>1)

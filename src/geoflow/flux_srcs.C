@@ -208,8 +208,5 @@ void Element::calc_flux(HashTable *NodeTable, FluxProps *fluxprops, TimeProps *t
 		printf("error in Influx[0] assignment\n");
 		assert(Influx[0] >= 0.0);
 	}
-	Awet = (Influx[0] > 0.0) ? 1.0 : 0.0;
-
-	return;
 }
 
