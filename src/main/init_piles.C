@@ -69,9 +69,6 @@ void init_piles(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid, int nu
     int adaptflag, MatProps* matprops, TimeProps* timeprops_ptr, MapNames* mapnames,
     PileProps* pileprops, FluxProps *fluxprops, StatProps* statprops) {
 
-	unsigned nodes[9][KEYLENGTH], *node_key;
-	int num_buckets = HT_Elem_Ptr->get_no_of_buckets();
-
 	if (!adaptflag)
 		H_adapt_to_level(HT_Elem_Ptr, HT_Node_Ptr, matprops, pileprops, fluxprops, timeprops_ptr,
 		    REFINE_LEVEL);
@@ -104,7 +101,7 @@ void init_piles(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid, int nu
 
 	/* initial calculation of actual volume on the map */
 
-	double realvolume = 0.0, depositedvol = 0.0, forcebed = 0.0, meanslope = 0.0;
+	double realvolume = 0., depositedvol = 0., forcebed = 0.;
 	double epsilon[2] = { matprops->epsilon, matprops->epsilon };
 
 	HashEntryPtr* buck = HT_Elem_Ptr->getbucketptr();
@@ -123,7 +120,6 @@ void init_piles(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid, int nu
 					realvolume += dvol;
 
 					Curr_El->put_kactxy(epsilon);
-					Curr_El->calc_stop_crit(matprops);
 
 					double resolution = 0, xslope = 0, yslope = 0;
 					Get_max_resolution(&resolution);

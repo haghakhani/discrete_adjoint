@@ -500,9 +500,7 @@ DualElem::DualElem(Element* element) {
 
 	elevation = element->elevation;
 
-	effect_bedfrict = element->effect_bedfrict;
-
-	effect_tanbedfrict = element->effect_tanbedfrict;
+	tan_bed_frict = element->tan_bed_frict;
 
 	ithelem = element->ithelem;
 
@@ -525,8 +523,6 @@ DualElem::DualElem(Element* element) {
 
 		dx[i] = element->dx[i];
 
-		eigenvxymax[i] = element->eigenvxymax[i];
-
 		kactxy[i] = element->kactxy[i];
 
 		zeta[i] = element->zeta[i];
@@ -534,8 +530,6 @@ DualElem::DualElem(Element* element) {
 		curvature[i] = element->curvature[i];
 
 		d_gravity[i] = element->d_gravity[i];
-
-		effect_kactxy[i] = element->effect_kactxy[i];
 
 		coord[i] = element->coord[i];
 
@@ -665,8 +659,7 @@ DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], 
 
 	kactxy[0] = fthTemp->kactxy[0];
 	kactxy[1] = fthTemp->kactxy[1];
-	effect_kactxy[0] = fthTemp->effect_kactxy[0];
-	effect_kactxy[1] = fthTemp->effect_kactxy[1];
+
 	for (int i = 0; i < NUM_STATE_VARS; i++) {
 		state_vars[i] = fthTemp->state_vars[i] * myfractionoffather;
 		prev_state_vars[i] = fthTemp->prev_state_vars[i] * myfractionoffather;
@@ -955,11 +948,11 @@ DualElem::DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table,
 		}
 	}
 
-	kactxy[0] = effect_kactxy[0] = 0.0;
-	kactxy[1] = effect_kactxy[1] = 0.0;
+	kactxy[0] = 0.;
+	kactxy[1] = 0.;
 }
 
-DualElem::DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
+DualElem::DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, MatProps* matprops_ptr, int myid) {
 
 	Node* node;
 	int i, j;
@@ -967,6 +960,7 @@ DualElem::DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 	generation = elem2->generation;
 	opposite_brother_flag = elem2->opposite_brother_flag;
 	material = elem2->material;
+	tan_bed_frict=matprops_ptr->tanbedfrict[material];
 
 	for (i = 0; i < 8; i++) {
 		neigh_proc[i] = elem2->neigh_proc[i];
@@ -1046,7 +1040,6 @@ DualElem::DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 	for (i = 0; i < DIMENSION; i++) {
 		coord[i] = elem2->n_coord[8][i];
 		dx[i] = elem2->dx[i];
-		eigenvxymax[i] = elem2->eigenvxymax[i];
 		kactxy[i] = elem2->kactxy[i];
 		zeta[i] = elem2->zeta[i];
 		curvature[i] = elem2->curvature[i];
@@ -1162,7 +1155,6 @@ void DualElem::update(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 	for (i = 0; i < DIMENSION; i++) {
 		coord[i] = elem2->n_coord[8][i];
 		dx[i] = elem2->dx[i];
-		eigenvxymax[i] = elem2->eigenvxymax[i];
 		kactxy[i] = elem2->kactxy[i];
 		zeta[i] = elem2->zeta[i];
 		curvature[i] = elem2->curvature[i];
@@ -1273,7 +1265,6 @@ void DualElem::Pack_element(DualElemPack* elem, HashTable* HT_Node_Ptr, int dest
 	elem->elevation = elevation;
 	for (i = 0; i < DIMENSION; i++) {
 		elem->dx[i] = dx[i];
-		elem->eigenvxymax[i] = eigenvxymax[i];
 		elem->kactxy[i] = kactxy[i];
 		elem->zeta[i] = zeta[i];
 		elem->curvature[i] = curvature[i];
@@ -2409,9 +2400,7 @@ ErrorElem::ErrorElem(Element* element) {
 
 	elevation = element->elevation;
 
-	effect_bedfrict = element->effect_bedfrict;
-
-	effect_tanbedfrict = element->effect_tanbedfrict;
+	tan_bed_frict = element->tan_bed_frict;
 
 	ithelem = element->ithelem;
 
@@ -2434,8 +2423,6 @@ ErrorElem::ErrorElem(Element* element) {
 
 		dx[i] = element->dx[i];
 
-		eigenvxymax[i] = element->eigenvxymax[i];
-
 		kactxy[i] = element->kactxy[i];
 
 		zeta[i] = element->zeta[i];
@@ -2443,8 +2430,6 @@ ErrorElem::ErrorElem(Element* element) {
 		curvature[i] = element->curvature[i];
 
 		d_gravity[i] = element->d_gravity[i];
-
-		effect_kactxy[i] = element->effect_kactxy[i];
 
 		coord[i] = element->coord[i];
 
@@ -2579,8 +2564,7 @@ ErrorElem::ErrorElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH]
 	correction = 0.0;
 	kactxy[0] = fthTemp->kactxy[0];
 	kactxy[1] = fthTemp->kactxy[1];
-	effect_kactxy[0] = fthTemp->effect_kactxy[0];
-	effect_kactxy[1] = fthTemp->effect_kactxy[1];
+
 	for (int i = 0; i < NUM_STATE_VARS; i++) {
 		state_vars[i] = fthTemp->state_vars[i];
 		prev_state_vars[i] = fthTemp->prev_state_vars[i];
@@ -2870,9 +2854,9 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 		}
 	}
 
-	kactxy[0] = effect_kactxy[0] = 0.;
-	kactxy[1] = effect_kactxy[1] = 0.;
-	correction = 0.0;
+	kactxy[0] = 0.;
+	kactxy[1] = 0.;
+	correction = 0.;
 
 	for (i = 0; i < EQUATIONS; i++)
 		el_error[i] = 0.;
@@ -2965,7 +2949,6 @@ ErrorElem::ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 	for (i = 0; i < DIMENSION; i++) {
 		coord[i] = elem2->n_coord[8][i];
 		dx[i] = elem2->dx[i];
-		eigenvxymax[i] = elem2->eigenvxymax[i];
 		kactxy[i] = elem2->kactxy[i];
 		zeta[i] = elem2->zeta[i];
 		curvature[i] = elem2->curvature[i];
@@ -3306,7 +3289,6 @@ void ErrorElem::Pack_element(ErrElemPack* elem, HashTable* HT_Node_Ptr, int dest
 	elem->elevation = elevation;
 	for (i = 0; i < DIMENSION; i++) {
 		elem->dx[i] = dx[i];
-		elem->eigenvxymax[i] = eigenvxymax[i];
 		elem->kactxy[i] = kactxy[i];
 		elem->zeta[i] = zeta[i];
 		elem->curvature[i] = curvature[i];
@@ -3422,7 +3404,6 @@ void ErrorElem::update(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 	for (i = 0; i < DIMENSION; i++) {
 		coord[i] = elem2->n_coord[8][i];
 		dx[i] = elem2->dx[i];
-		eigenvxymax[i] = elem2->eigenvxymax[i];
 		kactxy[i] = elem2->kactxy[i];
 		zeta[i] = elem2->zeta[i];
 		curvature[i] = elem2->curvature[i];

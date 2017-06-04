@@ -32,6 +32,7 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 
 	int myid = propctx->myid, numprocs = propctx->numproc;
 	int iter = propctx->timeprops->iter;
+	MatProps* matprops_ptr=propctx->matprops;
 
 	doubleKeyRange = *(El_Table->get_doublekeyrange() + 1);
 
@@ -256,7 +257,7 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 							DualElem* elm = (DualElem*) El_Table->lookup(receive_array[component].key);
 							assert(elm == NULL);
 
-							elm = new DualElem((receive_array + component), NodeTable, myid);
+							elm = new DualElem((receive_array + component), NodeTable, matprops_ptr, myid);
 
 							El_Table->add(elm->pass_key(), elm);
 

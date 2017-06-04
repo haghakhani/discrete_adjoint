@@ -74,8 +74,8 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 					double *gravity = Curr_El->get_gravity();
 					double *d_gravity = Curr_El->get_d_gravity();
 					double *curvature = Curr_El->get_curvature();
-					Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
-					double bedfrict = Curr_El->get_effect_bedfrict();
+
+					double *tan_bedfrict = Curr_El->get_tanbedfrict();
 					double *dx = Curr_El->get_dx();
 
 					if (timeprops_ptr->iter < 51)
@@ -95,7 +95,7 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 
 					update_states(state_vars, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy,
 					    dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, matprops_ptr->intfrict,
-					    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), matprops_ptr->frict_tiny,
+						tan_bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), matprops_ptr->frict_tiny,
 					    stop, orgSrcSgn);
 
 					Vec_Mat<9>& jacobian = Curr_El->get_jacobian();
@@ -133,7 +133,7 @@ void calc_jacobian(MeshCTX* meshctx, PropCTX* propctx) {
 
 							calc_jacobian_elem(jacobian(effelement), *jac_flux_n_x, *jac_flux_p_x, *jac_flux_n_y,
 							    *jac_flux_p_y, prev_state_vars, d_state_vars, (d_state_vars + NUM_STATE_VARS),
-							    curvature, gravity, d_gravity, dh_sens, matprops_ptr->intfrict, bedfrict,
+							    curvature, gravity, d_gravity, dh_sens, matprops_ptr->intfrict, *tan_bedfrict,
 							    *(Curr_El->get_kactxy()), effelement, dtdx, dtdy, dt, stop, orgSrcSgn);
 
 						}
@@ -339,16 +339,13 @@ void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx) {
 	HashTable* NodeTable = meshctx->nd_table;
 
 	TimeProps* timeprops_ptr = propctx->timeprops;
-	MapNames* mapname_ptr = propctx->mapnames;
 	MatProps* matprops_ptr = propctx->matprops;
 
-	int neigh_flag;
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
 	DualElem* Curr_El = NULL;
 
 	int iter = timeprops_ptr->iter;
-	double tiny = GEOFLOW_TINY;
 
 //this array holds ResFlag for element itself and its neighbors
 	ResFlag resflag[EFF_ELL];
@@ -391,10 +388,9 @@ void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx) {
 						double d_state_vars_old[NUM_STATE_VARS * DIMENSION];
 						double prev_state_vars_old[NUM_STATE_VARS * DIMENSION];
 						double *prev_state_vars = Curr_El->get_prev_state_vars();
-						Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
-						double bedfrict = Curr_El->get_effect_bedfrict();
+
+						double *tan_bedfrict = Curr_El->get_tanbedfrict();
 						double dx[DIMENSION] = { *(Curr_El->get_dx()), *(Curr_El->get_dx() + 1) };
-						double kactxy[DIMENSION];
 						double orgSrcSgn[DIMENSION];
 						int check_stop[DIMENSION] = { 0, 0 };
 
@@ -439,7 +435,7 @@ void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx) {
 						    fluxold[1], fluxold[2], fluxold[3], dtdx, dtdy, dt, d_state_vars_old, //7
 						    (d_state_vars_old + NUM_STATE_VARS), curvature, //2
 						    matprops_ptr->intfrict, //1
-						    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), //4
+							tan_bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), //4
 						    matprops_ptr->frict_tiny, orgSrcSgn, 0./*=increment*/, //3
 						    matprops_ptr->epsilon, check_stop); //2
 
@@ -520,13 +516,13 @@ void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx) {
 										double *d_state_vars = Curr_El->get_d_state_vars();
 
 										//here we compute the residuals
-										residual(vec_res, state_vars, prev_state_vars, flux[0],									//4
-										    flux[1], flux[2], flux[3], dtdx, dtdy, dt, d_state_vars,								//7
-										    (d_state_vars + NUM_STATE_VARS), curvature,									//2
+										residual(vec_res, state_vars, prev_state_vars, flux[0],		//4
+										    flux[1], flux[2], flux[3], dtdx, dtdy, dt, d_state_vars,//7
+										    (d_state_vars + NUM_STATE_VARS), curvature,				//2
 										    matprops_ptr->intfrict,									//1
-										    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()),									//4
-										    matprops_ptr->frict_tiny, orgSrcSgn, incr,									//3
-										    matprops_ptr->epsilon, check_stop, srcflag, 0);									//2
+											tan_bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()),	//4
+										    matprops_ptr->frict_tiny, orgSrcSgn, incr,				//3
+										    matprops_ptr->epsilon, check_stop, srcflag, 0);			//2
 
 #ifdef DEBUGFILE
 										myfile << "Elem Key[0]= " << *(Curr_El->pass_key()) << "  Key[1]= "

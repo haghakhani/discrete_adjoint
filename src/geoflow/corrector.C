@@ -71,29 +71,26 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 	double *gravity = EmTemp->get_gravity();
 	double *d_gravity = EmTemp->get_d_gravity();
 	double *curvature = EmTemp->get_curvature();
-	double bedfrict = EmTemp->get_effect_bedfrict();
+	double *tan_bedfrict = EmTemp->get_tanbedfrict();
 
 	double Vsolid[DIMENSION];
 
 	if (state_vars[0] > GEOFLOW_TINY) {
 		for (i = 0; i < DIMENSION; i++)
-			kactxy[i] = *(EmTemp->get_effect_kactxy() + i);
+			kactxy[i] = *(EmTemp->get_kactxy() + i);
+
+		double inv_h = 1. / state_vars[0];
 
 		// fluid velocities
-		Vsolid[0] = state_vars[1] / state_vars[0];
-		Vsolid[1] = state_vars[2] / state_vars[0];
+		Vsolid[0] = state_vars[1] * inv_h;
+		Vsolid[1] = state_vars[2] * inv_h;
 
 	} else {
 		for (i = 0; i < DIMENSION; i++) {
 			kactxy[i] = matprops_ptr->epsilon;
 			Vsolid[i] = 0.;
 		}
-		bedfrict = matprops_ptr->bedfrict[EmTemp->get_material()];
 	}
-
-	double V_avg[DIMENSION];
-	V_avg[0] = Vsolid[0];
-	V_avg[1] = Vsolid[1];
 
 //	int debuging, ggg = 0;
 //	if (EmTemp->get_ithelem() == 8251 /*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1 */
@@ -102,18 +99,14 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 ////	&& timeprops->iter == ITER)
 //		debuging = ggg = 1;
 
-	double dragforce[2] = { 0., 0. };
-
 	int stop[2];
 	double orgSrcSgn[4];
 
 	update_states(state_vars, prev_state_vars, //2
 	    fluxxp, fluxyp, fluxxm, fluxym, dtdx, //5
 	    dtdy, dt, d_state_vars, (d_state_vars + NUM_STATE_VARS), //4
-	    curvature, (matprops_ptr->intfrict), bedfrict, gravity, //4
+	    curvature, (matprops_ptr->intfrict), tan_bedfrict, gravity, //4
 	    d_gravity, kactxy[0], matprops_ptr->frict_tiny, stop, orgSrcSgn);
-
-	char filename[] = "corrector";
 
 #ifdef DEBUG
 	if (*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1 && timeprops->iter == ITER) {
@@ -133,7 +126,7 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 			    - dtdy * (fluxyp[i] - fluxym[i]);
 		printf("ElemKey: %d   ElemKey2: %d\n ", *EmTemp->pass_key(), *(EmTemp->pass_key() + 1));
 		printf("Kactxy = %10.5e, %10.5e\n", kactxy[0], kactxy[1]);
-		printf("BedFrict: %10.5e: IntFrict: %10.5e\n", bedfrict, matprops_ptr->intfrict);
+		printf("TAN BedFrict: %10.5e: IntFrict: %10.5e\n", *tan_bedfrict, matprops_ptr->intfrict);
 
 		printf("state_vars: \n");
 		for (i = 0; i < NUM_STATE_VARS; i++)

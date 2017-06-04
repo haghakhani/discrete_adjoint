@@ -22,7 +22,7 @@
 void residual(double* residual, double *state_vars, double *prev_state_vars, //3
     double *fluxxp, double *fluxyp, double *fluxxm, double *fluxym, double dtdx, //5
     double dtdy, double dt, double *d_state_vars_x, double *d_state_vars_y, //4
-    double *curvature, double intfrictang, double bedfrict, double *gravity, //4
+    double *curvature, double intfrictang, double *tan_bed_fric, double *gravity, //4
     double *dgdx, double kactxyelem, double fric_tiny, double* orgSrcSgn, //4
     double increment, double epsilon, int* check_stop_crit, int srcflag, int org_res_flag) {
 
@@ -64,14 +64,15 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
 
 	if (prev_state_vars[0] > GEOFLOW_TINY && srcflag) {
 
-		double unitvx = 0., unitvy = 0., h_inv = 0., speed = 0.;
+		double unitvx = 0., unitvy = 0., speed = 0., inv_speed = 0.;
 
 		speed = sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
 
-		if (speed > 0.) {
-			unitvx = velocity[0] / speed;
-			unitvy = velocity[1] / speed;
-		}
+		if (speed > 0.)
+			inv_speed = 1 / speed;
+
+		unitvx = velocity[0] * inv_speed;
+		unitvy = velocity[1] * inv_speed;
 
 		//x dir
 		double s1 = gravity[0] * prev_state_vars[0];
@@ -80,10 +81,9 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
 		double s2 = orgSrcSgn[0] * prev_state_vars[0] * kactxy[0]
 		    * (gravity[2] * d_state_vars_y[0] + dgdx[1] * prev_state_vars[0]) * sin_int_fric;
 
-		double tan_bed_fric = tan(bedfrict);
 		double s3 = unitvx
 		    * max(gravity[2] * prev_state_vars[0] + velocity[0] * prev_state_vars[1] * curvature[0],
-		        0.0) * tan_bed_fric;
+		        0.0) * *tan_bed_fric;
 		if (prev_state_vars[1] == increment)
 			s3 = 0;
 
@@ -104,7 +104,7 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //3
 
 		s3 = unitvy
 		    * max(gravity[2] * prev_state_vars[0] + velocity[1] * prev_state_vars[2] * curvature[1],
-		        0.0) * tan_bed_fric;
+		        0.0) * *tan_bed_fric;
 
 		if (prev_state_vars[2] == increment)
 			s3 = 0;
@@ -162,20 +162,22 @@ double tiny_sgn(double num, double tiny) {
 void update_states(double *state_vars, double *prev_state_vars, //2
     double *fluxxp, double *fluxyp, double *fluxxm, double *fluxym, double dtdx, //5
     double dtdy, double dt, double *d_state_vars_x, double *d_state_vars_y, //4
-    double *curvature, double intfrictang, double bedfrict, double *gravity, //4
+    double *curvature, double intfrictang, double* tan_bed_fric, double *gravity, //4
     double *dgdx, double kactxyelem, double fric_tiny, int* stop, double* orgSrcSgn) { //5
 
 	double velocity[DIMENSION];
 	double kactxy[DIMENSION];
-	double tmp;
+	double tmp,h_inv=0.;
 
 	if (prev_state_vars[0] > GEOFLOW_TINY) {
 		for (int k = 0; k < DIMENSION; k++)
 			kactxy[k] = kactxyelem;
 
+		h_inv = 1. / prev_state_vars[0];
+
 		// velocities
-		velocity[0] = prev_state_vars[1] / prev_state_vars[0];
-		velocity[1] = prev_state_vars[2] / prev_state_vars[0];
+		velocity[0] = prev_state_vars[1] * h_inv;
+		velocity[1] = prev_state_vars[2] * h_inv;
 
 	} else {
 
@@ -201,11 +203,6 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 
 	if (prev_state_vars[0] > GEOFLOW_TINY) {
 
-//		double unitvx = 0., unitvy = 0., h_inv = 0., speed = 0.;
-		double h_inv = 0.;
-
-		h_inv = 1. / prev_state_vars[0];
-
 		tmp = h_inv * (d_state_vars_y[1] - velocity[0] * d_state_vars_y[0]);
 		orgSrcSgn[0] = tiny_sgn(tmp, fric_tiny);
 		orgSrcSgn[2] = tiny_sgn(velocity[0], fric_tiny);
@@ -228,10 +225,9 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 		double s2 = orgSrcSgn[0] * prev_state_vars[0] * kactxy[0]
 		    * (gravity[2] * d_state_vars_y[0] + dgdx[1] * prev_state_vars[0]) * sin_int_fric;
 
-		double tan_bed_fric = tan(bedfrict);
 		double s3 = orgSrcSgn[2]
 		    * max(gravity[2] * prev_state_vars[0] + velocity[0] * prev_state_vars[1] * curvature[0],
-		        0.0) * tan_bed_fric;
+		        0.0) * *tan_bed_fric;
 
 		if (s3 == 0. && orgSrcSgn[2])
 			stop[0] = 1;
@@ -253,7 +249,7 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 
 		s3 = orgSrcSgn[3]
 		    * max(gravity[2] * prev_state_vars[0] + velocity[1] * prev_state_vars[2] * curvature[1],
-		        0.0) * tan_bed_fric;
+		        0.0) * *tan_bed_fric;
 
 		if (s3 == 0. && orgSrcSgn[3])
 			stop[1] = 1;
@@ -277,7 +273,7 @@ void update_states(double *state_vars, double *prev_state_vars, //2
 void residual(double* residual, double *state_vars, double *prev_state_vars, //2
     double *fluxxp, double *fluxyp, double *fluxxm, double *fluxym, double dtdx, //5
     double dtdy, double dt, double *d_state_vars_x, double *d_state_vars_y, //4
-    double *curvature, double intfrictang, double bedfrict, double *gravity, //4
+    double *curvature, double intfrictang, double* tan_bed_fric, double *gravity, //4
     double *dgdx, double kactxyelem, double fric_tiny, int* stop, double* orgSrcSgn) { //5
 
 	double velocity[DIMENSION];
@@ -333,10 +329,9 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //2
 		double s2 = orgSrcSgn[0] * prev_state_vars[0] * kactxy[0]
 		    * (gravity[2] * d_state_vars_y[0] + dgdx[1] * prev_state_vars[0]) * sin_int_fric;
 
-		double tan_bed_fric = tan(bedfrict);
 		double s3 = orgSrcSgn[2]
 		    * max(gravity[2] * prev_state_vars[0] + velocity[0] * prev_state_vars[1] * curvature[0],
-		        0.0) * tan_bed_fric;
+		        0.0) * *tan_bed_fric;
 
 		if (s3 == 0. && orgSrcSgn[2])
 			stop[0] = 1;
@@ -351,7 +346,7 @@ void residual(double* residual, double *state_vars, double *prev_state_vars, //2
 
 		s3 = orgSrcSgn[3]
 		    * max(gravity[2] * prev_state_vars[0] + velocity[1] * prev_state_vars[2] * curvature[1],
-		        0.0) * tan_bed_fric;
+		        0.0) * *tan_bed_fric;
 
 		if (s3 == 0. && orgSrcSgn[3])
 			stop[1] = 1;

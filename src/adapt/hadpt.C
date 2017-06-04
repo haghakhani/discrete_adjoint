@@ -287,7 +287,6 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count, double
 				case NOTRECADAPTED:
 					//it's an active (non ghost) element
 					EmTemp->calc_d_gravity(HT_Elem_Ptr);
-					EmTemp->calc_wet_dry_orient(HT_Elem_Ptr);
 					break;
 				case TOBEDELETED:
 					//deleting the refined father elements but not ghost element so don't need to call move_data() again
@@ -1171,7 +1170,6 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 				case NOTRECADAPTED:
 					//it's an active (non ghost) element
 					EmTemp->calc_d_gravity(HT_Elem_Ptr);
-					EmTemp->calc_wet_dry_orient(HT_Elem_Ptr);
 
 #ifdef FORDEBUG
 					NdTemp=(Node*) HT_Node_Ptr->lookup(EmTemp->pass_key());
@@ -1378,8 +1376,6 @@ void H_adapt_to_level(HashTable* El_Table, HashTable* NodeTable, MatProps* matpr
 			currentPtr = currentPtr->next;
 			assert(EmTemp);
 
-			if ((EmTemp->get_adapted_flag() > TOBEDELETED) && (EmTemp->get_adapted_flag() <= BUFFER))
-				EmTemp->calc_wet_dry_orient(El_Table);
 		}
 	}
 

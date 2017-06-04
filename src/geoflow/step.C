@@ -219,59 +219,14 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 					    coord[1] - 0.5 * dxy[1], coord[1] + 0.5 * dxy[1], hheight, pfheight);
 #endif
 
-//#ifdef APPLY_BC
-//					for (j = 0; j < 4; j++)
-//						if (*(Curr_El->get_neigh_proc() + j) == INIT) // this is a boundary!
-//							for (k = 0; k < NUM_STATE_VARS; k++)
-//								*(Curr_El->get_state_vars() + k) = 0;
-//#endif
-
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 
-	//update the orientation of the "dryline" (divides partially wetted cells
-	//into wet and dry parts solely based on which neighbors currently have
-	//pileheight greater than GEOFLOW_TINY
-	for (i = 0; i < El_Table->get_no_of_buckets(); i++) {
-		HashEntryPtr currentPtr = *(buck + i);
-		while (currentPtr) {
-			Element* Curr_El = (Element*) (currentPtr->value);
-			currentPtr = currentPtr->next;
-			if (Curr_El->get_adapted_flag() > 0) //if this is a refined element don't involve!!!
-				Curr_El->calc_wet_dry_orient(El_Table);
-		}
-	}
-
 	/* finished corrector step */
 	calc_stats(El_Table, NodeTable, myid, matprops_ptr, timeprops_ptr, statprops_ptr, discharge, dt);
 
-//	double tempin[6], tempout[6];
-//	tempin[0] = outflow;    //volume that flew out the boundaries this iteration
-//	tempin[1] = eroded;     //volume that was eroded this iteration
-//	tempin[2] = deposited;  //volume that is currently deposited
-//	tempin[3] = realvolume; //"actual" volume within boundaries
-//	tempin[4] = forceint;   //internal friction force
-//	tempin[5] = forcebed;   //bed friction force
-//
-//	MPI_Reduce(tempin, tempout, 6, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-//
-//	statprops_ptr->outflowvol += tempout[0] * (matprops_ptr->HEIGHT_SCALE)
-//	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
-//	statprops_ptr->erodedvol += tempout[1] * (matprops_ptr->HEIGHT_SCALE)
-//	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
-//	statprops_ptr->depositedvol = tempout[2] * (matprops_ptr->HEIGHT_SCALE)
-//	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
-//	statprops_ptr->realvolume = tempout[3] * (matprops_ptr->HEIGHT_SCALE)
-//	    * (matprops_ptr->LENGTH_SCALE) * (matprops_ptr->LENGTH_SCALE);
-//
-//	statprops_ptr->forceint = tempout[4] / tempout[3] * matprops_ptr->GRAVITY_SCALE;
-//	statprops_ptr->forcebed = tempout[5] / tempout[3] * matprops_ptr->GRAVITY_SCALE;
-
-	//calc_volume(El_Table, myid, matprops_ptr, timeprops_ptr, dt, v_star, nz_star);
-
-	return;
 }
 
 /***********************************************************************/
@@ -284,19 +239,19 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 
 void calc_volume(HashTable* El_Table, int myid, MatProps* matprops_ptr, TimeProps* timeprops_ptr,
     double d_time, double *v_star, double *nz_star) {
-	int i, j, k, counter, imax = 0;
-	double tiny = GEOFLOW_TINY;
+	int imax = 0;
+
 	//-------------------go through all the elements of the subdomain and
 	//-------------------calculate the state variables at time .5*delta_t
 	double volume = 0, volume2 = 0, max_height = 0;
 	double v_ave = 0, gl_v_ave;
-	double g_ave = 0, gl_g_ave;
+	double g_ave = 0;
 	double v_max = 0, gl_v_max;
 	double min_height = matprops_ptr->MAX_NEGLIGIBLE_HEIGHT;
 	register double temp;
 
 	HashEntryPtr* buck = El_Table->getbucketptr();
-	for (i = 0; i < El_Table->get_no_of_buckets(); i++)
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
 			HashEntryPtr currentPtr = *(buck + i);
 			while (currentPtr) {
@@ -337,7 +292,7 @@ void calc_volume(HashTable* El_Table, int myid, MatProps* matprops_ptr, TimeProp
 	send[1] = volume2;
 	send[2] = v_ave;
 	send[3] = g_ave;
-	i = MPI_Reduce(send, receive, 4, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	MPI_Reduce(send, receive, 4, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 	gl_volume = receive[0];
 	gl_volume2 = receive[1];
 	gl_v_ave = receive[2];
@@ -346,7 +301,7 @@ void calc_volume(HashTable* El_Table, int myid, MatProps* matprops_ptr, TimeProp
 	send[0] = max_height;
 	send[1] = v_max;
 
-	i = MPI_Reduce(send, receive, 2, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+	MPI_Reduce(send, receive, 2, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	gl_max_height = receive[0];
 	gl_v_max = receive[1];
 

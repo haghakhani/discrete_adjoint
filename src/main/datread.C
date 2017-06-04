@@ -362,22 +362,22 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 	fp = fopen("frict.data", "r");
 	fscanf(fp, "%d\n", &(matprops_ptr->material_count));
 
-	matprops_ptr->matnames = (char **) malloc((matprops_ptr->material_count + 1) * sizeof(char *));
+	matprops_ptr->matnames = (char **) malloc((matprops_ptr->material_count) * sizeof(char *));
 	matprops_ptr->bedfrict = CAllocD1(matprops_ptr->material_count + 1);
 	matprops_ptr->tanbedfrict = CAllocD1(matprops_ptr->material_count + 1);
 	char stringswap[512];
 	int imat;
 	double doubleswap;
-	for (imat = 1; imat <= matprops_ptr->material_count; imat++) {
+	for (imat = 0; imat < matprops_ptr->material_count; imat++) {
 		fgets(stringswap, 512, fp);
 		matprops_ptr->matnames[imat] = allocstrcpy(stringswap);
 		fscanf(fp, "%lf %lf\n", &doubleswap, &(matprops_ptr->bedfrict[imat]));
 		matprops_ptr->bedfrict[imat] *= PI / 180.0;
-		matprops_ptr->tanbedfrict[imat] = tan(matprops_ptr->intfrict);
+		matprops_ptr->tanbedfrict[imat] = tan(matprops_ptr->bedfrict[imat]);
 
-		if (imat == 1) {
+		if (imat == 0) {
 			matprops_ptr->intfrict = doubleswap * PI / 180.0;
-			matprops_ptr->tanintfrict = tan(matprops_ptr->intfrict);
+			matprops_ptr->sinintfrict = sin(matprops_ptr->intfrict);
 		}
 
 	}

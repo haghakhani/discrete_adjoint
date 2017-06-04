@@ -131,17 +131,8 @@ public:
 	//! returns the integer material flag for this element, needed for use of a material map which allows bedfriction to vary with physical position
 	int get_material();
 
-	//! legacy afeapi function prototype, this function does not exist in the finite difference/volume version of Titan
-	void get_stiffness(HashTable*, HashTable*, double*, double*, Element*);
-
 	//! returns the address of the first of 8 (nodes 0-7) node keys in an array, the node keys are used to access the nodes through the node hashtable
 	unsigned* getNode();
-
-	//! returns the array of 8 processors for the 8 neigbors of this element
-	int* getassoc();
-
-	//! not used in finite difference/volume version of titan, legacy, returns number of degrees of freedom, used is global stiffness matrices
-	int get_no_of_dof();
 
 	//! set the generation (number of times it's been refined -8<=gen<=+3) of this "element"/cell
 	void put_gen(int);
@@ -155,20 +146,11 @@ public:
 	//! this function returns the keys of an element's 4 brothers (an element is considered to be it's own brother) this is used during unrefinement to combine 4 brothers into their father element
 	unsigned* get_brothers();
 
-	//! this function stores the processor id "a" of neighbor "i" in the 8 element array of neighbor processors, this functionality is duplicated by put_neigh_proc which is the preferred function to use (don't use this one it's legacy)
-	void putassoc(int a, int i);
-
 	//! this function stores the key "n" of neighbor "i" in the array of the 8 keys of the neighbor keys
 	void putneighbor(unsigned *n, int i);
 
 	//! this function stores the processor id "proc" of neighbor "i" in the 8 element array of neighbor processors, use this function instead of putassoc.
 	void put_neigh_proc(int i, int proc);
-
-	//! afeapi legacy not used in the finite difference/volume version of Titan, but it is used in the discontinuous galerkin version (a separate more accurate less stable implementation with a lot of things in common with the finite difference/volume code)
-	void put_order(int, int);
-
-	//! afeapi legacy not used in the finite difference/volume version of Titan, but it is used in the discontinuous galerkin version (a separate more accurate less stable implementation with a lot of things in common with the finite difference/volume code)
-	int* get_order();
 
 	//! find and return what the key of this element's father element would be, very simple since the bubble node has the same key as the element, so all this function does is find which of its corner nodes will be the father element's bubble node, which it knows since it knows which_son it is.
 	unsigned* getfather();
@@ -179,12 +161,6 @@ public:
 	//! return the element keys of this element's 4 sons, used during refinement
 	unsigned* getson();
 
-	//! stores the ?square? of the "solution" and solution error, used durring refinement
-	void putel_sq(double solsq, double ellsq);
-
-	//! return the element's solution vector
-	double* get_el_solution();
-
 	//! returns the element's error vector
 	double* get_el_error();
 
@@ -193,9 +169,6 @@ public:
 
 	//! returns the array of processor ids for this element's 8 neighbors
 	int* get_neigh_proc();
-
-	//! returns the pointer to this element's array of boundary conditions, not really all that important in titan since any flow that goes beyond the boundary of the GIS map leaves the computational domain.
-	BC* get_bcptr();
 
 	//! returns this elements generation, that is how many times it's been refined -8<=generation<=+3, negative means courser than original mesh
 	int get_gen();
@@ -218,18 +191,6 @@ public:
 	//! refined, get_refined_flag(), put_refined_flag() are the partly replaced predecessors of adapted, get_adapted_flag(), and put_adapted_flag(). The magnitude of the "adapted" flag indicates whether the cell is NEWSON, NEWFATHER, NOTRECADAPTED, or TOBEDELETED.  A postive value indicates it's on this processor, a negative sign indicates a GHOST cell. These values are defined in constant.h.  The NEWSON value has allowed Keith to provide one time only immunity from unrefinement to recently refined elements, after which the "adapted" flag is resent to NOTRECADAPTED.
 	void put_adapted_flag(int new_adapted_status);
 
-	//! this function is only called in htflush.C to initialize it to zero, I (Keith) think it is afeapi legacy that isn't being used anymore but I'm not sure about that
-	void put_send_flag(int, int);
-
-	//! this function is only called in htflush.C to initialize it to zero, I (Keith) think it is afeapi legacy that isn't being used anymore but I'm not sure about that
-	void put_recv_flag(int, int);
-
-	//! this function isn't being called anywhere, which means it is afeapi legacy
-	int get_send_flag(int);
-
-	//! this function isn't being called anywhere, which means it is afeapi legacy
-	int get_recv_flag(int);
-
 	//! this function returns an array holding the generation of all 8 of this element's neighbors
 	int* get_neigh_gen();
 
@@ -251,20 +212,11 @@ public:
 	//! this function returns the vlaue of the new_old flag which is used during mesh adaptation and repartitioning
 	int get_new_old();
 
-	//! this function is legacy afeapi code, the function is defined in element2.C but it is never called anywhere in the finite difference/volume version of titan because it's finite element (including Discontinuous Galerkin) specific code
-	void update_ndof();
-
 	//! this function is called during repartitioning when one of an element's neighbors is sent to another processor
 	void change_neighbor_process(int which, int newp);
 
 	//! the function returns the vector of element "error", element error is used to say when a function should be refined
 	double* get_el_err();
-
-	//! this function is afeapi legacy it is not called anywhere in the finite difference/volume version of titan
-	void get_nelb_icon(HashTable*, HashTable*, int*, int*);
-
-	//! this function sets the pointer to an element's boundary conditions to NULL
-	void void_bcptr();
 
 	//! this function returns the Load Balancing weight of an element which is used in repartitioning
 	double get_lb_weight();
@@ -292,8 +244,7 @@ public:
 
 	//! this function computes searches for an element's brother, i.e. the brother (son of the same father) that is located diagonally from it, to get the brother information requires that atleast one of this element's neighboring brothers is on this process in order to get information onthe brother that is not a neighbor
 	void find_opposite_brother(HashTable*);
-	//void      get_icon(HashTable*, HashTable*, int[4]);
-	//void      get_boundary(int[4], double[4]);
+
 	/* geoflow functions */
 
 	//! this function initializes pileheight, momentums and shortspeed (also known as the L'Hosptial speed see calc_shortspeed for an explanation),this function is called in init_piles.C
@@ -394,35 +345,7 @@ public:
 	    vector<T*>* y_elem_list, MatProps* matprops_ptr, int myid, double dt, int* order_flag,
 	    double *outflow);
 
-	/*! this function calculates the maximum x and y direction wavespeeds
-	 *  which are the eigenvalues of the flux jacobian
-	 */
-	double* get_eigenvxymax();
-
-	/*!
-	 * this function calculates the shortspeed,also known as the L'Hospital
-	 * (pronounced Loo-pee-tal, you can look up L'Hospital's rule in almost
-	 * any calculus book if you so desire). here is a brief explanation of
-	 * shortspeed: shortspeed=|v|=|dhv/dh|=|v*dh/dh+h*dv/dh|=|v+h*dv/dh| which
-	 * goes to |v| in the limit of h->0, this is a more accurate way to compute
-	 * speed when the pile in this cell is short, hence the name "shortspeed"
-	 * but it is not accurate when the pile is tall, that is when h*dv/dh is
-	 * large, Keith implemented this in late summer 2006
-	 */
-	void calc_shortspeed(double inv_dt);
-
-	//! this function returns the already computed shortspeed
-	double get_shortspeed();
-
-	//! this function assigns the value passed in to shortspeed
-	void put_shortspeed(double shortspeedin);
-
-	/*! this function computes the velocity, either V=hV/h or shortspeed in
-	 *  the direction of hV/h, if the pile is short, that is h is less than
-	 *  the defined (nondimensional) value of GEOFLOW_SHORT, see geoflow.h,
-	 *  it chooses the speed to be min(|hV/h|,shortspeed) if h is greater than
-	 *  GEOFLOW_SHORT it chooses hV/h regardless of which one is smaller.
-	 */
+	/*! this function computes the velocity */
 	void eval_velocity(double xoffset, double yoffset, double Vel[]);
 
 	//! this function returns the already calculated value(s) of k active passive, which comes from using th Coulomb friction model of granular flows (this is problem specific to titan and thus does not appear in the standard afeapi code)
@@ -442,12 +365,6 @@ public:
 
 	//! this function returns the precomputed local terrain curvature.  Curvature itself is the inverse of radius of curvature.  The exact value of curvature  is the spatial second derivative of the normal coordinate of the surface along directions tangent to the surface at that point (local x and y).  However I believe that Laercio Namikawa implemented it approximately, i.e. as the global x and y second derivatives of terrain elevation.
 	double* get_curvature();
-
-	//! the only place this function is called is in move_data.C, I believe it is legacy titan code and could probably be removed
-	void put_lam(double lam_in);
-
-	//! this function is never called in the finite difference/volume version of titan, it is legacy (I believe titan rather than afeapi legacy code) that probably should be removed
-	double get_lam();
 
 	//! this function is called in element_weight.C, it is used in computing the load balancing weight
 	void calc_flux_balance(HashTable *NodeTable);
@@ -474,13 +391,6 @@ public:
 
 	void dual_find_brothers(HashTable* El_Table, HashTable* NodeTable, int myid,
 	    MatProps* matprops_ptr, void* NewFatherList, void* OtherProcUpdate, int rescomp);
-	/*
-	 //! this function is defined in unrefine.C, it is also called in that file, it finds this element's brothers
-	 int find_brothers(HashTable* El_Table, HashTable* NodeTable,
-	 double target, int myid, MatProps* matprops_ptr,
-	 Element **NewFatherList, int* NumNewFathers,
-	 Element **OtherProcUpdate, int *NumOtherProcUpdate);
-	 */
 
 	//! this function is defined in unrefine.C, it is also called in that file and no where else, it prevents refinement when one or more of the brothers does not belong to this processor
 	int check_unrefinement(HashTable *El_Table, double target);
@@ -502,20 +412,13 @@ public:
 	//! this function stores the coordinates of this element (which would be the same as its bubble node's coordinates)
 	void put_coord(double* coord_in);
 
-	//! this function is part of the experimental _LOCAL_ (not Bin Yu's) stopping criteria which has not yet been validated, I (Keith) have faith in the criteria, but enforcing the stopped after it has been decided that it needs to stop still needs some work. the only place this function is called is in get_coef_and_eigen.C immediately after k_active/passive and in init_piles.C when computing the initial volume that "should already be" deposited.
-	void calc_stop_crit(MatProps*);
-
-	//! this function is used to assign a value to stopped flags, for when you don't want to compute the criteria to decide whether it's stopped or not, useful during developement
-	void put_stoppedflags(int stoppedflagsin);
-
 	//! interface to change value of earth-pressure cofficients
 	void put_kactxy(double kap[]) {
 		kactxy[0] = kap[0];
 		kactxy[1] = kap[1];
 	}
 
-	//! this function returns the value of "stoppedflags"
-	int get_stoppedflags();
+	double* get_tanbedfrict();
 
 	//! this function zeros the extrusion (out of the ground) fluxes in this element
 	void zero_influx();
@@ -538,59 +441,11 @@ public:
 	//! the buffer layer is a layer of refined cells on the outside of the pile, i.e. ((pileheight<contour_height)&&(Influx[0]==0)) and adjacent to the pile.  It is "N" elements wide, and the "N" element width is increased one element at a time.  This function returns 2 if this element a member of the boundary of the buffer that is one element wider than the current buffer and does not need to be adapted.  It returns 1 if this elment needs to be refined and some of its sons will be in the next buffer boundary
 	int if_next_buffer_boundary(HashTable *ElemTable, HashTable *NodeTable, double contour_height);
 
-	//! for debugging only
-	int get_counted();
-
-	//! for debugging only
-	void put_counted(int countedvalue);
-
 	//! when sorted by keys this element is the ithelem element on this processor, ithelem is just storage for a value you have to assign before using, if you do not compute it before you use it will be wrong.
 	int get_ithelem() const;
 
 	//! when sorted by keys this element is the ithelem element on this processor, ithelem is just storage for a value you have to assign before using, if you do not compute it before you use it will be wrong.
 	void put_ithelem(int i);
-
-	//! one option for what to do when you know the flow should be stopped is to reset the bed friction angle to take on the value of the internal friction angle, thus the effective bed friction angle holds either the value of the actual bed friction angle if it should not be stopped or the value of the internal friction angle if it should not be stopped
-	double get_effect_bedfrict();
-
-	//! one option for what to do when you know the flow should be stopped is to reset the bed friction angle to take on the value of the internal friction angle, if the effective bed friction angle equals the internal friction angle effect_kactxy takes on the value 1, k active/passive comes from using a Coulomb friction model for granular flows
-	double* get_effect_kactxy();
-
-	//! this inline member function returns the stored value of Awet, Awet is the fraction of an element's area that is wet (has material), 0.0<=Awet<=1.0, where there is no flow (pileheight < GEOFLOW_TINY) Awet=0, in the interior of the Flow Awet=1.0, at the boundary of the flow, elements will be PARTIALLY WET (i.e. where the element SHOULD be separated into a dry part and wet part), Awet is the fraction that should be wet, Awet is updated during the corrector part of the (finite difference)predictor-(finite volume)corrector update.  Fluxes are adjusted to acount for how wet/dry an edge of an element is. Keith wrote this may 2007
-	double get_Awet();
-
-	//! this inline member function assigns a value to Awet, Awet is the fraction of an element's area that is wet (has material), 0.0<=Awet<=1.0, where there is no flow (pileheight < GEOFLOW_TINY) Awet=0, in the interior of the Flow Awet=1.0, at the boundary of the flow, elements will be PARTIALLY WET (i.e. where the element SHOULD be separated into a dry part and wet part), Awet is the fraction that should be wet, Awet is updated during the corrector part of the (finite difference)predictor-(finite volume)corrector update.  Fluxes are adjusted to acount for how wet/dry an edge of an element is. Keith wrote this may 2007
-	void put_Awet(double Awet_in);
-
-	//! this inline member function returns the stored value of Swet.  Swet is the fraction of the element's partially wet sides that are wet (i.e. have material).  Where there is no flow (pileheight < GEOFLOW_TINY), Swet=0.  In the interior of a flow, Swet=1.0.  At the flow boundary, elements will be PARTIALLY WET, 0.0<=Swet<=1.0.  Due to symmetry, any element can only have 0 or 2 partially wet sides, each of which (for normalized elements) will have the same fraction that is wet, Swet.  Swet for each partially wet cell is updated every time-step when calc_wet_dry_orient() is called in step.C.  Fluxes are adjusted to account for how wet/dry an edge of an element is.  Keith wrote this function may 2007
-	double get_Swet();
-
-	//! this inline member function assigns a value to Swet.  Swet is the fraction of the element's partially wet sides that are wet (i.e. have material).  Where there is no flow (pileheight < GEOFLOW_TINY), Swet=0.  In the interior of a flow, Swet=1.0.  At the flow boundary, elements will be PARTIALLY WET, 0.0<=Swet<=1.0.  Due to symmetry, any element can only have 0 or 2 partially wet sides, each of which (for normalized elements) will have the same fraction that is wet, Swet.  Swet for each partially wet cell is updated every time-step when calc_wet_dry_orient() is called in step.C.  Fluxes are adjusted to account for how wet/dry an edge of an element is.  Keith wrote this function may 2007
-	void put_Swet(double Swet_in);
-
-	//! this inline member function returns the value of iwetnode.  iwetnode is an integer that defines which of an element's 9 nodes is its "wettest" node (wet elements are those containing material).  In the interior of a flow, iwetnode=8 (the center node), indicating a fully wet element.  Outside of a flow (where an element and all it's neighbors have pileheight < GEOFLOW_TINY), iwetnode is also 8.  Along a flow boundary, partially wet elements with 1,2, or 3 wet sides can have an iwetnode other than 8.   iwetnode is used to determine which side of the dryline in a partially wet element has material.  Keith wrote this function may 2007
-	int get_iwetnode();
-
-	//! this inline member function sets the value of iwetnode. iwetnode is an integer that defines which of an element's 9 nodes is its "wettest" node (wet elements are those containing material).  In the interior of a flow, iwetnode=8 (the center node), indicating a fully wet element.  Outside of a flow (where an element and all it's neighbors have pileheight < GEOFLOW_TINY), iwetnode is also 8.  Along a flow boundary, partially wet elements with 1,2, or 3 wet sides can have an iwetnode other than 8.   iwetnode is used to determine which side of the dryline in a partially wet element has material.  Keith wrote this function may 2007
-	void put_iwetnode(int iwetnode_in);
-
-	//! this inline member function returns the array "drypoint".  drypoint[0] is the local x-coordinate, and drypoint[1] the local y-coordinate of its namesake, which is used to specify the position of the flow-front (or dryline) inside a given element.  The position of the dryline along with iwetnode is used to determine Awet, i.e. which fraction of a partially wet element is wet (contains material).  Keith wrote this function may 2007
-	double* get_drypoint();
-
-	//! this inline member function sets the values of the array "drypoint".  drypoint[0] is the local x-coordinate, and drypoint[1] the local y-coordinate of its namesake, which is used to specify the position of the flow-front (or dryline) inside a given element.  The position of the dryline along with iwetnode is used to determine Awet, i.e. which fraction of a partially wet element is wet (contains material).  Keith wrote this function may 2007
-	void put_drypoint(double *drypoint_in);
-
-	//! the element member function calc_wet_dry_orient() determines the orientation of the dryline and which side of it is wet, the wet fraction (Swet) of a partially wet edge, the location of the drypoint, it does NOT calculate the wet area (Awet)... these quantities are used in the adjustment of fluxes in partially wet elements. calc_wet_dry_orient() is not coded for generic element orientation, i.e. the positive_x_side must be side 1.  Keith wrote this may 2007
-	void calc_wet_dry_orient(HashTable *El_Table);
-
-	//! The Element member function calc_elem_edge_wet_fraction() returns the "how much of this is wet" fraction of side that this element shares with its ineigh-th neighboring element . This fraction is used to determine wether or not to "zero" the state variables used to compute physical fluxes through a "dry" side.  Keith wrote this function may 2007
-	double calc_elem_edge_wet_fraction(int ineigh, int ifusewholeside);
-
-	//! this function relaxes the zeroing of fluxes through cell edges that are completely dry at the beginning of the timestep, as indicated by calc_elem_edge_wet_fraction(), but will be at least partly wet by the end of the timestep... Keith wrote this function June 2007
-	double calc_elem_edge_wetness_factor(int ineigh, double dt);
-
-	//! The Element member function convect_dryline() calculates the coordinates of the "drypoint" in the element's local coordinate system.  This is used to determine the location of the wet-dry front (or dryline) inside this element, which in turn is used (in conjunction with the location of "iwetnode" - which indicates which side of the dryline is wet) to determine the fraction of its total area that is wet (Awet).  Awet is then returned by the function.  Keith wrote this function may 2007
-	double convect_dryline(double VxVy[2], double dt);
 
 	//! sgn of double
 	double sgn(double a) {
@@ -697,11 +552,11 @@ protected:
 	//! for structured grid, tells which side is the positive x direction
 	int positive_x_side;
 
-	//! maximum x and y direction wavespeeds for this element, wavespeeds are eigenvalues of the flux jacobians
-	double eigenvxymax[DIMENSION];
-
 	//! k active/passive in the x and y directions, k active/passive is part of the coulomb friction model for Granular Flows
 	double kactxy[DIMENSION];
+
+	//this is tan bed frict angle but it changes w.r.t stop criteria
+	double tan_bed_frict;
 
 	//! terrain elevation at this elements center/bubble node
 	double elevation;
@@ -717,15 +572,6 @@ protected:
 
 	//! the spatial (x and y) derivatives of the local z component of the gravity vector
 	double d_gravity[DIMENSION];
-
-	//! one option for what to do when you know the flow should be stopped is to reset the bed friction angle to take on the value of the internal friction angle, thus the effective bed friction angle holds either the value of the actual bed friction angle if it should not be stopped or the value of the internal friction angle if it should not be stopped
-	double effect_bedfrict;
-
-	//! one option for what to do when you know the flow should be stopped is to reset the bed friction angle to take on the value of the internal friction angle, thus effect_tanbedfrict holds the value of the effective bed friction angle
-	double effect_tanbedfrict;
-
-	//! one option for what to do when you know the flow should be stopped is to reset the bed friction angle to take on the value of the internal friction angle, if the effective bed friction angle equals the internal friction angle effect_kactxy takes on the value 1, k active/passive comes from using a Coulomb friction model for granular flows
-	double effect_kactxy[2];
 
 	//! extrusion flux rate for this timestep for this element, used when having material flow out of the ground, a volume per unit area influx rate source term
 	double Influx[NUM_STATE_VARS];
@@ -830,13 +676,13 @@ inline void Element::update_prev_state_vars() {
 		prev_state_vars[i] = state_vars[i];
 }
 
-inline double* Element::get_eigenvxymax() {
-	return eigenvxymax;
+inline double* Element::get_kactxy() {
+	return kactxy;
 }
 ;
 
-inline double* Element::get_kactxy() {
-	return kactxy;
+inline double* Element::get_tanbedfrict(){
+	return &tan_bed_frict;
 }
 ;
 
@@ -875,17 +721,6 @@ inline double* Element::get_coord() {
 	return coord;
 }
 ;
-
-//above this line Keith made inline 20061128
-/* REALLY? member functions defined in class body are 
- * automatically inlined by the complier. When they are
- * not, "inline" keyword is not going to help the cause.
- * This was a huge waste of time
- */
-
-inline int* Element::getassoc() {
-	return neigh_proc;
-}
 
 inline unsigned* Element::getNode() {
 	return &(node_key[0][0]);
@@ -926,14 +761,6 @@ inline void Element::putneighbor(unsigned* n, int i) {
 	int j;
 	for (j = 0; j < KEYLENGTH; j++)
 		neighbor[i][j] = *(n + j);
-}
-
-inline void Element::putassoc(int a, int i) {
-	neigh_proc[i] = a;
-}
-
-inline void Element::putel_sq(double solsq, double errsq) {
-	el_error[0] = errsq;
 }
 
 inline double* Element::get_el_error() {
@@ -1008,14 +835,6 @@ inline double* Element::get_influx() {
 inline void Element::put_father(unsigned *fatherin) {
 	for (int ikey = 0; ikey < KEYLENGTH; ikey++)
 		father[ikey] = fatherin[ikey];
-}
-
-inline double Element::get_effect_bedfrict() {
-	return effect_bedfrict;
-}
-
-inline double* Element::get_effect_kactxy() {
-	return effect_kactxy;
 }
 
 /*************************************************************************/

@@ -193,16 +193,6 @@ void unrefine(HashTable* El_Table, HashTable* NodeTable, double target, int myid
 	 */
 	move_data(nump, myid, El_Table, NodeTable, timeprops_ptr);
 
-	for (i = 0; i < El_Table->get_no_of_buckets(); i++) {
-		HashEntryPtr currentPtr = *(buck + i);
-		while (currentPtr) {
-			Curr_El = (Element*) currentPtr->value;
-			currentPtr = currentPtr->next;
-			if (Curr_El->get_adapted_flag() > TOBEDELETED)
-				Curr_El->calc_wet_dry_orient(El_Table);
-		}
-	}
-
 	//printf("myid=%d exiting unrefine\n",myid);
 	return;
 }

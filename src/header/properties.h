@@ -564,7 +564,7 @@ struct MatProps {
 	double intfrict;
 
 	//! tan(phi_{int}), tangent of the internal friction angle
-	double tanintfrict;
+	double sinintfrict;
 
 	//! phi_{bed}, the bed friction angle, must be LESS than the internal friction angle and should be greater than about 8 degrees, this minimum angle may change once Keith's local stopping criteria is enforced
 	double *bedfrict;
@@ -623,7 +623,7 @@ struct MatProps {
 		}
 
 		intfrict = intfrictin;
-		tanintfrict = tan(intfrict);
+		sinintfrict = sin(intfrict);
 		viscosity = muin;
 		den_solid = rhoin;
 		epsilon = epsilonin;

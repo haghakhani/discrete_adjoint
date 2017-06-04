@@ -134,8 +134,7 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 
 	// initialize kactxy
 	kactxy[0] = kactxy[1] = 0.;
-	effect_kactxy[0] = effect_kactxy[1] = 0.;
-	effect_bedfrict = effect_tanbedfrict = 0.;
+	tan_bed_frict = 0.;
 }
 
 //used for refinement
@@ -567,60 +566,6 @@ void Element::change_neighbor(unsigned* newneighbs, int which_side, int proc, in
 	}
 }
 
-void Element::get_nelb_icon(HashTable* NodeTable, HashTable* HT_Elem_Ptr, int* Nelb, int* icon)
-
-//for ONE step H-refinement (icon)
-
-    {
-	int i;
-	int ifg = 2;
-	double bc_value[4]; //--for poisson equ
-	Node* NodePtr;
-	Element* ElemPtr;
-
-	for (i = 0; i < 4; i++) {
-		Nelb[i] = 0;
-		icon[i] = 0;
-		//bc_value[i] = .0;
-	} //-- -1 may be better
-
-	if (generation) //filling up icon array
-	{
-		ElemPtr = (Element*) HT_Elem_Ptr->lookup(getfather()); //if the father is not there it is not a constrained element
-
-		if (ElemPtr) {
-			int j = 0; //<---indicates which son it is
-			while (ElemPtr->son[j][0] != key[0] || ElemPtr->son[j][1] != key[1]) //-- should use KEYLENGTH
-			{
-				j++;
-				if (j == 4) {
-					cerr << "error in get_el_stiffness\n\n" << flush;
-					exit(0);
-				}
-			}
-
-			int a = j - 1;
-			if (a == -1)
-				a = 3;
-			NodePtr = (Node*) (NodeTable->lookup(node_key[a]));
-			assert(NodePtr);
-
-			if (NodePtr->getinfo() == S_C_CON)
-				icon[a] = -1;
-
-			a = j + 1;
-			if (a == 4)
-				a = 0;
-			NodePtr = (Node*) (NodeTable->lookup(node_key[a]));
-			assert(NodePtr);
-
-			if (NodePtr->getinfo() == S_C_CON)
-				icon[j] = 1; //-- j was changed to a
-
-		}
-	}
-}
-
 /* routine also puts in the coords of the center node in the elm */
 void Element::find_positive_x_side(HashTable* nodetable) {
 	int i, j, side;
@@ -999,124 +944,6 @@ double min(double x, double y) {
 		return (y);
 
 	return (x);
-}
-
-// the element member function calc_wet_dry_orient() calculates the
-// orientation of the dryline (drylineorient), the wet length (Swet),
-// the location of the drypoint, and the location of the wetpoint...
-// it does NOT calculate the wet area (Awet)... these quantities are
-// used in the wetted area adjustment of fluxes. calc_wet_dry_orient()
-// is not coded for generic element orientation, positive_x_side must be side 1.
-// Keith wrote this may 2007
-void Element::calc_wet_dry_orient(HashTable *El_Table) {
-	int ifsidewet[4], numwetsides = 0;
-	int ineigh;
-	Element *EmTemp;
-
-//	for (ineigh = 0; ineigh < 4; ineigh++) {
-//		if (neigh_proc[ineigh] == -1)
-//			//edge of map and cell has same wetness as the cell
-//			ifsidewet[ineigh] = (state_vars[0] > GEOFLOW_TINY) ? 1 : 0;
-//		else {
-//			EmTemp = (Element *) El_Table->lookup(neighbor[ineigh]);
-//			if (*(EmTemp->get_state_vars()) > GEOFLOW_TINY)
-//				//first neighbor on this side is wet
-//				ifsidewet[ineigh] = 1;
-//			else if (neigh_proc[ineigh + 4] == -2)
-//				//only one neighbor on this side and it's not wet
-//				ifsidewet[ineigh] = 0;
-//			else {
-//				//since first neighbor on this side is not wet,
-//				//the edge has the wetness of the second neighbor on this side
-//				EmTemp = (Element *) El_Table->lookup(neighbor[ineigh + 4]);
-//				ifsidewet[ineigh] = (*(EmTemp->get_state_vars() + 0) > GEOFLOW_TINY) ? 1 : 0;
-//			}
-//		}
-//		numwetsides += ifsidewet[ineigh];
-//	}
-//
-//	if ((ifsidewet[0] == ifsidewet[2]) && (ifsidewet[1] == ifsidewet[3])) {
-//		//if opposite sides of the element are the same (both wet or dry)
-//		iwetnode = 8;
-//		drypoint[0] = drypoint[1] = 0.0;
-//		if (state_vars[0] > GEOFLOW_TINY)
-//			Awet = Swet = 1.0;
-//		else
-//			Awet = Swet = 0.0;
-//	} else if (numwetsides == 2) {
-//		//having exactly 2 adjacent wet edges means it has a diagonal orientation
-//
-//		Swet = sqrt(2.0 * ((Awet > 0.5) ? 1.0 - Awet : Awet));				//edge length of small triangle
-//		drypoint[0] = drypoint[1] = 0.5 * (1.0 - Swet);
-//		if (Awet > 0.5)
-//			Swet = 1.0 - Swet;					//the small triangle is dry not wet
-//
-//		if (ifsidewet[3] && ifsidewet[0]) {
-//			iwetnode = 0;
-//			if (Awet <= 0.5)
-//				drypoint[0] = drypoint[1] = -drypoint[0];
-//		} else if (ifsidewet[0] && ifsidewet[1]) {
-//			iwetnode = 1;
-//			if (Awet <= 0.5)
-//				drypoint[1] = -drypoint[1];
-//			else
-//				drypoint[0] = -drypoint[0];
-//		} else if (ifsidewet[1] && ifsidewet[2]) {
-//			iwetnode = 2;
-//			if (Awet > 0.5)
-//				drypoint[0] = drypoint[1] = -drypoint[0];
-//		} else if (ifsidewet[2] && ifsidewet[3]) {
-//			iwetnode = 3;
-//			if (Awet > 0.5)
-//				drypoint[1] = -drypoint[1];
-//			else
-//				drypoint[0] = -drypoint[0];
-//		}
-//	} else {
-//		//numwetsides is 1 or 3 i.e. it's a vertical or horizontal orientation
-//		if (numwetsides == 1) {
-//			//find the one wet side
-//			for (ineigh = 0; ineigh < 4; ineigh++)
-//				if (ifsidewet[ineigh])
-//					break;
-//		} else {
-//			//find the one dry side
-//			for (ineigh = 0; ineigh < 4; ineigh++)
-//				if (!ifsidewet[ineigh])
-//					break;
-//			//find the wet side opposite the one dry side
-//			ineigh = (ineigh + 2) % 4;
-//		}
-//		assert((-1 < ineigh) && (ineigh < 4));
-//		Swet = Awet;
-//
-//		iwetnode = ineigh + 4;
-//		switch (iwetnode) {
-//			case 4:
-//				drypoint[0] = 0.0;
-//				drypoint[1] = -0.5 + Swet;
-//				break;
-//			case 5:
-//				drypoint[0] = +0.5 - Swet;
-//				drypoint[1] = 0.0;
-//				break;
-//			case 6:
-//				drypoint[0] = 0.0;
-//				drypoint[1] = +0.5 - Swet;
-//				break;
-//			case 7:
-//				drypoint[0] = -0.5 + Swet;
-//				drypoint[1] = 0.0;
-//				break;
-//			default:
-//				assert(0);
-//		}
-//	}
-//
-//	if (iwetnode == 8)
-//		Awet = (state_vars[0] > GEOFLOW_TINY) ? 1.0 : 0.0;
-
-	return;
 }
 
 //x direction flux in current cell
@@ -2891,10 +2718,12 @@ void Element::calc_topo_data(MatProps* matprops_ptr) {
 	curvature[1] = curvature[1] * (matprops_ptr->LENGTH_SCALE);
 
 	if (matprops_ptr->material_count == 1) //only one material so don't need map
-		material = 1; //GIS material id tag/index starts from 1
+		material = 0; //GIS material id tag/index starts from 1
 	else
 //more than one material so need to get material from map
 		Get_raster_id(resolution, xcoord, ycoord, &material);
+
+	tan_bed_frict = matprops_ptr->tanbedfrict[material];
 
 //flat plane!!!
 	/*  elevation = 0;
@@ -3029,193 +2858,6 @@ void Element::find_opposite_brother(HashTable* El_Table) {
 
 	return;
 
-}
-#ifdef OLDCODE
-void Element::find_opposite_brother(HashTable* El_Table)
-{
-	/* brother information -- requires that atleast one of this
-	 element's neighboring brothers is on this process in
-	 order to get information onthe brother that is not a neighbor */
-	Element* EmTemp;
-	int myid;
-	MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-	int i;
-	if(opposite_brother_flag == 1)
-	return;
-	switch(which_son) {
-		case 0:
-		if(neigh_proc[2] != -1 && neigh_proc[1] != -1) {
-			if(neigh_proc[2] == myid) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[2]);
-				if(*(EmTemp->get_neigh_gen()+1) == generation) {
-					for(i=0;i<KEYLENGTH;i++)
-					brothers[2][i] = *(EmTemp->get_neighbors()+KEYLENGTH+i);
-					opposite_brother_flag = 1;
-				}
-				else {
-					EmTemp = (Element*) El_Table->lookup(EmTemp->get_neighbors()+KEYLENGTH);
-					if(EmTemp != NULL && EmTemp->get_refined_flag() != GHOST && EmTemp->get_gen() == (generation+1)) {
-						unsigned* elm_father = EmTemp->getfather();
-						for(i=0;i<KEYLENGTH;i++)
-						brothers[2][i] = elm_father[i];
-						opposite_brother_flag = 1;
-					}
-				}
-			}
-			else if(neigh_proc[1] == myid) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[5]);
-				if(*(EmTemp->get_neigh_gen()+2) == generation) {
-					for(i=0;i<KEYLENGTH;i++)
-					brothers[2][i] = *(EmTemp->get_neighbors()+2*KEYLENGTH+i);
-					opposite_brother_flag = 1;
-				}
-				else {
-					EmTemp = (Element*) El_Table->lookup(EmTemp->get_neighbors()+6*KEYLENGTH);
-					if(EmTemp != NULL && EmTemp->get_refined_flag() != GHOST && EmTemp->get_gen() == (generation+1)) {
-						unsigned* elm_father = EmTemp->getfather();
-						for(i=0;i<KEYLENGTH;i++)
-						brothers[2][i] = elm_father[i];
-						opposite_brother_flag = 1;
-					}
-				}
-
-			}
-		}
-		break;
-		case 1:
-		if(neigh_proc[2] != -1 && neigh_proc[3] != -1) {
-			if(neigh_proc[2] == myid) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[6]);
-				if(*(EmTemp->get_neigh_gen()+3) == generation) {
-					for(i=0;i<KEYLENGTH;i++)
-					brothers[3][i] = *(EmTemp->get_neighbors()+3*KEYLENGTH+i);
-					opposite_brother_flag = 1;
-				}
-				else {
-					EmTemp = (Element*) El_Table->lookup(EmTemp->get_neighbors()+7*KEYLENGTH);
-					if(EmTemp != NULL && EmTemp->get_refined_flag() != GHOST && EmTemp->get_gen() == (generation+1)) {
-						unsigned* elm_father = EmTemp->getfather();
-						for(i=0;i<KEYLENGTH;i++)
-						brothers[3][i] = elm_father[i];
-						opposite_brother_flag = 1;
-					}
-				}
-			}
-			else if(neigh_proc[3] == myid) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[3]);
-				if(*(EmTemp->get_neigh_gen()+2) == generation) {
-					for(i=0;i<KEYLENGTH;i++)
-					brothers[3][i] = *(EmTemp->get_neighbors()+2*KEYLENGTH+i);
-					opposite_brother_flag = 1;
-				}
-				else {
-					EmTemp = (Element*) El_Table->lookup(EmTemp->get_neighbors()+2*KEYLENGTH);
-					if(EmTemp != NULL && EmTemp->get_refined_flag() != GHOST && EmTemp->get_gen() == (generation+1)) {
-						unsigned* elm_father = EmTemp->getfather();
-						for(i=0;i<KEYLENGTH;i++)
-						brothers[3][i] = elm_father[i];
-						opposite_brother_flag = 1;
-					}
-				}
-
-			}
-		}
-		break;
-		case 2:
-		if(neigh_proc[0] != -1 && neigh_proc[3] != -1) {
-			if(neigh_proc[0] == myid) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[0]);
-				if(*(EmTemp->get_neigh_gen()+3) == generation) {
-					for(i=0;i<KEYLENGTH;i++)
-					brothers[0][i] = *(EmTemp->get_neighbors()+3*KEYLENGTH+i);
-					opposite_brother_flag = 1;
-				}
-				else {
-					EmTemp = (Element*) El_Table->lookup(EmTemp->get_neighbors()+3*KEYLENGTH);
-					if(EmTemp != NULL && EmTemp->get_refined_flag() != GHOST && EmTemp->get_gen() == (generation+1)) {
-						unsigned* elm_father = EmTemp->getfather();
-						for(i=0;i<KEYLENGTH;i++)
-						brothers[0][i] = elm_father[i];
-						opposite_brother_flag = 1;
-					}
-				}
-			}
-			else if(neigh_proc[3] == myid) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[3]);
-				if(*(EmTemp->get_neigh_gen()) == generation) {
-					for(i=0;i<KEYLENGTH;i++)
-					brothers[0][i] = *(EmTemp->get_neighbors()+i);
-					opposite_brother_flag = 1;
-				}
-				else {
-					EmTemp = (Element*) El_Table->lookup(EmTemp->get_neighbors());
-					if(EmTemp != NULL && EmTemp->get_refined_flag() != GHOST && EmTemp->get_gen() == (generation+1)) {
-						unsigned* elm_father = EmTemp->getfather();
-						for(i=0;i<KEYLENGTH;i++)
-						brothers[0][i] = elm_father[i];
-						opposite_brother_flag = 1;
-					}
-				}
-
-			}
-		}
-		break;
-		case 3:
-		if(neigh_proc[4] != -1 && neigh_proc[1] != -1) {
-			if(neigh_proc[4] == myid) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[4]);
-				if(*(EmTemp->get_neigh_gen()+1) == generation) {
-					for(i=0;i<KEYLENGTH;i++)
-					brothers[1][i] = *(EmTemp->get_neighbors()+KEYLENGTH+i);
-					opposite_brother_flag = 1;
-				}
-				else {
-					EmTemp = (Element*) El_Table->lookup(EmTemp->get_neighbors()+KEYLENGTH);
-					if(EmTemp != NULL && EmTemp->get_refined_flag() != GHOST && EmTemp->get_gen() == (generation+1)) {
-						unsigned* elm_father = EmTemp->getfather();
-						for(i=0;i<KEYLENGTH;i++)
-						brothers[1][i] = elm_father[i];
-						opposite_brother_flag = 1;
-					}
-				}
-			}
-			else if(neigh_proc[1] == myid) {
-				EmTemp = (Element*) El_Table->lookup(neighbor[1]);
-				if(*(EmTemp->get_neigh_gen()) == generation) {
-					for(i=0;i<KEYLENGTH;i++)
-					brothers[1][i] = *(EmTemp->get_neighbors()+i);
-					opposite_brother_flag = 1;
-				}
-				else {
-					EmTemp = (Element*) El_Table->lookup(EmTemp->get_neighbors());
-					if(EmTemp != NULL && EmTemp->get_refined_flag() != GHOST && EmTemp->get_gen() == (generation+1)) {
-						unsigned* elm_father = EmTemp->getfather();
-						for(i=0;i<KEYLENGTH;i++)
-						brothers[1][i] = elm_father[i];
-						opposite_brother_flag = 1;
-					}
-				}
-			}
-		}
-		break;
-	}
-
-	return;
-}
-#endif
-
-/* the _only_ place calc_stop_crit() is called is in get_coef_and_eigen.C
- immediately after k_active/passive is calculated AND in init_piles.C when
- computing the initial "deposited" volume.
-
- */
-void Element::calc_stop_crit(MatProps *matprops_ptr) {
-
-	double stopcrit;
-	effect_kactxy[0] = kactxy[0];
-	effect_kactxy[1] = kactxy[1];
-	effect_bedfrict = matprops_ptr->bedfrict[material];
-	effect_tanbedfrict = matprops_ptr->tanbedfrict[material];
 }
 
 int Element::if_pile_boundary(HashTable *ElemTable, double contour_height) {
@@ -3716,8 +3358,6 @@ void Element::write_elem(gzFile& myfile) {
 	gzwrite(myfile, (state_vars), sizeof(double) * 3);
 	assert(state_vars[0] >= 0.);
 	gzwrite(myfile, (prev_state_vars), sizeof(double) * 3);
-	gzwrite(myfile, &(effect_bedfrict), sizeof(double));
-	gzwrite(myfile, &(effect_tanbedfrict), sizeof(double));
 
 	gzwrite(myfile, &(which_son), sizeof(int));
 	gzwrite(myfile, &(positive_x_side), sizeof(int));
@@ -3727,6 +3367,8 @@ void Element::write_elem(gzFile& myfile) {
 	gzwrite(myfile, gravity, sizeof(double) * 3);
 	gzwrite(myfile, d_gravity, sizeof(double) * 2);
 	gzwrite(myfile, &opposite_brother_flag, sizeof(int));
+
+	gzwrite(myfile, kactxy, sizeof(double) * 2);
 
 	gzwrite(myfile, &material, sizeof(int));
 }
@@ -3767,8 +3409,6 @@ Element::Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, i
 	gzread(myfile, (state_vars), sizeof(double) * 3);
 	assert(state_vars[0] >= 0.);
 	gzread(myfile, (prev_state_vars), sizeof(double) * 3);
-	gzread(myfile, &(effect_bedfrict), sizeof(double));
-	gzread(myfile, &(effect_tanbedfrict), sizeof(double));
 
 	//extra
 	gzread(myfile, &(which_son), sizeof(int));
@@ -3780,8 +3420,11 @@ Element::Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, i
 	gzread(myfile, d_gravity, sizeof(double) * 2);
 	gzread(myfile, &opposite_brother_flag, sizeof(int));
 
+	gzread(myfile, kactxy, sizeof(double) * 2);
+
 	//super extra
 	gzread(myfile, &material, sizeof(int));
+	tan_bed_frict = matprops_ptr->tanbedfrict[material];
 
 //	if (adapted > 0) {
 //		calc_which_son();

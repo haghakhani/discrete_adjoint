@@ -15,7 +15,7 @@
 void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3x3& jac_flux_p_x,
     const Mat3x3& jac_flux_n_y, const Mat3x3& jac_flux_p_y, double* prev_state_vars,
     double* d_state_vars_x, double* d_state_vars_y, double *curvature, double* gravity,
-    double* d_gravity, double* dh_sens, double int_fric, double bedfrict, double kact, int effelem,
+    double* d_gravity, double* dh_sens, double int_fric, double tan_bedfrict, double kact, int effelem,
     double dtdx, double dtdy, double dt, int* stop, double* OrgSgn) {
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
@@ -52,14 +52,14 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 
 		} else {
 
-			double velocity[2] = { prev_state_vars[1] / prev_state_vars[0], prev_state_vars[2]
-			    / prev_state_vars[0] }; //, unitvx = 0., unitvy = 0., speed_inv = 0.;
+			double h_inv = 1. / prev_state_vars[0];
+
+			double velocity[2] = { prev_state_vars[1] / h_inv, prev_state_vars[2]
+			    / h_inv }; //, unitvx = 0., unitvy = 0., speed_inv = 0.;
 
 			double vx_sq = velocity[0] * velocity[0], vy_sq = velocity[1] * velocity[1];
 
 //			double speed = sqrt(vx_sq + vy_sq);
-
-			double tan_bed_frict = tan(bedfrict);
 
 //			if (speed > 0.) {
 //				speed_inv = 1. / speed;
@@ -76,9 +76,9 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 
 			if (OrgSgn[2] != 0. && !stop[0] /*&& unitvx != 0.*/) {
 
-				jacobian(1, 0) -= -dt * OrgSgn[2] * tan_bed_frict * (gravity[2] - vx_sq * curvature[0]);
+				jacobian(1, 0) -= -dt * OrgSgn[2] * tan_bedfrict * (gravity[2] - vx_sq * curvature[0]);
 
-				jacobian(1, 1) -= -dt * OrgSgn[2] * tan_bed_frict * (2 * velocity[0] * curvature[0]);
+				jacobian(1, 1) -= -dt * OrgSgn[2] * tan_bedfrict * (2 * velocity[0] * curvature[0]);
 
 				jacobian(1, 2) -= 0.;
 			}
@@ -91,11 +91,11 @@ void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3
 			        - betta * gravity[2] * d_state_vars_x[0]);
 
 			if (OrgSgn[3] != 0. && !stop[1] /*&& unitvy != 0.*/) {
-				jacobian(2, 0) -= -dt * OrgSgn[3] * tan_bed_frict * (gravity[2] - vy_sq * curvature[1]);
+				jacobian(2, 0) -= -dt * OrgSgn[3] * tan_bedfrict * (gravity[2] - vy_sq * curvature[1]);
 
 				jacobian(2, 1) -= 0.;
 
-				jacobian(2, 2) -= -dt * OrgSgn[3] * tan_bed_frict * (2 * velocity[1] * curvature[1]);
+				jacobian(2, 2) -= -dt * OrgSgn[3] * tan_bedfrict * (2 * velocity[1] * curvature[1]);
 
 			}
 //			}

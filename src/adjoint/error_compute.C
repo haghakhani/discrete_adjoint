@@ -50,8 +50,8 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 					double *gravity = Curr_El->get_gravity();
 					double *d_gravity = Curr_El->get_d_gravity();
 					double *curvature = Curr_El->get_curvature();
-					Curr_El->calc_stop_crit(matprops_ptr); //this function updates bedfric properties
-					double bedfrict = Curr_El->get_effect_bedfrict();
+
+					double *tan_bedfrict = Curr_El->get_tanbedfrict();
 					double *dx = Curr_El->get_dx();
 					double orgSrcSgn[4];
 					double *vec_res = Curr_El->get_residual();
@@ -62,7 +62,6 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 					double dt = timeprops_ptr->dt.at(iter - 1); // if we have n iter size of dt vector is n-1
 					double dtdx = dt / dx[0];
 					double dtdy = dt / dx[1];
-					double tiny = GEOFLOW_TINY;
 					double *d_state_vars = Curr_El->get_d_state_vars();
 
 					if (timeprops_ptr->iter < 51)
@@ -78,7 +77,7 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 
 					update_states(tmp, prev_state_vars, flux[0], flux[1], flux[2], flux[3], dtdx, dtdy, dt,
 					    d_state_vars, (d_state_vars + NUM_STATE_VARS), curvature, matprops_ptr->intfrict,
-					    bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), matprops_ptr->frict_tiny,
+						tan_bedfrict, gravity, d_gravity, *(Curr_El->get_kactxy()), matprops_ptr->frict_tiny,
 					    stop, orgSrcSgn);
 
 					el_error[0] = el_error[1] = 0.;

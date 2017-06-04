@@ -59,7 +59,7 @@ MPI_Datatype ENRICHED_INFO;
 MPI_Datatype NSOLTYPE;
 MPI_Datatype LB_VERT_TYPE;*/
 
-	int blockcounts[3] = { 37, 25 * KEYLENGTH, 66 };
+	int blockcounts[3] = { 36, 25 * KEYLENGTH, 59 };
 	MPI_Datatype types[3];
 	MPI_Aint displs[3];
 	int d;
@@ -82,7 +82,7 @@ MPI_Datatype LB_VERT_TYPE;*/
 
 	//create the 2nd new d_type
 
-	int blockcounts_d[3] = { 37, 25 * KEYLENGTH, 72 };
+	int blockcounts_d[3] = { 36, 25 * KEYLENGTH, 65 };
 	MPI_Datatype types_d[3];
 	MPI_Aint displs_d[3];
 	int dd;
@@ -105,7 +105,7 @@ MPI_Datatype LB_VERT_TYPE;*/
 
 	//create the 3rd new d_type
 
-	int blockcounts_e[3] = { 37, 25 * KEYLENGTH, 78 };
+	int blockcounts_e[3] = { 36, 25 * KEYLENGTH, 71 };
 	MPI_Datatype types_e[3];
 	MPI_Aint displs_e[3];
 	int de;

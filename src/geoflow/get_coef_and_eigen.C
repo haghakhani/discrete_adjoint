@@ -30,9 +30,9 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* m
     FluxProps* fluxprops_ptr, TimeProps* timeprops_ptr, int ghost_flag) {
 	int myid;
 	MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-	double min_distance = 1000000, max_evalue = GEOFLOW_TINY, doubleswap;
+	double min_distance, max_evalue, doubleswap;
 
-	int ibuck, ierr;
+	int ibuck;
 	double tiny = GEOFLOW_TINY, min_dx_dy_evalue = 10000000, hmax = 0;
 	double evalue = 1.0;  //might need to change this
 	//-------------------go through all the elements of the subdomain and get
@@ -81,7 +81,7 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* m
 	double* d_uvec, *dx_ptr;
 
 	double *curve, maxcurve;
-	int ifanynonzeroheight = 0;
+	int ifanynonzeroheight;
 	double Vsolid[2];
 	for (ibuck = 0; ibuck < num_elem_buckets; ibuck++) {
 		entryp = *(elem_bucket_zero + ibuck);
@@ -114,14 +114,16 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* m
 					    &kactxy[0], &kactxy[1], &tiny, &(matprops_ptr->epsilon));
 
 					EmTemp->put_kactxy(kactxy);
-					EmTemp->calc_stop_crit(matprops_ptr);
 
-					Vsolid[0] = (*(EmTemp->get_state_vars() + 1)) / (*(EmTemp->get_state_vars()));
-					Vsolid[1] = (*(EmTemp->get_state_vars() + 2)) / (*(EmTemp->get_state_vars()));
+					double h_inv = 1. / *(EmTemp->get_state_vars());
 
-					eigen_(EmTemp->get_state_vars(), (EmTemp->get_eigenvxymax()),
-					    (EmTemp->get_eigenvxymax() + 1), &evalue, &tiny, EmTemp->get_kactxy(),
-					    EmTemp->get_gravity(), Vsolid, &(matprops_ptr->epsilon));
+					Vsolid[0] = *(EmTemp->get_state_vars() + 1) * h_inv;
+					Vsolid[1] = *(EmTemp->get_state_vars() + 2) * h_inv;
+
+					double eigen_xy[] = {0., 0.};
+
+					eigen_(EmTemp->get_state_vars(), eigen_xy, (eigen_xy+1), &evalue, &tiny,
+							EmTemp->get_kactxy(), EmTemp->get_gravity(), Vsolid, &(matprops_ptr->epsilon));
 #endif
 
 					// ***********************************************************
@@ -149,7 +151,6 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* m
 
 					min_dx_dy_evalue = c_dmin1(c_dmin1(dx_ptr[0], dx_ptr[1]) / evalue, min_dx_dy_evalue);
 				} else {
-					EmTemp->calc_stop_crit(matprops_ptr); // ensure decent friction-values
 					kactxy[0] = kactxy[1] = matprops_ptr->epsilon;
 					EmTemp->put_kactxy(kactxy);
 				}
@@ -162,7 +163,7 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* m
 	//find the negative of the max not the positive min
 	dt[1] = -0.9 * sqrt(hmax * (matprops_ptr->epsilon) * (matprops_ptr->GRAVITY_SCALE) / 9.8);
 
-	ierr = MPI_Allreduce(dt, global_dt, 3, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+	MPI_Allreduce(dt, global_dt, 3, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
 
 	dt[0] = 0.5 * c_dmin1(global_dt[0], -global_dt[1]);
 	if (dt[0] == 0.0)

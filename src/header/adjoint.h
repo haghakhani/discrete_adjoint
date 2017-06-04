@@ -47,7 +47,7 @@ void calc_jacobian_old(MeshCTX* meshctx, PropCTX* propctx);
 void calc_jacobian_elem(Mat3x3& jacobian, const Mat3x3& jac_flux_n_x, const Mat3x3& jac_flux_p_x,
     const Mat3x3& jac_flux_n_y, const Mat3x3& jac_flux_p_y, double* prev_state_vars,
     double* d_state_vars_x, double* d_state_vars_y, double *curvature, double* gravity,
-    double* d_gravity, double* dh_sens, double int_fric, double bedfrict, double kact, int effelem,
+    double* d_gravity, double* dh_sens, double int_fric, double tan_bedfrict, double kact, int effelem,
     double dtdx, double dtdy, double dt, int* stop, double* OrgSgn);
 
 void error_compute(MeshCTX* meshctx, PropCTX* propctx);
@@ -94,20 +94,20 @@ void compute_functional(HashTable* El_Table, double* functional, TimeProps* time
 void residual(double* residual, double *state_vars, double *prev_state_vars, //3
     double *fluxxp, double *fluxyp, double *fluxxm, double *fluxym, double dtdx, //5
     double dtdy, double dt, double *d_state_vars_x, double *d_state_vars_y, //4
-    double *curvature, double intfrictang, double bedfrictin, double *gravity, //4
+    double *curvature, double intfrictang, double* tan_bed_fric, double *gravity, //4
     double *dgdx, double kactxyelem, double fric_tiny, double* orgSrcSgn, //4
     double increment, double epsilon, int* check_stop_crit, int srcflag = 1, int org_res_flag = 1); //5
 
 void residual(double* residual, double *state_vars, double *prev_state_vars, double *fluxxp,
     double *fluxyp, double *fluxxm, double *fluxym, double dtdx, double dtdy, double dt,
     double *d_state_vars_x, double *d_state_vars_y, double *curvature, double intfrictang,
-    double bedfrict, double *gravity, double *dgdx, double kactxyelem, double fric_tiny, int* stop,
+    double *tan_bed_fric, double *gravity, double *dgdx, double kactxyelem, double fric_tiny, int* stop,
     double* orgSrcSgn);
 
 void update_states(double *state_vars, double *prev_state_vars, //2
     double *fluxxp, double *fluxyp, double *fluxxm, double *fluxym, double dtdx, //5
     double dtdy, double dt, double *d_state_vars_x, double *d_state_vars_y, //4
-    double *curvature, double intfrictang, double bedfrict, double *gravity, //4
+    double *curvature, double intfrictang, double* bedfrict, double *gravity, //4
     double *dgdx, double kactxyelem, double fric_tiny, int* stop, double* orgSrcSgn); //5
 
 void save_solution(HashTable* El_Table, HashTable* NodeTable, HashTable* solHystPtr,

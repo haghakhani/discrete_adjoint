@@ -434,7 +434,7 @@ void move_dual_data(MeshCTX* meshctx, PropCTX* propctx) {
 					for (ielem = 0; ielem < num_send_recv[iproc]; ielem++) {
 						elm = (DualElem*) (El_Table->lookup((recv_array[iproc] + ielem)->key));
 						if (elm == NULL) { // this elm doesn't exist on this proc
-							new_elm = new DualElem((recv_array[iproc] + ielem), NodeTable, myid);
+							new_elm = new DualElem((recv_array[iproc] + ielem), NodeTable, matprops_ptr, myid);
 							if ((new_elm->get_adapted_flag() < 0) && (new_elm->get_adapted_flag() >= -BUFFER))
 								new_elm->put_myprocess(iproc);
 							El_Table->add(new_elm->pass_key(), new_elm);

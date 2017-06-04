@@ -75,7 +75,7 @@ public:
 
 	Solution* lookup(unsigned* key, int iter);
 
-	void write_table(gzFile& myfile,run_mode=NORMAL);
+	void write_table(gzFile& myfile,run_mode = NORMAL);
 
 };
 
@@ -93,7 +93,7 @@ public:
 	//used for unrefinement
 	DualElem(DualElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr);
 
-	DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, int myid);
+	DualElem(DualElemPack* elem2, HashTable* HT_Node_Ptr, MatProps* matprops_ptr, int myid);
 
 	DualElem(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
 
