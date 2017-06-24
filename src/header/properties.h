@@ -639,7 +639,7 @@ struct MatProps {
 		if (material_count > 0) {
 			CDeAllocD1(bedfrict);
 			CDeAllocD1(tanbedfrict);
-			for (int imat = 1; imat <= material_count; imat++)
+			for (int imat = 0; imat < material_count; imat++)
 				free(matnames[imat]);
 			free(matnames);
 		}
