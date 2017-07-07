@@ -1,0 +1,44 @@
+pile/source
+number of piles/sources
+-------------------
+this part wil be repeated to the nuber of piles/sources
+pile height
+x of the center
+y of the center 
+major_radius(x if not rotation)
+minor_radius(y if not rotation)
+rotation degree(clockwise)
+flow speed
+flow direction measured counterclockwise
+-----------------------
+(if source type is flux this part will be repeated to the number of sources)
+influx
+start_time
+end_time
+xcen
+ycen
+major_rad
+minor_rad
+rotation angle
+velocity
+velocity angle
+--------------------------
+number of cells accross the axis
+maxiter
+maxtime
+time output
+time save
+adaption flg
+visualization flag
+order flag
+gis main
+gis sub
+gis mapset
+gis map
+extra maps
+-------------------------
+max h at test location xy
+if h passed a location
+num of discharge planes 
+for each plane two points (4 input: x1 y1 x2 y2) are required
+
