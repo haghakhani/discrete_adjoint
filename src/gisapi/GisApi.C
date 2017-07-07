@@ -34,7 +34,7 @@
 #include "GisLabels.h"
 #include "GisLines.h"
 
-Gis_Grid gis_grid, gis_grid2;
+Gis_Grid gis_grid;
 Gis_Raster gis_rast;
 Gis_Image gis_image;
 Gis_Vector gis_vector;
@@ -189,67 +189,6 @@ int Initialize_GIS_data(char* GISDbase, char* location, char* mapset, char* rast
 		gis_grid.ghead.datafile = strdup(gisFullPath);
 
 		return 0;
-	}
-	return -4;
-}
-
-//Keith Added
-int Update_GIS_data(char* GISDbase, char* location, char* mapset, char* raster_file) {
-
-	char gisPath[200];
-	char gisFullPath[250];
-#if defined WIN32
-	char* gisSlash = "\\";
-#else
-	char* gisSlash = "/";
-#endif
-
-	if (GISDbase && location && mapset && raster_file) {
-
-		strcpy(gisPath, GISDbase);
-		sprintf(gisPath, "%s%s%s%s", gisPath, gisSlash, location, gisSlash);
-		sprintf(gisPath, "%s%s%s", gisPath, mapset, gisSlash);
-		strcpy(gisFullPath, gisPath);
-		sprintf(gisFullPath, "%scellhd%s%s", gisFullPath, gisSlash, raster_file);
-		//printf("\n%s\n",gisFullPath);
-		/* this is a nasty hack need to get only whether is compressed or not
-		 don't need the rest of the header... assumed to be identicle to
-		 original should really allow it to be different than original but
-		 that would take more work do it later if needed*/
-		GisRasterHdr gisHeader(gisFullPath);
-
-		int nrows = gis_grid.ghead.nrows;
-		int ncols = gis_grid.ghead.ncols;
-
-		if (!(gis_grid2.elev = alloc_double_matrix(nrows, ncols)))
-			return -3;	// memory error
-
-		strcpy(gisFullPath, gisPath);
-		sprintf(gisFullPath, "%sfcell%s%s", gisFullPath, gisSlash, raster_file);
-
-		GisBinFile binFile(gisFullPath);
-
-		if (binFile.good()) {
-			binFile.setEndian("big");
-			binFile.setDataSize(4);
-			binFile.setIsInteger(false);
-
-			binFile.isCompressed(gisHeader.isCompressed());
-			binFile.nRows(nrows);
-			binFile.nCols(ncols);
-
-			for (int row = 0; row < nrows; row++)
-				if (!binFile.readRow(row, gis_grid2.elev[row]))
-					return -4;
-
-			for (int row = 0; row < nrows; row++)
-				for (int col = 0; row < ncols; col++)
-					if (fabs(gis_grid2.elev[row][col] - gis_grid.elev[row][col]) > 1.0)
-						printf("row=%d, col=%d, elevation old=%g new=%g\n", row, col, gis_grid.elev[row][col],
-						    gis_grid2.elev[row][col]);
-
-			return 0;
-		}
 	}
 	return -4;
 }
