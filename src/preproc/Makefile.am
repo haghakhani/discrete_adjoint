@@ -12,10 +12,8 @@ titan_materialnames_CXXFLAGS = -I$(srcdir)/../gisapi -I$(srcdir)/../useful
 
 titan_materialnames_LDADD = ../gisapi/libgisapi.a ../useful/libuseful.a 
 
-titan_preprocess_SOURCES = preprocess.C boundary.C createfunky.C element2.C \
-	hilbert.C node.C \
-	boundary.h element.h node.h \
-	../header/FileFormat.h
+titan_preprocess_SOURCES = preprocess.C createfunky.C element2.C \
+	hilbert.C node.C element.h node.h 
 
 titan_preprocess_CXXFLAGS = -I$(srcdir)/../gisapi -I$(srcdir)/../useful
 

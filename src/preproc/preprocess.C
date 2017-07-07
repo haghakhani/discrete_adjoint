@@ -27,11 +27,10 @@ using namespace std;
 #include<math.h>
 #include<stdlib.h>
 #include<string.h>
-#include "boundary.h"
 #include "element.h"
-#include "../header/FileFormat.h"
 #include "node.h"
 #include "useful_lib.h"
+
 
 //load has to be applied on the middle node of the face!!!
 /* executable must include the 6 or 10 arguments on the command line, they are 
@@ -50,15 +49,14 @@ using namespace std;
 //createfunky() is found in createfunky.C
 void createfunky(int NumProc, char *GISDbase, char *location, char *mapset, char *topomap,
     int havelimits, double limits[4], long int *node_count, Node **node, long int *element_count,
-    Element **element, int *force_count, int *constraint_count, Boundary **boundary,
+    Element **element, int *force_count, int *constraint_count,
     int *material_count, char ***materialnames, double **lambda, double **mu);
 
 int Read_no_of_objects(int*, int*, int*, int*, int*, long*);
 void Read_node_data(int*, Node*, long*);
 void Read_element_data(int*, Node*, Element*, long*);
-void Read_boundary_data(int*, int*, Node*, Boundary*, long*);
 void Read_material_data(int *material_count, char ***materialnames, double **lambda, double **mu);
-void Write_data(int, int, int, int, int, Node*, Element**, Boundary*, unsigned*, unsigned*, double*,
+void Write_data(int, int, int, int, int, Node*, Element**, unsigned*, unsigned*, double*,
     double*, char**, double*, double*);
 void Determine_neighbors(int, Element*, int, Node*);
 
@@ -90,16 +88,7 @@ int main(int argc, char** argv) {
 	int i; //generic indice
 	long int node_count, element_count;
 	int force_count, constraint_count, material_count;
-	long location; /* "current" location within the intermediate file (funky.bin
-	 or funky.dat), this is only used if you're reading from 
-	 an intermediate file (i.e. you're NOT passing the funky 
-	 directly from createfunky() to main()) see FileFormat.h */
-	int NumProc; //the number of processes  
-	int ny; /* either the number of initial cells or gridpoints in y direction.
-	 the old documentation says gridpoints but code looks like cells 
-	 see createfunky.C */
-	int havelimits; /* flag to say if optional arguments i.e. limits were passed
-	 in */
+
 	double limits[4]; /* optional (string) arguments of main() are requested 
 	 xmin, ymin, xmax, ymax (which are doubles) */
 	double *lambda, *mu; //internal and bed friction angles
@@ -107,35 +96,29 @@ int main(int argc, char** argv) {
 	double min[] = { 0., 0. };
 
 	Node *node;
-	Element *element, **ordering;
-	Boundary *boundary;
+	Element *element;
 
-	if ((argc != 7) && (argc != 11)) {
+	if ((argc != 6) && (argc != 10)) {
 		printf(
-		    "You entered %d arguments, preprocess.C now requires 6, or 10 arguments.  In order, they are:\n  1) number of processes,\n 2) the number of cells in the y direction,\n 3) the full path of the GIS database,\n 4) the location,\n 5) the mapset,\n 6) the raster map name,\n 7) the requested minimum x,\n 8) the requested minimum y,\n 9) the requested maximum x\n10) the requested maximum y.\nPlease enter the correct number of arguments.\n",
+		    "You entered %d arguments, preprocess.C now requires 5, or 9 arguments.  In order, they are:\n  1) number of processes,\n 2) the full path of the GIS database,\n 3) the location,\n 4) the mapset,\n 5) the raster map name,\n 6) the requested minimum x,\n 7) the requested minimum y,\n 8) the requested maximum x\n 9) the requested maximum y.\nPlease enter the correct number of arguments.\n",
 		    argc - 1);
 		exit(1);
 	}
 
-	NumProc = atoi(argv[1]); // the number of processors -- this parameter is passed in
+	int havelimits; /* flag for optional arguments (limits)*/
 
-	//ny=atoi(argv[2]);
-
-	if (argc == 11) {
+	if (argc == 10) {
 		havelimits = 1;
 		for (i = 0; i < 4; i++)
-			limits[i] = atof(argv[7 + i]);
+			limits[i] = atof(argv[6 + i]);
 	} else
 		havelimits = 0;
 
-	createfunky(NumProc, argv[3], argv[4], argv[5], argv[6], havelimits, limits, &node_count, &node,
-	    &element_count, &element, &force_count, &constraint_count, &boundary, &material_count,
+	int NumProc = atoi(argv[1]); // the number of processors
+
+	createfunky(NumProc, argv[2], argv[3], argv[4], argv[5], havelimits, limits, &node_count, &node,
+	    &element_count, &element, &force_count, &constraint_count, &material_count,
 	    &materialnames, &lambda, &mu);
-
-	ordering = (Element **) calloc(element_count, sizeof(Element*));
-
-	/* for(int i=0; i<element_count; i++)
-	 element[i].case5();*/
 
 	element[0].create_m_node(max, min);
 
@@ -160,6 +143,8 @@ int main(int argc, char** argv) {
 	for (i = 0; i < element_count; i++)
 		(*(element[i].get_element_node() + 8))->determine_the_key(nkey, max, min, maxkey, minkey);
 
+	Element **ordering = (Element **) calloc(element_count, sizeof(Element*));
+
 	for (i = 0; i < element_count; i++)
 		ordering[i] = &(element[i]);
 
@@ -170,18 +155,11 @@ int main(int argc, char** argv) {
 
 	qsort(ordering, element_count, sizeof(Element*), compare_key_fn);
 
-	/* printf("Number of processors: ");
-	 scanf("%d",&NumProc);
-	 while(NumProc <=0){
-	 printf("Number of processors must be greater than 0\n");
-	 printf("Number of processors: ");
-	 scanf("%d",&NumProc);} */
-
 	for (i = 0; i < element_count; i++)
 		(ordering[i])->myproc(NumProc, i, element_count);
 
 	Write_data(NumProc, node_count, element_count, (force_count + constraint_count), material_count,
-	    node, ordering, boundary, maxkey, minkey, min, max, materialnames, lambda, mu);
+	    node, ordering, maxkey, minkey, min, max, materialnames, lambda, mu);
 
 	CDeAllocD1(lambda); //see useful_lib.h
 	CDeAllocD1(mu);
@@ -192,7 +170,6 @@ int main(int argc, char** argv) {
 
 	free(node);
 	free(element);
-	free(boundary);
 	free(ordering);
 	return (0);
 
@@ -399,89 +376,6 @@ void Read_element_data(int* ec, Node n[], Element e[], long* loc) {
 #endif
 }
 
-void Read_boundary_data(int* fc, int* cc, Node n[], Boundary b[], long* loc) {
-	int bound_id, i, w;
-	double xcomp;
-	double ycomp;
-
-#ifdef BINARYPRE
-	FILE *fp=fopen_bin("funky.bin","r");
-	int version;
-#ifdef DEBUGFUNKYBIN
-	FILE *fpD=fopen("funky.bin.debug","a");
-#endif
-	if(!fp) {printf("file not found\n"); fflush(stdout); return;}
-	freadI(fp,&version);
-	fseek(fp,*loc,0);
-
-	for(i=0; i<*cc; i++) { //first constraints, then forces
-		freadI(fp,&bound_id);
-		if(version==20030722) { //floats read into doubless
-			freadF2D(fp,&xcomp);
-			freadF2D(fp,&ycomp);}
-		else if(version==20030802) { //doubles read into doubles
-			freadD(fp,&xcomp);
-			freadD(fp,&ycomp);}
-
-#ifdef DEBUGFUNKYBIN
-		fprintf(fpD,"%6d %7.3f %7.3f\n",bound_id,xcomp,ycomp);
-#endif
-		w=0;
-		while(n[w].get_nodeid()!=bound_id) w++;
-		b[i].setparameters(&n[w], xcomp, ycomp, -2);}
-
-	for(i=*cc; i<(*fc+*cc); i++) {
-		freadI(fp,&bound_id);
-		if(version==20030722) { //floats read into doubles
-			freadF2D(fp,&xcomp);
-			freadF2D(fp,&ycomp);}
-		else if(version==20030802) { //doubles read into doubles
-			freadD(fp,&xcomp);
-			freadD(fp,&ycomp);}
-
-#ifdef DEBUGFUNKYBIN
-		fprintf(fpD,"%6d %7.3f %7.3f\n",bound_id,xcomp,ycomp);
-#endif
-		w=0;
-		while(n[w].get_nodeid()!=bound_id) w++;
-		b[i].setparameters(&n[w], xcomp, ycomp, -3);}
-
-	*loc=ftell(fp);
-	fclose(fp);
-#ifdef DEBUGFUNKYBIN
-	fclose(fpD);
-#endif
-#else
-	ifstream inDatafile("funky.dat", ios::in);
-	if (!inDatafile)
-		cout << "file not found\n" << flush;
-	inDatafile.seekg(*loc);
-
-	for (i = 0; i < *cc; i++) { //first constraints, then forces
-		inDatafile >> bound_id;
-		inDatafile >> xcomp;
-		inDatafile >> ycomp;
-		w = 0;
-		while (n[w].get_nodeid() != bound_id)
-			w++;
-		b[i].setparameters(&n[w], xcomp, ycomp, -2);
-	}
-
-	for (i = *cc; i < (*fc + *cc); i++) {
-		inDatafile >> bound_id;
-		inDatafile >> xcomp;
-		inDatafile >> ycomp;
-		w = 0;
-		while (n[w].get_nodeid() != bound_id)
-			w++;
-		b[i].setparameters(&n[w], xcomp, ycomp, -3);
-	}
-
-	*loc = inDatafile.tellg();
-	inDatafile.close();
-#endif
-}
-
 //Read_material_data() is also called in createfunky.C... do not delete 
 void Read_material_data(int *material_count, char ***materialnames, double **lambda, double **mu) {
 
@@ -533,7 +427,7 @@ void Determine_neighbors(int element_count, Element* element, int node_count, No
 
 //**************************DATA OUTPUT******************************
 
-void Write_data(int np, int nc, int ec, int bc, int mc, Node n[], Element* o[], Boundary b[],
+void Write_data(int np, int nc, int ec, int bc, int mc, Node n[], Element* o[],
     unsigned maxk[], unsigned mink[], double min[], double max[], char **materialnames,
     double* lambda, double* mu) {
 
@@ -562,24 +456,11 @@ void Write_data(int np, int nc, int ec, int bc, int mc, Node n[], Element* o[], 
 		doublekeyrange[1] = pow(2.0, sizeof(unsigned) * 8) + 1; //max is 2^32-1 but starts at zero which makes range 2^32 and add 1 to make odd, use this for every unsigned variable in key except the zeroth (starting from zero) when have higher dimensions. 
 		doublekeyrange[0] = doublekeyrange[1] / np; //this will never be a whole number because np=2^integer, we want a fractional number here.
 
-#ifdef BININPUT
 		FILE *fp = fopen_bin(filename, "w");
 		if (!fp) {
 			printf("Could not be created!!!\n");
 			return;
 		}
-#ifdef WRITEDOUBLEASFLOAT
-		fwriteI(fp,20061109); //version number: date file format was established: 2006 November 9
-		//fwriteI(fp,20030824); //version number: date file format was established
-#else
-		fwriteI(fp, 20061110); //version number: date file format was established: 2006 November 10
-		//fwriteI(fp,20030825); //version number: date file format was established
-#endif
-
-#else
-		ofstream outDatafile(filename, ios::out);
-		if(!outDatafile) cout<<"Could not be created!!!"<<'\n';
-#endif
 
 		c = i * el_per_proc;
 		if (i != np - 1)
@@ -600,31 +481,14 @@ void Write_data(int np, int nc, int ec, int bc, int mc, Node n[], Element* o[], 
 				}
 			}
 
-#ifdef BININPUT
 		fwriteI(fp, subdomain_nodes);
 
-		/*
-		 fwriteU(fp,mink[0]); //min key
-		 fwriteU(fp,mink[1]);
-		 fwriteU(fp,maxk[0]); //max key
-		 fwriteU(fp,maxk[1]);
-		 */
-
-#ifdef WRITEDOUBLEASFLOAT
-		fwriteF(fp,doublekeyrange[0]); //range of first part of key on every processor
-		fwriteF(fp,doublekeyrange[1]);//range of second part of key on every processor
-		fwriteF(fp,min[0]);//min x
-		fwriteF(fp,max[0]);//max x
-		fwriteF(fp,min[1]);//min y
-		fwriteF(fp,max[1]);//max y
-#else
 		fwriteD(fp, doublekeyrange[0]); //range of first part of key on every processor
 		fwriteD(fp, doublekeyrange[1]); //range of second part of key on every processor
 		fwriteD(fp, min[0]); //min x
 		fwriteD(fp, max[0]); //max x
 		fwriteD(fp, min[1]); //min y
 		fwriteD(fp, max[1]); //max y
-#endif
 
 		for (j = 0; j < nc; j++)
 			n[j].clear_written_flag();
@@ -640,16 +504,6 @@ void Write_data(int np, int nc, int ec, int bc, int mc, Node n[], Element* o[], 
 
 		fwriteI(fp, x - c); //number of elements
 
-		/* Min and Max Key no longer important
-		 //write the minimum key
-		 fwriteU(fp,*((*((o[c])->get_element_node()+8))->get_key()));
-		 fwriteU(fp,*((*((o[c])->get_element_node()+8))->get_key()+1));
-		 
-		 //write the maximum key
-		 fwriteU(fp,*((*((o[x-1])->get_element_node()+8))->get_key()));
-		 fwriteU(fp,*((*((o[x-1])->get_element_node()+8))->get_key()+1));
-		 */
-
 		for (j = c; j < x; j++)
 			(o[j])->write_element_data_bin(fp);
 
@@ -657,67 +511,15 @@ void Write_data(int np, int nc, int ec, int bc, int mc, Node n[], Element* o[], 
 		fwriteI(fp, mc); //number of materials 
 
 		char tempmatname[20];
-#ifdef WRITEDOUBLEASFLOAT
-		for(int imat=1;imat<=mc;imat++) {
-			fwritestring(fp,materialnames[imat]);
-			fwriteF(fp,lambda[imat]);
-			fwriteF(fp,mu[imat]);}
-#else
+
 		for (int imat = 1; imat <= mc; imat++) {
 			fwritestring(fp, materialnames[imat]);
 			fwriteD(fp, lambda[imat]);
 			fwriteD(fp, mu[imat]);
 		}
-#endif
 
 		fclose(fp);
-#else
-		assert(0); //text funky is outdated.
-		outDatafile<<subdomain_nodes<<' '<<mink[0]<<' '<<mink[1]<<' '<<' '<<maxk[0]<<' '<<maxk[1]<<'\n';
-
-		outDatafile<<min[0]<<" "<<max[0]<<' '<<min[1]<<' '<<max[1]<<endl;
-
-		for(j=0; j<nc; j++)
-		n[j].clear_written_flag();
-
-		/*    for(j=0; j<nc; j++)
-		 n[j].write_node_data(&outDatafile);*/
-
-		for(j=c; j<x; j++)
-		for(k=0; k<9; k++) {
-			if(k==8)
-			(*((o[j])->get_element_node()+k))->clear_written_flag();
-			(*((o[j])->get_element_node()+k))->write_node_data(&outDatafile);}
-
-		//element data start here
-
-		outDatafile<<x-c<<' '<<*((*((o[c])->get_element_node()+8))->get_key())<<' '<<*((*((o[c])->get_element_node()+8))->get_key()+1)<<'\n';
-
-		outDatafile<<*((*((o[x-1])->get_element_node()+8))->get_key())<<' '<<*((*((o[x-1])->get_element_node()+8))->get_key()+1)<<'\n';
-
-		for(j=c; j<x; j++) {
-			(o[j])->write_element_data(&outDatafile);
-			outDatafile<<'\n';}
-
-		outDatafile<<mc<<endl;
-		for(imat=1;imat<=mc;imat++) {
-			outDatafile<<materialnames[imat]<<endl;
-			outDatafile<<lambda[imat]<<"  "<<mu[imat]<<endl;}
-
-		/*
-		 outDatafile<<'\n';
-		 
-		 outDatafile<<bc<<'\n';
-		 
-		 for(int k=0; k<bc; k++)
-		 b[k].write_b_data(&outDatafile);
-		 outDatafile<<'\n';
-		 
-		 
-		 outDatafile.close();*/
-#endif    
 
 	}
-
 }
 

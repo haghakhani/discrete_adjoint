@@ -26,13 +26,12 @@ using namespace std;
 
 #include <stdio.h>
 #include "node.h"
-#include "../header/FileFormat.h"
 #include "useful_lib.h"
 
 Node::Node() {
 
 	for (int i = 0; i < 2; i++)
-		node_coord[i] = 0;
+		node_coord[i] = 0.;
 
 }
 
@@ -84,13 +83,8 @@ void Node::write_node_data_bin(FILE *fp) {
 	if (!written) {
 		fwriteU(fp, key[0]);
 		fwriteU(fp, key[1]);
-#ifdef WRITEDOUBLEASFLOAT
-		fwriteF(fp,node_coord[0]);
-		fwriteF(fp,node_coord[1]);
-#else
 		fwriteD(fp, node_coord[0]);
 		fwriteD(fp, node_coord[1]);
-#endif
 	}
 	written = 1;
 }

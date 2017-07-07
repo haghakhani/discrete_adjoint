@@ -466,42 +466,15 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 		exit(0);
 	}
 
-	int version, DoublesFromFloats;
-	freadI(fp, &version);
-
-	switch (version) {
-		case 20061109:
-			DoublesFromFloats = 1;
-			break;
-		case 20061110:
-			DoublesFromFloats = 0;
-			break;
-		default:
-			printf("Read_data() does not recognize binary funkyxxxx.inp version %d\n", version);
-			exit(1);
-			break;
-	}
-
 	freadI(fp, &Node_Num);
 
-	if (DoublesFromFloats) {
-		for (i = 0; i < KEYLENGTH; i++)
-			freadF2D(fp, &(doublekeyrange[i]));
-
-		freadF2D(fp, &(XRange[0]));  //min x
-		freadF2D(fp, &(XRange[1]));  //max x
-		freadF2D(fp, &(YRange[0]));  //min y
-		freadF2D(fp, &(YRange[1]));
-	} //max y
-	else {
 		for (i = 0; i < KEYLENGTH; i++)
 			freadD(fp, &(doublekeyrange[i]));
 
 		freadD(fp, &(XRange[0]));  //min x
 		freadD(fp, &(XRange[1]));  //max x
 		freadD(fp, &(YRange[0]));  //min y
-		freadD(fp, &(YRange[1]));
-	} //max y
+		freadD(fp, &(YRange[1]));//max y
 
 	double inv_length_scale=1./matprops_ptr->LENGTH_SCALE;
 
@@ -521,10 +494,6 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 		for (j = 0; j < KEYLENGTH; j++)
 			freadU(fp, &(key[j]));
 
-		if (DoublesFromFloats)
-			for (j = 0; j < DIMENSION; j++)
-				freadF2D(fp, &(coord[j]));
-		else
 			for (j = 0; j < DIMENSION; j++)
 				freadD(fp, &(coord[j]));
 
@@ -587,54 +556,6 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 				//--there is no neighbor
 				for (k = 0; k < KEYLENGTH; k++)
 					neigh[j][k] = 0;
-		}
-
-//		BC* bcptr = 0;
-		int bcf = 0;
-
-		//.....the essential boundary conditions....
-
-		for (j = 0; j < 4; j++) {
-			freadI(fp, &temp2);
-
-			if (temp2 != -1) { //--there is bound constraint
-
-//				if (!bcf)
-//					dummy = new BC();
-				dummy->type[j] = 1; //--intialize type
-
-				/* "value" is a FLOAT so DON'T use freadD when DoublesFromFloats
-				 is false (and obviously don't use freadD when it's true
-				 either) */
-				for (k = 0; k < 2; k++)
-					freadF(fp, &(dummy->value[j][0][k])); //--j: edge number
-
-				bcf = 1;
-			}
-		}
-
-		//.....the natural boundary conditions.....
-		for (j = 0; j < 4; j++) {
-
-			freadI(fp, &temp2);
-
-			if (temp2 != -1) { //--there is bound constraint
-
-//				if (!bcf)
-//					bcptr = new BC();
-				if (dummy->type[j] == 0)
-					dummy->type[j] = 2; //--intialize type
-				else
-					dummy->type[j] = 3; //--intialize type
-
-				/* "value" is a FLOAT so DON'T use freadD when DoublesFromFloats
-				 is false (and obviously don't use freadD when it's true
-				 either) */
-				for (k = 0; k < 2; k++)
-					freadF(fp, &(dummy->value[j][1][k])); //--j: edge number
-
-				bcf = 1;
-			}
 		}
 
 		freadI(fp, &(elm_loc[0]));

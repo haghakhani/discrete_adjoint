@@ -24,18 +24,11 @@ using namespace std;
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "boundary.h"
 #include "element.h"
-#include "../header/FileFormat.h"
 #include "GisApi.h"
 #include "node.h"
 #include "useful_lib.h"
 #include <fenv.h>
-void myround(double *num) {
-	fesetround(FE_TONEAREST);
-	double dummy=rint(*num*1.e8);
-	*num = dummy/1.e8;
-}
 
 #define MIN_NONSEQ_REPART
 
@@ -44,7 +37,7 @@ void Read_material_data(int *material_count, char ***materialnames, double **lam
 
 void createfunky(int NumProc, char *GISDbase, char *location, char *mapset, char *topomap,
     int havelimits, double limits[4], long int *node_count, Node **node, long int *element_count,
-    Element **element, int *force_count, int *constraint_count, Boundary **boundary,
+    Element **element, int *force_count, int *constraint_count,
     int *material_count, char ***materialnames, double **lambda, double **mu) {
 
 	// *********************************************************************
@@ -264,7 +257,6 @@ void createfunky(int NumProc, char *GISDbase, char *location, char *mapset, char
 		xy = CAllocD2(*node_count, 2);
 
 		*node = (Node *) calloc(*node_count, sizeof(Node));
-		*boundary = (Boundary *) calloc(2 * (nx + ny), sizeof(Boundary));
 
 		int ibc = 0, ielem, inode = 0;
 		int *ibc2inode = CAllocI1(2 * (nx + ny));
@@ -284,8 +276,6 @@ void createfunky(int NumProc, char *GISDbase, char *location, char *mapset, char
 						ielem = ((j < 2 * ny) ? j / 2 : ny - 1) * nx + ((i < 2 * nx) ? i / 2 : nx - 1);
 						ibc2ielem[ibc] = ielem;
 						ibc2inode[ibc] = inode;
-
-						(*boundary)[ibc++].setparameters(&((*node)[inode]), 0.0, 0.0, -3);
 					}
 					inode++;
 				}
@@ -356,10 +346,6 @@ void createfunky(int NumProc, char *GISDbase, char *location, char *mapset, char
 			}
 			(*element)[ielem].setparameters(ielem + 1, address, elem_mat[ielem] - 1, elem_loc[ielem]);
 		}
-
-		//store the boundary conditions (bc's)
-		for (ibc = 0; ibc < 2 * (nx + ny); ibc++)
-			(*element)[ibc2ielem[ibc]].set_boundary(&((*boundary)[ibc]));
 
 		//deallocate the data list
 		CDeAllocD2(xy);
