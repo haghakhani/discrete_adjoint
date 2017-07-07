@@ -150,7 +150,7 @@ bool GisBinFile::readRow(int row, double* floatValues) {
 					else
 						fvalchar[k] = readValues[i++];
 				}
-				floatValues[j++] = *((float*) &fvalchar[0]);
+				floatValues[j++] =  (double) *((float*)fvalchar);
 			}
 			delete[] readValues;
 			return true;
@@ -218,7 +218,7 @@ bool GisBinFile::readCompressdRow(int row, double* floatValues) {
 					else
 						fvalchar[k] = expandedValues[i++];
 				}
-				floatValues[j++] = *((float*) &fvalchar[0]);
+				floatValues[j++] = (double) *((float*) fvalchar);
 			}
 			delete[] expandedValues;
 			return true;
@@ -252,7 +252,7 @@ bool GisBinFile::readCompressdRow(int row, char* charValues) {
 			file_.get(compressFlag);
 			//			if ( rowSize < totBytes )
 			if ((compressFlag == 0x01) && ((rowSize - 1) < totBytes)) {
-				unsigned int i = 0;
+				unsigned i = 0;
 				while (i < totBytes) {
 					char charCount;
 					file_.get(charCount);
