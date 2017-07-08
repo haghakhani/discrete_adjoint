@@ -60,9 +60,6 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 
 		double rotang;
 		double doubleswap1, doubleswap2;
-		double maxphi = 0.;
-		double minphi = HUGE_VAL;
-		int imat;
 
 		for (isrc = 0; isrc < numpiles; isrc++) {
 			inD2 >> pileprops_ptr->pileheight[isrc]; // pile height
@@ -120,7 +117,7 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 	/*************************************************************************/
 	//over ride regular input with statistical sample run data
 	FILE* fp;
-	int lhsref, lhsid, ifstatbed = 0;
+	int ifstatbed = 0;
 	int i;
 	double statbed, statint;  //friction angles
 	if ((fp = fopen("statin.bed", "r")) != NULL) {
