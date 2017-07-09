@@ -723,9 +723,20 @@ private:
 
 public:
 
+	double *prev_state_vars,*gravity, *d_gravity, *d_state_vars, elevation,*curvature,*slope,*coord,*dx ;
+
 	Data(Element* elem) {
 		key = elem->pass_key();
 		state = elem->get_state_vars();
+		prev_state_vars= elem->get_prev_state_vars();
+		gravity=elem->get_gravity();
+		d_gravity= elem->get_d_gravity();
+		d_state_vars= elem->get_d_state_vars();
+		elevation= elem->get_elevation();
+		curvature= elem->get_curvature();
+		slope= elem->get_zeta();
+		coord= elem->get_coord();
+		dx= elem->get_dx();
 	}
 
 	unsigned* get_key() const {
@@ -782,6 +793,32 @@ void write_alldata_ordered(HashTable* El_Table, char filename[50]) {
 	for (it = mydata.begin(); it != mydata.end(); ++it) {
 		fprintf(fp, "%u %u %16.10f %16.10f %16.10f \n", it->get_key()[0], it->get_key()[1],
 		    it->get_state()[0], it->get_state()[1], it->get_state()[2]);
+
+		fprintf(fp,"prev_state_vars \n");
+
+		fprintf(fp, "%16.10f %16.10f %16.10f \n", it->prev_state_vars[0], it->prev_state_vars[1],
+		    it->prev_state_vars[2]);
+
+		fprintf(fp,"gravity \n");
+
+		fprintf(fp, "%16.10f %16.10f \n", it->gravity[0], it->gravity[1]);
+
+		fprintf(fp,"d_gravity \n");
+
+		fprintf(fp, "%16.10f %16.10f \n", it->d_gravity[0], it->d_gravity[1]);
+
+		fprintf(fp,"d_state_vars \n");
+
+		fprintf(fp, "%16.10f %16.10f %16.10f %16.10f %16.10f %16.10f \n", it->prev_state_vars[0], it->prev_state_vars[1],
+		    it->prev_state_vars[2],it->prev_state_vars[3], it->prev_state_vars[4], it->prev_state_vars[5]);
+
+		fprintf(fp,"elevation, curvatures and slopes \n");
+
+		fprintf(fp, "%16.10f %16.10f %16.10f %16.10f %16.10f \n", it->elevation, it->curvature[0],
+				    it->curvature[1],it->slope[0], it->slope[1]);
+
+		fprintf(fp,"coordinates and dx , dy \n");
+		fprintf(fp, "%16.10f %16.10f %16.10f %16.10f %16.10f \n", it->coord[0], it->coord[1], it->dx[0],it->dx[1]);
 //		gzwrite(myfile, (it->get_key()), sizeof(unsigned) * 2);
 //		gzwrite(myfile, (it->get_state()), sizeof(double) * 3);
 	}
