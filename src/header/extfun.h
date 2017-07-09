@@ -96,7 +96,7 @@ extern void Read_data(int imat, MatProps* matprops_ptr, PileProps* pileprops_ptr
 
 //! this function reads in the "funky" grid at the start of an original run but not during restart.  This used to be part of Read_data() before Keith seperated them when adding the restart capability.  It is my (Keith's) opinion that this should be torn out and along with the preprocessor rewritten into a new format that is a lot more like what happens during the restart, this would significantly reduce the startup time for large runs.
 extern void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable,
-    MatProps* matprops_ptr, OutLine* outline_ptr, SolRec** solrec);
+    MatProps* matprops_ptr, TimeProps *timeprops_ptr, OutLine* outline_ptr, SolRec** solrec);
 
 //! this function loads the restart file, recreates the hashtables and restores the saved nodes and elements.  Only one readstatement per Node is performed and one or two per Element depending upon the Element's boundary conditions so it is very fast.  Keith, who wrote this, believes a slightly cleaner solution is to add/move functionality to useful_lib.h and useful_lib.C to pack/unpack variables into an unsigned array, which is what should be done if Read_grid is ever rewritten.
 extern int loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable, MatProps* matprops_ptr,

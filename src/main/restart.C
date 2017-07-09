@@ -92,6 +92,8 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 
 	gzclose(myfile);
 
+	if(timeprops->verbose){
+
 	// now writing outline
 
 	//output maximum flow depth a.k.a. flow outline
@@ -116,6 +118,7 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 	gzclose(myfile);
 
 	MPI_Barrier(MPI_COMM_WORLD);
+	}
 }
 
 void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX* propctx,
@@ -328,6 +331,7 @@ run_mode loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** Elem
 
 		move_data(numprocs, myid, *ElemTable, *NodeTable, timeprops);
 
+		if (timeprops->verbose){
 		char filename[50];
 		// now reading outline
 		sprintf(filename, "outline_%04d", myid);
@@ -343,6 +347,7 @@ run_mode loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** Elem
 		gzclose(myfile);
 
 		MPI_Barrier(MPI_COMM_WORLD);
+		}
 
 		status= run_mode(status | RESTART);
 

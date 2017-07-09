@@ -35,8 +35,7 @@ typedef enum{
 
 //! non member C++ function that wraps the fortran correct_() function
 void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* matprops_ptr,
-    FluxProps *fluxprops, TimeProps *timeprops, Element *EmTemp, double *forceint, double *forcebed,
-    double *eroded, double *deposited);
+    FluxProps *fluxprops, TimeProps *timeprops, Element *EmTemp);
 
 //! This function assigns a global_weight to the collection of elements based on the sum of their element_weight
 double element_weight(HashTable* El_Table, HashTable*, int myid, int nump);

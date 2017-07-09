@@ -252,12 +252,13 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 	inD2 >> matprops_ptr->number_of_cells_across_axis;
 
 	//time related info
-	int maxiter;
+	int maxiter,verbose;
 	double maxtime, timeoutput, timesave;
 	inD2 >> maxiter;
 	inD2 >> maxtime;
 	inD2 >> timeoutput;
 	inD2 >> timesave;
+	inD2 >> verbose;
 
 	timeprops_ptr->inittime(maxiter, maxtime, timeoutput, timesave, TIME_SCALE);
 
@@ -435,7 +436,7 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 //this reads in the funky grid, ignoring the material properties at the 
 //end of the file, those are now read from frict.data in Read_data()
 void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTable,
-    MatProps* matprops_ptr, OutLine* outline_ptr, SolRec** solrec) {
+    MatProps* matprops_ptr, TimeProps *timeprops_ptr,OutLine* outline_ptr, SolRec** solrec) {
 	int Node_Num, Elem_Num;
 
 	int NODE_TABLE_SIZE = 400000;
@@ -638,6 +639,7 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 	//initialize the flow "outline" map (maximum pileheight in every cell throught simulation is recorded)
 	//printf("dx=%g dy=%g XRange={%g,%g} YRange={%g,%g}\n",*(Quad9P->get_dx()),*(Quad9P->get_dx()+1),xminmax[0],xminmax[1],yminmax[0],yminmax[1]);
 #ifdef MAX_DEPTH_MAP
+	if (timeprops_ptr->verbose)
 	outline_ptr->init(Quad9P->get_dx(), REFINE_LEVEL - Quad9P->get_gen(), xminmax, yminmax);
 #endif
 	*solrec = new SolRec(doublekeyrange, EL_TABLE_SIZE, 503, XRange, YRange, 0);

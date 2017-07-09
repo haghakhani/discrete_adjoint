@@ -165,20 +165,7 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 	 * corrector step and b.c.s
 	 */
 
-	//for comparison of magnitudes of forces in slumping piles
-	double forceint = 0.0, elemforceint;
-	double forcebed = 0.0, elemforcebed;
-	double eroded = 0.0, elemeroded;
-	double deposited = 0.0, elemdeposited;
-	double realvolume = 0.0;
-
 	buck = El_Table->getbucketptr();
-
-	// mdj 2007-04 this loop has pretty much defeated me - there is
-	//             a dependency in the Element class that causes incorrect
-	//             results
-	//
-
 	for (i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
 			HashEntryPtr currentPtr = *(buck + i);
@@ -197,26 +184,17 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 					//if (*(Curr_El->pass_key())==2151461179 && *(Curr_El->pass_key()+1)==330382099 /*&& timeprops->iter == 9 */)
 					//  cout<<"step is cheking the element"<<endl;
 
-					correct(NodeTable, El_Table, dt, matprops_ptr, fluxprops, timeprops_ptr, Curr_El,
-					    &elemforceint, &elemforcebed, &elemeroded, &elemdeposited);
-
-					forceint += fabs(elemforceint);
-					forcebed += fabs(elemforcebed);
-					realvolume += dxy[0] * dxy[1] * *(Curr_El->get_state_vars());
-					eroded += elemeroded;
-					deposited += elemdeposited;
-
-					double *coord = Curr_El->get_coord();
-					//update the record of maximum pileheight in the area covered by this element
-					double hheight = *(Curr_El->get_state_vars());
-
-//					int ind = Curr_El->get_sol_rec_ind();
-//					jacobian = solHyst->at(ind);
+					correct(NodeTable, El_Table, dt, matprops_ptr, fluxprops, timeprops_ptr, Curr_El);
 
 #ifdef MAX_DEPTH_MAP
 					double pfheight[6];
-					outline_ptr->update(coord[0] - 0.5 * dxy[0], coord[0] + 0.5 * dxy[0],
-					    coord[1] - 0.5 * dxy[1], coord[1] + 0.5 * dxy[1], hheight, pfheight);
+					if (timeprops_ptr->verbose){
+						double *coord = Curr_El->get_coord();
+						//update the record of maximum pileheight in the area covered by this element
+						double hheight = *(Curr_El->get_state_vars());
+						outline_ptr->update(coord[0] - 0.5 * dxy[0], coord[0] + 0.5 * dxy[0],
+								coord[1] - 0.5 * dxy[1], coord[1] + 0.5 * dxy[1], hheight, pfheight);
+					}
 #endif
 
 				}

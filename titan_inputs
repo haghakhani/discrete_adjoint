@@ -28,6 +28,7 @@ maxiter
 maxtime
 time output
 time save
+verbosity
 adaption flg
 visualization flag
 order flag

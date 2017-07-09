@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
 	    &solrec, &matprops, &timeprops, &outline, argv[1], argv[2]);
 
 	if (runcond & NORMAL) {
-		Read_grid(myid, numprocs, &Node_Table, &El_Table, &matprops, &outline, &solrec);
+		Read_grid(myid, numprocs, &Node_Table, &El_Table, &matprops, &timeprops, &outline, &solrec);
 
 		setup_geoflow(El_Table, Node_Table, myid, numprocs, &matprops, &timeprops);
 
@@ -240,7 +240,7 @@ int main(int argc, char *argv[]) {
 			char filename[50];
 			sprintf(filename,"forward_%d_%d",timeprops.iter,myid);
 
-//			write_alldata_ordered(El_Table, filename);
+			write_alldata_ordered(El_Table, filename);
 
 //			write_elem_sorted(El_Table,filename);
 
@@ -299,12 +299,12 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		MPI_Barrier(MPI_COMM_WORLD);
 		move_data(numprocs, myid, El_Table, Node_Table, &timeprops);
 
 		output_discharge(&matprops, &timeprops, &discharge, myid);
 		MPI_Barrier(MPI_COMM_WORLD);
 
+		if (timeprops.verbose){
 		if (myid == 0)
 			output_summary(&timeprops, &statprops, savefileflag);
 
@@ -326,6 +326,7 @@ int main(int argc, char *argv[]) {
 		MPI_Barrier(MPI_COMM_WORLD);
 
 		//output maximum flow depth a.k.a. flow outline
+
 		OutLine outline2;
 		double dxy[2];
 		dxy[0] = outline.dx;
@@ -342,8 +343,9 @@ int main(int argc, char *argv[]) {
 
 		outline.dealloc();
 		outline2.dealloc();
-
 		MPI_Barrier(MPI_COMM_WORLD);
+		}
+
 		primal.stop();
 	}
 

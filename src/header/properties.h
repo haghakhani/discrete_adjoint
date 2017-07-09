@@ -347,6 +347,9 @@ struct TimeProps {
 	//! count of the number of times saving has been done
 	int isave;
 
+	//! if this flag is on outline and some other functionalities will work
+	int verbose;
+
 	//! the non-dimensional time at which the next output should occur
 	double ndnextoutput;
 
@@ -370,8 +373,8 @@ struct TimeProps {
 	int REFINE;
 
 	//! this function initializes the time properties at the beginning of the simulation
-	void inittime(int maxiterin, double maxtimein, double timeoutputin, double timesavein,
-	    double TIME_SCALEin) {
+	void inittime(int maxiterin, int verbose_in, double maxtimein, double timeoutputin,
+		double timesavein, double TIME_SCALEin) {
 		maxiter = maxiterin;
 		maxtime = maxtimein;
 		timeoutput = timeoutputin;
@@ -384,6 +387,7 @@ struct TimeProps {
 		adjiter = 0;
 		ioutput = 0;
 		isave = 0;
+		verbose = verbose_in;
 		time = 0.0;
 		dtime = 0.0;
 		// we clear for case that we need to use timpeprops again
