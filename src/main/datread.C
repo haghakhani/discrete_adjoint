@@ -260,7 +260,7 @@ void Read_data(int myid, MatProps* matprops_ptr, PileProps* pileprops_ptr, StatP
 	inD2 >> timesave;
 	inD2 >> verbose;
 
-	timeprops_ptr->inittime(maxiter, maxtime, timeoutput, timesave, TIME_SCALE);
+	timeprops_ptr->inittime(maxiter, verbose, maxtime, timeoutput, timesave, TIME_SCALE);
 
 	/*************************************************************************/
 	//flags

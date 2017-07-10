@@ -122,6 +122,8 @@ extern void init_piles(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid,
     int adaptflag, MatProps* matprops, TimeProps* timeprops, MapNames* mapnames,
     PileProps* pileprops, FluxProps* fluxprops, StatProps* statprops);
 
+void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec);
+
 //! this function performs adaptive refinement at timestep zero for refining initial piles and whenever a flux source is activated.
 void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count,
     MatProps* matprops_ptr, PileProps *pileprops_ptr, FluxProps *fluxprops_ptr,
