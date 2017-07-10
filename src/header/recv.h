@@ -36,7 +36,7 @@ public:
 	void identify();
 
 	Recv(HashTable* ht_elem_ptr, unsigned* recv_buf, int assoc, int iam) {
-		int i, j;
+		int i;
 		side = INIT;
 		myid = iam;
 		for (i = 0; i < KEYLENGTH; i++)

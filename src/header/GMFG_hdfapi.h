@@ -56,7 +56,7 @@ hid_t GH5_open_zip_sol_file(const char *filename, char mode);
  * run out of file descriptors
  */
 inline void GH5_closefile(hid_t fp) {
-	herr_t status = H5Fclose(fp);
+	H5Fclose(fp);
 }
 
 /*! Writes the mesh to hdf file. 
