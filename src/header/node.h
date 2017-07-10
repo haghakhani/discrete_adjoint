@@ -179,6 +179,8 @@ public:
 	//! this function returns the id of a node, it is used in repartitioning,
 	int get_id();
 
+	int get_info();
+
 	//! this function returns the vector of fluxes stored in an edge node between elements
 	double* get_flux();
 

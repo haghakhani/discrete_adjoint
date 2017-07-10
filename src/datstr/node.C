@@ -362,5 +362,9 @@ void Node::write_node(gzFile myfile) {
 	gzwrite(myfile, &(elevation), sizeof(double));
 
 }
+
+int Node::get_info(){
+	return info;
+}
 #endif
 
