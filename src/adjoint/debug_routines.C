@@ -459,7 +459,7 @@ int num_nonzero_elem(HashTable *El_Table, int type) {
 }
 
 int num_nonzero_elem(HashTable *El_Table) {
-	int num = 0;			//myid
+	int num = 0;
 	HashEntryPtr currentPtr;
 	Element *Curr_El;
 	HashEntryPtr *buck = El_Table->getbucketptr();
