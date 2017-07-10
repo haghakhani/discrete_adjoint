@@ -115,10 +115,11 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 	gzwrite(myfile, outline->yminmax, sizeof(double) * 2);
 	for (int i = 0; i < ny; ++i)
 		gzwrite(myfile, outline2.pileheight[i], sizeof(double) * nx);
+	}
 	gzclose(myfile);
 
 	MPI_Barrier(MPI_COMM_WORLD);
-	}
+
 }
 
 void save_dual(const MeshCTX* meshctx, const MeshCTX* err_meshctx, const PropCTX* propctx,
@@ -331,7 +332,10 @@ run_mode loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** Elem
 
 		move_data(numprocs, myid, *ElemTable, *NodeTable, timeprops);
 
+		setup_geoflow(*ElemTable, *NodeTable, myid, numprocs, matprops, timeprops);
+
 		if (timeprops->verbose){
+
 		char filename[50];
 		// now reading outline
 		sprintf(filename, "outline_%04d", myid);
@@ -439,6 +443,9 @@ run_mode loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** Elem
 		dualmesh.nd_table = *NodeTable;
 		move_dual_data(&dualmesh, &propctx);
 
+		setup_geoflow(*ElemTable, *NodeTable, myid, numprocs, matprops, timeprops);
+
+		MeshCTX errmesh;
 #ifdef Error
 		//recreate error element hashtable
 		*Err_ElemTable = new HashTable(myfile);
@@ -456,11 +463,12 @@ run_mode loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** Elem
 		gzread(myfile, &(check), sizeof(unsigned));
 		assert(check == 4444);
 
-		MeshCTX errmesh;
 		errmesh.el_table = *Err_ElemTable;
 		errmesh.nd_table = *Err_NodeTable;
 
 		move_err_data(&errmesh, &propctx);
+
+		setup_geoflow(*Err_ElemTable, *Err_NodeTable, myid, numprocs, matprops, timeprops);
 
 		HashEntryPtr *buck = (*Err_ElemTable)->getbucketptr();
 		for (int i = 0; i < (*Err_ElemTable)->get_no_of_buckets(); i++)

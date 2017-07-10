@@ -2600,10 +2600,10 @@ int Element::determine_refinement(double target) {
 
 void Element::calc_d_gravity(HashTable* El_Table) {
 
-	unsigned keyy[2] = { 3941335040, 0 };
-	int aa = 0, bb = 1;
-	if (key[0] == keyy[0] && key[1] == keyy[1])
-		bb = aa;
+//	unsigned keyy[2] = { 3941335040, 0 };
+//	int aa = 0, bb = 1;
+//	if (key[0] == keyy[0] && key[1] == keyy[1])
+//		bb = aa;
 
 	int xp, xm, yp, ym; //x plus, x minus, y plus, y minus
 	xp = positive_x_side;
@@ -3359,16 +3359,16 @@ void Element::write_elem(gzFile& myfile) {
 	assert(state_vars[0] >= 0.);
 	gzwrite(myfile, (prev_state_vars), sizeof(double) * 3);
 
-	gzwrite(myfile, &(which_son), sizeof(int));
-	gzwrite(myfile, &(positive_x_side), sizeof(int));
-	gzwrite(myfile, dx, sizeof(double) * 2);
-	gzwrite(myfile, curvature, sizeof(double) * 2);
-	gzwrite(myfile, &elevation, sizeof(double));
-	gzwrite(myfile, gravity, sizeof(double) * 3);
+//	gzwrite(myfile, &(which_son), sizeof(int));
+//	gzwrite(myfile, &(positive_x_side), sizeof(int));
+//	gzwrite(myfile, dx, sizeof(double) * 2);
+//	gzwrite(myfile, curvature, sizeof(double) * 2);
+//	gzwrite(myfile, &elevation, sizeof(double));
+//	gzwrite(myfile, gravity, sizeof(double) * 3);
 	gzwrite(myfile, d_gravity, sizeof(double) * 2);
 	gzwrite(myfile, &opposite_brother_flag, sizeof(int));
 
-	gzwrite(myfile, kactxy, sizeof(double) * 2);
+//	gzwrite(myfile, kactxy, sizeof(double) * 2);
 
 	gzwrite(myfile, &material, sizeof(int));
 }
@@ -3411,26 +3411,12 @@ Element::Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, i
 	gzread(myfile, (prev_state_vars), sizeof(double) * 3);
 
 	//extra
-	gzread(myfile, &(which_son), sizeof(int));
-	gzread(myfile, &(positive_x_side), sizeof(int));
-	gzread(myfile, dx, sizeof(double) * 2);
-	gzread(myfile, curvature, sizeof(double) * 2);
-	gzread(myfile, &elevation, sizeof(double));
-	gzread(myfile, gravity, sizeof(double) * 3);
-	gzread(myfile, d_gravity, sizeof(double) * 2);
 	gzread(myfile, &opposite_brother_flag, sizeof(int));
-
-	gzread(myfile, kactxy, sizeof(double) * 2);
 
 	//super extra
 	gzread(myfile, &material, sizeof(int));
 	tan_bed_frict = matprops_ptr->tanbedfrict[material];
 
-//	if (adapted > 0) {
-//		calc_which_son();
-//		find_positive_x_side(NodeTable);
-//		calculate_dx(NodeTable);
-//		calc_topo_data(matprops_ptr);
-//		calc_gravity_vector(matprops_ptr);
-//	}
+	if (adapted > 0)
+		calc_which_son();
 }
