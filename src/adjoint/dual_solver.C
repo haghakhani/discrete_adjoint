@@ -94,7 +94,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropC
 	HashTable *Err_El_Tab, *Err_Nod_Tab;
 #endif
 
-	if (mode & (ADJOINT|RESTART)){
+	if (mode & (ADJOINT&RESTART)){
 
 	Dual_El_Tab = meshctx->el_table;
 	NodeTable = meshctx->nd_table;
