@@ -115,8 +115,8 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 	gzwrite(myfile, outline->yminmax, sizeof(double) * 2);
 	for (int i = 0; i < ny; ++i)
 		gzwrite(myfile, outline2.pileheight[i], sizeof(double) * nx);
-	}
 	gzclose(myfile);
+	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
