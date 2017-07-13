@@ -8,9 +8,123 @@
 #include "../header/hpfem.h"
 #include "zlib.h"
 
-SolRec::SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[],
-    int ifrestart) :
-		HashTable(doublekeyrangein, size, prime, XR, YR, ifrestart), range(50) {
+Node_minimal::Node_minimal(Node *node):
+id(node->get_id()),
+info(node->get_info()),
+coord({node->get_coord()[0],node->get_coord()[1]}),
+elevation(node->get_elevation()){
+
+}
+
+Elem_minimal::Elem_minimal(Element *elem):
+myprocess(elem->get_myprocess()),
+generation(elem->get_gen()){
+
+	for (int i=0;i<8;++i){
+		neigh_proc[i]=elem->get_neigh_proc()[i];
+		neigh_gen[i]=elem->get_neigh_gen()[i];
+		for (int j=0;j<DIMENSION;++j){
+			neighbor[i][j]=elem->get_neighbors()[i*8+j];
+			node_key[i][j]=elem->getNode()[i*8+j];
+		}
+	}
+
+	refined=elem->get_refined_flag();
+	adapted=elem->get_adapted_flag();
+	material=elem->get_material();
+	opposite_brother_flag=elem->get_opposite_brother_flag();
+
+	for (int j=0;j<DIMENSION;++j){
+		elm_loc[j]=elem->get_elm_loc()[j];
+		key[j]=elem->pass_key()[j];
+		coord[j]=elem->get_coord()[j];
+	}
+
+
+	for (int i=0;i<4;++i)
+		for (int j=0;j<DIMENSION;++j){
+			son[i][j]=elem->getson()[i*4+j];
+			brothers[i][j]=elem->get_brothers()[i*4+j];
+		}
+
+	for (int i=0;i<NUM_STATE_VARS;++i){
+		state_vars[i]=elem->get_state_vars()[i];
+		prev_state_vars[i]=elem->get_prev_state_vars()[i];
+	}
+
+}
+
+Table_minimal::Table_minimal(HashTable *table):
+			MinKey({table->get_MinKey()[0],table->get_MinKey()[1]}),
+			MaxKey({table->get_MaxKey()[0],table->get_MaxKey()[1]}),
+			doublekeyrange({table->get_doublekeyrange()[0],table->get_doublekeyrange()[1]}),
+			Xrange({table->get_Xrange()[0],table->get_Xrange()[1]}),
+			Yrange({table->get_Yrange()[0],table->get_Yrange()[1]}),
+			NBUCKETS(table->get_nbuckets()),
+			PRIME(),
+			ENTRIES(){
+
+	invdxrange = 1.0 / (Xrange[1] - Xrange[0]);
+	invdyrange = 1.0 / (Yrange[1] - Yrange[0]);
+	hashconstant = 8.0 * NBUCKETS / (doublekeyrange[0] * doublekeyrange[1] + doublekeyrange[1]);
+}
+
+Snapshot::Snapshot(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec):
+		node_tab(meshctx.nd_table),
+		elem_tab(meshctx.el_table){
+
+	TimeProps* timeprops = propctx.timeprops;
+	int numprocs = propctx.numproc;
+	int myid = propctx.myid;
+
+	HashTable* El_Table = meshctx.el_table;
+	HashTable* NodeTable = meshctx.nd_table;
+
+	move_data(numprocs, myid, El_Table, NodeTable, timeprops);
+
+	time=timeprops->time;
+	iter=timeprops->iter;
+
+	num_nodes=table_members(NodeTable);
+	num_elems=table_members(El_Table);
+
+	node_vec.reserve(num_nodes);
+	elem_vec.reserve(num_elems);
+
+	HashEntryPtr currentPtr;
+	HashEntryPtr *buck = NodeTable->getbucketptr();
+
+
+	unsigned member=0;
+	for (int i = 0; i < NodeTable->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				node_vec.push_back(Node_minimal((Node*) currentPtr->value ));
+				member++;
+				currentPtr = currentPtr->next;
+			}
+		}
+
+
+	member=0;
+	buck = El_Table->getbucketptr();
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			currentPtr = *(buck + i);
+			while (currentPtr) {
+				elem_vec.push_back(Elem_minimal((Element*) currentPtr->value));
+				member++;
+				currentPtr = currentPtr->next;
+			}
+		}
+}
+
+Snapshot::~Snapshot(){
+}
+
+SolRec::SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[]) :
+		HashTable(doublekeyrangein, size, prime, XR, YR), range(50) {
 
 	first_solution_time_step = 0;
 	last_solution_time_step = 0;
@@ -473,6 +587,8 @@ Solution* SolRec::lookup(unsigned* key, int iter) {
 		return NULL;
 
 }
+
+SolRec::~SolRec(){}
 
 //==============================================================
 

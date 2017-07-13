@@ -32,49 +32,8 @@
 #define MaxBits ( sizeof(unsigned) * CHAR_BIT )
 #define IScale  ((unsigned)((MaxBits <= 32) ? ~(0u) : (0xffffffff << (MaxBits - 32))))
 
-HashTable::HashTable(unsigned* min, unsigned* max, int size, int prime) {
-	assert(0);  //avoid using this since it doesn't intialize doublekeyrange
-
-	MinKey[0] = *min;
-	MinKey[1] = *(min + 1);
-	MaxKey[0] = *max;
-	MaxKey[1] = *(max + 1);
-	// extend the hashtable bounds a little bit to make it more efficient for adaptive meshes
-	unsigned hashtable_extender = HASHTABLE_EXTENDER;
-	if (MinKey[0] >= hashtable_extender)
-		MinKey[0] -= hashtable_extender;
-	else
-		MinKey[0] = 0;
-	unsigned umax = IScale;
-	if ((hashtable_extender / 2 + MaxKey[0] / 2) <= (umax / 2))
-		MaxKey[0] += hashtable_extender;
-	else
-		MaxKey[0] = umax;
-
-	NBUCKETS = size;
-	PRIME = prime;
-	//Range  = *(MaxKey);
-	Range = *(MaxKey) - *(MinKey); //Keith Made this change 20061109
-
-	bucket = new HashEntryPtr[NBUCKETS];
-
-	for (int i = 0; i < NBUCKETS; i++)
-		*(bucket + i) = 0;
-
-	/*  MaxMinX[0]=MaxMinY[0]=-1;
-	 MaxMinX[1]=MaxMinY[1]=1;*/
-
-}
-
-HashTable::HashTable(double *doublekeyrangein, int size, int prime, double XR[], double YR[],
-    int ifrestart) {
+HashTable::HashTable(double *doublekeyrangein, int size, int prime, double XR[], double YR[]) {
 	int i;
-	/*
-	 MinKey[0] = *min;
-	 MinKey[1] = *(min+1);
-	 MaxKey[0] = *max;
-	 MaxKey[1] = *(max+1);
-	 */
 
 	NBUCKETS = size;
 	PRIME = prime;
@@ -89,7 +48,7 @@ HashTable::HashTable(double *doublekeyrangein, int size, int prime, double XR[],
 	for (i = 0; i < NBUCKETS; i++)
 		*(bucket + i) = 0;
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < DIMENSION; i++) {
 		Xrange[i] = XR[i];
 		Yrange[i] = YR[i];
 	}

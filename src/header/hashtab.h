@@ -92,7 +92,7 @@ protected:
 
 public:
 	HashTable(unsigned*, unsigned*, int, int);
-	HashTable(double *doublekeyrangein, int, int, double* XR, double* YR, int ifrestart);
+	HashTable(double *doublekeyrangein, int, int, double* XR, double* YR);
 	HashTable(HashTable* hashtable);
 	HashTable(gzFile& myfile);
 	~HashTable();

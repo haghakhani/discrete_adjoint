@@ -486,7 +486,7 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 		yminmax[i] = YRange[i];
 	}
 
-	*NodeTable = new HashTable(doublekeyrange, NODE_TABLE_SIZE, 2017, XRange, YRange, 0);
+	*NodeTable = new HashTable(doublekeyrange, NODE_TABLE_SIZE, 2017, XRange, YRange);
 
 	for (i = 0; i < Node_Num; i++) {
 		for (j = 0; j < KEYLENGTH; j++)
@@ -513,22 +513,16 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 	unsigned opposite_brother[2];
 
 	Element *Quad9P;
-	float* value = new float[2];
-	BC* dummy = new BC;
-	void* p;
-	int* assocp;/*--*/
-	unsigned* keyP;
-
 	unsigned nodes[9][2];
 	unsigned neigh[4][2];
 	int neighbor_proc[4];
 
 	int temp2;
-	int interflag;
+//	int interflag;
 
 	freadI(fp, &Elem_Num);  //--number of the elements assigned to the proc
 
-	*ElemTable = new HashTable(doublekeyrange, EL_TABLE_SIZE, 503, XRange, YRange, 0);
+	*ElemTable = new HashTable(doublekeyrange, EL_TABLE_SIZE, 503, XRange, YRange);
 
 	for (int ielem = 0; ielem < Elem_Num; ielem++) {
 
@@ -536,15 +530,15 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 			for (k = 0; k < KEYLENGTH; k++)
 				freadU(fp, &(nodes[j][k]));
 
-		interflag = 0;  //---switch for interface
+//		interflag = 0;  //---switch for interface
 		for (j = 0; j < 4; j++) {
 
 			freadI(fp, &(neighbor_proc[j]));  //--read the neighbor info
 
 			if (neighbor_proc[j] != -1) //--if there is neighbor(-1 means the edge is bound)
 			    {
-				if (neighbor_proc[j] != myid) //--the neighbor belongs to other proc
-					interflag = 1; //--switch is used for avoiding nominating neighbor twice
+//				if (neighbor_proc[j] != myid) //--the neighbor belongs to other proc
+//					interflag = 1; //--switch is used for avoiding nominating neighbor twice
 
 				for (k = 0; k < KEYLENGTH; k++)
 					freadU(fp, &(neigh[j][k])); //--read the left parts of the key
@@ -642,10 +636,10 @@ void Read_grid(int myid, int numprocs, HashTable** NodeTable, HashTable** ElemTa
 	if (timeprops_ptr->verbose)
 	outline_ptr->init(Quad9P->get_dx(), REFINE_LEVEL - Quad9P->get_gen(), xminmax, yminmax);
 #endif
-	*solrec = new SolRec(doublekeyrange, EL_TABLE_SIZE, 503, XRange, YRange, 0);
+	*solrec = new SolRec(doublekeyrange, EL_TABLE_SIZE, 503, XRange, YRange);
 
-	delete[] value;
-	delete dummy;
+//	delete[] value;
+//	delete dummy;
 
 	//assert(0);
 

@@ -16,6 +16,75 @@
 
 class ErrorElem;
 
+class Node_minimal{
+
+private:
+	int id, info;
+	double coord[2],elevation;
+	unsigned key[2];
+
+public:
+	Node_minimal(Node *node);
+
+};
+
+class Elem_minimal{
+
+private:
+	int myprocess, generation;
+	int neigh_proc[8],neigh_gen[8];
+	int refined,adapted;
+	int elm_loc[2],material;
+	int opposite_brother_flag;
+
+	unsigned key[DIMENSION];
+	unsigned node_key[8][DIMENSION];
+	unsigned neighbor[8][DIMENSION];
+	unsigned son[4][DIMENSION];
+	unsigned brothers[4][DIMENSION];
+
+	double coord[DIMENSION];
+	double state_vars[NUM_STATE_VARS];
+	double prev_state_vars[NUM_STATE_VARS];
+
+public:
+	Elem_minimal(Element *elem);
+
+};
+
+class Table_minimal{
+
+private:
+	unsigned MinKey[2];
+	unsigned MaxKey[2];
+	double doublekeyrange[2];
+	double hashconstant;
+	double Xrange[2];
+	double Yrange[2];
+	double invdxrange, invdyrange;
+	int NBUCKETS, PRIME,ENTRIES;
+
+public:
+	Table_minimal(HashTable* table);
+
+};
+
+class Snapshot{
+private:
+
+	int iter;
+	int num_nodes, num_elems;
+	double time;
+
+	vector<Node_minimal> node_vec;
+	vector<Elem_minimal> elem_vec;
+	Table_minimal node_tab, elem_tab;
+
+public:
+	Snapshot(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec);
+	~Snapshot();
+};
+
 class SolRec: public HashTable {
 
 private:
@@ -31,7 +100,7 @@ private:
 public:
 
 	// constructor
-	SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[], int ifrestart);
+	SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[]);
 
 	SolRec(gzFile& myfile);
 
@@ -76,6 +145,8 @@ public:
 	Solution* lookup(unsigned* key, int iter);
 
 	void write_table(gzFile& myfile,run_mode = NORMAL);
+
+	~SolRec();
 
 };
 
