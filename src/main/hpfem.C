@@ -88,21 +88,8 @@ int main(int argc, char *argv[]) {
 	DISCHARGE discharge;
 
 	int adaptflag;
-	int rescomp = 0;
-	int adjflag = 0;
 
-	int OUTPUT = 0; //Hossein generated this flag to turn off writing output in forward run
-	/*
-	 * viz_flag is used to determine which viz output to use
-	 * nonzero 1st bit of viz_flag means output tecplotxxxx.plt
-	 * nonzero 2nd bit of viz_flag means output mshplotxxxx.plt
-	 * nonzero 4th bit of viz_flag means output xdmfxxxxx.xmf
-	 * nonzero 5th bit of viz_flag means output grass_sites files
-
-	 order_flag == 1 means use first order method
-	 order_flag == 2 means use second order method
-	 */
-	int viz_flag = 0, order_flag, savefileflag = 1; //savefileflag will be flipped so first savefile will end in 0
+	int viz_flag = 0, order_flag; //savefileflag will be flipped so first savefile will end in 0
 	int srctype;
 
 	Read_data(myid, &matprops, &pileprops, &statprops, &timeprops, &fluxprops, &adaptflag, &viz_flag,
@@ -136,217 +123,15 @@ int main(int argc, char *argv[]) {
 	propctx.matprops = &matprops;
 	propctx.mapnames = &mapnames;
 	propctx.outline = &outline;
+	propctx.discharge = &discharge;
+	propctx.statprops = &statprops;
+	propctx.fluxprops = &fluxprops;
 	propctx.numproc = numprocs;
 	propctx.myid = myid;
 	propctx.adapt_flag = adaptflag;
 
 	if ((runcond & NORMAL) || (runcond & FORWARD)) {
-
-		if (myid == 0) {
-			for (int imat = 1; imat <= matprops.material_count; imat++)
-				printf("bed friction angle for \"%s\" is %g\n", matprops.matnames[imat],
-				    matprops.bedfrict[imat] * 180.0 / PI);
-
-			printf("internal friction angle is %g, epsilon is %g \n method order = %i\n",
-			    matprops.intfrict * 180.0 / PI, matprops.epsilon, order_flag);
-			printf("REFINE_LEVEL=%d\n", REFINE_LEVEL);
-		}
-
-		MPI_Barrier(MPI_COMM_WORLD);
-		calc_stats(El_Table, Node_Table, myid, &matprops, &timeprops, &statprops, &discharge, 0.0);
-
-		output_discharge(&matprops, &timeprops, &discharge, myid);
-
-		move_data(numprocs, myid, El_Table, Node_Table, &timeprops);
-
-		if (myid == 0)
-			output_summary(&timeprops, &statprops, savefileflag);
-
-		if (viz_flag & 1)
-			tecplotter(El_Table, Node_Table, &matprops, &timeprops, &mapnames, statprops.vstar, adjflag);
-
-		if (viz_flag & 2)
-			meshplotter(El_Table, Node_Table, &matprops, &timeprops, &mapnames, statprops.vstar);
-
-#ifdef HAVE_HDF5
-		if(viz_flag&8)
-		write_xdmf(El_Table,Node_Table,&timeprops,&matprops,&mapnames,XDMF_NEW);
-#endif
-
-		if (viz_flag & 16) {
-			if (myid == 0)
-				grass_sites_header_output(&timeprops);
-			grass_sites_proc_output(El_Table, Node_Table, myid, &matprops, &timeprops);
-		}
-		initialization_f.stop();
-
-		/*
-		 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-		 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-
-		 Time Stepping Loop
-
-		 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-		 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-		 */
-
-		while (!(timeprops.ifend())) //(timeprops.ifend(0.5*statprops.vmean)) && !ifstop)
-		{
-			/*
-			 *  mesh adaption routines
-			 */
-			double TARGET = .05;
-			//double UNREFINE_TARGET = .005;
-			double UNREFINE_TARGET = .01;
-			int h_count = 0;
-			if (timeprops.iter < 50)
-				matprops.frict_tiny = 0.1;
-			else
-				matprops.frict_tiny = 0.000000001;
-
-			if ((adaptflag != 0) && timeprops.ifrefine()) {
-
-				adaption.start();
-
-				H_adapt(El_Table, Node_Table, h_count, TARGET, &matprops, &fluxprops, &timeprops, 5);
-
-				move_data(numprocs, myid, El_Table, Node_Table, &timeprops);
-
-				unrefine(El_Table, Node_Table, UNREFINE_TARGET, myid, numprocs, &timeprops, &matprops,
-				    rescomp);
-
-				move_data(numprocs, myid, El_Table, Node_Table, &timeprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
-				adaption.stop();
-
-				if ((numprocs > 1) && timeprops.ifrepartition()) {
-					repartition_f.start();
-
-					repartition2(El_Table, Node_Table, &timeprops);
-
-					move_data(numprocs, myid, El_Table, Node_Table, &timeprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
-					repartition_f.stop();
-				}
-
-				calc_d_gravity(El_Table);
-			}
-
-			stept.start();
-
-			step(El_Table, Node_Table, myid, numprocs, &matprops, &timeprops, &pileprops, &fluxprops,
-			    &statprops, &order_flag, &outline, &discharge, adaptflag);
-
-			stept.stop();
-
-			char filename[50];
-			sprintf(filename,"forward_%d_%d",timeprops.iter,myid);
-
-			write_alldata_ordered(El_Table, filename);
-
-//			write_elem_sorted(El_Table,filename);
-
-			write_solution.start();
-
-			solrec->record_solution(&meshctx, &propctx);
-
-			if (solrec->write_sol()/* || must_write(&memuse, myid)*/) {
-				solrec->wrtie_sol_to_disk(myid);
-//			solrec->wrtie_sol_to_disk_hdf5(myid);
-				solrec->delete_jacobians_after_writes();
-			}
-			write_solution.stop();
-
-			/*
-			 * output results to file
-			 */
-//		if (OUTPUT) {
-			visualization.start();
-			if (timeprops.ifoutput() && OUTPUT) {
-				move_data(numprocs, myid, El_Table, Node_Table, &timeprops);
-
-				output_discharge(&matprops, &timeprops, &discharge, myid);
-
-				if (myid == 0) {
-					output_summary(&timeprops, &statprops, savefileflag);
-				}
-
-				if (viz_flag & 1)
-					tecplotter(El_Table, Node_Table, &matprops, &timeprops, &mapnames, statprops.vstar,
-					    adjflag);
-
-				if (viz_flag & 2)
-					meshplotter(El_Table, Node_Table, &matprops, &timeprops, &mapnames, statprops.vstar);
-
-#ifdef HAVE_HDF5
-				if(viz_flag&8)
-				write_xdmf(El_Table,Node_Table,&timeprops,&matprops,&mapnames,XDMF_OLD);
-#endif
-
-				if (viz_flag & 16) {
-					if (myid == 0)
-						grass_sites_header_output(&timeprops);
-					grass_sites_proc_output(El_Table, Node_Table, myid, &matprops, &timeprops);
-				}
-			}
-			visualization.stop();
-//		}
-
-			if (timeprops.ifsave()) {
-				move_data(numprocs, myid, El_Table, Node_Table, &timeprops);
-				save_forward(meshctx, propctx, solrec);
-				solrec->wrtie_sol_to_disk(myid);
-				solrec->delete_jacobians_after_writes();
-//			write_alldata_ordered(El_Table, myid);
-			}
-		}
-
-		move_data(numprocs, myid, El_Table, Node_Table, &timeprops);
-
-		output_discharge(&matprops, &timeprops, &discharge, myid);
-		MPI_Barrier(MPI_COMM_WORLD);
-
-		if (timeprops.verbose){
-		if (myid == 0)
-			output_summary(&timeprops, &statprops, savefileflag);
-
-		MPI_Barrier(MPI_COMM_WORLD);
-		// write out ending warning, maybe flow hasn't finished moving
-		sim_end_warning(El_Table, &matprops, &timeprops, statprops.vstar);
-		MPI_Barrier(MPI_COMM_WORLD);
-
-		//write out the final pile statistics (and run time)
-		if (myid == 0)
-			out_final_stats(&timeprops, &statprops);
-
-		MPI_Barrier(MPI_COMM_WORLD);
-
-		//write out stochastic simulation statistics
-		//if(statprops.lhs.runid>=0)
-		if (myid == 0)
-			output_stoch_stats(&matprops, &statprops);
-		MPI_Barrier(MPI_COMM_WORLD);
-
-		//output maximum flow depth a.k.a. flow outline
-
-		OutLine outline2;
-		double dxy[2];
-		dxy[0] = outline.dx;
-		dxy[1] = outline.dy;
-		outline2.init2(dxy, outline.xminmax, outline.yminmax);
-		int NxNyout = outline.Nx * outline.Ny;
-		MPI_Reduce(*(outline.pileheight), *(outline2.pileheight), NxNyout, MPI_DOUBLE,
-		MPI_SUM, 0, MPI_COMM_WORLD);
-		if (myid == 0)
-			outline2.output(&matprops, &statprops);
-
-		// we deallocate these to make more space in memory
-		// adjoint solution
-
-		outline.dealloc();
-		outline2.dealloc();
-		MPI_Barrier(MPI_COMM_WORLD);
-		}
-
-		primal.stop();
+		forward_solve(meshctx, propctx, solrec);
 	}
 
 	dual.start();
