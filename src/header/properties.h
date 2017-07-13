@@ -383,11 +383,11 @@ struct TimeProps {
 		ndmaxtime = maxtime / TIME_SCALE;
 		ndnextoutput = timeoutput / TIME_SCALE;
 		ndnextsave = timesave / TIME_SCALE;
+		verbose = verbose_in;
 		iter = 0;
 		adjiter = 0;
 		ioutput = 0;
 		isave = 0;
-		verbose = verbose_in;
 		time = 0.0;
 		dtime = 0.0;
 		// we clear for case that we need to use timpeprops again
@@ -827,7 +827,7 @@ struct OutLine {
 			yy = ((iy + 0.5) * dy + yminmax[0]) * matprops_ptr->LENGTH_SCALE;
 			for (ix = 0; ix < Nx - 1; ix++) {
 				xx = ((ix + 0.5) * dx + xminmax[0]) * matprops_ptr->LENGTH_SCALE;
-				ierr = Get_elevation(res, xx, yy, &elevation);
+				Get_elevation(res, xx, yy, &elevation);
 				fprintf(fp, "%g ", elevation);
 			}
 			fprintf(fp, "%g\n", pileheight[iy][ix] * matprops_ptr->HEIGHT_SCALE);
@@ -1408,7 +1408,7 @@ struct PertElemInfo {
 			fclose(fp);
 		} else {
 			printf(
-			    "size of functional vectors are not equal, dual_size=%d, forw_size=%d, pert_size=%d \n",
+			    "size of functional vectors are not equal, dual_size=%u, forw_size=%u, pert_size=%u \n",
 			    dual_func.size(), pert_func.size(), forw_func.size());
 		}
 	}
