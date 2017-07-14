@@ -35,7 +35,7 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 	 */
 
 	/* pass off proc data here (really only need state_vars for off-proc neighbors) */
-	move_data(nump, myid, El_Table, NodeTable, timeprops_ptr);
+	move_data(nump, myid, El_Table, NodeTable, timeprops_ptr, matprops_ptr);
 
 	slopes(El_Table, NodeTable, matprops_ptr, FORWARD);
 
@@ -145,7 +145,7 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 #endif  //SECOND_ORDER
 
 	/* really only need to share dudx, state_vars, and kactxy */
-	move_data(nump, myid, El_Table, NodeTable, timeprops_ptr);
+	move_data(nump, myid, El_Table, NodeTable, timeprops_ptr, matprops_ptr);
 
 	/* calculate kact/pass */
 	double dt_not_used = get_coef_and_eigen(El_Table, NodeTable, matprops_ptr, fluxprops,

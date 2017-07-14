@@ -73,7 +73,7 @@ double get_coef_and_eigen(HashTable* El_Table, HashTable* NodeTable, MatProps* m
 
 //! this function transfers information during events such as ghost element data exchange and repartitioning
 void move_data(int nump, int myid, HashTable* El_Table, HashTable* NodeTable,
-    TimeProps* timeprops_ptr);
+    TimeProps* timeprops_ptr, MatProps *matprops);
 
 //! this function deletes the current ghost elements
 void delete_ghost_elms(HashTable* El_Table, int myid);

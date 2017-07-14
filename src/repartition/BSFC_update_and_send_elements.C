@@ -23,10 +23,10 @@
 #include "../header/exvar.h"
 #include "./repartition_BSFC.h"
 
-void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid);
+void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid, MatProps *matprops);
 
 void BSFC_update_and_send_elements(int myid, int numprocs, HashTable* HT_Elem_Ptr,
-    HashTable* HT_Node_Ptr, int time_step) {
+    HashTable* HT_Node_Ptr, int time_step,  MatProps *matprops) {
 	int i, j, k, no_of_buckets = HT_Elem_Ptr->get_no_of_buckets();
 	HashEntryPtr entryp;
 	Element* EmTemp;
@@ -246,7 +246,7 @@ void BSFC_update_and_send_elements(int myid, int numprocs, HashTable* HT_Elem_Pt
 		if (recv_info[2 * i + 1] != 0) {
 			j = MPI_Wait((recv_request + i * 2 + 1), &status);
 			for (j = 0; j < recv_info[2 * i + 1]; j++) {
-				create_element((recv_elm_array + counter), HT_Elem_Ptr, HT_Node_Ptr, myid);
+				create_element((recv_elm_array + counter), HT_Elem_Ptr, HT_Node_Ptr, myid, matprops);
 				counter++;
 			}
 		}

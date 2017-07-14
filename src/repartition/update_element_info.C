@@ -37,13 +37,13 @@ void diff_proc(Element* r_element, HashTable* HT_Elem_Ptr, int new_proc, int sid
 
 //! construct_el is a friend function of the Element class that fills an element with information it receives in a variable of the ElemPack class from an MPI call
 void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, int myid,
-    double* e_error);
+    double* e_error, MatProps *matprops);
 
 // bsfc repartitioning scheme
-void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid) {
+void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid, MatProps *matprops) {
 	Element* newelement = new Element();
 	double e_error = 0;
-	construct_el(newelement, elem2, HT_Node_Ptr, myid, &e_error);
+	construct_el(newelement, elem2, HT_Node_Ptr, myid, &e_error,matprops);
 
 	Element* EmTemp = (Element*) HT_Elem_Ptr->lookup(newelement->pass_key());
 	if (EmTemp != NULL) { // update this element
@@ -84,7 +84,7 @@ void same_proc(Element* r_element, HashTable* HT_Elem_Ptr, int target_proc, int 
 }
 
 void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, int myid,
-    double* e_error) {
+    double* e_error, MatProps *matprops) {
 	Node* node;
 	int i, j;
 	newelement->myprocess = myid;
@@ -188,6 +188,8 @@ void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, 
 	newelement->lb_weight = elem2->lb_weight;
 	newelement->elm_loc[0] = elem2->elm_loc[0];
 	newelement->elm_loc[1] = elem2->elm_loc[1];
+
+	newelement->tan_bed_frict=matprops->tanbedfrict[newelement->material];
 }
 
 //for the 3rd party involved in updating

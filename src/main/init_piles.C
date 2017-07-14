@@ -96,7 +96,7 @@ void init_piles(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int myid, int nu
 	}
 #endif //end "#if defined PARABALOID || defined CYLINDER"
 
-	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops);
 	slopes(HT_Elem_Ptr, HT_Node_Ptr, matprops, FORWARD);
 
 	/* initial calculation of actual volume on the map */

@@ -60,7 +60,7 @@ void setup_geoflow(HashTable* El_Table, HashTable* NodeTable, int myid, int nump
 		}
 
 	/* transfer ghost elements to proper processors */
-	move_data(nump, myid, El_Table, NodeTable, timeprops_ptr);
+	move_data(nump, myid, El_Table, NodeTable, timeprops_ptr, matprops_ptr);
 
 	/* calculate d_gravity array for each element */
 	buck = El_Table->getbucketptr();

@@ -304,7 +304,7 @@ public:
 	//used for unrefinement
 	ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Table, MatProps* matprops_ptr);
 
-	ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid);
+	ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, MatProps *matprops_ptr, int myid);
 
 	ErrorElem(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
 

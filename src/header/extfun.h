@@ -154,15 +154,15 @@ extern void Pack_element(void *sendel, ElemPack *elem, HashTable* HT_Node_Ptr,
 extern void MPI_New_Datatype();
 
 //! this function repartitions (redistributes) the number of elements on each processor so they all have approximately the same ammount of work to do.  it is called in hpfem.C and init_piles.C 
-extern void repartition(HashTable*, HashTable*, int);
+extern void repartition(HashTable*, HashTable*, int, MatProps *matprops);
 //extern void repartition(HashTable*, HashTable*);
 
 //! the replacement for repartition(), this function repartitions (redistributes) the number of elements on each processor so they all have approximately the same ammount of work to do
-extern void repartition2(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprops_ptr);
+extern void repartition2(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprops_ptr, MatProps *matprops);
 
 //! this function creates the elements listed in recv_array and adds them to the Element HashTable, it will fail an assertion if you tell it to create an Element that already exists, it is called by repartion2(), which requires the deletion of ghost elements first.
 extern void IncorporateNewElements(HashTable* El_Table, HashTable* NodeTable, int myid,
-    int num_recv, ElemPack *recv_array, TimeProps* timeprops_ptr);
+    int num_recv, ElemPack *recv_array, TimeProps* timeprops_ptr,  MatProps *matprops);
 
 //! quicksort into ascending order, according to matching double precision numbers, the array of pointers to data
 extern void q_sort_data(double *numbers, void **data, int left, int right);

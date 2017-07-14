@@ -191,7 +191,7 @@ void unrefine(HashTable* El_Table, HashTable* NodeTable, double target, int myid
 	 fprintf(fpdebug,"%d elements unrefined on process %d ====================================!!!!!!!!!!!\n", unrefined*4, myid);
 	 fclose(fpdebug);
 	 */
-	move_data(nump, myid, El_Table, NodeTable, timeprops_ptr);
+	move_data(nump, myid, El_Table, NodeTable, timeprops_ptr, matprops_ptr);
 
 	//printf("myid=%d exiting unrefine\n",myid);
 	return;

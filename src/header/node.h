@@ -85,7 +85,7 @@ class Node {
 	friend void destroy_element(void *r_element, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr);
 
 	friend void create_element(ElemPack* elem2, HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr,
-	    double* e_error);
+	    double* e_error, MatProps *matprops);
 
 	friend void uniform_refine_neigh_update(HashTable* El_Table, HashTable* NodeTable, int nump, int myid, void* RL,
 	    TimeProps* timeprops_ptr);

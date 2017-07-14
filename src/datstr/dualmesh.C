@@ -74,13 +74,14 @@ Snapshot::Snapshot(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solre
 		elem_tab(meshctx.el_table){
 
 	TimeProps* timeprops = propctx.timeprops;
+	MatProps* matprops = propctx.matprops;
 	int numprocs = propctx.numproc;
 	int myid = propctx.myid;
 
 	HashTable* El_Table = meshctx.el_table;
 	HashTable* NodeTable = meshctx.nd_table;
 
-	move_data(numprocs, myid, El_Table, NodeTable, timeprops);
+	move_data(numprocs, myid, El_Table, NodeTable, timeprops, matprops);
 
 	time=timeprops->time;
 	iter=timeprops->iter;
@@ -2978,7 +2979,7 @@ ErrorElem::ErrorElem(ErrorElem* sons[], HashTable* NodeTable, HashTable* El_Tabl
 		el_error[i] = 0.;
 }
 
-ErrorElem::ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
+ErrorElem::ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, MatProps *matprops_ptr, int myid) {
 
 	Node* node;
 	int i, j;
@@ -2986,6 +2987,7 @@ ErrorElem::ErrorElem(ErrElemPack* elem2, HashTable* HT_Node_Ptr, int myid) {
 	generation = elem2->generation;
 	opposite_brother_flag = elem2->opposite_brother_flag;
 	material = elem2->material;
+	tan_bed_frict=matprops_ptr->tanbedfrict[material];
 
 	for (i = 0; i < 8; i++) {
 		neigh_proc[i] = elem2->neigh_proc[i];

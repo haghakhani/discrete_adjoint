@@ -26,7 +26,7 @@
 //#define PRINT_MOVE
 
 void move_data(int numprocs, int myid, HashTable* El_Table, HashTable* NodeTable,
-    TimeProps* timeprops_ptr) {
+    TimeProps* timeprops_ptr, MatProps* matprops) {
 
 	if (numprocs < 2)
 		return;
@@ -239,7 +239,7 @@ void move_data(int numprocs, int myid, HashTable* El_Table, HashTable* NodeTable
 						if (elm == NULL) { // this elm doesn't exist on this proc
 							new_elm = new Element();
 
-							construct_el(new_elm, (recv_array[iproc] + ielem), NodeTable, myid, &not_used);
+							construct_el(new_elm, (recv_array[iproc] + ielem), NodeTable, myid, &not_used, matprops);
 							if ((new_elm->get_adapted_flag() < 0) && (new_elm->get_adapted_flag() >= -BUFFER))
 								new_elm->put_myprocess(iproc);
 							El_Table->add(new_elm->pass_key(), new_elm);
@@ -249,7 +249,7 @@ void move_data(int numprocs, int myid, HashTable* El_Table, HashTable* NodeTable
 							//this elm is already on this proc, rather than delete old copy
 							//and allocate space for a new one, save time by only copying the
 							//new element data to the old element.
-							construct_el(elm, (recv_array[iproc] + ielem), NodeTable, myid, &not_used);
+							construct_el(elm, (recv_array[iproc] + ielem), NodeTable, myid, &not_used, matprops);
 							if ((elm->get_adapted_flag() < 0) && (elm->get_adapted_flag() >= -BUFFER))
 								elm->put_myprocess(iproc);
 							update_counter++;
@@ -797,7 +797,7 @@ void move_err_data(MeshCTX* meshctx, PropCTX* propctx) {
 					for (ielem = 0; ielem < num_send_recv[iproc]; ielem++) {
 						elm = (ErrorElem*) (El_Table->lookup((recv_array[iproc] + ielem)->key));
 						if (elm == NULL) { // this elm doesn't exist on this proc
-							new_elm = new ErrorElem((recv_array[iproc] + ielem), NodeTable, myid);
+							new_elm = new ErrorElem((recv_array[iproc] + ielem), NodeTable, matprops_ptr, myid);
 							if ((new_elm->get_adapted_flag() < 0) && (new_elm->get_adapted_flag() >= -BUFFER))
 								new_elm->put_myprocess(iproc);
 							El_Table->add(new_elm->pass_key(), new_elm);

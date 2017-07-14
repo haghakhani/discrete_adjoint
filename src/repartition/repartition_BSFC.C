@@ -46,10 +46,10 @@
 #define DEBUG_ITER 1000000
 
 int SequentialSend(int numprocs, int myid, HashTable* El_Table, HashTable* NodeTable,
-    TimeProps* timeprops_ptr, double *NewProcDoubleKeyBoundaries, int iseqsend);
+    TimeProps* timeprops_ptr, double *NewProcDoubleKeyBoundaries, int iseqsend,  MatProps *matprops);
 
 void NonSequentialSendAndUpdateNeigh(int numprocs, int myid, HashTable* El_Table,
-    HashTable* NodeTable, TimeProps* timeprops_ptr, double *NewProcDoubleKeyBoundaries);
+    HashTable* NodeTable, TimeProps* timeprops_ptr, double *NewProcDoubleKeyBoundaries,  MatProps *matprops);
 
 void BSFC_create_refinement_info(int* number_of_cuts, float* global_actual_work_allocated,
     float total_weight, float* work_percent_array, unstructured_communication verts_in_cuts_info,
@@ -69,7 +69,7 @@ void BSFC_update_element_proc(int myid, int numprocs, HashTable* HT_Elem_Ptr,
 /*---------------------------------------------------------------------------*/
 /*---------------------------------------------------------------------------*/
 
-void repartition(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int time_step) {
+void repartition(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int time_step, MatProps *matprops) {
 	int ierr, i, j, k; /* local variables */
 	int num_local_objects; /* the number of objects this processor owns */
 	BSFC_VERTEX_PTR sfc_vert_ptr; /* array that stores the sfc objects */
@@ -344,7 +344,7 @@ void repartition(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int time_step) 
 	//done debug stuff
 	free(sfc_vert_ptr);
 
-	BSFC_update_and_send_elements(myid, numprocs, HT_Elem_Ptr, HT_Node_Ptr, time_step);
+	BSFC_update_and_send_elements(myid, numprocs, HT_Elem_Ptr, HT_Node_Ptr, time_step, matprops);
 
 	return;
 }
@@ -537,7 +537,7 @@ void repartition2(HashTable* El_Table, HashTable* NodeTable,
  *  collection of elements.
  *
  */
-void repartition2(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprops_ptr) {
+void repartition2(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprops_ptr, MatProps *matprops) {
 
 	int myid, numprocs;
 	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
@@ -552,7 +552,7 @@ void repartition2(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprop
 	int ifrepeat = 0;
 	do {
 		ifrepeat = SequentialSend(numprocs, myid, El_Table, NodeTable, timeprops_ptr,
-		    NewProcDoubleKeyBoundaries, counter);
+		    NewProcDoubleKeyBoundaries, counter, matprops);
 //		printf("myid=%d counter=%d MyFirstAndLastDoubleKey=%g , %g\n",myid,counter,NewProcDoubleKeyBoundaries[myid],NewProcDoubleKeyBoundaries[myid+1]);
 		if (counter++ > 4 * numprocs) {
 			printf(
@@ -566,7 +566,7 @@ void repartition2(HashTable* El_Table, HashTable* NodeTable, TimeProps* timeprop
 	//printf("myid=%d counter=%d\n",myid,counter);
 
 	NonSequentialSendAndUpdateNeigh(numprocs, myid, El_Table, NodeTable, timeprops_ptr,
-	    NewProcDoubleKeyBoundaries);
+	    NewProcDoubleKeyBoundaries, matprops);
 //	printf("myid=%d nonseq MyFirstAndLastDoubleKey=%g , %g\n",myid,NewProcDoubleKeyBoundaries[myid],NewProcDoubleKeyBoundaries[myid+1]);
 
 	CDeAllocD1(NewProcDoubleKeyBoundaries);
@@ -593,7 +593,7 @@ void checkelemnode(HashTable *El_Table, HashTable *NodeTable, int myid, FILE *fp
 	return;
 }
 int SequentialSend(int numprocs, int myid, HashTable* El_Table, HashTable* NodeTable,
-    TimeProps* timeprops_ptr, double *NewProcDoubleKeyBoundaries, int iseqsend) {
+    TimeProps* timeprops_ptr, double *NewProcDoubleKeyBoundaries, int iseqsend,  MatProps *matprops) {
 
 	int num_buck = El_Table->get_no_of_buckets();
 	HashEntryPtr* buck = El_Table->getbucketptr();
@@ -1920,7 +1920,7 @@ int SequentialSend(int numprocs, int myid, HashTable* El_Table, HashTable* NodeT
 					fclose(fpdb2);
 				}
 #endif
-				IncorporateNewElements(El_Table, NodeTable, myid, num_recv[0], recv_array0, timeprops_ptr);
+				IncorporateNewElements(El_Table, NodeTable, myid, num_recv[0], recv_array0, timeprops_ptr, matprops);
 
 #ifdef DEBUG_REPART2
 				if (timeprops_ptr->iter == DEBUG_ITER) {
@@ -1961,7 +1961,7 @@ int SequentialSend(int numprocs, int myid, HashTable* El_Table, HashTable* NodeT
 					fclose(fpdb2);
 				}
 #endif
-				IncorporateNewElements(El_Table, NodeTable, myid, num_recv[1], recv_array1, timeprops_ptr);
+				IncorporateNewElements(El_Table, NodeTable, myid, num_recv[1], recv_array1, timeprops_ptr, matprops);
 #ifdef DEBUG_REPART2
 				if (timeprops_ptr->iter == DEBUG_ITER) {
 					fpdb2 = fopen(fname2, "a");
@@ -2131,7 +2131,7 @@ int SequentialSend(int numprocs, int myid, HashTable* El_Table, HashTable* NodeT
 //bob
 
 void NonSequentialSendAndUpdateNeigh(int numprocs, int myid, HashTable* El_Table,
-    HashTable* NodeTable, TimeProps* timeprops_ptr, double *NewProcDoubleKeyBoundaries) {
+    HashTable* NodeTable, TimeProps* timeprops_ptr, double *NewProcDoubleKeyBoundaries,  MatProps *matprops) {
 
 	int num_buck = El_Table->get_no_of_buckets();
 	HashEntryPtr* buck = El_Table->getbucketptr();
@@ -2459,7 +2459,7 @@ void NonSequentialSendAndUpdateNeigh(int numprocs, int myid, HashTable* El_Table
 
 				if (IfSentRecvd) {
 					IncorporateNewElements(El_Table, NodeTable, myid, NumToSecondRecv[iproc],
-					    SecondRecvArray[iproc], timeprops_ptr);
+					    SecondRecvArray[iproc], timeprops_ptr,matprops);
 					IfSecondRecvDone[iproc] = 1;
 					free(SecondRecvArray[iproc]);
 				} else
@@ -2609,7 +2609,7 @@ void NonSequentialSendAndUpdateNeigh(int numprocs, int myid, HashTable* El_Table
 }
 
 void IncorporateNewElements(HashTable* El_Table, HashTable* NodeTable, int myid, int num_recv,
-    ElemPack *recv_array, TimeProps* timeprops_ptr) {
+    ElemPack *recv_array, TimeProps* timeprops_ptr, MatProps *matprops) {
 	int ielem;
 	Element *EmTemp;
 
@@ -2636,7 +2636,7 @@ void IncorporateNewElements(HashTable* El_Table, HashTable* NodeTable, int myid,
 		//if((timeprops_ptr->iter==119)&&(myid==0))
 		//printf("myid=%d num_recv=%d ielem=%d\n",myid,num_recv,ielem);
 
-		construct_el(EmNew, recv_array + ielem, NodeTable, myid, &not_used);
+		construct_el(EmNew, recv_array + ielem, NodeTable, myid, &not_used, matprops);
 		El_Table->add(EmNew->pass_key(), EmNew);
 	}
 

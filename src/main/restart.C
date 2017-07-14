@@ -21,7 +21,7 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 
 	TimeProps* timeprops = propctx.timeprops;
 	// we do not need to write them we can re-make them when we restart
-//	MatProps* matprops = propctx.matprops;
+	MatProps* matprops = propctx.matprops;
 //	MapNames* mapnames = propctx.mapnames;
 	OutLine* outline = propctx.outline;
 	int numprocs = propctx.numproc;
@@ -31,7 +31,7 @@ void save_forward(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec
 	HashTable* NodeTable = meshctx.nd_table;
 	char filename[50];
 
-	move_data(numprocs, myid, El_Table, NodeTable, timeprops);
+	move_data(numprocs, myid, El_Table, NodeTable, timeprops, matprops);
 
 	sprintf(filename, "forward_%04d_%06d", myid,timeprops->iter);
 	gzFile myfile = gzopen(filename, "wb");
@@ -330,7 +330,7 @@ run_mode loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable** Elem
 
 		gzclose(myfile);
 
-		move_data(numprocs, myid, *ElemTable, *NodeTable, timeprops);
+		move_data(numprocs, myid, *ElemTable, *NodeTable, timeprops, matprops);
 
 		setup_geoflow(*ElemTable, *NodeTable, myid, numprocs, matprops, timeprops);
 

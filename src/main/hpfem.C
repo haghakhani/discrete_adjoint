@@ -103,7 +103,7 @@ int main(int argc, char *argv[]) {
 
 		setup_geoflow(El_Table, Node_Table, myid, numprocs, &matprops, &timeprops);
 
-		move_data(numprocs, myid, El_Table, Node_Table, &timeprops);
+		move_data(numprocs, myid, El_Table, Node_Table, &timeprops,&matprops);
 
 		AssertMeshErrorFree(El_Table, Node_Table, numprocs, myid, -1.0);
 

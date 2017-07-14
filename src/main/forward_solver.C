@@ -55,7 +55,7 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 	if (timeprops->verbose)
 	output_discharge(matprops, timeprops, discharge, myid);
 
-	move_data(numprocs, myid, El_Table, Node_Table, timeprops);
+	move_data(numprocs, myid, El_Table, Node_Table, timeprops, matprops);
 
 	write_xdmf(El_Table,Node_Table,timeprops,matprops,mapname,XDMF_NEW);
 
@@ -91,20 +91,20 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 
 			H_adapt(El_Table, Node_Table, h_count, TARGET, matprops, fluxprops, timeprops, 5);
 
-			move_data(numprocs, myid, El_Table, Node_Table, timeprops);
+			move_data(numprocs, myid, El_Table, Node_Table, timeprops, matprops);
 
 			unrefine(El_Table, Node_Table, UNREFINE_TARGET, myid, numprocs, timeprops, matprops,
 					rescomp);
 
-			move_data(numprocs, myid, El_Table, Node_Table, timeprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
+			move_data(numprocs, myid, El_Table, Node_Table, timeprops, matprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
 			adaption.stop();
 
 			if ((numprocs > 1) && timeprops->ifrepartition()) {
 				repartition_f.start();
 
-				repartition2(El_Table, Node_Table, timeprops);
+				repartition2(El_Table, Node_Table, timeprops, matprops);
 
-				move_data(numprocs, myid, El_Table, Node_Table, timeprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
+				move_data(numprocs, myid, El_Table, Node_Table, timeprops, matprops); //this move_data() here for debug... to make AssertMeshErrorFree() Work
 				repartition_f.stop();
 			}
 
@@ -141,7 +141,7 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 //		if (OUTPUT) {
 		visualization.start();
 		if (timeprops->ifoutput() && OUTPUT) {
-			move_data(numprocs, myid, El_Table, Node_Table, timeprops);
+			move_data(numprocs, myid, El_Table, Node_Table, timeprops, matprops);
 
 			output_discharge(matprops, timeprops, discharge, myid);
 
@@ -155,14 +155,14 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 //		}
 
 		if (timeprops->ifsave()) {
-			move_data(numprocs, myid, El_Table, Node_Table, timeprops);
+			move_data(numprocs, myid, El_Table, Node_Table, timeprops, matprops);
 			save_forward(meshctx, propctx, solrec);
 			solrec->wrtie_sol_to_disk(myid);
 			solrec->delete_jacobians_after_writes();
 		}
 	}
 
-	move_data(numprocs, myid, El_Table, Node_Table, timeprops);
+	move_data(numprocs, myid, El_Table, Node_Table, timeprops, matprops);
 
 	output_discharge(matprops, timeprops, discharge, myid);
 	MPI_Barrier(MPI_COMM_WORLD);

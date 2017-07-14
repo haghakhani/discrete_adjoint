@@ -76,7 +76,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count, double
 	MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 
-	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 	if ((myid == TARGETPROC)) { //&&(timeprops_ptr->iter==354)){
 		printf("entering H_adapt()\n");
 		AssertMeshErrorFree(HT_Elem_Ptr, HT_Node_Ptr, numprocs, myid, 0.0);
@@ -106,7 +106,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count, double
 	delete_unused_elements_nodes(HT_Elem_Ptr, HT_Node_Ptr, myid);
 
 	// must be included to make sure that elements share same side/S_C_CON nodes with neighbors
-	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 	// determine which elements to refine and flag them for refinement
 	double geo_target = element_weight(HT_Elem_Ptr, HT_Node_Ptr, myid, numprocs);
@@ -128,7 +128,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count, double
 		}
 	}
 
-	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 	for (i = 0; i < hash_size; i++) { //-- every process begin to scan their own hashtable
 
@@ -158,7 +158,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count, double
 	refine_neigh_update(HT_Elem_Ptr, HT_Node_Ptr, numprocs, myid, (void*) &RefinedList,
 	    timeprops_ptr);
 
-	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 	if ((myid == TARGETPROC)) { //&&(timeprops_ptr->iter==354)){
 		AssertMeshErrorFree(HT_Elem_Ptr, HT_Node_Ptr, numprocs, myid, 0.0);
 		printf("After third AssertMeshErrorFree\n");
@@ -169,7 +169,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count, double
 	/*************************************************************************/
 	if (num_buffer_layer >= 1) {
 
-		move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+		move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 		//refine where necessary before placing the innermost buffer layer
 		for (i = 0; i < hash_size; i++) {
@@ -191,7 +191,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count, double
 		refine_neigh_update(HT_Elem_Ptr, HT_Node_Ptr, numprocs, myid, (void*) &RefinedList,
 		    timeprops_ptr);
 
-		move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+		move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 		//mark the elements in the innermost buffer layer as the BUFFER layer
 		for (i = 0; i < hash_size; i++) { //-- every process begin to scan their own hashtable
@@ -209,7 +209,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count, double
 		}
 
 		for (int ibufferlayer = 2; ibufferlayer <= num_buffer_layer; ibufferlayer++) {
-			move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+			move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 			//refine where necessary before placing the next buffer layer
 			for (i = 0; i < hash_size; i++) {
@@ -233,7 +233,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count, double
 			refine_neigh_update(HT_Elem_Ptr, HT_Node_Ptr, numprocs, myid, (void*) &RefinedList,
 			    timeprops_ptr);
 
-			move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+			move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 			if ((myid == TARGETPROC)) {      //&&(timeprops_ptr->iter==354)){
 				AssertMeshErrorFree(HT_Elem_Ptr, HT_Node_Ptr, numprocs, myid, 0.0);
@@ -267,7 +267,7 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count, double
 		}
 	}
 
-	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 	htflush(HT_Elem_Ptr, HT_Node_Ptr, 2);
 
 	for (i = 0; i < hash_size; i++) {
@@ -476,7 +476,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 	//for(k=0;k<297200;k++) refined[k] = 0;
 	int h_begin = 1;
 	int h_begin_type = 102;
-	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 	/*
 	 if(myid==0) {
@@ -500,7 +500,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 	//printf("init_H_adapt 2\n");
 	//AssertMeshErrorFree(HT_Elem_Ptr,HT_Node_Ptr,numprocs,myid,0.0);
 	// must be included to make sure that elements share same side/S_C_CON nodes with neighbors
-	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 	/*
 	 if(myid==0) {
@@ -612,7 +612,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 
 		// -h_count for debugging
 		if (numprocs > 1) {
-			move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+			move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 			/*
 			 if(myid==0) {
@@ -668,7 +668,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 				}
 				TempList.trashlist();
 
-				move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+				move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 				/*
 				 if(myid==0) {
 				 printf("before AssertMeshErrorFree() 2.0\n");
@@ -771,7 +771,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 
 		//if(myid==0) printf("initial_H_adapt %d\n",4); fflush(stdout)
 
-		move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+		move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 		/*
 		 printf("myid=%d Initial_H_adapt() before first if_pile_boundary()\n",myid);
@@ -852,7 +852,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 
 		//if(myid==0) printf("initial_H_adapt %d\n",8); fflush(stdout)
 
-		move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+		move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 		/*
 		 printf("myid=%d Initial_H_adapt() before second if_pile_boundary()\n",myid);
@@ -891,7 +891,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 		//if(myid==0) printf("initial_H_adapt %d\n",9); fflush(stdout)
 
 		if (numprocs > 1) {
-			move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+			move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 			//if(myid==0) printf("initial_H_adapt %d\n",10); fflush(stdout)
 
@@ -947,7 +947,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 
 				//if(myid==0) printf("initial_H_adapt %d\n",13); fflush(stdout)
 
-				move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+				move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 				/*
 				 //move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr,timeprops_ptr); //this move_data() only here for debug
@@ -994,7 +994,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 	/*************************************************************************/
 	if (num_buffer_layer >= 1) {
 
-		move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+		move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 		//refine where necessary before placing the innermost buffer layer
 		for (i = 0; i < hash_size; i++) {
@@ -1019,7 +1019,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 		refine_neigh_update(HT_Elem_Ptr, HT_Node_Ptr, numprocs, myid, (void*) &RefinedList,
 		    timeprops_ptr);
 
-		move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+		move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 		/*
 		 //move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr,timeprops_ptr); //this move_data() only here for debug
@@ -1048,7 +1048,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 		//until it's num_buffer_layer Elements wide
 		for (int ibufferlayer = 2; ibufferlayer <= num_buffer_layer; ibufferlayer++) {
 
-			move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+			move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 			//refine where necessary before placing the next buffer layer
 			for (i = 0; i < hash_size; i++) {
@@ -1070,7 +1070,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 			refine_neigh_update(HT_Elem_Ptr, HT_Node_Ptr, numprocs, myid, (void*) &RefinedList,
 			    timeprops_ptr);
 
-			move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+			move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 			/*
 			 //move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr,timeprops_ptr); //this move_data() only here for debug
@@ -1117,7 +1117,7 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 
 	/* transfer ghost elements to proper processors */
 
-	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 	htflush(HT_Elem_Ptr, HT_Node_Ptr, 2);
 
 #ifdef FORDEBUG  
@@ -1233,9 +1233,9 @@ void initial_H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count
 #endif
 
 	if (numprocs > 1)
-		repartition2(HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+		repartition2(HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
-	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr);
+	move_data(numprocs, myid, HT_Elem_Ptr, HT_Node_Ptr, timeprops_ptr, matprops_ptr);
 
 #ifdef FORDEBUG  
 	if(myid==TARGETPROC) {
@@ -1314,7 +1314,7 @@ void H_adapt_to_level(HashTable* El_Table, HashTable* NodeTable, MatProps* matpr
 
 		refine_neigh_update(El_Table, NodeTable, numprocs, myid, (void*) &RefinedList, timeprops_ptr);
 
-		move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
+		move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr, matprops_ptr);
 
 	} while (minrefinelevel < refinelevel);
 
@@ -1366,9 +1366,9 @@ void H_adapt_to_level(HashTable* El_Table, HashTable* NodeTable, MatProps* matpr
 	mark_flux_region(El_Table, NodeTable, matprops_ptr, fluxprops_ptr, timeprops_ptr);
 
 	if (numprocs > 1)
-		repartition2(El_Table, NodeTable, timeprops_ptr);
+		repartition2(El_Table, NodeTable, timeprops_ptr, matprops_ptr);
 
-	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr);
+	move_data(numprocs, myid, El_Table, NodeTable, timeprops_ptr, matprops_ptr);
 	for (i = 0; i << num_buck; i++) {
 		currentPtr = *(El_Table->getbucketptr() + i);
 		while (currentPtr) {
