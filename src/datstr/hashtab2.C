@@ -207,8 +207,7 @@ void HashTable::add(unsigned* key, void* value) {
 }
 
 void HashTable::remove(unsigned* key) {
-	/* if(key[0] == (unsigned) 270752286)
-	 printf(" removing an unknown object with key %u %u\n",key[0], key[1]);*/
+
 	int entry = hash(key);
 
 	HashEntryPtr p = searchBucket(*(bucket + entry), key);
@@ -234,12 +233,6 @@ void HashTable::remove(unsigned* key) {
 }
 // for debugging...
 void HashTable::remove(unsigned* key, int whatflag) {
-	/*  if(whatflag == 1) {
-	 printf(" removing an element with key %u %u\n",key[0], key[1]);
-	 }
-	 else {
-	 printf(" removing a node with key %u %u\n",key[0], key[1]);
-	 }*/
 	int entry = hash(key);
 
 	HashEntryPtr p = searchBucket(*(bucket + entry), key);
@@ -269,13 +262,6 @@ void HashTable::remove(unsigned* key, int whatflag) {
 void HashTable::remove(unsigned* key, int whatflag, FILE *fp, int myid, int where) {
 	if (fp == NULL)
 		fp = stdout;
-
-	/*  if(whatflag == 1) {
-	 printf(" removing an element with key %u %u\n",key[0], key[1]);
-	 }
-	 else {
-	 printf(" removing a node with key %u %u\n",key[0], key[1]);
-	 }*/
 	int entry = hash(key);
 
 	HashEntryPtr p = searchBucket(*(bucket + entry), key);
@@ -318,65 +304,3 @@ void HashTable::write_table(gzFile& myfile){
 	gzwrite(myfile, &(PRIME), sizeof(int));
 	gzwrite(myfile, &(ENTRIES), sizeof(int));
 }
-
-/* Keith changed the hash function 20061109 and made it an inline function, this is the old hash function which is outdated
- int
- HashTable:: hash(unsigned* key)
- {
- unsigned numer = *key;
- float    igaze = (float)numer/Range;
- int      igazee = igaze*NBUCKETS+.5;
- if(igazee>=NBUCKETS) igazee = NBUCKETS-1;
- return (igazee);
- }
- */
-
-void HashTable::print_out(int type) {
-
-	/*int count=0;
-	 char filename[6]="tab_x";
-	 if(type==0) filename[4]='n';
-	 else filename[4]='e';
-	 ofstream out2(filename, ios::out);
-	 out2<<"furcsa"<<'\n';
-	 for(int i=0; i<NBUCKETS; i++)
-	 {
-	 out2<<i<<"   ";
-	 if(bucket[i])
-	 {
-	 out2<<bucket[i]->key[0]<<' '<<bucket[i]->key[1]<<"   ";
-	 count++;
-	 HashEntryPtr currentPtr=bucket[i];
-	 while(currentPtr)
-	 {
-	 out2<<currentPtr->key[0]<<' '<<currentPtr->key[1]<<"   ";
-	 count++;
-	 currentPtr=currentPtr->next;
-	 // if(currentPtr)
-	 }
-	 }
-	 out2<<'\n';
-	 }
-	 out2<<count;
-	 out2.close();
-	 */
-}
-
-/* made into inline functions
- HashEntryPtr* HashTable::getbucketptr()
- {
- return bucket;
- }
- int HashTable::get_no_of_buckets()
- {
- return NBUCKETS;
- }
- double* HashTable::get_Xrange()
- {
- return &Xrange[0];
- }
- double* HashTable::get_Yrange()
- {
- return &Yrange[0];
- }
- */

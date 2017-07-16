@@ -11,9 +11,9 @@
 Node_minimal::Node_minimal(Node *node):
 id(node->get_id()),
 info(node->get_info()),
-coord({node->get_coord()[0],node->get_coord()[1]}),
 elevation(node->get_elevation()){
-
+	for (int i=0;i<DIMENSION;++i)
+		coord[i]=node->get_coord()[i];
 }
 
 Elem_minimal::Elem_minimal(Element *elem):
@@ -55,14 +55,17 @@ generation(elem->get_gen()){
 }
 
 Table_minimal::Table_minimal(HashTable *table):
-			MinKey({table->get_MinKey()[0],table->get_MinKey()[1]}),
-			MaxKey({table->get_MaxKey()[0],table->get_MaxKey()[1]}),
-			doublekeyrange({table->get_doublekeyrange()[0],table->get_doublekeyrange()[1]}),
-			Xrange({table->get_Xrange()[0],table->get_Xrange()[1]}),
-			Yrange({table->get_Yrange()[0],table->get_Yrange()[1]}),
 			NBUCKETS(table->get_nbuckets()),
-			PRIME(),
-			ENTRIES(){
+			PRIME(table->get_prime()),
+			ENTRIES(table->get_entries()){
+
+	for (int i=0;i<DIMENSION;++i){
+		MinKey[i] = table->get_MinKey()[i];
+		MaxKey[i] = table->get_MaxKey()[i];
+		doublekeyrange[i] = table->get_doublekeyrange()[i];
+		Xrange[i] = table->get_Xrange()[i];
+		Yrange[i] = table->get_Yrange()[i];
+	}
 
 	invdxrange = 1.0 / (Xrange[1] - Xrange[0]);
 	invdyrange = 1.0 / (Yrange[1] - Yrange[0]);

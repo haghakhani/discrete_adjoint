@@ -40,11 +40,11 @@ struct HashEntry {
 	HashEntry* next;    //pre, next: objects with same entry will be stored in a two-way link
 
 	HashEntry(unsigned* keyi) {
-		int i;
-		for (i = 0; i < KEYLENGTH; i++)
+		for (int i = 0; i < KEYLENGTH; i++)
 			key[i] = *(keyi + i);
 		next = NULL;
 		pre = NULL;
+		value=NULL;
 	}
 
 	HashEntry() {
@@ -68,7 +68,6 @@ typedef HashEntry* HashEntryPtr;
 //! Hashtables store pointers to each Element or Node (of which HashTable is a friend class), these pointers can be accessed by giving the hashtable the "key" of the element number you want to "lookup."  The keys are ordered sequentially by a space filling curve that ensures that the pointers to elements (or nodes) that are located close to each other in physical space will usually be located close to each other in memory, which speeds up access time.  Each key is a single number that spans several unsigned variables (elements of an array).
 class HashTable {
 
-	//friend int hash(unsigned* keyi);
 	friend class Element;
 
 protected:
@@ -95,7 +94,7 @@ public:
 	HashTable(double *doublekeyrangein, int, int, double* XR, double* YR);
 	HashTable(HashTable* hashtable);
 	HashTable(gzFile& myfile);
-	~HashTable();
+	virtual ~HashTable();
 
 	int hash(unsigned* key);
 	void add(unsigned* key, void* value);
@@ -105,10 +104,10 @@ public:
 	void remove(unsigned* key, int whatflag, FILE *fp, int myid, int where);  //for debugging
 	void print_out(int);
 	int get_no_of_buckets();
-//    void   get_element_stiffness(HashTable*);
 	HashEntryPtr* getbucketptr();
 	void* get_value();
-
+	int get_prime();
+	int get_entries();
 	double* get_Xrange();
 	double* get_Yrange();
 	double* get_doublekeyrange();
@@ -117,15 +116,15 @@ public:
 	unsigned* get_MinKey();
 	unsigned* get_MaxKey();
 	int get_nbuckets();
-
-	/*
-	 double* getXrange();
-	 double* getYrange();
-	 */
-	int get_no_of_entries();
-
 	virtual void write_table(gzFile& myfile);
+};
 
+inline int HashTable::get_prime(){
+	return PRIME;
+};
+
+inline int HashTable::get_entries(){
+	return ENTRIES;
 };
 
 inline double* HashTable::get_doublekeyrange() {
