@@ -146,7 +146,7 @@ public:
 
 	void write_table(gzFile& myfile,run_mode = NORMAL);
 
-	~SolRec();
+    virtual	~SolRec();
 
 };
 

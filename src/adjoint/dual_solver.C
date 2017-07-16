@@ -26,42 +26,6 @@
 
 #define DEBUG1
 
-template<typename T1, typename T2>
-void copy_hashtables_objects(HashTable* El_Table, HashTable* cp_El_Table) {
-
-	HashEntryPtr *buck = El_Table->getbucketptr();
-
-	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
-		if (*(buck + i)) {
-			HashEntryPtr currentPtr = *(buck + i);
-			while (currentPtr) {
-				T1 *Curr = (T1*) (currentPtr->value);
-				T2 *cp = new T2(Curr);
-				cp_El_Table->add(cp->pass_key(), cp);
-				currentPtr = currentPtr->next;
-
-			}
-		}
-}
-
-template<typename T1>
-void delete_hashtables_objects(HashTable* El_Table) {
-	HashEntryPtr *buck = El_Table->getbucketptr();
-
-	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
-		if (*(buck + i)) {
-			HashEntryPtr currentPtr = *(buck + i);
-			while (currentPtr) {
-				T1 *Curr = (T1*) (currentPtr->value);
-				delete Curr;
-				currentPtr = currentPtr->next;
-
-			}
-		}
-
-	delete El_Table;
-}
-
 //Timers for dual, dual_init, dual_adapt and dual_repart have been set such that their timings include the error
 //part as well, so to compute the timing for dual itself for these timing the error part has to be considered
 
@@ -289,20 +253,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropC
 // we know the solution from initial condition  so the error of 0th step is zero,
 // and we have to compute the error for other time steps.
 	}
-
-	delete_hashtables_objects<DualElem>(Dual_El_Tab);
-	delete_hashtables_objects<Node>(NodeTable);
 	close_xdmf_files(myid);
-
-#ifdef Error
-	error.start();
-	delete_hashtables_objects<ErrorElem>(Err_El_Tab);
-	delete_hashtables_objects<Node>(Err_Nod_Tab);
-	error.stop();
-#endif
-
-	delete_hashtables_objects<Jacobian>(solrec);
-
 }
 
 bool must_write(MemUse* memuse_ptr, int myid) {

@@ -258,6 +258,12 @@ void check_the_list(vector<ErrorElem*> imported_elem, HashTable* El_Table);
 
 void write_elem_sorted(HashTable* El_Table, char place[50]);
 
+template<typename T1, typename T2>
+void copy_hashtables_objects(HashTable* El_Table, HashTable* cp_El_Table);
+
+template<typename T1>
+void delete_hashtables_objects(HashTable* El_Table);
+
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);
 

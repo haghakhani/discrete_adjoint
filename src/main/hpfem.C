@@ -25,11 +25,6 @@
 #include "../header/GMFG_hdfapi.h"
 #endif
 
-//#define LOAD_BAL_DEBUG  //turns on a whole mess of mpi barriers so it makes run time more sensitive to load imbalances i.e. more sensitive to the load balance weights, it just makes it easier to adjust the constants.
-//#define PERFTEST
-#define TARGETPROC  -1
-#define TARGETPROCA -1
-
 int REFINE_LEVEL = 3;
 
 Mat3x3 ZERO_MATRIX;
@@ -136,25 +131,23 @@ int main(int argc, char *argv[]) {
 
 	dual.start();
 
-	if (runcond & RESTART) {
-		MeshCTX dual_meshctx;
-		dual_meshctx.el_table = El_Table;
-		dual_meshctx.nd_table = Node_Table;
+	MeshCTX error_meshctx;
+	error_meshctx.el_table = Err_El_Table;
+	error_meshctx.nd_table = Err_Node_Table;
 
-		MeshCTX error_meshctx;
-		error_meshctx.el_table = Err_El_Table;
-		error_meshctx.nd_table = Err_Node_Table;
-		dual_solver(solrec, &dual_meshctx, &error_meshctx, &propctx, runcond);
-	} else if (runcond & NORMAL)
+	if (runcond & RESTART)
+		dual_solver(solrec, &meshctx, &error_meshctx, &propctx, runcond);
+	else if (runcond & NORMAL)
 		dual_solver(solrec, &meshctx, NULL, &propctx, NORMAL);
-
 	dual.stop();
+
+
+	delete_data(solrec, &meshctx, &error_meshctx, &propctx);
+	free_mpi_types();
+
 	total.stop();
 
 	print_timings(myid);
-
-//	Delete_Table(El_Table, Node_Table, solrec);
-	free_mpi_types();
 
 	MPI_Finalize();
 	return (0);

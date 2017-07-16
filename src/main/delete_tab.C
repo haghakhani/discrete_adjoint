@@ -21,48 +21,87 @@
 
 #include "../header/hpfem.h"
 
-void Delete_Table(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, HashTable* Sol_rec) {
+template<typename T1, typename T2>
+void copy_hashtables_objects(HashTable* El_Table, HashTable* cp_El_Table) {
 
-	int i, j, k;
-	HashEntryPtr entryp;
+	HashEntryPtr *buck = El_Table->getbucketptr();
 
-	int elements = HT_Elem_Ptr->get_no_of_buckets();
-	int nodes = HT_Node_Ptr->get_no_of_buckets();
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				T1 *Curr = (T1*) (currentPtr->value);
+				T2 *cp = new T2(Curr);
+				cp_El_Table->add(cp->pass_key(), cp);
+				currentPtr = currentPtr->next;
 
-	for (i = 0; i < elements; i++) {
-		entryp = *(HT_Elem_Ptr->getbucketptr() + i);
-		while (entryp) {
-			Element* EmTemp = (Element*) (entryp->value);
-			delete EmTemp;
-			entryp = entryp->next;
-		}
-	}
-
-	for (i = 0; i < nodes; i++) {
-		entryp = *(HT_Node_Ptr->getbucketptr() + i);
-		while (entryp) {
-			Node* NdTemp = (Node*) (entryp->value);
-			delete NdTemp;
-			entryp = entryp->next;
-		}
-	}
-
-	if (Sol_rec) {
-		int records = Sol_rec->get_no_of_buckets();
-		for (i = 0; i < records; i++) {
-			entryp = *(Sol_rec->getbucketptr() + i);
-			while (entryp) {
-				Jacobian *jacobian = (Jacobian *) (entryp->value);
-				if (jacobian != NULL)
-					delete jacobian;
-				entryp = entryp->next;
 			}
 		}
-		delete Sol_rec;
-	}
+}
 
-	delete HT_Elem_Ptr;
-	delete HT_Node_Ptr;
+template void copy_hashtables_objects<Element, DualElem>(HashTable* El_Table, HashTable* cp_El_Table);
 
+template<typename T1>
+void delete_hashtables_objects(HashTable* El_Table) {
+	HashEntryPtr *buck = El_Table->getbucketptr();
+
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				T1 *Curr = (T1*) (currentPtr->value);
+				delete Curr;
+				currentPtr = currentPtr->next;
+
+			}
+		}
+
+	delete El_Table;
+}
+
+template void delete_hashtables_objects<DualElem>(HashTable* El_Table);
+
+template void delete_hashtables_objects<Node>(HashTable* El_Table);
+
+template void delete_hashtables_objects<Jacobian>(HashTable* El_Table);
+
+template void delete_hashtables_objects<Element>(HashTable* El_Table);
+
+template void delete_hashtables_objects<ErrorElem>(HashTable* El_Table);
+
+void delete_data(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx,
+		PropCTX* propctx) {
+
+	HashTable* elem_table = meshctx->el_table;
+	HashTable* node_table = meshctx->nd_table;
+
+	if (elem_table)
+		delete_hashtables_objects<DualElem>(elem_table);
+
+	if (node_table)
+		delete_hashtables_objects<Node>(elem_table);
+
+	if (solrec)
+		delete_hashtables_objects<Jacobian>(solrec);
+
+	delete propctx->discharge;
+	delete propctx->fluxprops;
+	delete propctx->mapnames;
+	delete propctx->matprops;
+	delete propctx->pileprops;
+	delete propctx->statprops;
+	delete propctx->timeprops;
+
+#ifdef Error
+	error.start();
+	HashTable* err_elem_table = error_meshctx->el_table;
+	HashTable* err_node_table = error_meshctx->nd_table;
+	if (err_elem_table)
+		delete_hashtables_objects<ErrorElem>(err_elem_table);
+
+	if (err_node_table)
+		delete_hashtables_objects<Node>(err_node_table);
+	error.stop();
+#endif
 }
 
