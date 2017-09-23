@@ -25,6 +25,12 @@
 #endif
 
 #define DEBUG1
+#define Error
+
+#define KEY0   3920807148
+#define KEY1   1321528399
+#define ITER   10
+#define J      0
 
 template<typename T1, typename T2>
 void copy_hashtables_objects(HashTable* El_Table, HashTable* cp_El_Table) {

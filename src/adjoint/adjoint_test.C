@@ -17,7 +17,7 @@ unsigned key1_1, key2_1, iter_1, key1_2, key2_2, iter_2;
 double simple_test(HashTable* El_Table, TimeProps* timeprops, MatProps* matprops_ptr) {
 
 	double dot = 0.;
-	vector<pair<unsigned, unsigned>> wrong_elem;
+	vector<pair<unsigned, unsigned> > wrong_elem;
 	vector<double> wrong_value, wrong_value1;
 
 	HashEntryPtr currentPtr;

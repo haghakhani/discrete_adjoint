@@ -13,7 +13,7 @@
 #include <algorithm>
 #include <map>
 
-void copy_jacobian(HashTable* El_Table, map<int, Vec_Mat<9>>& jac_map) {
+void copy_jacobian(HashTable* El_Table, map<int, Vec_Mat<9> >& jac_map) {
 
 	HashEntryPtr currentPtr;
 	DualElem *Curr_El;
@@ -33,9 +33,9 @@ void copy_jacobian(HashTable* El_Table, map<int, Vec_Mat<9>>& jac_map) {
 
 }
 
-void compare_jacobians(map<int, Vec_Mat<9>>& jac_code, map<int, Vec_Mat<9>>& jac_diff) {
+void compare_jacobians(map<int, Vec_Mat<9> >& jac_code, map<int, Vec_Mat<9> >& jac_diff) {
 
-	for (map<int, Vec_Mat<9>>::iterator it = jac_code.begin(); it != jac_code.end(); ++it) {
+	for (map<int, Vec_Mat<9> >::iterator it = jac_code.begin(); it != jac_code.end(); ++it) {
 		Vec_Mat<9>& jacdiff = jac_diff[it->first];
 		Vec_Mat<9>& jaccode = jac_code[it->first];
 
