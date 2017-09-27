@@ -785,10 +785,10 @@ struct OutLine {
 	}
 
 	//! this function outputs the maximum throughout time map of pileheights to the file pileheightrecord.xxxxxx
-	void output(MatProps* matprops_ptr, StatProps* statprops_ptr) {
+	void output(MatProps* matprops_ptr, const int runid){
 		int ix, iy;
 		char filename[256];
-		sprintf(filename, "pileheightrecord.%06d", statprops_ptr->runid);
+		sprintf(filename, "pileheightrecord.%06d", runid);
 		FILE *fp = fopen(filename, "w");
 
 		//FILE *fp=fopen("outline.pileheight","w");
@@ -884,6 +884,13 @@ struct OutLine {
 
 		return;
 	}
+
+	void clear(){
+		for (int iy = 0; iy < Ny; iy++)
+			for (int ix = 0; ix < Nx; ix++)
+				pileheight[iy][ix] = 0.0;
+	}
+
 
 	//! this function deallocates the 2 dimensional array of maximum throughout time pileheights
 	void dealloc() {

@@ -115,6 +115,9 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	if (myid == 0)
 		cout << "The Adjoint grid has been generated ....\n";
 
+	// we want to use outline for
+	propctx->outline->clear();
+
 	calc_adjoint(&dual_meshctx, propctx);
 
 	dual_vis.start();
@@ -230,7 +233,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 		error_comp.stop();
 
 		error_vis.start();
-//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 		write_err_xdmf(Err_El_Tab, Err_Nod_Tab, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD, 1);
 		error_vis.stop();
 //		}
@@ -255,6 +258,18 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx) {
 	delete_hashtables_objects<DualElem>(Dual_El_Tab);
 	delete_hashtables_objects<Node>(NodeTable);
 	close_xdmf_files(myid);
+
+	//output maximum error
+	OutLine outline2;
+	double dxy[2];
+	dxy[0] = propctx->outline->dx;
+	dxy[1] = propctx->outline->dy;
+	outline2.init2(dxy, propctx->outline->xminmax, propctx->outline->yminmax);
+	int NxNyout = propctx->outline->Nx * propctx->outline->Ny;
+	MPI_Reduce(*(propctx->outline->pileheight), *(outline2.pileheight), NxNyout, MPI_DOUBLE,
+	MPI_SUM, 0, MPI_COMM_WORLD);
+	if (myid == 0)
+		outline2.output(propctx->matprops, 0);
 
 #ifdef Error
 	error.start();

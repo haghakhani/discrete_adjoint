@@ -43,8 +43,8 @@ void calc_adjoint(MeshCTX* meshctx, PropCTX* propctx) {
 	int iter = propctx->timeprops->iter;
 	int aa = 0, bb = 1;
 
-//	if (propctx->timeprops->adjiter == 0)
-//		calc_func_sens_hmax(meshctx, propctx);
+	if (propctx->timeprops->adjiter == 0)
+		calc_func_sens_hmax(meshctx, propctx);
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++) {
 		if (*(buck + i)) {
@@ -96,7 +96,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 //		Curr_El->calc_func_sens((void*) propctx);
 
 		for (int i = 0; i < NUM_STATE_VARS; ++i)
-			adjoint[i] = *(Curr_El->get_func_sens() + i);
+			adjoint[i] = Curr_El->get_func_sens()[i];
 
 	} else {
 
@@ -136,18 +136,22 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 			}
 		}
 
+//		for (int j = 0; j < NUM_STATE_VARS; j++)
+//			adjoint[j] = *(Curr_El->get_func_sens() + j) - adjcontr[j];
 		for (int j = 0; j < NUM_STATE_VARS; j++)
-			adjoint[j] = *(Curr_El->get_func_sens() + j) - adjcontr[j];
+			adjoint[j] = - adjcontr[j];
 	}
 
 	for (int i = 0; i < NUM_STATE_VARS; i++)
-		if (isnan(adjoint[i]) || isinf(adjoint[i]))
-			cout << "it is incorrect  " << endl;
+		if (isnan(adjoint[i]) || isinf(adjoint[i])){
+			cout << "it is incorrect in element " << Curr_El->pass_key()[0]<<" "<< Curr_El->pass_key()[1] <<endl;
+			exit(1);
+		}
 
 	// this is for round off error
-	for (int i = 0; i < NUM_STATE_VARS; i++)
-		if (fabs(adjoint[i]) < 1e-16)
-			adjoint[i] = 0.;
+//	for (int i = 0; i < NUM_STATE_VARS; i++)
+//		if (fabs(adjoint[i]) < 1e-16)
+//			adjoint[i] = 0.;
 
 #ifdef DEBUGFILE
 	ofstream adjdebug;
@@ -209,6 +213,8 @@ void calc_func_sens_hmax(MeshCTX* meshctx, PropCTX* propctx) {
 				currentPtr = currentPtr->next;
 			}
 		}
+	double ghmax=0.;
+	MPI_Allreduce(&hmax,&ghmax,1,MPI_DOUBLE,MPI_MAX,MPI_COMM_WORLD);
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -216,9 +222,10 @@ void calc_func_sens_hmax(MeshCTX* meshctx, PropCTX* propctx) {
 			while (currentPtr) {
 				DualElem* Curr_El = (DualElem*) (currentPtr->value);
 
-				if (Curr_El->get_adapted_flag() > 0 && hmax == *(Curr_El->get_state_vars())) {
+				if (Curr_El->get_adapted_flag() > 0 && fabs(ghmax - Curr_El->get_state_vars()[0])<1e-12 ) {
 					*(Curr_El->get_func_sens()) = 1.;
-				}
+				}else
+				*(Curr_El->get_func_sens()) = 0.;
 
 				for (int i = 0; i < NUM_STATE_VARS; i++)
 					if (isnan(*(Curr_El->get_func_sens()+i)) || isinf(*(Curr_El->get_func_sens() + i)))
@@ -227,9 +234,6 @@ void calc_func_sens_hmax(MeshCTX* meshctx, PropCTX* propctx) {
 				currentPtr = currentPtr->next;
 			}
 		}
-
-
-
 }
 
 void calc_func_sens(MeshCTX* meshctx, PropCTX* propctx) {

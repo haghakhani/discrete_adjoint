@@ -115,6 +115,12 @@ void error_compute(MeshCTX* meshctx, PropCTX* propctx) {
 //							    *(Curr_El->pass_key() + 1));
 
 					}
+					double pfheight[6];
+					double *dxy=Curr_El->get_dx();
+					double *coord=Curr_El->get_coord();
+
+					propctx->outline->update(coord[0] - 0.5 * dxy[0], coord[0] + 0.5 * dxy[0],
+					    coord[1] - 0.5 * dxy[1], coord[1] + 0.5 * dxy[1], el_error[1], pfheight);
 
 				}
 				currentPtr = currentPtr->next;

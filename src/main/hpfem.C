@@ -384,12 +384,13 @@ int main(int argc, char *argv[]) {
 	MPI_Reduce(*(outline.pileheight), *(outline2.pileheight), NxNyout, MPI_DOUBLE,
 	MPI_SUM, 0, MPI_COMM_WORLD);
 	if (myid == 0)
-		outline2.output(&matprops, &statprops);
+		outline2.output(&matprops, statprops.runid);
 
 	// we deallocate these to make more space in memory
 	// adjoint solution
 
-	outline.dealloc();
+	//we use use outline in dual solver for reporting the error
+	//outline.dealloc();
 	outline2.dealloc();
 
 	MPI_Barrier(MPI_COMM_WORLD);
