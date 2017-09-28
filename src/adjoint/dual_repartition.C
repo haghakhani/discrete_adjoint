@@ -30,11 +30,8 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 	HashTable* cp_NodeTable = err_meshctx->nd_table;
 #endif
 
-	TimeProps* timeprops_ptr = propctx->timeprops;
-	MapNames* mapname_ptr = propctx->mapnames;
-	MatProps* matprops_ptr = propctx->matprops;
 	int myid = propctx->myid, numprocs = propctx->numproc;
-	int iter = timeprops_ptr->iter;
+	int iter = propctx->timeprops->iter;
 
 	doubleKeyRange = *(El_Table->get_doublekeyrange() + 1);
 
@@ -121,42 +118,42 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 		//following lines initialize the connection loop
 		int send = trans_keys_vec.size(), receive_size;
 		int receive_from = 0, send_to = 0, found = 0;
-		vector<TRANSKEY> keys_to_check_vec;
-		vector<int> my_keys_status(send), other_keys_status;
+		int *my_keys_status, *other_keys_status;
+		my_keys_status = new int [send];
 
 		set_send_receive_proc(count, myid, numprocs, receive_from, send_to);
 
-		MPI_Send(&send, 1, MPI_INT, send_to, count, MPI_COMM_WORLD);
-		MPI_Recv(&receive_size, 1, MPI_INT, receive_from, count, MPI_COMM_WORLD, &status);
+		MPI_Send(&send, 1, MPI_INT, send_to, 10, MPI_COMM_WORLD);
+		MPI_Recv(&receive_size, 1, MPI_INT, receive_from, 10, MPI_COMM_WORLD, &status);
 
 		if (send > 0) {
-			MPI_Send(&trans_keys_vec[0], send, TRANSKEYS, send_to, count, MPI_COMM_WORLD);
+			MPI_Send(&trans_keys_vec[0], send, TRANSKEYS, send_to, 100, MPI_COMM_WORLD);
 			// first we open a window to show we are waiting to receive the data from the other proc
-			MPI_Irecv(&my_keys_status[0], send, MPI_INT, send_to, count, MPI_COMM_WORLD, &(r_request[0]));
+			MPI_Irecv(my_keys_status, send, MPI_INT, send_to, 200, MPI_COMM_WORLD, &(r_request[0]));
 		}
 
 		if (receive_size > 0) {
 
-			keys_to_check_vec.resize(receive_size);
-			other_keys_status.resize(receive_size);
+			vector<TRANSKEY> keys_to_check_vec(receive_size);
+			other_keys_status = new int [receive_size];
 
-			MPI_Recv(&keys_to_check_vec[0], receive_size, TRANSKEYS, receive_from, count, MPI_COMM_WORLD,
+			MPI_Recv(&keys_to_check_vec[0], receive_size, TRANSKEYS, receive_from, 100, MPI_COMM_WORLD,
 			    &status);
 
 			found = 0;
-			check_received_keys(solrec, keys_to_check_vec, other_keys_status, iter, found);
+			check_received_keys(solrec, keys_to_check_vec, other_keys_status, iter, found, receive_size);
 
-			MPI_Isend(&other_keys_status[0], receive_size, MPI_INT, receive_from, count, MPI_COMM_WORLD,
+			MPI_Isend(other_keys_status, receive_size, MPI_INT, receive_from, 200, MPI_COMM_WORLD,
 			    &(s_request[0]));
 
 			if (found) {
 				receive_array = new DualElemPack[found];
-				MPI_Irecv(receive_array, found, DUALELEMTYPE, receive_from, count, MPI_COMM_WORLD,
+				MPI_Irecv(receive_array, found, DUALELEMTYPE, receive_from, 300, MPI_COMM_WORLD,
 				    &(r_request[1]));
 #ifdef Error
 				error_repart.start();
 				err_receive_array = new ErrElemPack[4 * found];
-				MPI_Irecv(err_receive_array, 4 * found, ERRELEMTYPE, receive_from, count, MPI_COMM_WORLD,
+				MPI_Irecv(err_receive_array, 4 * found, ERRELEMTYPE, receive_from, 400, MPI_COMM_WORLD,
 				    &(e_r_request));
 				error_repart.stop();
 #endif
@@ -175,7 +172,7 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 				MPI_Test(&(r_request[0]), &IfSentRecvd, &status);
 				if (IfSentRecvd) {
 					to_be_sent = 0;
-					for (int i = 0; i < my_keys_status.size(); ++i)
+					for (int i = 0; i < send; ++i)
 						if (my_keys_status[i] > 0)
 							to_be_sent += 1;
 
@@ -188,7 +185,7 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 						error_repart.stop();
 #endif
 						int component = 0;
-						for (int i = 0; i < my_keys_status.size(); ++i)
+						for (int i = 0; i < send; ++i)
 							if (my_keys_status[i] > 0) {
 								repart_list[i]->Pack_element((send_array + component), NodeTable, send_to);
 
@@ -229,14 +226,14 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 
 						assert(component == to_be_sent);
 
-						MPI_Isend(send_array, to_be_sent, DUALELEMTYPE, send_to, count, MPI_COMM_WORLD,
+						MPI_Isend(send_array, to_be_sent, DUALELEMTYPE, send_to, 300, MPI_COMM_WORLD,
 						    &(s_request[1]));
 
 						delete_extra_nodes(El_Table, NodeTable);
 
 #ifdef Error
 						error_repart.start();
-						MPI_Isend(err_send_array, 4 * to_be_sent, ERRELEMTYPE, send_to, count, MPI_COMM_WORLD,
+						MPI_Isend(err_send_array, 4 * to_be_sent, ERRELEMTYPE, send_to, 400, MPI_COMM_WORLD,
 						    &(e_s_request));
 
 						delete_extra_nodes(cp_El_Table, cp_NodeTable);
@@ -253,7 +250,7 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 				MPI_Test(&(r_request[1]), &IfSentRecvd, &status);
 				if (IfSentRecvd) {
 					int component = 0;
-					for (int i = 0; i < other_keys_status.size(); ++i) {
+					for (int i = 0; i < receive_size; ++i) {
 						if (other_keys_status[i] > 0) {
 
 							DualElem* elm = (DualElem*) El_Table->lookup(receive_array[component].key);
@@ -298,7 +295,7 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 				MPI_Test(&(e_r_request), &IfSentRecvd, &status);
 				if (IfSentRecvd) {
 					int component = 0;
-					for (int i = 0; i < other_keys_status.size(); ++i) {
+					for (int i = 0; i < receive_size; ++i) {
 						if (other_keys_status[i] > 0) {
 
 							for (int err = 0; err < 4; ++err) {
@@ -333,12 +330,12 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 			vector<int> cp_trans_keys_status;
 			vector<DualElem*> cp_repart_list;
 
-			assert(trans_keys_vec.size() == my_keys_status.size());
-			assert(trans_keys_status.size() == my_keys_status.size());
-			assert(repart_list.size() == my_keys_status.size());
+			assert(trans_keys_vec.size() == send);
+			assert(trans_keys_status.size() == send);
+			assert(repart_list.size() == send);
 			// we must clean those elements that we sent from the list
 			// and update status of those elements that we have found their sons in other procs
-			for (int i = 0; i < my_keys_status.size(); ++i)
+			for (int i = 0; i < send; ++i)
 				// the following condition means those elements that we have not found them yet or just some of their sons have been found
 				if (my_keys_status[i] % 3 == 0 && my_keys_status[i] != 12) {
 					cp_repart_list.push_back(repart_list[i]);
@@ -379,6 +376,9 @@ void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_me
 		int nsize = trans_keys_vec.size();
 
 		MPI_Allreduce(&nsize, &remaining, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+		if (send>0)	delete[] my_keys_status;
+		if (receive_size > 0) delete[] other_keys_status;
 
 	} while (count < numprocs - 1 && remaining > 0);
 
@@ -469,9 +469,9 @@ void SetTransPack(TRANSKEY& transelem, unsigned* key, unsigned* father_key, unsi
 }
 
 void check_received_keys(SolRec* solrec, vector<TRANSKEY>& keys_to_check_vec,
-    vector<int>& keys_status, int iter, int &found) {
+    int* keys_status, int iter, int &found, int receive_size) {
 
-	for (int i = 0; i < keys_to_check_vec.size(); ++i) {
+	for (int i = 0; i < receive_size; ++i) {
 		Solution * prev_sol = solrec->lookup((keys_to_check_vec[i].key), iter - 1);
 
 		//initialize to zero
