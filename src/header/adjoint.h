@@ -223,6 +223,9 @@ void dual_repartition(SolRec* solrec, MeshCTX* meshctx, PropCTX* propctx);
 void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx,
     PropCTX* propctx);
 
+void dual_err_repartition2(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx,
+    PropCTX* propctx);
+
 void delete_extra_nodes(HashTable* El_Table, HashTable* NodeTable);
 
 void update_neighbor_proc(PropCTX* propctx, HashTable* El_Table, double * allKeyRange);

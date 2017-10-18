@@ -626,6 +626,10 @@ public:
 
 	void write_elem(gzFile& myfile);
 
+	unsigned* get_iwas();
+
+	int* get_irefined();
+
 protected:
 	//! myprocess is id of the process(or) that owns this element
 	int myprocess;
@@ -763,9 +767,21 @@ protected:
 	//! when an element edge is partially wet and partially dry... Swet is the fraction of a cell edge that is partially wet, because it can only be horizontal, vertical, or parallel to either diagonal, all of one element's partially wet sides are have the same fraction of wetness.  The state variables (used to compute the physical fluxes) at the element/cell edge are adjusted to be the weighted by wetness average over an element/cell edge.  As such physical fluxes through completely dry edges of partially wet elements/cells are zeroed, while physical fluxes through completely wet edges are left unchanged.  Because of the definition as "wetness weighted average" physical fluxes through a partially wet edge shared with a neighbor of the same generation is also left left unchanged but, when a partially wet edge is shared with two more refined neighbors the total mass and momentum at the edge is split between the two neighbors in proportion to how much of their boundary shared with this element is wet.  This "scaling" of the physical fluxes is the "adjustment of fluxes in partially wetted cells" facet of our multifaceted thin-layer problem mitigation approach.  And it has been shown to significantly reduce the area covered by a thin layer of material.  Keith wrote this May 2007.
 	double Swet;
 
+	unsigned i_was;
+
+	int i_refined;
+
 //	//! Drag-force
 //	double drag[DIMENSION];
 };
+
+inline unsigned* Element::get_iwas(){
+	return &i_was;
+}
+
+inline int* Element::get_irefined(){
+	return &i_refined;
+}
 
 inline int Element::get_ithelem() const {
 	return ithelem;

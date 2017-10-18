@@ -145,6 +145,8 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 	kactxy[0] = kactxy[1] = 0.;
 	effect_kactxy[0] = effect_kactxy[1] = 0.;
 	effect_bedfrict = effect_tanbedfrict = 0.;
+	i_was=myid;
+	i_refined=0;
 
 }
 
@@ -251,6 +253,8 @@ Element::Element(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], in
 		prev_state_vars[i] = fthTemp->prev_state_vars[i] * myfractionoffather;
 		shortspeed = fthTemp->shortspeed;
 	}
+	i_was=myid;
+	i_refined=1;
 
 	return;
 }
@@ -548,7 +552,8 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 		shortspeed += *(sons[j]->get_state_vars()) * sons[j]->get_shortspeed();
 	if (state_vars[0] > 0.0)
 		shortspeed /= (4.0 * state_vars[0]);
-
+	i_was=myid;
+	i_refined=-1;
 	return;
 }
 

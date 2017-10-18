@@ -21,27 +21,19 @@
 
 #include "../header/hpfem.h"
 
-Solution::Solution(double* curr_sol) {
+Solution::Solution(double* curr_sol, unsigned i_was, int itszero) {
 
+	iwas=i_was;
+	its_zero=itszero;
+
+	if (!its_zero)
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		states[i] = curr_sol[i];
 }
 
-Solution::Solution() {
-
-	for (int i = 0; i < NUM_STATE_VARS; ++i)
-		states[i] = 0.;
-}
-
-Solution Solution::solution_zero;
-
 Solution::~Solution() {
 
 }
-
-//static Solution* instance() {
-//	return &Solution::solution_zero;
-//}
 
 Jacobian::Jacobian(unsigned* key, double* position) {
 
@@ -63,19 +55,15 @@ void Jacobian::clear_container(int iter) {
 
 	for (map<int, Solution*>::iterator it = solContainer.begin(); it != solContainer.end(); ++it)
 		if (it->first >= iter - 1) {
-			if (it->second != &(Solution::solution_zero))
 				delete it->second;
 			solContainer.erase(it);
-
 		}
 }
 
 Jacobian::~Jacobian() {
 
 	for (map<int, Solution*>::iterator it = solContainer.begin(); it != solContainer.end(); ++it)
-		if (it->second != &(Solution::solution_zero))
 			delete it->second;
 
 	solContainer.clear();
-
 }

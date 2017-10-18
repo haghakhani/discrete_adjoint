@@ -37,7 +37,7 @@ void diff_proc(Element* r_element, HashTable* HT_Elem_Ptr, int new_proc, int sid
 
 //! construct_el is a friend function of the Element class that fills an element with information it receives in a variable of the ElemPack class from an MPI call
 void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, int myid,
-    double* e_error);
+    double* e_error, unsigned source_proc);
 
 void check_neighbor_info(Element* newelement, HashTable* HT_Elem_Ptr, int myid);
 
@@ -158,7 +158,7 @@ void diff_proc(Element* r_element, HashTable* HT_Elem_Ptr, int new_proc, int sid
 }
 
 void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, int myid,
-    double* e_error) {
+    double* e_error, unsigned source_proc) {
 	Node* node;
 	int i, j;
 	newelement->myprocess = myid;
@@ -269,6 +269,7 @@ void construct_el(Element* newelement, ElemPack* elem2, HashTable* HT_Node_Ptr, 
 	newelement->Swet = elem2->Swet;
 	newelement->drypoint[0] = elem2->drypoint[0];
 	newelement->drypoint[1] = elem2->drypoint[1];
+	newelement->i_was=source_proc;
 
 	return;
 }

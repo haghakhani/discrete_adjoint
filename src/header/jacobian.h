@@ -26,25 +26,29 @@ class Solution {
 
 public:
 
-	Solution(double* curr_sol);
+	Solution(double* curr_sol, unsigned i_was, int itszero);
 
 	double* get_solution();
 
 	double get_kact();
 
-	~Solution();
+	unsigned* get_iwas();
 
-	static Solution solution_zero;
+	~Solution();
 
 protected:
 
-	Solution();
-
 	double states[NUM_STATE_VARS]; //to save the solution
+	unsigned iwas;
+	int its_zero;
 };
 
 inline double* Solution::get_solution() {
 	return states;
+}
+
+inline unsigned* Solution::get_iwas(){
+	return *iwas;
 }
 
 class Jacobian {

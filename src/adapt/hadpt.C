@@ -121,8 +121,12 @@ void H_adapt(HashTable* HT_Elem_Ptr, HashTable* HT_Node_Ptr, int h_count, double
 
 			EmTemp = (Element*) (entryp->value);
 			assert(EmTemp);
-			if (EmTemp->get_adapted_flag() >= NEWSON)
+			if (EmTemp->get_adapted_flag() >= NEWSON){
 				EmTemp->put_adapted_flag(NOTRECADAPTED);
+			}
+			if (EmTemp->get_adapted_flag() >0){
+				*(EmTemp->get_irefined())=0;
+			}
 
 			entryp = entryp->next;
 		}

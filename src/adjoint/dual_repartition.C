@@ -17,6 +17,133 @@ double doubleKeyRange;
 
 void inspect_element(HashTable* El_Table, unsigned* key);
 
+void dual_err_repartition2(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx,
+    PropCTX* propctx){
+
+	dual_repart.start();
+
+	HashTable* El_Table = dual_meshctx->el_table;
+	HashTable* NodeTable = dual_meshctx->nd_table;
+
+#ifdef Error
+	HashTable* cp_El_Table = err_meshctx->el_table;
+	HashTable* cp_NodeTable = err_meshctx->nd_table;
+#endif
+
+	int myid = propctx->myid, numprocs = propctx->numproc;
+	int iter = propctx->timeprops->iter;
+	vector< vector<DualElem*> >  transfer_element(numprocs);
+
+	HashEntryPtr * buck = El_Table->getbucketptr();
+	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				DualElem *Curr_El = (DualElem*) (currentPtr->value);
+
+				// because we may delete the it we first send it to next
+				currentPtr = currentPtr->next;
+
+				if (Curr_El->get_adapted_flag() > 0) {
+					unsigned iwas=*(Curr_El->get_iwas());
+					if (iwas!=myid)
+						transfer_element[iwas].push_back(Curr_El);
+
+				} else {
+					//during repartitioning we delete the GHOST elements as we do in forward run
+					El_Table->remove(Curr_El->pass_key());
+					delete Curr_El;
+				}
+			}
+		}
+
+	delete_extra_nodes(El_Table, NodeTable);
+
+	// assure that I am not sending to myself
+	assert(transfer_element[myid].size()==0);
+
+	int *send_size= new int[numprocs];
+	int *recv_size= new int[numprocs];
+
+	DualElemPack *receive_array, *send_array;
+	ErrElemPack *err_receive_array, *err_send_array;
+
+	for (int i=0;i<numprocs;++i){
+		send_size[i]=transfer_element[i].size();
+		MPI_Send(&send_size[i], 1, MPI_INT, i, myid, MPI_COMM_WORLD);
+	}
+
+	for (int i=0;i<numprocs;++i){
+		MPI_Recv(&recv_size[i], 1, MPI_INT, i, i, MPI_COMM_WORLD);
+
+		if (recv_size[i]) {
+			receive_array = new DualElemPack[recv_size[i]];
+
+			MPI_Irecv(receive_array, recv_size[i], DUALELEMTYPE, i, 300, MPI_COMM_WORLD,
+			    &(r_request[1]));
+	#ifdef Error
+			error_repart.start();
+			err_receive_array = new ErrElemPack[4 * recv_size[i]];
+			MPI_Irecv(err_receive_array, 4 * recv_size[i], ERRELEMTYPE, receive_from, 400, MPI_COMM_WORLD,
+			    &(e_r_request));
+			error_repart.stop();
+	#endif
+
+		}
+	}
+
+	for (int i=0;i<numprocs;++i){
+		if(send_size[i]){
+			for (int j=0;j<transfer_element[i].size();++j){
+				transfer_element[i][j]->Pack_element((send_array + j), NodeTable, i);
+#ifdef Error
+								error_repart.start();
+								ErrorElem* departing_elem[4];
+								for (int err = 0; err < 4; ++err) {
+									departing_elem[err] = (ErrorElem*) cp_El_Table->lookup();
+
+									assert(departing_elem[err]);
+
+									departing_elem[err]->Pack_element((err_send_array + err + 4 * j),
+									    cp_NodeTable, send_to);
+								}
+								error_repart.stop();
+#endif
+			}
+		}
+	}
+
+
+
+	dual_repart.stop();
+
+#ifdef Error
+	error_repart.start();
+	buck = cp_El_Table->getbucketptr();
+	for (int i = 0; i < cp_El_Table->get_no_of_buckets(); i++)
+		if (*(buck + i)) {
+			HashEntryPtr currentPtr = *(buck + i);
+			while (currentPtr) {
+				ErrorElem *Curr_El = (ErrorElem*) (currentPtr->value);
+
+				// because we may delete the it we first send it to next
+				currentPtr = currentPtr->next;
+
+				if (!(Curr_El->get_adapted_flag() > 0)) {
+					//during repartitioning we delete the GHOST elements as we do in forward run
+					cp_El_Table->remove(Curr_El->pass_key());
+					delete Curr_El;
+				}
+			}
+		}
+
+	delete_extra_nodes(cp_El_Table, cp_NodeTable);
+	error_repart.stop();
+#endif
+
+
+}
+
 void dual_err_repartition(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx,
     PropCTX* propctx) {
 

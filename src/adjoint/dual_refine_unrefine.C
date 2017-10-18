@@ -390,7 +390,7 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 
 	//timing inside the function
 	if (timeprops_ptr->ifrepartition() && propctx->adapt_flag && numprocs > 1) {
-		dual_err_repartition(solrec, dual_meshctx, err_meshctx, propctx);
+		dual_err_repartition2(solrec, dual_meshctx, err_meshctx, propctx);
 	}
 
 	ElemPtrList<DualElem> refinelist, unrefinelist;

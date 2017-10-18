@@ -41,6 +41,7 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
 	Element* Curr_El;
+	int elem_zero;
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -50,33 +51,25 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 				if (Curr_El->get_adapted_flag() > 0) {
 
 					Jacobian *jacobian = (Jacobian *) lookup(Curr_El->pass_key());
-					if (jacobian) {
-						if (*(Curr_El->get_prev_state_vars()) > 0.) {
-							Solution *solution = new Solution(Curr_El->get_prev_state_vars());
-							jacobian->put_solution(solution, timeptr->iter - 1);
-
-						} else
-							jacobian->put_solution(&(Solution::solution_zero), timeptr->iter - 1);
-
-					} else {
+					if (!jacobian) {
 						jacobian = new Jacobian(Curr_El->pass_key());
 						add(jacobian->get_key(), jacobian);
-
-						if (*(Curr_El->get_prev_state_vars()) > 0.) {
-							Solution *solution = new Solution(Curr_El->get_prev_state_vars());
-							jacobian->put_solution(solution, timeptr->iter - 1);
-
-						} else
-							jacobian->put_solution(&(Solution::solution_zero), timeptr->iter - 1);
-
 					}
+
+					if (*(Curr_El->get_prev_state_vars()) > 0.)
+						elem_zero=0;
+					else
+						elem_zero=1;
+
+					Solution *solution = new Solution(Curr_El->get_prev_state_vars(), *(Curr_El->get_iwas()), elem_zero);
+					jacobian->put_solution(solution, timeptr->iter - 1);
+
 				}
 				currentPtr = currentPtr->next;
 			}
 		}
 
 	last_solution_time_step = timeptr->iter;
-
 }
 
 void SolRec::wrtie_sol_to_disk(int myid) {
@@ -93,7 +86,7 @@ void SolRec::wrtie_sol_to_disk(int myid) {
 		myfile = gzopen(filename, "wb");
 
 		vector<unsigned*> zero_key, non_zero_key;
-		vector<Solution*> non_zero_sol;
+		vector<Solution*> zero_sol, non_zero_sol;
 
 		for (int i = 0; i < NBUCKETS; ++i)
 			if (*(bucket + i)) {
@@ -107,12 +100,13 @@ void SolRec::wrtie_sol_to_disk(int myid) {
 
 //				Because some of the elements are created and deleted in refinement and unrefinement
 					if (sol) {
-						if (sol != &(Solution::solution_zero)) {
+						if (!sol->its_zero) {
 							non_zero_sol.push_back(sol);
 							non_zero_key.push_back(jacobian->get_key());
-
-						} else
+						} else{
 							zero_key.push_back(jacobian->get_key());
+							zero_sol.push_back(sol);
+						}
 					}
 
 					// here we delete it from the jacobian, but we still have access to it from generated vectors
@@ -128,11 +122,15 @@ void SolRec::wrtie_sol_to_disk(int myid) {
 		gzwrite(myfile, &size_zero, sizeof(int));
 		gzwrite(myfile, &size_non_zero, sizeof(int));
 
-		for (int i = 0; i < size_zero; ++i)
+		for (int i = 0; i < size_zero; ++i){
 			gzwrite(myfile, zero_key[i], sizeof(unsigned) * 2);
+			gzwrite(myfile, zero_sol[i]->get_iwas(), sizeof(unsigned));
+			delete zero_sol[i];
+		}
 
 		for (int i = 0; i < size_non_zero; ++i) {
 			gzwrite(myfile, non_zero_key[i], sizeof(unsigned) * 2);
+			gzwrite(myfile, non_zero_sol[i]->get_iwas(), sizeof(unsigned));
 			gzwrite(myfile, non_zero_sol[i]->get_solution(), sizeof(double) * 3);
 			delete non_zero_sol[i];
 		}
@@ -169,7 +167,7 @@ void SolRec::wrtie_sol_to_disk_hdf5(int myid) {
 
 //				Because some of the elements are created and deleted in refinement and unrefinement
 					if (sol) {
-						if (sol != &(Solution::solution_zero)) {
+						if (!sol->its_zero) {
 							non_zero_sol.push_back(*(sol->get_solution()));
 							non_zero_sol.push_back(*(sol->get_solution() + 1));
 							non_zero_sol.push_back(*(sol->get_solution() + 2));
@@ -237,7 +235,7 @@ void SolRec::read_sol_from_disk(int myid, int iter) {
 	char filename[50];
 	double state_vars[NUM_STATE_VARS] = { 0., 0., 0. };
 
-	unsigned key[DIMENSION] = { 0, 0 };
+	unsigned iwas, key[DIMENSION] = { 0, 0 };
 	Solution * solution;
 	int dbg, count = 0;
 
@@ -253,42 +251,38 @@ void SolRec::read_sol_from_disk(int myid, int iter) {
 	dbg = gzread(myfile, &num_zero, sizeof(int));
 	dbg = gzread(myfile, &num_non_zero, sizeof(int));
 
+	const int elem_zero=1;
+	const int elem_non_zero=0;
+
 	for (int i = 0; i < num_zero; ++i) {
+
 		gzread(myfile, key, sizeof(unsigned) * 2);
+		gzread(myfile, &iwas, sizeof(unsigned));
+		double dummy[3];
 
 		Jacobian *jacobian = (Jacobian *) lookup(key);
-		solution = &(Solution::solution_zero);
+		solution = new Solution(dummy, iwas, elem_zero);
 
-		if (jacobian)
-			jacobian->put_solution(solution, iter);
-
-		else {
-
+		if (!jacobian){
 			jacobian = new Jacobian(key);
 			add(key, jacobian);
-			jacobian->put_solution(solution, iter);
-
 		}
+		jacobian->put_solution(solution, iter);
 	}
 
 	for (int i = 0; i < num_non_zero; ++i) {
 
 		gzread(myfile, key, sizeof(unsigned) * 2);
+		gzread(myfile, &iwas, sizeof(unsigned));
 		gzread(myfile, state_vars, sizeof(double) * 3);
 
-		solution = new Solution(state_vars);
+		solution = new Solution(state_vars, iwas, elem_non_zero);
 		Jacobian *jacobian = (Jacobian *) lookup(key);
-		if (jacobian)
-			jacobian->put_solution(solution, iter);
-
-		else {
-
+		if (!jacobian){
 			jacobian = new Jacobian(key);
 			add(key, jacobian);
-			jacobian->put_solution(solution, iter);
-
 		}
-
+		jacobian->put_solution(solution, iter);
 	}
 
 	gzclose(myfile);
@@ -589,6 +583,9 @@ DualElem::DualElem(Element* element) {
 
 		func_sens[i] = 0.;
 	}
+
+	i_was = element->i_was;
+	i_refined = element->i_refined;
 }
 
 //used for refinement
@@ -710,6 +707,7 @@ DualElem::DualElem(unsigned nodekeys[][KEYLENGTH], unsigned neigh[][KEYLENGTH], 
 		Influx[i] = 0.;
 
 	}
+
 }
 
 /*********************************
@@ -2328,10 +2326,10 @@ void DualElem::update_state(SolRec* solrec, HashTable* El_Table, int iter) {
 	for (int i = 0; i < NUM_STATE_VARS; ++i) {
 		prev_state_vars[i] = *(prev_sol->get_solution() + i);
 		prev_adjoint[i] = adjoint[i];
+		i_was=*(prev_sol->get_iwas());
 	}
 
-	if (prev_sol != &(Solution::solution_zero))
-		delete prev_sol;
+	delete prev_sol;
 
 }
 
@@ -2594,6 +2592,8 @@ ErrorElem::ErrorElem(Element* element) {
 
 	myfather = NULL;
 
+	i_was=element->i_was;
+	i_refined=element->i_refined;
 }
 
 //used for refinement
