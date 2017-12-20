@@ -39,12 +39,12 @@ using namespace std;
 #include <assert.h>
 #include <mpi.h>
 #include "matrix.h"
+#include "dualmesh.h"
 #include "hashtab.h"
 #include "node.h"
 #include "properties.h"
 #include "element2.h"
 #include "jacobian.h"
-#include "dualmesh.h"
 #include "recv.h"
 #include "extfun.h"
 #include "scale.h"

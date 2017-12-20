@@ -27,6 +27,7 @@ class SolRec;
 class Jacobian;
 class Element;
 class DualElem;
+class Node_minimal;
 class Node {
 
 	friend class Element;
@@ -103,8 +104,9 @@ public:
 	Node(unsigned* keyi, double* coordi, int inf, double elev, int yada);
 
 	//! this is the constructor that recreates/restores a node that was saved in a restart file.
-	Node(FILE* fp, MatProps* matprops_ptr); //for restart
 	Node(gzFile& myfile, MatProps* matprops_ptr);
+
+	Node(const Node_minimal* node_minimal);
 
 	//! constructor that creates a node without setting any of its values
 	Node();
@@ -117,7 +119,7 @@ public:
 	;
 
 	//! this function writes all of one Node's data necessary for restart to a file in a single fwrite statement
-	void save_node(FILE* fp); //for restart
+	void write_node(gzFile myfile);
 
 	//! this function is legacy afeapi, it is extraneous for the finite difference/volume version of titan, however it appears once in htflush.C
 	void putdof(int lower, int up);
@@ -198,8 +200,6 @@ public:
 
 	//! this function returns the number of elements associated with this node
 	int get_num_assoc_elem();
-
-	void write_node(gzFile myfile);
 
 protected:
 	//! used in delete_unused_nodes_and_elements() function

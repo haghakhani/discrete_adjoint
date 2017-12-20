@@ -8,6 +8,7 @@
 #ifndef DUALMESH_H
 #define DUALMESH_H
 
+#include "hashtab.h"
 #include "element2.h"
 #include "jacobian.h"
 #include <hdf5.h>
@@ -15,8 +16,11 @@
 #include "geoflow.h"
 
 class ErrorElem;
+class Node;
 
 class Node_minimal{
+
+	friend class Node;
 
 private:
 	int id, info;
@@ -29,6 +33,8 @@ public:
 };
 
 class Elem_minimal{
+
+	friend class Element;
 
 private:
 	int myprocess, generation;
@@ -53,6 +59,7 @@ public:
 };
 
 class Table_minimal{
+	friend class HashTable;
 
 private:
 	unsigned MinKey[2];
@@ -62,7 +69,7 @@ private:
 	double Xrange[2];
 	double Yrange[2];
 	double invdxrange, invdyrange;
-	int NBUCKETS, PRIME,ENTRIES;
+	int NBUCKETS, PRIME;
 
 public:
 	Table_minimal(HashTable* table);
@@ -81,18 +88,49 @@ private:
 	Table_minimal node_tab, elem_tab;
 
 public:
-	Snapshot(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec);
-	~Snapshot();
+	Snapshot(const MeshCTX& meshctx, const PropCTX& propctx);
+	vector<Node_minimal>* get_node_vector(){
+		return &node_vec;
+	};
+	vector<Elem_minimal>* get_elem_vector(){
+		return &elem_vec;
+	};
+	Table_minimal* get_node_table_minimal(){
+		return &node_tab;
+	};
+	Table_minimal* get_elem_table_minimal(){
+		return &elem_tab;
+	};
+	int get_iter(){
+		return iter;
+	};
+	double get_time(){
+		return time;
+	};
+
+	void adjust_timeprops(TimeProps* timeprops,const int final_iter){
+		double inv_t_sc = 1./timeprops->TIME_SCALE;
+		timeprops->iter=iter;
+		timeprops->time=time;
+		timeprops->isave = (int) (time / (timeprops->timesave * inv_t_sc));
+		timeprops->ioutput = (int) (time / (timeprops->timeoutput * inv_t_sc));
+		timeprops->ndnextsave = ((timeprops->isave + 1) * timeprops->timesave) * inv_t_sc;
+		timeprops->ndnextoutput = ((timeprops->ioutput + 1) * timeprops->timeoutput) * inv_t_sc;;
+		timeprops->maxiter = final_iter;
+	}
+
+	~Snapshot()	{
+	};
 };
 
 class SolRec: public HashTable {
 
 private:
 
-	// this integer shows the first time step that its solution is vailable in SolRec
+	// this integer shows the first time step that its solution is available in SolRec
 	int first_solution_time_step;
 
-	// this integer shows the last time step that its solution is vailable in SolRec
+	// this integer shows the last time step that its solution is available in SolRec
 	int last_solution_time_step;
 
 	const int range;

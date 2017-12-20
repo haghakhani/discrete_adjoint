@@ -68,7 +68,7 @@ void GisGrid::setNumCols(int nCols) {
 	}
 }
 
-void GisGrid::setRes(float res) {
+void GisGrid::setRes(double res) {
 	if (res > 0.) {
 		resX_ = res;
 		nCols_ = (int) (this->deltaX() / resX_);
@@ -78,7 +78,7 @@ void GisGrid::setRes(float res) {
 	}
 }
 
-void GisGrid::setResX(float res) {
+void GisGrid::setResX(double res) {
 	if (res > 0.) {
 		resX_ = res;
 		nCols_ = (int) (this->deltaX() / resX_);
@@ -86,7 +86,7 @@ void GisGrid::setResX(float res) {
 	}
 }
 
-void GisGrid::setResY(float res) {
+void GisGrid::setResY(double res) {
 	if (res > 0.) {
 		resY_ = res;
 		nRows_ = (int) (this->deltaY() / resY_);
@@ -102,7 +102,7 @@ double GisGrid::get(int row, int col) {
 	return noData_;
 }
 
-void GisGrid::set(int row, int col, float floatVal) {
+void GisGrid::set(int row, int col, double floatVal) {
 	if ((row >= 0 && row < nRows_) && (col >= 0 && col < nCols_)) {
 		int index = (row * nCols_) + col;
 		gisGrid_[index] = floatVal;
@@ -169,7 +169,7 @@ void GisGrid::setMax(GisTriOut & tri, int simVar) {
 					if (this->get(j, i) < tri.pHeight_)
 						this->set(j, i, tri.pHeight_);
 				} else if (simVar == 2 && tri.pHeight_ > 0.2) {
-					float v = (sqrt(tri.xmom_ * tri.xmom_ + tri.ymom_ * tri.ymom_)) / tri.pHeight_;
+					double v = (sqrt(tri.xmom_ * tri.xmom_ + tri.ymom_ * tri.ymom_)) / tri.pHeight_;
 					if (this->get(j, i) < v)
 						this->set(j, i, v);
 				}
@@ -179,9 +179,9 @@ void GisGrid::setMax(GisTriOut & tri, int simVar) {
 }
 
 void GisGrid::smooth3() {
-	queue<float> outBuf;
+	queue<double> outBuf;
 	int i;
-	float fVal;
+	double fVal;
 	for (i = 0; i < nRows_; i++) {
 		int k1 = nCols_ * (i - 1);
 		int k2 = nCols_ * i;
@@ -226,7 +226,7 @@ void GisGrid::smooth3() {
 
 void GisGrid::print() {
 	int col = 0;
-	vector<float>::iterator i;
+	vector<double>::iterator i;
 	for (i = gisGrid_.begin(); i != gisGrid_.end(); i++) {
 
 		if ((*i) < 1.)

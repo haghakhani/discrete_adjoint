@@ -30,15 +30,15 @@ public:
 		yMax_ = yMax;
 	}
 
-	void setRes(float res);
+	void setRes(double res);
 
-	void setResX(float res);
+	void setResX(double res);
 
 	double getResX() {
 		return resX_;
 	}
 
-	void setResY(float res);
+	void setResY(double res);
 
 	double getResY() {
 		return resY_;
@@ -75,7 +75,7 @@ public:
 
 	double getX(int col);
 
-	void set(int row, int col, float floatVal);
+	void set(int row, int col, double floatVal);
 
 	void smooth3();
 
@@ -93,7 +93,7 @@ public:
 	int nCols_;
 	int nRows_;
 
-	vector<float> gisGrid_;
+	vector<double> gisGrid_;
 
 private:
 

@@ -40,7 +40,7 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 	int savefileflag = 1;
 
 	if (myid == 0) {
-		for (int imat = 1; imat <= matprops->material_count; imat++)
+		for (int imat = 0; imat <= matprops->material_count; imat++)
 		printf("bed friction angle for \"%s\" is %g\n", matprops->matnames[imat],
 				matprops->bedfrict[imat] * 180.0 / PI);
 
@@ -121,17 +121,17 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 		char filename[50];
 		sprintf(filename,"forward_%d_%d",timeprops->iter,myid);
 
-//		write_alldata_ordered(El_Table, filename);
+		write_alldata_ordered(El_Table, filename);
 
 		write_solution.start();
 
 		solrec->record_solution(&meshctx, &propctx);
 
-		if (solrec->write_sol()/* || must_write(&memuse, myid)*/) {
-			solrec->wrtie_sol_to_disk(myid);
-
-			solrec->delete_jacobians_after_writes();
-		}
+//		if (solrec->write_sol()/* || must_write(&memuse, myid)*/) {
+//			solrec->wrtie_sol_to_disk(myid);
+//
+//			solrec->delete_jacobians_after_writes();
+//		}
 		write_solution.stop();
 
 		/*
@@ -154,11 +154,15 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 		visualization.stop();
 //		}
 
-		if (timeprops->ifsave()) {
+		if (timeprops->ifsave() && (propctx.runcond & RECORD)) {
 			move_data(numprocs, myid, El_Table, Node_Table, timeprops, matprops);
+//			meshctx.snapshot_vec->push_back(Snapshot(meshctx,propctx));
+			solrec->update_first_sol_time(timeprops->iter);
 			save_forward(meshctx, propctx, solrec);
-			solrec->wrtie_sol_to_disk(myid);
+//			solrec->wrtie_sol_to_disk(myid);
 			solrec->delete_jacobians_after_writes();
+			if (propctx.runcond & RECORD)
+				meshctx.snapshot_vec->push_back(Snapshot(meshctx,propctx));
 		}
 	}
 

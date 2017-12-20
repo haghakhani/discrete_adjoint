@@ -84,6 +84,8 @@ int main(int argc, char *argv[]) {
 
 	int adaptflag;
 
+	vector<Snapshot> snapshot_vec;
+
 	int viz_flag = 0, order_flag; //savefileflag will be flipped so first savefile will end in 0
 	int srctype;
 
@@ -112,6 +114,7 @@ int main(int argc, char *argv[]) {
 	MeshCTX meshctx;
 	meshctx.el_table = El_Table;
 	meshctx.nd_table = Node_Table;
+	meshctx.snapshot_vec = &snapshot_vec;
 
 	PropCTX propctx;
 	propctx.timeprops = &timeprops;
@@ -124,6 +127,10 @@ int main(int argc, char *argv[]) {
 	propctx.numproc = numprocs;
 	propctx.myid = myid;
 	propctx.adapt_flag = adaptflag;
+	propctx.runcond = (run_mode) (runcond | RECORD);
+
+	//we need to record the initial configuration
+	meshctx.snapshot_vec->push_back(Snapshot(meshctx,propctx));
 
 	if ((runcond & NORMAL) || (runcond & FORWARD)) {
 		forward_solve(meshctx, propctx, solrec);
@@ -135,12 +142,11 @@ int main(int argc, char *argv[]) {
 	error_meshctx.el_table = Err_El_Table;
 	error_meshctx.nd_table = Err_Node_Table;
 
-	if (runcond & RESTART)
-		dual_solver(solrec, &meshctx, &error_meshctx, &propctx, runcond);
-	else if (runcond & NORMAL)
-		dual_solver(solrec, &meshctx, NULL, &propctx, NORMAL);
-	dual.stop();
+	timeprops.adjiter=timeprops.maxiter;
 
+	dual_solver(solrec, &meshctx, &error_meshctx, &propctx, runcond);
+
+	dual.stop();
 
 	delete_data(solrec, &meshctx, &error_meshctx, &propctx);
 	free_mpi_types();

@@ -33,6 +33,8 @@ using namespace std;
 #include "constant.h"
 #include "zlib.h"
 
+class Table_minimal;
+
 struct HashEntry {
 	unsigned key[KEYLENGTH];  //key: object key word
 	void* value;   //value: poiter to record
@@ -73,7 +75,6 @@ class HashTable {
 protected:
 	unsigned MinKey[2];
 	unsigned MaxKey[2];
-	unsigned Range;
 	double doublekeyrange[2];
 	double hashconstant;
 	double Xrange[2];
@@ -84,7 +85,6 @@ protected:
 	HashEntryPtr* bucket;
 	int NBUCKETS;
 	int PRIME;
-	int ENTRIES;
 
 	HashEntryPtr addElement(int entry, unsigned* key);
 	HashEntryPtr searchBucket(HashEntryPtr p, unsigned* key);
@@ -94,6 +94,7 @@ public:
 	HashTable(double *doublekeyrangein, int, int, double* XR, double* YR);
 	HashTable(HashTable* hashtable);
 	HashTable(gzFile& myfile);
+	HashTable(Table_minimal *table_minimal);
 	virtual ~HashTable();
 
 	int hash(unsigned* key);
@@ -121,10 +122,6 @@ public:
 
 inline int HashTable::get_prime(){
 	return PRIME;
-};
-
-inline int HashTable::get_entries(){
-	return ENTRIES;
 };
 
 inline double* HashTable::get_doublekeyrange() {

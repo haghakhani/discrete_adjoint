@@ -17,11 +17,10 @@
 
 #ifndef ELEMENT_H
 #define ELEMENT_H
-#include "boundary.h"
+
 #include "hashtab.h"
 #include "node.h"
 #include "struct.h"
-
 #include <fstream>
 #include <iostream>
 
@@ -29,6 +28,8 @@ using namespace std;
 
 template<typename T>
 class ElemPtrList;
+class Elem_minimal;
+class SolRec;
 #include "../header/matrix.h"
 
 //#define USE_FATHER
@@ -116,6 +117,8 @@ public:
 	Element(FILE* fp, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
 
 	Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, int myid);
+
+	Element(const Elem_minimal* elem_minimal, MatProps* matprops_ptr);
 
 	//! destructor that does nothing except delete boundary condition pointer
 	virtual ~Element() {

@@ -406,8 +406,11 @@ struct TimeProps {
 		dtime = *indt;
 		// then increment time
 		time += *indt;
-		dt.push_back(*indt);
 		iter++;
+		if (dt.size() >= iter)
+			dt[iter] = *indt;
+		else
+			dt.push_back(*indt);
 	}
 
 	void adjoint_time(int iter) {
@@ -545,7 +548,6 @@ struct TimeProps {
 		ndnextoutput = ((ioutput + 1) * timeoutput) / TIME_SCALE;
 
 	}
-
 };
 
 /*****************************************************************************/
@@ -822,7 +824,6 @@ struct OutLine {
 		    xminmax[0] * matprops_ptr->LENGTH_SCALE, xminmax[1] * matprops_ptr->LENGTH_SCALE, Ny,
 		    yminmax[0] * matprops_ptr->LENGTH_SCALE, yminmax[1] * matprops_ptr->LENGTH_SCALE);
 		double yy, xx, res = dx + dy, elevation;
-		int ierr;
 		for (iy = 0; iy < Ny; iy++) {
 			yy = ((iy + 0.5) * dy + yminmax[0]) * matprops_ptr->LENGTH_SCALE;
 			for (ix = 0; ix < Nx - 1; ix++) {
@@ -1428,15 +1429,13 @@ struct PertElemInfo {
 };
 
 class HashTable;
+class Snapshot;
 
 struct MeshCTX {
 
-	MeshCTX() {
-		el_table = nd_table = NULL;
-	}
-
 	HashTable* el_table;
 	HashTable* nd_table;
+	vector<Snapshot>* snapshot_vec;
 
 };
 
@@ -1453,7 +1452,7 @@ struct PropCTX {
 	int numproc;
 	int myid;
 	int adapt_flag;
-
+	run_mode runcond;
 };
 
 struct MemUse {

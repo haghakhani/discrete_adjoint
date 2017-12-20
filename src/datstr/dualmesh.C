@@ -12,8 +12,10 @@ Node_minimal::Node_minimal(Node *node):
 id(node->get_id()),
 info(node->get_info()),
 elevation(node->get_elevation()){
-	for (int i=0;i<DIMENSION;++i)
-		coord[i]=node->get_coord()[i];
+	for (int i=0;i<DIMENSION;++i){
+		coord[i] = node->get_coord()[i];
+		key[i] = node->pass_key()[i];
+	}
 }
 
 Elem_minimal::Elem_minimal(Element *elem):
@@ -24,8 +26,8 @@ generation(elem->get_gen()){
 		neigh_proc[i]=elem->get_neigh_proc()[i];
 		neigh_gen[i]=elem->get_neigh_gen()[i];
 		for (int j=0;j<DIMENSION;++j){
-			neighbor[i][j]=elem->get_neighbors()[i*8+j];
-			node_key[i][j]=elem->getNode()[i*8+j];
+			neighbor[i][j]=elem->get_neighbors()[i*DIMENSION+j];
+			node_key[i][j]=elem->getNode()[i*DIMENSION+j];
 		}
 	}
 
@@ -43,8 +45,8 @@ generation(elem->get_gen()){
 
 	for (int i=0;i<4;++i)
 		for (int j=0;j<DIMENSION;++j){
-			son[i][j]=elem->getson()[i*4+j];
-			brothers[i][j]=elem->get_brothers()[i*4+j];
+			son[i][j]=elem->getson()[i*DIMENSION+j];
+			brothers[i][j]=elem->get_brothers()[i*DIMENSION+j];
 		}
 
 	for (int i=0;i<NUM_STATE_VARS;++i){
@@ -56,8 +58,7 @@ generation(elem->get_gen()){
 
 Table_minimal::Table_minimal(HashTable *table):
 			NBUCKETS(table->get_nbuckets()),
-			PRIME(table->get_prime()),
-			ENTRIES(table->get_entries()){
+			PRIME(table->get_prime()){
 
 	for (int i=0;i<DIMENSION;++i){
 		MinKey[i] = table->get_MinKey()[i];
@@ -72,9 +73,9 @@ Table_minimal::Table_minimal(HashTable *table):
 	hashconstant = 8.0 * NBUCKETS / (doublekeyrange[0] * doublekeyrange[1] + doublekeyrange[1]);
 }
 
-Snapshot::Snapshot(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solrec):
-		node_tab(meshctx.nd_table),
-		elem_tab(meshctx.el_table){
+Snapshot::Snapshot(const MeshCTX& meshctx, const PropCTX& propctx):
+	node_tab(meshctx.nd_table),
+	elem_tab(meshctx.el_table){
 
 	TimeProps* timeprops = propctx.timeprops;
 	MatProps* matprops = propctx.matprops;
@@ -83,8 +84,6 @@ Snapshot::Snapshot(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solre
 
 	HashTable* El_Table = meshctx.el_table;
 	HashTable* NodeTable = meshctx.nd_table;
-
-	move_data(numprocs, myid, El_Table, NodeTable, timeprops, matprops);
 
 	time=timeprops->time;
 	iter=timeprops->iter;
@@ -98,7 +97,6 @@ Snapshot::Snapshot(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solre
 	HashEntryPtr currentPtr;
 	HashEntryPtr *buck = NodeTable->getbucketptr();
 
-
 	unsigned member=0;
 	for (int i = 0; i < NodeTable->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -109,7 +107,6 @@ Snapshot::Snapshot(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solre
 				currentPtr = currentPtr->next;
 			}
 		}
-
 
 	member=0;
 	buck = El_Table->getbucketptr();
@@ -122,9 +119,6 @@ Snapshot::Snapshot(const MeshCTX& meshctx, const PropCTX& propctx, SolRec *solre
 				currentPtr = currentPtr->next;
 			}
 		}
-}
-
-Snapshot::~Snapshot(){
 }
 
 SolRec::SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[]) :
@@ -165,6 +159,9 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 	HashEntryPtr* buck = El_Table->getbucketptr();
 	HashEntryPtr currentPtr;
 	Element* Curr_El;
+
+	if (first_solution_time_step > timeptr->iter)
+		first_solution_time_step = timeptr->iter;
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -569,6 +566,7 @@ void SolRec::load_new_set_of_solution(int myid) {
 	last_solution_time_step = first_solution_time_step - 1;
 
 	while ((data_range() < 2 || read_sol()) && first_solution_time_step) {
+
 
 		read_sol_from_disk(myid, first_solution_time_step - 1);
 //		read_sol_from_disk_hdf5(myid, first_solution_time_step - 1);

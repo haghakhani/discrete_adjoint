@@ -24,6 +24,7 @@
 #include "../header/node.h"
 #include "../gisapi/GisApi.h"
 #include "../header/properties.h"
+#include "../header/dualmesh.h"
 
 //#undef SEEK_SET
 //#undef SEEK_END
@@ -202,31 +203,24 @@ Node::Node(gzFile& myfile, MatProps* matprops_ptr) {
 	num_assoc_elem = 0;
 }
 
+Node::Node(const Node_minimal* node_minimal){
+
+	id = node_minimal->id;
+	info = node_minimal->info;
+	for (int i=0;i<DIMENSION;++i){
+		key[i]= node_minimal->key[i];
+		coord[i] = node_minimal->coord[i];
+	}
+	elevation = node_minimal->elevation;
+	zero_flux();
+	num_assoc_elem = 0;
+}
+
 void Node::set_parameters(int inf) {
 	info = inf;
-	/*  if(key[0] == (unsigned) 3197207111) {
-	 int mmmyid;
-	 MPI_Comm_rank(MPI_COMM_WORLD, &mmmyid);
-	 printf("?????????????????????????????????????????????????????? \n");
-	 printf("?????????????????????????????????????????????????????? \n");
-	 printf("changing info and ord %u %u on %d $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n",key[0], key[1], mmmyid);
-	 printf("======================================================================\n");
-	 printf("======================================================================\n");
-
-	 }*/
 }
 void Node::putinfo(int in) {
 	info = in;
-	/*  if(key[0] == (unsigned) 2962355296) {
-	 int mmmyid;
-	 MPI_Comm_rank(MPI_COMM_WORLD, &mmmyid);
-	 printf("?????????????????????????????????????????????????????? \n");
-	 printf("?????????????????????????????????????????????????????? \n");
-	 printf("changing info %u %u on %d $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n",key[0], key[1], mmmyid);
-	 printf("?????????????????????????????????????????????????????? \n");
-	 printf("?????????????????????????????????????????????????????? \n");
-
-	 }*/
 }
 
 void Node::zero_flux() {
@@ -251,106 +245,6 @@ void Node::set_elevation(MatProps* matprops_ptr) {
 	}
 	elevation = elevation / matprops_ptr->LENGTH_SCALE;
 
-}
-
-void Node::save_node(FILE* fp) {
-
-	FourBytes temp4;
-	EightBytes temp8;
-	unsigned writespace[13];
-
-	int Itemp = 0, itemp;
-	for (itemp = 0; itemp < KEYLENGTH; itemp++) {
-		writespace[Itemp++] = key[itemp];
-	}
-	assert(Itemp == 2);
-#ifdef DEBUG_SAVE_NODE
-	FILE *fpdb=fopen("save_node.debug","w");
-	fprintf(fpdb,"key=%u %u\n",key[0],key[1]);
-#endif
-
-	for (itemp = 0; itemp < DIMENSION; itemp++) {
-		temp8.d = coord[itemp];
-		writespace[Itemp++] = temp8.u[0];
-		writespace[Itemp++] = temp8.u[1];
-	}
-#ifdef DEBUG_SAVE_NODE
-	fprintf(fpdb,"coord=%g %g\n",coord[0],coord[1]);
-#endif
-	assert(Itemp == 6);
-
-	temp4.i = id;
-	writespace[Itemp++] = temp4.u;
-	assert(Itemp == 7);
-#ifdef DEBUG_SAVE_NODE
-	fprintf(fpdb,"id=%d\n",id);
-#endif
-
-	temp4.i = info;
-	writespace[Itemp++] = temp4.u;
-	assert(Itemp == 8);
-#ifdef DEBUG_SAVE_NODE
-	fprintf(fpdb,"info=%d\n",info);
-#endif
-
-#ifdef DEBUG_SAVE_NODE
-	fclose(fpdb);
-#endif
-	fwrite(writespace, sizeof(unsigned), Itemp, fp);
-
-	return;
-}
-
-Node::Node(FILE* fp, MatProps* matprops_ptr) {
-
-	FourBytes temp4;
-	EightBytes temp8;
-	//unsigned readspace[13];
-	unsigned readspace[8];
-	int Itemp = 0, itemp;
-
-	//fread(readspace,sizeof(unsigned),13,fp);
-	fread(readspace, sizeof(unsigned), 8, fp);
-
-	//KEYLENGTH should be 2 but put it in a loop to make it generic.
-	for (itemp = 0; itemp < KEYLENGTH; itemp++) {
-		key[itemp] = readspace[Itemp++];
-	}
-	assert(Itemp == 2);
-
-	//DIMENSION should be 2 but put it in a loop to make it generic.
-	for (itemp = 0; itemp < DIMENSION; itemp++) {
-		temp8.u[0] = readspace[Itemp++];
-		temp8.u[1] = readspace[Itemp++];
-		coord[itemp] = temp8.d;
-	}
-	assert(Itemp == 6);
-
-	temp4.u = readspace[Itemp++];
-	id = temp4.i;
-	assert(Itemp == 7);
-
-	temp4.u = readspace[Itemp++];
-	info = temp4.i;
-	assert(Itemp == 8);
-
-	// find the max resolution of the GIS info and then get the elevation at this node
-	double resolution = 0;
-	double xcoord = coord[0] * (matprops_ptr->LENGTH_SCALE);
-	double ycoord = coord[1] * (matprops_ptr->LENGTH_SCALE);
-	int i = Get_max_resolution(&resolution);
-	if (i != 0) {
-		printf("error in Get_max_resolution\n");
-		exit(1);
-	}
-	i = Get_elevation(resolution, xcoord, ycoord, &elevation);
-	if (i != 0) {
-		printf("error in Get_elevation\n");
-		exit(1);
-	}
-	elevation = elevation / matprops_ptr->LENGTH_SCALE;
-
-	return;
 }
 
 void Node::write_node(gzFile myfile) {

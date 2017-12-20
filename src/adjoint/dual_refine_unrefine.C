@@ -367,6 +367,65 @@ void reset_newson_adaption_flag(HashTable* El_Table) {
 
 }
 
+static void run_from_snapshot(MeshCTX* dual_meshctx, PropCTX* propctx, SolRec* solrec, vector<Snapshot>& snapshot_vec){
+
+	propctx->runcond = (run_mode) (propctx->runcond & ~RECORD);
+	const int numprocs=propctx->numproc;
+	const int myid=propctx->myid;
+	TimeProps* timeprops=propctx->timeprops;
+	MatProps* matprops=propctx->matprops;
+	//this is just to initilize a reference
+	Snapshot& snapshot=snapshot_vec.back();
+
+	for (unsigned i = snapshot_vec.size()-1; i-- > 0; ){
+		snapshot=snapshot_vec[i];
+		if (snapshot.get_iter()<timeprops->iter)
+			break;
+	}
+
+	// reconstructing hash tables
+	HashTable *newel_table = new HashTable(snapshot.get_elem_table_minimal());
+	HashTable *newnd_table = new HashTable(snapshot.get_node_table_minimal());
+
+	// filling elem table and node table new information
+	const vector<Node_minimal>* node_vector = snapshot.get_node_vector();
+	const int num_node = node_vector->size();
+	for (int i=0; i < num_node; ++i){
+		Node* newnode = new Node(&((*node_vector)[i]));
+		newnd_table->add(newnode->pass_key(),newnode);
+	}
+
+	const vector<Elem_minimal>* elem_vector = snapshot.get_elem_vector();
+	const int num_elem = elem_vector->size();
+	for (int i=0; i < num_elem; ++i){
+		Element* newelem = new Element(&((*elem_vector)[i]), matprops);
+		newel_table->add(newelem->pass_key(),newelem);
+	}
+
+	setup_geoflow(newel_table, newnd_table, myid, numprocs, matprops, timeprops);
+
+	move_data(numprocs, myid, newel_table, newnd_table, timeprops,matprops);
+
+	MeshCTX newmeshctx;
+	newmeshctx.nd_table=newnd_table;
+	newmeshctx.el_table=newel_table;
+	const int final_iter = timeprops->iter-2;
+	snapshot.adjust_timeprops(timeprops,final_iter);
+
+	forward_solve(newmeshctx, *propctx, solrec);
+
+	HashTable* Dual_El_Tab = new HashTable(newel_table);
+
+	copy_hashtables_objects<Element, DualElem>(newel_table, Dual_El_Tab);
+
+	delete_hashtables_objects<DualElem>(dual_meshctx->el_table);
+
+	delete_hashtables_objects<Element>(newel_table);
+
+	dual_meshctx->el_table=Dual_El_Tab;
+	dual_meshctx->nd_table=newnd_table;
+}
+
 void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx,
     PropCTX* propctx) {
 
@@ -383,9 +442,11 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 	int myid = propctx->myid, numprocs = propctx->numproc;
 	int iter = propctx->timeprops->iter;
 
+	 vector<Snapshot> *snapshot_vec= dual_meshctx->snapshot_vec;
+
 	read_solution.start();
 	if (solrec->get_first_solution() >= iter - 1)
-		solrec->load_new_set_of_solution(myid);
+		run_from_snapshot(dual_meshctx, propctx, solrec, *snapshot_vec);
 	read_solution.stop();
 
 	//timing inside the function

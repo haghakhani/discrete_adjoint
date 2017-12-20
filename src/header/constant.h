@@ -79,4 +79,13 @@ const double INCREMENT = 1.49e-08;
 #define OLDFATHER     -6  //This is a temporary marking that says neighbors need to be updated with NEWSON information and then this element should be remarked as TOBEDELETED
 #define OLDSON        -7  //The plan is make this analogous to OLDFATHER to allow unrefinement NEXT TO but not across interprocessor boundaries, this has not been implemented yet (date of this comment: 20061026)
 
+typedef enum{
+	FORWARD=0x01,
+	ADJOINT=0x02,
+	ERROR=0x04,
+	RESTART=0x08,
+	NORMAL=0x10,
+	RECORD=0x20
+}run_mode;
+
 #endif

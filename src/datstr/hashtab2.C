@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "../header/hashtab.h"
+#include "../header/dualmesh.h"
 //#undef SEEK_SET
 //#undef SEEK_END
 //#undef SEEK_CUR
@@ -62,7 +63,6 @@ HashTable::HashTable(HashTable* hashtable) {
 
 	NBUCKETS = hashtable->NBUCKETS;
 	PRIME = hashtable->PRIME;
-	ENTRIES = hashtable->ENTRIES;
 
 	for (int i = 0; i < DIMENSION; ++i) {
 
@@ -77,7 +77,6 @@ HashTable::HashTable(HashTable* hashtable) {
 		doublekeyrange[i] = hashtable->doublekeyrange[i];
 	}
 
-	Range = hashtable->Range;
 	hashconstant = hashtable->hashconstant;
 	invdxrange = hashtable->invdxrange;
 	invdyrange = hashtable->invdyrange;
@@ -93,7 +92,6 @@ HashTable::HashTable(gzFile& myfile) {
 
 	gzread(myfile, MinKey, sizeof(unsigned) * 2);
 	gzread(myfile, MaxKey, sizeof(unsigned) * 2);
-	gzread(myfile, &(Range), sizeof(unsigned));
 	gzread(myfile, doublekeyrange, sizeof(double) * 2);
 	gzread(myfile, &(hashconstant), sizeof(double));
 	gzread(myfile, Xrange, sizeof(double) * 2);
@@ -102,13 +100,38 @@ HashTable::HashTable(gzFile& myfile) {
 	gzread(myfile, &(invdyrange), sizeof(double));
 	gzread(myfile, &(NBUCKETS), sizeof(int));
 	gzread(myfile, &(PRIME), sizeof(int));
-	gzread(myfile, &(ENTRIES), sizeof(int));
 
 	bucket = new HashEntryPtr[NBUCKETS];
 
 	for (int i = 0; i < NBUCKETS; i++)
 		*(bucket + i) = 0;
 
+}
+
+HashTable::HashTable(Table_minimal *table_minimal){
+
+	int i;
+
+	NBUCKETS = table_minimal->NBUCKETS;
+	PRIME = table_minimal->PRIME;
+
+	for (i = 0; i < KEYLENGTH; i++)
+		doublekeyrange[i] = table_minimal->doublekeyrange[i];
+
+	hashconstant = 8.0 * NBUCKETS / (doublekeyrange[0] * doublekeyrange[1] + doublekeyrange[1]);
+
+	bucket = new HashEntryPtr[NBUCKETS];
+
+	for (i = 0; i < NBUCKETS; i++)
+		*(bucket + i) = 0;
+
+	for (i = 0; i < DIMENSION; i++) {
+		Xrange[i] = table_minimal->Xrange[i];
+		Yrange[i] = table_minimal->Yrange[i];
+	}
+
+	invdxrange = 1.0 / (Xrange[1] - Xrange[0]);
+	invdyrange = 1.0 / (Yrange[1] - Yrange[0]);
 }
 
 HashTable::~HashTable()              //evacuate the table
@@ -293,7 +316,6 @@ void HashTable::write_table(gzFile& myfile){
 
 	gzwrite(myfile, MinKey, sizeof(unsigned) * 2);
 	gzwrite(myfile, MaxKey, sizeof(unsigned) * 2);
-	gzwrite(myfile, &(Range), sizeof(unsigned));
 	gzwrite(myfile, doublekeyrange, sizeof(double) * 2);
 	gzwrite(myfile, &(hashconstant), sizeof(double));
 	gzwrite(myfile, Xrange, sizeof(double) * 2);
@@ -302,5 +324,4 @@ void HashTable::write_table(gzFile& myfile){
 	gzwrite(myfile, &(invdyrange), sizeof(double));
 	gzwrite(myfile, &(NBUCKETS), sizeof(int));
 	gzwrite(myfile, &(PRIME), sizeof(int));
-	gzwrite(myfile, &(ENTRIES), sizeof(int));
 }

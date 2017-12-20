@@ -79,7 +79,7 @@ void delete_data(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx,
 		delete_hashtables_objects<DualElem>(elem_table);
 
 	if (node_table)
-		delete_hashtables_objects<Node>(elem_table);
+		delete_hashtables_objects<Node>(node_table);
 
 	if (solrec)
 		delete_hashtables_objects<Jacobian>(solrec);

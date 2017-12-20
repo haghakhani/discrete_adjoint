@@ -130,17 +130,17 @@ AC_CHECK_FUNCS([floor pow sqrt strchr strdup])
 AC_CONFIG_FILES([Makefile
                  scripts/Makefile
                  src/Makefile
+		 src/header/Makefile
                  src/adapt/Makefile
                  src/datstr/Makefile
                  src/geoflow/Makefile
                  src/adjoint/Makefile
                  src/gisapi/Makefile
-                 src/header/Makefile
-                 src/main/Makefile
                  src/preproc/Makefile
                  src/repartition/Makefile
                  src/stochastic/Makefile
                  src/tecplot/Makefile
                  src/useful/Makefile
-                 src/vectordatapreproc/Makefile])
+                 src/vectordatapreproc/Makefile
+		 src/main/Makefile])
 AC_OUTPUT

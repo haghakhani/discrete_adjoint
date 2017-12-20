@@ -482,6 +482,95 @@ Element::Element(Element* sons[], HashTable* NodeTable, HashTable* El_Table, Mat
 	}
 }
 
+Element::Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, int myid) {
+
+	for (int ikey = 0; ikey < KEYLENGTH; ikey++)
+		father[ikey] = brothers[0][ikey] = brothers[1][ikey] = brothers[2][ikey] = brothers[3][ikey] =
+		    son[0][ikey] = son[1][ikey] = son[2][ikey] = son[3][ikey] = 0;
+
+	for (int i = 0; i < NUM_STATE_VARS; i++)
+		Influx[i] = 0.0;
+	myprocess = myid;
+
+	gzread(myfile, &(generation), sizeof(int));
+	gzread(myfile, (key), sizeof(unsigned) * 2);
+
+	for (int i = 0; i < 8; ++i) {
+		gzread(myfile, (node_key[i]), sizeof(unsigned) * 2);
+		gzread(myfile, (neighbor[i]), sizeof(unsigned) * 2);
+	}
+
+	for (int i = 0; i < 4; ++i) {
+		gzread(myfile, (son[i]), sizeof(unsigned) * 2);
+		gzread(myfile, (brothers[i]), sizeof(unsigned) * 2);
+	}
+
+	gzread(myfile, (neigh_proc), sizeof(int) * 8);
+	gzread(myfile, (neigh_gen), sizeof(int) * 8);
+	gzread(myfile, &(refined), sizeof(int));
+	gzread(myfile, &(adapted), sizeof(int));
+
+	gzread(myfile, (coord), sizeof(double) * 2);
+	gzread(myfile, (elm_loc), sizeof(int) * 2);
+	gzread(myfile, (state_vars), sizeof(double) * 3);
+	assert(state_vars[0] >= 0.);
+	gzread(myfile, (prev_state_vars), sizeof(double) * 3);
+
+	//extra
+	gzread(myfile, &opposite_brother_flag, sizeof(int));
+
+	//super extra
+	gzread(myfile, &material, sizeof(int));
+	tan_bed_frict = matprops_ptr->tanbedfrict[material];
+
+	if (adapted > 0)
+		calc_which_son();
+}
+
+Element::Element(const Elem_minimal* elem_minimal, MatProps* matprops_ptr){
+
+	myprocess = elem_minimal->myprocess;
+	generation = elem_minimal->generation;
+
+	for (int i = 0; i < DIMENSION; ++i){
+		key[i] = elem_minimal->key[i];
+		coord[i] = elem_minimal->coord[i];
+		elm_loc[i] = elem_minimal->elm_loc[i];
+	}
+
+	for (int i = 0; i < 8; ++i)
+		for (int j=0;j<DIMENSION;++j){
+			node_key[i][j]=elem_minimal->node_key[i][j];
+			neighbor[i][j]=elem_minimal->neighbor[i][j];
+		}
+
+	for (int i = 0; i < 4; ++i)
+		for (int j=0;j<DIMENSION;++j){
+			son[i][j]=elem_minimal->son[i][j];
+			brothers[i][j]=elem_minimal->brothers[i][j];
+		}
+
+	for (int i = 0; i < 8; ++i) {
+		neigh_proc[i]= elem_minimal->neigh_proc[i];
+		neigh_gen[i]=elem_minimal->neigh_gen[i];
+	}
+	refined= elem_minimal->refined;
+	adapted=elem_minimal->adapted;
+
+	for (int i=0; i<NUM_STATE_VARS;++i){
+		state_vars[i]=elem_minimal->state_vars[i];
+		prev_state_vars[i]=elem_minimal->prev_state_vars[i];
+	}
+	opposite_brother_flag=elem_minimal->opposite_brother_flag;
+	material=elem_minimal->material;
+
+		tan_bed_frict = matprops_ptr->tanbedfrict[material];
+
+		if (adapted > 0)
+			calc_which_son();
+
+}
+
 unsigned* Element::getfather() {
 	switch (which_son) {
 		case 0:
@@ -496,9 +585,11 @@ unsigned* Element::getfather() {
 		case 3:
 			return node_key[1];
 			break;
+		default:
+			printf("my key is %u %u in getfather on proc %d\n", key[0], key[1], myprocess);
+			assert(0); // 0 <= which_son <= 3 !!!
+			break;
 	}
-	printf("my key is %u %u in getfather on proc %d\n", key[0], key[1], myprocess);
-	assert(0); // 0 <= which_son <= 3 !!!
 }
 
 int Element::which_neighbor(unsigned* FindNeigh) {
@@ -568,17 +659,15 @@ void Element::change_neighbor(unsigned* newneighbs, int which_side, int proc, in
 
 /* routine also puts in the coords of the center node in the elm */
 void Element::find_positive_x_side(HashTable* nodetable) {
-	int i, j, side;
-	double xmax;
-	Node* nodeptr;
+	int side;
 
-	nodeptr = (Node*) (nodetable->lookup(key));
-	xmax = nodeptr->coord[0];
+	Node* nodeptr = (Node*) (nodetable->lookup(key));
+	double xmax = nodeptr->coord[0];
 	coord[0] = xmax;
 	coord[1] = nodeptr->coord[1];
 
-	for (i = 4; i < 8; i++) {
-		nodeptr = (Node*) (nodetable->lookup(node_key[i]));
+	for (int i = 4; i < 8; i++) {
+		nodeptr = (Node*) nodetable->lookup(node_key[i]);
 		double xcoord = nodeptr->coord[0];
 		if (xcoord > xmax) {
 			xmax = xcoord;
@@ -587,8 +676,6 @@ void Element::find_positive_x_side(HashTable* nodetable) {
 	}
 
 	positive_x_side = side;
-
-	return;
 }
 
 void Element::get_slopes_prev(HashTable* El_Table, HashTable* NodeTable, double gamma) {
@@ -3373,50 +3460,3 @@ void Element::write_elem(gzFile& myfile) {
 	gzwrite(myfile, &material, sizeof(int));
 }
 
-void Element::save_elem(FILE* fp, FILE *fptxt) {
-}
-
-Element::Element(gzFile& myfile, HashTable* NodeTable, MatProps* matprops_ptr, int myid) {
-
-	for (int ikey = 0; ikey < KEYLENGTH; ikey++)
-		father[ikey] = brothers[0][ikey] = brothers[1][ikey] = brothers[2][ikey] = brothers[3][ikey] =
-		    son[0][ikey] = son[1][ikey] = son[2][ikey] = son[3][ikey] = 0;
-
-	for (int i = 0; i < NUM_STATE_VARS; i++)
-		Influx[i] = 0.0;
-	myprocess = myid;
-
-	gzread(myfile, &(generation), sizeof(int));
-	gzread(myfile, (key), sizeof(unsigned) * 2);
-
-	for (int i = 0; i < 8; ++i) {
-		gzread(myfile, (node_key[i]), sizeof(unsigned) * 2);
-		gzread(myfile, (neighbor[i]), sizeof(unsigned) * 2);
-	}
-
-	for (int i = 0; i < 4; ++i) {
-		gzread(myfile, (son[i]), sizeof(unsigned) * 2);
-		gzread(myfile, (brothers[i]), sizeof(unsigned) * 2);
-	}
-
-	gzread(myfile, (neigh_proc), sizeof(int) * 8);
-	gzread(myfile, (neigh_gen), sizeof(int) * 8);
-	gzread(myfile, &(refined), sizeof(int));
-	gzread(myfile, &(adapted), sizeof(int));
-
-	gzread(myfile, (coord), sizeof(double) * 2);
-	gzread(myfile, (elm_loc), sizeof(int) * 2);
-	gzread(myfile, (state_vars), sizeof(double) * 3);
-	assert(state_vars[0] >= 0.);
-	gzread(myfile, (prev_state_vars), sizeof(double) * 3);
-
-	//extra
-	gzread(myfile, &opposite_brother_flag, sizeof(int));
-
-	//super extra
-	gzread(myfile, &material, sizeof(int));
-	tan_bed_frict = matprops_ptr->tanbedfrict[material];
-
-	if (adapted > 0)
-		calc_which_son();
-}

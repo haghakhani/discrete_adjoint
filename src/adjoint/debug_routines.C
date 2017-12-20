@@ -791,34 +791,35 @@ void write_alldata_ordered(HashTable* El_Table, char filename[50]) {
 
 	set<Data>::iterator it;
 	for (it = mydata.begin(); it != mydata.end(); ++it) {
+		fprintf(fp,"keys and states ");
 		fprintf(fp, "%u %u %16.10f %16.10f %16.10f \n", it->get_key()[0], it->get_key()[1],
 		    it->get_state()[0], it->get_state()[1], it->get_state()[2]);
 
-		fprintf(fp,"prev_state_vars \n");
+		fprintf(fp,"prev_state_vars ");
 
 		fprintf(fp, "%16.10f %16.10f %16.10f \n", it->prev_state_vars[0], it->prev_state_vars[1],
 		    it->prev_state_vars[2]);
 
-		fprintf(fp,"gravity \n");
+		fprintf(fp,"gravity ");
 
 		fprintf(fp, "%16.10f %16.10f \n", it->gravity[0], it->gravity[1]);
 
-		fprintf(fp,"d_gravity \n");
+		fprintf(fp,"d_gravity ");
 
 		fprintf(fp, "%16.10f %16.10f \n", it->d_gravity[0], it->d_gravity[1]);
 
-		fprintf(fp,"d_state_vars \n");
+		fprintf(fp,"d_state_vars ");
 
 		fprintf(fp, "%16.10f %16.10f %16.10f %16.10f %16.10f %16.10f \n", it->prev_state_vars[0], it->prev_state_vars[1],
 		    it->prev_state_vars[2],it->prev_state_vars[3], it->prev_state_vars[4], it->prev_state_vars[5]);
 
-		fprintf(fp,"elevation, curvatures and slopes \n");
+		fprintf(fp,"elevation, curvatures and slopes ");
 
 		fprintf(fp, "%16.10f %16.10f %16.10f %16.10f %16.10f \n", it->elevation, it->curvature[0],
 				    it->curvature[1],it->slope[0], it->slope[1]);
 
-		fprintf(fp,"coordinates and dx , dy \n");
-		fprintf(fp, "%16.10f %16.10f %16.10f %16.10f %16.10f \n", it->coord[0], it->coord[1], it->dx[0],it->dx[1]);
+		fprintf(fp,"coordinates and dx , dy ");
+		fprintf(fp, "%16.10f %16.10f %16.10f %16.10f \n", it->coord[0], it->coord[1], it->dx[0],it->dx[1]);
 //		gzwrite(myfile, (it->get_key()), sizeof(unsigned) * 2);
 //		gzwrite(myfile, (it->get_state()), sizeof(double) * 3);
 	}

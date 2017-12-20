@@ -40,7 +40,8 @@ Timer error("error"), error_init("error initialization"), error_repart("error re
         "error computation"), read_dual("read from dual"), update_error("updating error grid"),
     error_vis("error visualization"), error_neigh_update("error repart. neighbor update");
 #endif
-void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropCTX* propctx, run_mode mode) {
+void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropCTX* propctx,
+		run_mode mode) {
 
 	TimeProps* timeprops_ptr = propctx->timeprops;
 	MapNames* mapname_ptr = propctx->mapnames;
@@ -53,6 +54,8 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropC
 	timeprops_ptr->adjust_save_time();
 
 	timeprops_ptr->update_savetime();
+
+	dual_meshctx.snapshot_vec = meshctx->snapshot_vec;
 
 #ifdef Error
 	HashTable *Err_El_Tab, *Err_Nod_Tab;
@@ -170,7 +173,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropC
 
 	}
 
-	for (int iter = maxiter; iter > 0; --iter) {
+	for (int iter = timeprops_ptr->adjiter; iter > 0; --iter) {
 
 		timeprops_ptr->iter = iter;
 		if (myid == 0)
@@ -233,7 +236,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropC
 #else
 		dual_vis.start();
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-		write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
+		write_dual_xdmf(dual_meshctx.el_table, dual_meshctx.nd_table, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
 				1);
 		dual_vis.stop();
 #endif

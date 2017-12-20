@@ -22,8 +22,8 @@
 #define DO_EROSION
 //#define DEBUG
 
-#define KEY0   3781669179
-#define KEY1   330382100
+#define KEY0   2198474436
+#define KEY1   3964585199
 #define ITER   11
 #define EFFELL 1
 #define J      0
@@ -91,12 +91,12 @@ void correct(HashTable* NodeTable, HashTable* El_Table, double dt, MatProps* mat
 		}
 	}
 
-//	int debuging, ggg = 0;
-//	if (EmTemp->get_ithelem() == 8251 /*(EmTemp->pass_key()) == KEY0 && *(EmTemp->pass_key() + 1) == KEY1 */
-//	&& timeprops->iter > 13)
-////	if (dabs(*(EmTemp->get_coord()) - X) < INCREMENT&& dabs(*(EmTemp->get_coord()+1) - Y)<INCREMENT
-////	&& timeprops->iter == ITER)
-//		debuging = ggg = 1;
+	int debuging, ggg = 0;
+	if (/*EmTemp->get_ithelem() == 8251*/ EmTemp->pass_key()[0] == KEY0 && EmTemp->pass_key()[1] == KEY1
+	&& timeprops->iter ==51)
+//	if (dabs(*(EmTemp->get_coord()) - X) < INCREMENT&& dabs(*(EmTemp->get_coord()+1) - Y)<INCREMENT
+//	&& timeprops->iter == ITER)
+		debuging = ggg = 1;
 
 	int stop[2];
 	double orgSrcSgn[4];

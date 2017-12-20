@@ -6,8 +6,8 @@
 
 bin_PROGRAMS = titan
 
-titan_SOURCES = forward_solver.C compare_key.C delete_tab.C hpfem.C \
-		datread.C hilbert.C init_piles.C update_topo.C restart.C
+titan_SOURCES = forward_solver.C compare_key.C delete_tab.C datread.C \
+		hilbert.C init_piles.C update_topo.C restart.C hpfem.C
 
 titan_CXXFLAGS = -I$(srcdir)/../gisapi
 
