@@ -262,7 +262,7 @@ template<typename T1, typename T2>
 void copy_hashtables_objects(HashTable* El_Table, HashTable* cp_El_Table);
 
 template<typename T1>
-void delete_hashtables_objects(HashTable* El_Table);
+void delete_hashtables_objects(HashTable* El_Table, int keep_table=0);
 
 //===========function that are used for the test mode========================
 void perturbU(HashTable* El_Table, PertElemInfo* pelinf, int iter);

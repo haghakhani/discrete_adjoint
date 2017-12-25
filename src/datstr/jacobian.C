@@ -28,54 +28,37 @@ Solution::Solution(double* curr_sol) {
 }
 
 Solution::Solution() {
-
 	for (int i = 0; i < NUM_STATE_VARS; ++i)
 		states[i] = 0.;
 }
-
-Solution Solution::solution_zero;
 
 Solution::~Solution() {
 
 }
 
-//static Solution* instance() {
-//	return &Solution::solution_zero;
-//}
-
 Jacobian::Jacobian(unsigned* key, double* position) {
-
 	for (int i = 0; i < KEYLENGTH; ++i) {
 		Jacobian::key[i] = key[i];
-//		Jacobian::position[i] = position[i];
 	}
-
 }
 
 Jacobian::Jacobian(unsigned* key) {
-
 	for (int i = 0; i < KEYLENGTH; ++i)
 		Jacobian::key[i] = key[i];
-
 }
 
 void Jacobian::clear_container(int iter) {
-
 	for (map<int, Solution*>::iterator it = solContainer.begin(); it != solContainer.end(); ++it)
 		if (it->first >= iter - 1) {
-			if (it->second != &(Solution::solution_zero))
-				delete it->second;
+			delete it->second;
 			solContainer.erase(it);
-
 		}
 }
 
 Jacobian::~Jacobian() {
-
-	for (map<int, Solution*>::iterator it = solContainer.begin(); it != solContainer.end(); ++it)
-		if (it->second != &(Solution::solution_zero))
+	for (map<int, Solution*>::iterator it = solContainer.begin(); it != solContainer.end(); ++it){
+		if (it->second)
 			delete it->second;
-
-	solContainer.clear();
-
+		solContainer.erase(it);
+	}
 }

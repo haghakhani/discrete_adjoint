@@ -168,6 +168,8 @@ public:
 
 	int get_last_solution();
 
+	int get_range(){return range;}
+
 	void load_new_set_of_solution(int myid);
 
 	void free_all_available_sol();
@@ -180,7 +182,7 @@ public:
 
 	using HashTable::lookup;
 
-	Solution* lookup(unsigned* key, int iter);
+	Solution* lookup(unsigned* key, int iter, int erase_map=0);
 
 	void write_table(gzFile& myfile,run_mode = NORMAL);
 

@@ -1458,3 +1458,18 @@ char **set_cats(GisCats& g_cats) {
 	}
 	return 0;
 }
+
+void clear_GIS_grid(){
+	if (gis_grid.elev)
+		free_double_matrix(gis_grid.elev);
+	if (gis_grid.xslope)
+		free_double_matrix(gis_grid.xslope);
+	if (gis_grid.yslope)
+		free_double_matrix(gis_grid.yslope);
+	if (gis_grid.slope)
+		free_double_matrix(gis_grid.slope);
+	if (gis_grid.xcurv)
+		free_double_matrix(gis_grid.xcurv);
+	if (gis_grid.ycurv)
+		free_double_matrix(gis_grid.ycurv);
+}

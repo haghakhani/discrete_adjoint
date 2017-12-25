@@ -142,8 +142,6 @@ int main(int argc, char *argv[]) {
 	error_meshctx.el_table = Err_El_Table;
 	error_meshctx.nd_table = Err_Node_Table;
 
-	timeprops.adjiter=timeprops.maxiter;
-
 	dual_solver(solrec, &meshctx, &error_meshctx, &propctx, runcond);
 
 	dual.stop();

@@ -247,19 +247,23 @@ struct PileProps {
 
 	}
 
+	void clear(){
+		if (numpiles > 0) {
+					CDeAllocD1(pileheight);
+					CDeAllocD1(xCen);
+					CDeAllocD1(yCen);
+					CDeAllocD1(majorrad);
+					CDeAllocD1(minorrad);
+					CDeAllocD1(cosrot);
+					CDeAllocD1(sinrot);
+					CDeAllocD1(initialVx);
+					CDeAllocD1(initialVy);
+				}
+	}
+
 	//! this function deallocates the dynamically out array members of the PileProps structure
 	~PileProps() {
-		if (numpiles > 0) {
-			CDeAllocD1(pileheight);
-			CDeAllocD1(xCen);
-			CDeAllocD1(yCen);
-			CDeAllocD1(majorrad);
-			CDeAllocD1(minorrad);
-			CDeAllocD1(cosrot);
-			CDeAllocD1(sinrot);
-			CDeAllocD1(initialVx);
-			CDeAllocD1(initialVy);
-		}
+		clear();
 	}
 
 };
@@ -640,16 +644,19 @@ struct MatProps {
 		GRAVITY_SCALE = gscale;
 	}
 
+	void clear(){
+		if (material_count > 0) {
+					CDeAllocD1(bedfrict);
+					CDeAllocD1(tanbedfrict);
+					for (int imat = 0; imat < material_count; imat++)
+						free(matnames[imat]);
+					free(matnames);
+				}
+	}
+
 	//! this destructor deallocates the arrays of bed friction angles and their tangents
 	~MatProps() {
-		if (material_count > 0) {
-			CDeAllocD1(bedfrict);
-			CDeAllocD1(tanbedfrict);
-			for (int imat = 0; imat < material_count; imat++)
-				free(matnames[imat]);
-			free(matnames);
-		}
-		return;
+		clear();
 	}
 };
 
@@ -927,11 +934,14 @@ struct DISCHARGE {
 		return;
 	}
 
-	//! this destructor deallocates the planes information
-	~DISCHARGE() {
+	void clear(){
 		if (num_planes > 0)
 			CDeAllocD2(planes);
-		return;
+	}
+
+	//! this destructor deallocates the planes information
+	~DISCHARGE() {
+		clear();
 	}
 
 	//reinitialized in load_run()
@@ -1206,6 +1216,28 @@ struct FluxProps {
 		xVel = new double[nsrcs];
 		yVel = new double[nsrcs];
 	}
+
+	void clear(){
+		if (no_of_sources){
+		delete influx;
+		delete xCen;
+		delete yCen;
+		delete majorrad;
+		delete minorrad;
+		delete cosrot;
+		delete sinrot;
+		delete start_time;
+		delete end_time;
+		delete xVel;
+		delete yVel;
+		}
+	}
+
+	~FluxProps(){
+		clear();
+	}
+
+
 
 	//! this function returns 1 if any flux sources become active during the current timestep, this is used to trigger "initial adaptation" of the flux source area, Keith wrote this function
 	int IfAnyStart(TimeProps *timeprops_ptr) {

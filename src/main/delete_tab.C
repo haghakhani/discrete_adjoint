@@ -42,7 +42,7 @@ void copy_hashtables_objects(HashTable* El_Table, HashTable* cp_El_Table) {
 template void copy_hashtables_objects<Element, DualElem>(HashTable* El_Table, HashTable* cp_El_Table);
 
 template<typename T1>
-void delete_hashtables_objects(HashTable* El_Table) {
+void delete_hashtables_objects(HashTable* El_Table, int keep_table) {
 	HashEntryPtr *buck = El_Table->getbucketptr();
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
@@ -52,22 +52,22 @@ void delete_hashtables_objects(HashTable* El_Table) {
 				T1 *Curr = (T1*) (currentPtr->value);
 				delete Curr;
 				currentPtr = currentPtr->next;
-
 			}
 		}
 
-	delete El_Table;
+	if(!keep_table)
+		delete El_Table;
 }
 
-template void delete_hashtables_objects<DualElem>(HashTable* El_Table);
+template void delete_hashtables_objects<DualElem>(HashTable* El_Table, int keep_table);
 
-template void delete_hashtables_objects<Node>(HashTable* El_Table);
+template void delete_hashtables_objects<Node>(HashTable* El_Table, int keep_table);
 
-template void delete_hashtables_objects<Jacobian>(HashTable* El_Table);
+template void delete_hashtables_objects<Jacobian>(HashTable* El_Table, int keep_table);
 
-template void delete_hashtables_objects<Element>(HashTable* El_Table);
+template void delete_hashtables_objects<Element>(HashTable* El_Table, int keep_table);
 
-template void delete_hashtables_objects<ErrorElem>(HashTable* El_Table);
+template void delete_hashtables_objects<ErrorElem>(HashTable* El_Table, int keep_table);
 
 void delete_data(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx,
 		PropCTX* propctx) {
@@ -84,13 +84,7 @@ void delete_data(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx,
 	if (solrec)
 		delete_hashtables_objects<Jacobian>(solrec);
 
-	delete propctx->discharge;
-	delete propctx->fluxprops;
-	delete propctx->mapnames;
-	delete propctx->matprops;
-	delete propctx->pileprops;
-	delete propctx->statprops;
-	delete propctx->timeprops;
+	clear_GIS_grid();
 
 #ifdef Error
 	error.start();

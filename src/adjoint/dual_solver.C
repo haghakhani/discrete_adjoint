@@ -48,14 +48,11 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropC
 	MatProps* matprops_ptr = propctx->matprops;
 	int myid = propctx->myid;
 	int maxiter;
-	MeshCTX dual_meshctx;
-	HashTable *Dual_El_Tab,*NodeTable;
+	HashTable *Dual_El_Tab, *NodeTable;
 
 	timeprops_ptr->adjust_save_time();
 
 	timeprops_ptr->update_savetime();
-
-	dual_meshctx.snapshot_vec = meshctx->snapshot_vec;
 
 #ifdef Error
 	HashTable *Err_El_Tab, *Err_Nod_Tab;
@@ -72,9 +69,6 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropC
 #endif
 
 	maxiter = timeprops_ptr->iter-1;
-
-	dual_meshctx.el_table = Dual_El_Tab;
-	dual_meshctx.nd_table = NodeTable;
 
 	}else{
 
@@ -94,15 +88,14 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropC
 
 		Dual_El_Tab = new HashTable(El_Table);
 
-		dual_meshctx.el_table = Dual_El_Tab;
-		dual_meshctx.nd_table = NodeTable;
+		meshctx->el_table=Dual_El_Tab;
 
 		copy_hashtables_objects<Element, DualElem>(El_Table, Dual_El_Tab);
 
 		if (myid == 0)
 			cout << "The Adjoint grid has been generated ....\n";
 
-		calc_adjoint(&dual_meshctx, propctx);
+		calc_adjoint(meshctx, propctx);
 
 		dual_vis.start();
 		write_dual_xdmf(Dual_El_Tab, NodeTable, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_NEW, 2);
@@ -173,25 +166,25 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropC
 
 	}
 
-	for (int iter = timeprops_ptr->adjiter; iter > 0; --iter) {
+	for (int iter = timeprops_ptr->maxiter; iter > 0; --iter) {
 
 		timeprops_ptr->iter = iter;
 		if (myid == 0)
 			cout << "computing ADJOINT time step " << iter - 1 << endl;
 		timeprops_ptr->adjiter++;
 
-		setup_dual_flow(solrec, &dual_meshctx, error_meshctx, propctx);
+		setup_dual_flow(solrec, meshctx, error_meshctx, propctx);
 
 		timeprops_ptr->adjoint_time(iter - 1);
 
 		jacobian.start();
-		calc_jacobian(&dual_meshctx, propctx);
+		calc_jacobian(meshctx, propctx);
 
-		comminucate_jacobians(&dual_meshctx, propctx);
+		comminucate_jacobians(meshctx, propctx);
 		jacobian.stop();
 
 		adjoint_sol.start();
-		calc_adjoint(&dual_meshctx, propctx);
+		calc_adjoint(meshctx, propctx);
 		adjoint_sol.stop();
 
 //		char filename[50];
@@ -236,16 +229,16 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropC
 #else
 		dual_vis.start();
 //		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
-		write_dual_xdmf(dual_meshctx.el_table, dual_meshctx.nd_table, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
+		write_dual_xdmf(meshctx->el_table, meshctx->nd_table, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
 				1);
 		dual_vis.stop();
 #endif
 		if (timeprops_ptr->ifsave_adj()) {
-			move_dual_data(&dual_meshctx, propctx);
+			move_dual_data(meshctx, propctx);
 #ifdef Error
 			move_err_data(error_meshctx, propctx);
 #endif
-			save_dual(&dual_meshctx, error_meshctx, propctx, solrec);
+			save_dual(meshctx, error_meshctx, propctx, solrec);
 		}
 //for first adjoint iteration there is no need to compute Jacobian and adjoint can be computed from the functional
 //sensitivity w.r.t to parameters

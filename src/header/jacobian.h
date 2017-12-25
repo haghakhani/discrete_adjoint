@@ -34,8 +34,6 @@ public:
 
 	~Solution();
 
-	static Solution solution_zero;
-
 protected:
 
 	Solution();
@@ -63,7 +61,7 @@ public:
 
 	void put_solution(Solution* sol, int iter);
 
-	Solution* get_solution(int iter);
+	Solution* get_solution(int iter, int erase_map=0);
 
 	void erase_solution(int iter);
 
@@ -73,12 +71,8 @@ public:
 
 	void clear_container(int iter);
 
-//	unsigned get_create_time(){
-//		return create_time;
-//	}
-
 	//destructor
-	virtual ~Jacobian();
+	~Jacobian();
 
 	//members
 protected:
@@ -102,9 +96,12 @@ inline void Jacobian::put_solution(Solution* solution, int iter) {
 	return;
 }
 
-inline Solution* Jacobian::get_solution(int iter) {
+inline Solution* Jacobian::get_solution(int iter, int erase_map) {
 
-	return solContainer[iter];
+	Solution* solution =solContainer[iter];
+	if (erase_map)
+		solContainer.erase(iter);
+	return solution;
 }
 
 inline unsigned* Jacobian::get_key() {

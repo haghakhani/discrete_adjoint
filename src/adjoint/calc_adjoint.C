@@ -93,7 +93,7 @@ void calc_adjoint_elem(MeshCTX* meshctx, PropCTX* propctx, DualElem *Curr_El) {
 
 	if (propctx->timeprops->adjiter == 0) {
 
-//		Curr_El->calc_func_sens((void*) propctx);
+		Curr_El->calc_func_sens((void*) propctx);
 
 		for (int i = 0; i < NUM_STATE_VARS; ++i)
 			adjoint[i] = - *(Curr_El->get_func_sens() + i);

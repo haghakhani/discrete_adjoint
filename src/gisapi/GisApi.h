@@ -355,4 +355,6 @@ int Get_image_grid(double resolution, double xmin, double xmax, double ymin, dou
 //! Set vector scale, used to calculate precision, Input: scale - Scale of the vector data, ex.: 10000, API pre-defines scale at 50000 
 void Set_vector_scale(double scale);
 
+void clear_GIS_grid();
+
 #endif

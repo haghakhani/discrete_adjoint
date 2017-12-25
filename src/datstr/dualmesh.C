@@ -161,7 +161,7 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 	Element* Curr_El;
 
 	if (first_solution_time_step > timeptr->iter)
-		first_solution_time_step = timeptr->iter;
+		first_solution_time_step = timeptr->iter-1;
 
 	for (int i = 0; i < El_Table->get_no_of_buckets(); i++)
 		if (*(buck + i)) {
@@ -171,26 +171,12 @@ void SolRec::record_solution(MeshCTX* meshctx, PropCTX* propctx) {
 				if (Curr_El->get_adapted_flag() > 0) {
 
 					Jacobian *jacobian = (Jacobian *) lookup(Curr_El->pass_key());
-					if (jacobian) {
-						if (*(Curr_El->get_prev_state_vars()) > 0.) {
-							Solution *solution = new Solution(Curr_El->get_prev_state_vars());
-							jacobian->put_solution(solution, timeptr->iter - 1);
-
-						} else
-							jacobian->put_solution(&(Solution::solution_zero), timeptr->iter - 1);
-
-					} else {
+					if (!jacobian) {
 						jacobian = new Jacobian(Curr_El->pass_key());
 						add(jacobian->get_key(), jacobian);
-
-						if (*(Curr_El->get_prev_state_vars()) > 0.) {
-							Solution *solution = new Solution(Curr_El->get_prev_state_vars());
-							jacobian->put_solution(solution, timeptr->iter - 1);
-
-						} else
-							jacobian->put_solution(&(Solution::solution_zero), timeptr->iter - 1);
-
 					}
+					Solution *solution = new Solution(Curr_El->get_prev_state_vars());
+					jacobian->put_solution(solution, timeptr->iter - 1);
 				}
 				currentPtr = currentPtr->next;
 			}
@@ -212,7 +198,7 @@ void SolRec::wrtie_sol_to_disk(int myid) {
 		sprintf(filename, "solution_%04d_%08d", myid, step);
 		myfile = gzopen(filename, "wb");
 
-		vector<unsigned*> zero_key, non_zero_key;
+		vector<unsigned*> non_zero_key;
 		vector<Solution*> non_zero_sol;
 
 		for (int i = 0; i < NBUCKETS; ++i)
@@ -227,29 +213,18 @@ void SolRec::wrtie_sol_to_disk(int myid) {
 
 //				Because some of the elements are created and deleted in refinement and unrefinement
 					if (sol) {
-						if (sol != &(Solution::solution_zero)) {
 							non_zero_sol.push_back(sol);
 							non_zero_key.push_back(jacobian->get_key());
-
-						} else
-							zero_key.push_back(jacobian->get_key());
 					}
 
 					// here we delete it from the jacobian, but we still have access to it from generated vectors
 					jacobian->erase_solution(step);
-
 					currentPtr = currentPtr->next;
-
 				}
 			}
 
-		int size_zero = zero_key.size(), size_non_zero = non_zero_key.size();
-
-		gzwrite(myfile, &size_zero, sizeof(int));
+		int size_non_zero = non_zero_key.size();
 		gzwrite(myfile, &size_non_zero, sizeof(int));
-
-		for (int i = 0; i < size_zero; ++i)
-			gzwrite(myfile, zero_key[i], sizeof(unsigned) * 2);
 
 		for (int i = 0; i < size_non_zero; ++i) {
 			gzwrite(myfile, non_zero_key[i], sizeof(unsigned) * 2);
@@ -273,7 +248,7 @@ void SolRec::wrtie_sol_to_disk_hdf5(int myid) {
 
 	for (int step = first_solution_time_step; step < last_solution_time_step; ++step) {
 		int count = 0;
-		vector<unsigned> zero_key, non_zero_key;
+		vector<unsigned> non_zero_key;
 		vector<double> non_zero_sol;
 
 		for (int i = 0; i < NBUCKETS; ++i)
@@ -288,17 +263,12 @@ void SolRec::wrtie_sol_to_disk_hdf5(int myid) {
 
 //				Because some of the elements are created and deleted in refinement and unrefinement
 					if (sol) {
-						if (sol != &(Solution::solution_zero)) {
 							non_zero_sol.push_back(*(sol->get_solution()));
 							non_zero_sol.push_back(*(sol->get_solution() + 1));
 							non_zero_sol.push_back(*(sol->get_solution() + 2));
 							non_zero_key.push_back(*(jacobian->get_key()));
 							non_zero_key.push_back(*(jacobian->get_key() + 1));
 							delete sol;
-						} else {
-							zero_key.push_back(*(jacobian->get_key()));
-							zero_key.push_back(*(jacobian->get_key() + 1));
-						}
 					}
 					// here we delete it from the jacobian, but we still have access to it from generated vectors
 					jacobian->erase_solution(step);
@@ -310,7 +280,6 @@ void SolRec::wrtie_sol_to_disk_hdf5(int myid) {
 		sprintf(hdf5file, "solution_%04d_%08d.h5", myid, step);
 		hid_t h5fid = GH5_open_zip_sol_file(hdf5file, 'n');
 
-		GH5_write_zero_keys(h5fid, zero_key.size() / 2, zero_key);
 		GH5_write_non_zero_keys_sol(h5fid, non_zero_key.size() / 2, non_zero_key, non_zero_sol);
 		GH5_closefile(h5fid);
 
@@ -318,7 +287,6 @@ void SolRec::wrtie_sol_to_disk_hdf5(int myid) {
 			cout << "writing solution of time step " << step << " to the disk" << endl;
 	}
 	first_solution_time_step = last_solution_time_step;
-
 }
 
 void SolRec::delete_jacobians_after_writes() {
@@ -358,37 +326,13 @@ void SolRec::read_sol_from_disk(int myid, int iter) {
 
 	unsigned key[DIMENSION] = { 0, 0 };
 	Solution * solution;
-	int dbg, count = 0;
+	int dbg;
 
 	sprintf(filename, "solution_%04d_%08d", myid, iter);
 	myfile = gzopen(filename, "rb");
 
-//	while (!feof(myfile)) {
-
-	count++;
-
-	int num_zero = 0, num_non_zero = 0;
-
-	dbg = gzread(myfile, &num_zero, sizeof(int));
+	int num_non_zero = 0;
 	dbg = gzread(myfile, &num_non_zero, sizeof(int));
-
-	for (int i = 0; i < num_zero; ++i) {
-		gzread(myfile, key, sizeof(unsigned) * 2);
-
-		Jacobian *jacobian = (Jacobian *) lookup(key);
-		solution = &(Solution::solution_zero);
-
-		if (jacobian)
-			jacobian->put_solution(solution, iter);
-
-		else {
-
-			jacobian = new Jacobian(key);
-			add(key, jacobian);
-			jacobian->put_solution(solution, iter);
-
-		}
-	}
 
 	for (int i = 0; i < num_non_zero; ++i) {
 
@@ -401,13 +345,10 @@ void SolRec::read_sol_from_disk(int myid, int iter) {
 			jacobian->put_solution(solution, iter);
 
 		else {
-
 			jacobian = new Jacobian(key);
 			add(key, jacobian);
 			jacobian->put_solution(solution, iter);
-
 		}
-
 	}
 
 	gzclose(myfile);
@@ -423,43 +364,14 @@ void SolRec::read_sol_from_disk_hdf5(int myid, int iter) {
 
 	sprintf(filename, "solution_%04d_%08d.h5", myid, iter);
 	hid_t myfile = GH5_open_zip_sol_file(filename, 'o');
-	hid_t gz_id = GH5_open_group(myfile, "ZERO_CELLS");
-	hid_t dset = H5Dopen(gz_id, "KEYS");
+	hsize_t dims[2];
 
+	hid_t gz_id = GH5_open_group(myfile, "NON_ZERO_CELLS");
+	hid_t dset = H5Dopen(gz_id, "KEYS");
 	hid_t dcpl = H5Dget_create_plist(dset);
 	hid_t dspace = H5Dget_space(dset);
-	hsize_t dims[2];
 	status = H5Sget_simple_extent_dims(dspace, dims, NULL);
 	unsigned* keys = new unsigned[2 * dims[0]];
-	status = H5Dread(dset, H5T_NATIVE_UINT, H5P_DEFAULT, dspace, H5P_DEFAULT, keys);
-	for (unsigned i = 0; i < dims[0]; ++i) {
-
-		Jacobian *jacobian = (Jacobian *) lookup(keys + 2 * i);
-		solution = &(Solution::solution_zero);
-
-		if (jacobian)
-			jacobian->put_solution(solution, iter);
-
-		else {
-
-			jacobian = new Jacobian(keys + 2 * i);
-			add(keys + 2 * i, jacobian);
-			jacobian->put_solution(solution, iter);
-
-		}
-	}
-	delete[] keys;
-	H5Pclose(dcpl);
-	H5Sclose(dspace);
-	H5Dclose(dset);
-	H5Gclose(gz_id);
-
-	gz_id = GH5_open_group(myfile, "NON_ZERO_CELLS");
-	dset = H5Dopen(gz_id, "KEYS");
-	dcpl = H5Dget_create_plist(dset);
-	dspace = H5Dget_space(dset);
-	status = H5Sget_simple_extent_dims(dspace, dims, NULL);
-	keys = new unsigned[2 * dims[0]];
 	status = H5Dread(dset, H5T_NATIVE_UINT, H5P_DEFAULT, dspace, H5P_DEFAULT, keys);
 
 	hid_t dset1 = H5Dopen(gz_id, "SOLUTIONS");
@@ -580,14 +492,13 @@ void SolRec::load_new_set_of_solution(int myid) {
 
 }
 
-Solution* SolRec::lookup(unsigned* key, int iter) {
+Solution* SolRec::lookup(unsigned* key, int iter, int erase_map) {
 
 	Jacobian *jacobian = (Jacobian *) lookup(key);
 	if (jacobian)
-		return jacobian->get_solution(iter);
+		return jacobian->get_solution(iter,erase_map);
 	else
 		return NULL;
-
 }
 
 SolRec::~SolRec(){}
@@ -2338,16 +2249,14 @@ void DualElem::print_jacobian(int iter) {
 
 void DualElem::update_state(SolRec* solrec, HashTable* El_Table, int iter) {
 
-	Solution* prev_sol = solrec->lookup(key, iter - 1);
+	/*FIXME correct erasing data from solrec after use*/
+	Solution* prev_sol = solrec->lookup(key, iter - 1,1);
 
 	for (int i = 0; i < NUM_STATE_VARS; ++i) {
 		prev_state_vars[i] = *(prev_sol->get_solution() + i);
 		prev_adjoint[i] = adjoint[i];
 	}
-
-	if (prev_sol != &(Solution::solution_zero))
 		delete prev_sol;
-
 }
 
 void DualElem::set_jacobianMat_zero(int jacmatind) {

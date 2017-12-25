@@ -40,7 +40,7 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 	int savefileflag = 1;
 
 	if (myid == 0) {
-		for (int imat = 0; imat <= matprops->material_count; imat++)
+		for (int imat = 0; imat < matprops->material_count; imat++)
 		printf("bed friction angle for \"%s\" is %g\n", matprops->matnames[imat],
 				matprops->bedfrict[imat] * 180.0 / PI);
 
@@ -57,7 +57,9 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 
 	move_data(numprocs, myid, El_Table, Node_Table, timeprops, matprops);
 
-	write_xdmf(El_Table,Node_Table,timeprops,matprops,mapname,XDMF_NEW);
+	int OUTPUT=0;
+	if (OUTPUT)
+		write_xdmf(El_Table,Node_Table,timeprops,matprops,mapname,XDMF_NEW);
 
 	initialization_f.stop();
 
@@ -116,12 +118,12 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 		step(El_Table, Node_Table, myid, numprocs, matprops, timeprops, pileprops, fluxprops,
 				statprops, &order_flag, outline, discharge, adaptflag);
 
-		stept.stop();
-
-		char filename[50];
-		sprintf(filename,"forward_%d_%d",timeprops->iter,myid);
-
-		write_alldata_ordered(El_Table, filename);
+//		stept.stop();
+//
+//		char filename[50];
+//		sprintf(filename,"forward_%d_%d",timeprops->iter,myid);
+//
+//		write_alldata_ordered(El_Table, filename);
 
 		write_solution.start();
 
@@ -137,8 +139,7 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 		/*
 		 * output results to file
 		 */
-		int OUTPUT=0;
-//		if (OUTPUT) {
+
 		visualization.start();
 		if (timeprops->ifoutput() && OUTPUT) {
 			move_data(numprocs, myid, El_Table, Node_Table, timeprops, matprops);
@@ -152,7 +153,6 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 
 		}
 		visualization.stop();
-//		}
 
 		if (timeprops->ifsave() && (propctx.runcond & RECORD)) {
 			move_data(numprocs, myid, El_Table, Node_Table, timeprops, matprops);
