@@ -413,7 +413,11 @@ static void run_from_snapshot(MeshCTX* dual_meshctx, PropCTX* propctx, SolRec* s
 	newmeshctx.nd_table = newnd_table;
 	newmeshctx.el_table = newel_table;
 
-	const int final_iter = timeprops->iter;
+	/* the time steps iteration is always one more than
+	 * maximum time step at the end
+	 */
+	/*FIXME the max iter in forward solve is always +1 that it should*/
+	const int final_iter = timeprops->iter-1;
 	snapshot_vec[index].adjust_timeprops(timeprops,final_iter);
 
 	solrec->free_all_available_sol();
@@ -489,7 +493,6 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 		dual_refine_unrefine<DualElem>(dual_meshctx, propctx, &refinelist, &unrefinelist);
 
 		calc_d_gravity(El_Table);
-
 	}
 
 	update_dual_grid(solrec, dual_meshctx, propctx);

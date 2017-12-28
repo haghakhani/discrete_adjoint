@@ -122,7 +122,7 @@ Snapshot::Snapshot(const MeshCTX& meshctx, const PropCTX& propctx):
 }
 
 SolRec::SolRec(double *doublekeyrangein, int size, int prime, double XR[], double YR[]) :
-		HashTable(doublekeyrangein, size, prime, XR, YR), range(50) {
+		HashTable(doublekeyrangein, size, prime, XR, YR), range(100) {
 
 	first_solution_time_step = 0;
 	last_solution_time_step = 0;

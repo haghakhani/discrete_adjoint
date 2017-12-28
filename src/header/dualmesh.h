@@ -112,8 +112,8 @@ public:
 		double inv_t_sc = 1./timeprops->TIME_SCALE;
 		timeprops->iter=iter;
 		timeprops->time=time;
-		timeprops->isave = (int) (time / (timeprops->timesave * inv_t_sc));
-		timeprops->ioutput = (int) (time / (timeprops->timeoutput * inv_t_sc));
+		timeprops->isave = (int) (time / (timeprops->timesave * inv_t_sc) + 0.5);
+		timeprops->ioutput = (int) (time / (timeprops->timeoutput * inv_t_sc) + 0.5);
 		timeprops->ndnextsave = ((timeprops->isave + 1) * timeprops->timesave) * inv_t_sc;
 		timeprops->ndnextoutput = ((timeprops->ioutput + 1) * timeprops->timeoutput) * inv_t_sc;;
 		timeprops->maxiter = final_iter;

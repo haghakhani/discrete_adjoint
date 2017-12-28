@@ -181,8 +181,8 @@ void step(HashTable* El_Table, HashTable* NodeTable, int myid, int nump, MatProp
 					if (*order_flag == 1)
 						Curr_El->update_prev_state_vars();
 
-					//if (*(Curr_El->pass_key())==2151461179 && *(Curr_El->pass_key()+1)==330382099 /*&& timeprops->iter == 9 */)
-					//  cout<<"step is cheking the element"<<endl;
+//					if (*(Curr_El->pass_key())==713645238 && *(Curr_El->pass_key()+1)==481696948 && timeprops_ptr->iter == 473)
+//					  cout<<"step is cheking the element"<<endl;
 
 					correct(NodeTable, El_Table, dt, matprops_ptr, fluxprops, timeprops_ptr, Curr_El);
 

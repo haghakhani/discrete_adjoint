@@ -398,7 +398,7 @@ struct TimeProps {
 		dt.clear();
 	}
 
-	//! this function increments the time step, after, if neccessary, decreasing the time step to land evenly on the next time to output save or end the simulation
+	//! this function increments the time step, after, if necessary, decreasing the time step to land evenly on the next time to output save or end the simulation
 	void incrtime(double *indt) {
 		// first reduce dt to hit output or end time "exactly"
 		if (time + *indt > ndnextoutput)

@@ -118,14 +118,14 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 		step(El_Table, Node_Table, myid, numprocs, matprops, timeprops, pileprops, fluxprops,
 				statprops, &order_flag, outline, discharge, adaptflag);
 
-//		stept.stop();
-//
+		stept.stop();
+
 //		char filename[50];
 //		sprintf(filename,"forward_%d_%d",timeprops->iter,myid);
 //
 //		write_alldata_ordered(El_Table, filename);
-
-		write_solution.start();
+//
+//		write_solution.start();
 
 		solrec->record_solution(&meshctx, &propctx);
 
