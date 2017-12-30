@@ -84,7 +84,7 @@ void delete_data(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx,
 	if (solrec)
 		delete_hashtables_objects<Jacobian>(solrec);
 
-	clear_GIS_grid();
+	clear_gis_grid();
 
 #ifdef Error
 	error.start();

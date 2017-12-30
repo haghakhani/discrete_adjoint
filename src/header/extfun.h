@@ -107,7 +107,7 @@ extern run_mode loadrun(int myid, int numprocs, HashTable** NodeTable, HashTable
     HashTable** Err_NodeTable, HashTable** Err_ElemTable, SolRec** solrec, MatProps* matprops_ptr,
     TimeProps* timeprops_ptr, OutLine* outline, char* prefix, char* iter);
 
-extern void write_alldata_ordered(HashTable* El_table, char filename[50]);
+extern void write_alldata_ordered(HashTable* El_table, char filename[50], int bin_switch=0);
 
 void write_alldualdata_ordered(HashTable* El_Table, char filename[50]);
 

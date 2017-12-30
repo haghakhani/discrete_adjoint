@@ -184,10 +184,10 @@ void createfunky(int NumProc, char *GISDbase, char *location, char *mapset, char
 
 #ifdef MIN_NONSEQ_REPART
 		//the number of subdomain divisions per dimension is such that each
-		//processor will originaly own exactly 2 or 4 subdomains in two
+		//processor will originally own exactly 2 or 4 subdomains in two
 		//dimensions (or in three dimensions 2, 4, or 8 subdomains per proc). 
 		//(mdj)2007-04-11 int NumDimDiv=(int) pow(2,floor(log(pow(NumProc,1.0/NumDim))/log(2.0))+1);
-		int NumDimDiv = (int) pow(2, floor(log(pow(NumProc, 1.0 / NumDim)) / log(2.0)) + 3);
+		int NumDimDiv = (int) pow(2, floor(log(pow((double) NumProc, 1.0 / (double) NumDim)) / log(2.0)) + 3);
 		int NumCellPerSub = pow(2, NumDim);
 #else
 		//disable the initial gridding trick that minimizes non-sequential 
@@ -197,8 +197,9 @@ void createfunky(int NumProc, char *GISDbase, char *location, char *mapset, char
 		int NumCellPerSub=8*NumProc;
 #endif
 
-		double dX = (xmax - xmin) / NumDimDiv; //subdomain X length
-		double dY = (ymax - ymin) / NumDimDiv; //subdomain Y length
+		const double inv_NumDimDiv = 1. / (double) NumDimDiv;
+		double dX = (xmax - xmin) * inv_NumDimDiv; //subdomain X length
+		double dY = (ymax - ymin) * inv_NumDimDiv; //subdomain Y length
 
 		double dx = 0.5 * dX;
 		double dy = 0.5 * dY;

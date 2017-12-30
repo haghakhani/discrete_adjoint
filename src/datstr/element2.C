@@ -2773,7 +2773,7 @@ double* Element::get_zeta() {
 void Element::calc_topo_data(MatProps* matprops_ptr) {
 
 	double resolution = (dx[0]/*/(zeta[0]*zeta[0]+1)*/+ dx[1]/*/(zeta[1]*zeta[1]+1)*/)
-	    * (matprops_ptr->LENGTH_SCALE) / 2.0;  // element "size"
+	    * (matprops_ptr->LENGTH_SCALE) * 0.5;  // element "size"
 	double xcoord = coord[0] * (matprops_ptr->LENGTH_SCALE);
 	double ycoord = coord[1] * (matprops_ptr->LENGTH_SCALE);
 //double eldif = elevation;

@@ -723,7 +723,8 @@ private:
 
 public:
 
-	double *prev_state_vars,*gravity, *d_gravity, *d_state_vars, elevation,*curvature,*slope,*coord,*dx ;
+	double *prev_state_vars,*gravity, *d_gravity, *d_state_vars, elevation,*curvature,*slope,*coord,*dx;
+	int generation;
 
 	Data(Element* elem) {
 		key = elem->pass_key();
@@ -737,6 +738,7 @@ public:
 		slope= elem->get_zeta();
 		coord= elem->get_coord();
 		dx= elem->get_dx();
+		generation=elem->get_gen();
 	}
 
 	unsigned* get_key() const {
@@ -770,7 +772,7 @@ public:
 	}
 };
 
-void write_alldata_ordered(HashTable* El_Table, char filename[50]) {
+void write_alldata_ordered(HashTable* El_Table, char filename[50], int bin_switch) {
 
 	set<Data> mydata;
 
@@ -786,7 +788,26 @@ void write_alldata_ordered(HashTable* El_Table, char filename[50]) {
 		}
 	}
 
-//	gzFile myfile = gzopen(filename, "wb");
+
+	if (bin_switch){
+			gzFile myfile = gzopen(filename, "wb");
+			set<Data>::iterator it;
+			for (it = mydata.begin(); it != mydata.end(); ++it) {
+				gzwrite(myfile, (it->get_key()), sizeof(unsigned) * 2);
+				gzwrite(myfile, (it->get_state()), sizeof(double) * 3);
+				gzwrite(myfile, (it->prev_state_vars), sizeof(double) * 3);
+				gzwrite(myfile, (it->gravity), sizeof(double) * 2);
+				gzwrite(myfile, (it->d_gravity), sizeof(double) * 2);
+				gzwrite(myfile, (it->d_state_vars), sizeof(double) * 6);
+				gzwrite(myfile, &(it->elevation), sizeof(double));
+				gzwrite(myfile, (it->curvature), sizeof(double) * 2);
+				gzwrite(myfile, (it->slope), sizeof(double) * 2);
+				gzwrite(myfile, (it->coord), sizeof(double) * 2);
+				gzwrite(myfile, (it->dx), sizeof(double) * 2);
+
+			}
+			gzclose (myfile);
+	}else{
 	FILE *fp = fopen(filename, "w");
 
 	set<Data>::iterator it;
@@ -810,24 +831,19 @@ void write_alldata_ordered(HashTable* El_Table, char filename[50]) {
 
 		fprintf(fp,"d_state_vars ");
 
-		fprintf(fp, "%16.10f %16.10f %16.10f %16.10f %16.10f %16.10f \n", it->prev_state_vars[0], it->prev_state_vars[1],
-		    it->prev_state_vars[2],it->prev_state_vars[3], it->prev_state_vars[4], it->prev_state_vars[5]);
+		fprintf(fp, "%16.10f %16.10f %16.10f %16.10f %16.10f %16.10f \n", it->d_state_vars[0], it->d_state_vars[1],
+		    it->d_state_vars[2],it->d_state_vars[3], it->d_state_vars[4], it->d_state_vars[5]);
 
 		fprintf(fp,"elevation, curvatures and slopes ");
 
 		fprintf(fp, "%16.10f %16.10f %16.10f %16.10f %16.10f \n", it->elevation, it->curvature[0],
 				    it->curvature[1],it->slope[0], it->slope[1]);
 
-		fprintf(fp,"coordinates and dx , dy ");
-		fprintf(fp, "%16.10f %16.10f %16.10f %16.10f \n", it->coord[0], it->coord[1], it->dx[0],it->dx[1]);
-//		gzwrite(myfile, (it->get_key()), sizeof(unsigned) * 2);
-//		gzwrite(myfile, (it->get_state()), sizeof(double) * 3);
+		fprintf(fp,"coordinates and dx , dy and generation");
+		fprintf(fp, "%16.10f %16.10f %16.10f %16.10f  %d\n", it->coord[0], it->coord[1], it->dx[0],it->dx[1], it->generation);
 	}
-
 	fclose(fp);
-
-//	gzclose (myfile);
-
+	}
 }
 
 void write_alldualdata_ordered(HashTable* El_Table, char filename[50]) {
