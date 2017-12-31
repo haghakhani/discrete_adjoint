@@ -297,12 +297,10 @@ void SolRec::delete_jacobians_after_writes() {
 
 			currentPtr = *(bucket + i);
 			while (currentPtr) {
-
 				Jacobian* jacobian = (Jacobian*) (currentPtr->value);
 				currentPtr = currentPtr->next;
 				this->remove(jacobian->get_key());
 				delete jacobian;
-
 			}
 		}
 }

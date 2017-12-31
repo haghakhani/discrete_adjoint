@@ -453,9 +453,6 @@ void setup_dual_flow(SolRec* solrec, MeshCTX* dual_meshctx, MeshCTX* err_meshctx
 	read_solution.start();
 	if (solrec->get_first_solution() && (solrec->get_first_solution() >= iter - 1)){
 		run_from_snapshot(dual_meshctx, propctx, solrec, *snapshot_vec);
-		//because the hash tabeles change in run_from_snapshot
-//		El_Table = dual_meshctx->el_table;
-//		NodeTable = dual_meshctx->nd_table;
 	}
 	read_solution.stop();
 
