@@ -405,8 +405,8 @@ static void run_from_snapshot(MeshCTX* dual_meshctx, PropCTX* propctx, SolRec* s
 		newel_table->add(newelem->pass_key(), newelem);
 	}
 
-//	setup_geoflow(newel_table, newnd_table, myid, numprocs, matprops, timeprops);
-	setup_from_snapshot(newel_table, newnd_table, myid, numprocs, matprops, timeprops);
+	setup_geoflow(newel_table, newnd_table, myid, numprocs, matprops, timeprops);
+//	setup_from_snapshot(newel_table, newnd_table, myid, numprocs, matprops, timeprops);
 
 	move_data(numprocs, myid, newel_table, newnd_table, timeprops,matprops);
 

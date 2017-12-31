@@ -453,12 +453,9 @@ struct TimeProps {
 	//! checks if the restart file should be saved now
 	int ifsave() {
 		// don't save if nobody asked you to do it
-//		if (timesave < 1.0E-06)
-//			return 0;
 		if (time >= ndnextsave) {
 			isave++; //using isave eliminates roundoff
 			ndnextsave = ((isave + 1) * timesave) / TIME_SCALE;
-			printf("isave %d nextsave %f\n",isave,ndnextsave);
 			return (1);
 		} else
 			return 0;
@@ -481,8 +478,6 @@ struct TimeProps {
 	//! checks if the restart file should be saved now
 	int ifsave_adj() {
 		// don't save if nobody asked you to do it
-//		if (timesave < 1.0E-06)
-//			return 0;
 		if (fabs(time - ndnextsave) < 1.0E-06 && time > 0.) {
 			isave--; //using isave eliminates roundoff
 			ndnextsave = ((isave + 1) * timesave) / TIME_SCALE;
@@ -496,7 +491,6 @@ struct TimeProps {
 		if (time >= ndnextoutput) {
 			ioutput++; //using ioutput eliminates roundoff
 			ndnextoutput = ((ioutput + 1) * timeoutput) / TIME_SCALE;
-			printf("ioutput %d nextoutput %f\n",ioutput,ndnextoutput);
 			return (1);
 		} else
 			return (0);

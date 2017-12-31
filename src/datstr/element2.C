@@ -533,7 +533,6 @@ Element::Element(const Elem_minimal* elem_minimal, MatProps* matprops_ptr){
 	generation = elem_minimal->generation;
 
 	for (int i = 0; i < DIMENSION; ++i){
-		dx[i] = elem_minimal->dx[i];
 		key[i] = elem_minimal->key[i];
 		coord[i] = elem_minimal->coord[i];
 		elm_loc[i] = elem_minimal->elm_loc[i];
