@@ -458,6 +458,7 @@ struct TimeProps {
 		if (time >= ndnextsave) {
 			isave++; //using isave eliminates roundoff
 			ndnextsave = ((isave + 1) * timesave) / TIME_SCALE;
+			printf("isave %d nextsave %f\n",isave,ndnextsave);
 			return (1);
 		} else
 			return 0;
@@ -495,6 +496,7 @@ struct TimeProps {
 		if (time >= ndnextoutput) {
 			ioutput++; //using ioutput eliminates roundoff
 			ndnextoutput = ((ioutput + 1) * timeoutput) / TIME_SCALE;
+			printf("ioutput %d nextoutput %f\n",ioutput,ndnextoutput);
 			return (1);
 		} else
 			return (0);

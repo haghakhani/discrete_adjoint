@@ -120,12 +120,12 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 
 		stept.stop();
 
-		char filename[50];
-		sprintf(filename,"forward_%d_%d",timeprops->iter,myid);
-
-		write_alldata_ordered(El_Table, filename);
-
-		write_solution.start();
+//		char filename[50];
+//		sprintf(filename,"forward_%d_%d",timeprops->iter,myid);
+//
+//		write_alldata_ordered(El_Table, filename);
+//
+//		write_solution.start();
 
 		solrec->record_solution(&meshctx, &propctx);
 
@@ -134,7 +134,7 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 //
 //			solrec->delete_jacobians_after_writes();
 //		}
-		write_solution.stop();
+//		write_solution.stop();
 
 		/*
 		 * output results to file

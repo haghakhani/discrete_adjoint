@@ -114,9 +114,31 @@ public:
 		timeprops->time=time;
 		timeprops->isave = (int) (time / (timeprops->timesave * inv_t_sc) + 0.5);
 		timeprops->ioutput = (int) (time / (timeprops->timeoutput * inv_t_sc) + 0.5);
-		timeprops->ndnextsave = ((timeprops->isave + 1) * timeprops->timesave) * inv_t_sc;
-		timeprops->ndnextoutput = ((timeprops->ioutput + 1) * timeprops->timeoutput) * inv_t_sc;;
+
+		double prop_ndnextsave = ((timeprops->isave + 1) * timeprops->timesave) * inv_t_sc;
+//		timeprops->isave++;
+		while(1){
+			if (prop_ndnextsave > time){
+				timeprops->ndnextsave = prop_ndnextsave;
+				break;
+			}
+			else
+				timeprops->isave++;
+		}
+
+		double prop_ndnextoutput = ((timeprops->ioutput + 1) * timeprops->timeoutput) * inv_t_sc;
+//		timeprops->ioutput++;
+		while(1){
+			if (prop_ndnextoutput > time){
+				timeprops->ndnextoutput = prop_ndnextoutput;
+				break;
+			}
+			else
+				timeprops->ioutput++;
+		}
 		timeprops->maxiter = final_iter;
+		printf("ioutput %d nextoutput %f\n",timeprops->ioutput,timeprops->ndnextoutput);
+		printf("isave %d nextsave %f\n",timeprops->isave,timeprops->ndnextsave);
 	}
 
 	~Snapshot()	{
