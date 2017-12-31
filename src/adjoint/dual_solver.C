@@ -228,7 +228,7 @@ void dual_solver(SolRec* solrec, MeshCTX* meshctx, MeshCTX* error_meshctx, PropC
 		error.stop();
 #else
 		dual_vis.start();
-//		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
+		if (/*timeprops_ptr->adjiter*/timeprops_ptr->ifadjoint_out()/*|| adjiter == 1*/)
 		write_dual_xdmf(meshctx->el_table, meshctx->nd_table, timeprops_ptr, matprops_ptr, mapname_ptr, XDMF_OLD,
 				1);
 		dual_vis.stop();
