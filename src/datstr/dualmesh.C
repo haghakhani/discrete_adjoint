@@ -40,6 +40,7 @@ generation(elem->get_gen()){
 		elm_loc[j]=elem->get_elm_loc()[j];
 		key[j]=elem->pass_key()[j];
 		coord[j]=elem->get_coord()[j];
+		dx[j]=elem->get_dx()[j];
 	}
 
 

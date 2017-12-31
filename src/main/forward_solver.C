@@ -120,25 +120,7 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 
 		stept.stop();
 
-//		char filename[50];
-//		sprintf(filename,"forward_%d_%d",timeprops->iter,myid);
-//
-//		write_alldata_ordered(El_Table, filename);
-//
-//		write_solution.start();
-
 		solrec->record_solution(&meshctx, &propctx);
-
-//		if (solrec->write_sol()/* || must_write(&memuse, myid)*/) {
-//			solrec->wrtie_sol_to_disk(myid);
-//
-//			solrec->delete_jacobians_after_writes();
-//		}
-//		write_solution.stop();
-
-		/*
-		 * output results to file
-		 */
 
 		visualization.start();
 		if (timeprops->ifoutput() && OUTPUT) {
@@ -156,10 +138,8 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 
 		if (timeprops->ifsave() && (propctx.runcond & RECORD)) {
 			move_data(numprocs, myid, El_Table, Node_Table, timeprops, matprops);
-//			meshctx.snapshot_vec->push_back(Snapshot(meshctx,propctx));
 			solrec->update_first_sol_time(timeprops->iter);
 			save_forward(meshctx, propctx, solrec);
-//			solrec->wrtie_sol_to_disk(myid);
 			solrec->delete_jacobians_after_writes();
 			if (propctx.runcond & RECORD)
 				meshctx.snapshot_vec->push_back(Snapshot(meshctx,propctx));
@@ -187,7 +167,6 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 		MPI_Barrier(MPI_COMM_WORLD);
 
 		//write out stochastic simulation statistics
-		//if(statprops.lhs.runid>=0)
 		if (myid == 0)
 		output_stoch_stats(matprops, statprops);
 		MPI_Barrier(MPI_COMM_WORLD);
@@ -206,7 +185,6 @@ void forward_solve(MeshCTX &meshctx, PropCTX &propctx, SolRec *solrec) {
 		outline2.output(matprops, statprops);
 
 		// we deallocate these to make more space in memory
-		// adjoint solution
 		outline->dealloc();
 		outline2.dealloc();
 		MPI_Barrier(MPI_COMM_WORLD);

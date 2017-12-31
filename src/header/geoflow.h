@@ -56,6 +56,9 @@ void out_final_stats(TimeProps* timeprops_ptr, StatProps* statprops_ptr);
 void setup_geoflow(HashTable* El_Table, HashTable* NodeTable, int myid, int nump,
     MatProps* matprops_ptr, TimeProps *timeprops_ptr);
 
+void setup_from_snapshot(HashTable* El_Table, HashTable* NodeTable, int myid, int nump,
+    MatProps* matprops_ptr, TimeProps *timeprops_ptr);
+
 void calc_d_gravity(HashTable* El_Table);
 
 //! this function calculates the spatial derivatives of the state variables
